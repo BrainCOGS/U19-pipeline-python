@@ -7,10 +7,10 @@ class Center(dj.Lookup):
     definition = """
     center                      :   varchar(100)
     ---
-    notes = ""                  :   varchar(500)
+    description = ""                  :   varchar(500)
     """
     contents = [
-        ["Bezos Center"],["McDonnell Center"]
+        ["Bezos Center",""],["McDonnell Center",""]
         ]
 
 @schema
