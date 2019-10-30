@@ -34,4 +34,4 @@ It has some counterintuitive properties:
 |'-10'  | -10* |
 |'0'    | 0*    |
 
-\*Would expect this to be stored as 1 based on the rules of `bool` in python
+\*Would expect this to be stored as 1 based on the rules of `bool` in python. See: https://github.com/datajoint/datajoint-docs/issues/222
