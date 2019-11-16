@@ -197,12 +197,12 @@ class Segmentation(dj.Imported):
         roi_spatial:      longblob     # 505 x 504, from cnmf-
         """
 
-    class Morphology(dj.Part):
-        definition = """
-        -> master.Roi
-        ---
-        morphology:  enum('Doughnut', 'Blob', 'Puncta', 'Filament', 'Other', 'Noise')
-        """
+class Morphology(dj.Manual):
+    definition = """
+    -> Segmentation.Roi
+    ---
+    morphology:  enum('Doughnut', 'Blob', 'Puncta', 'Filament', 'Other', 'Noise')
+    """
 
 
 @schema
@@ -211,6 +211,8 @@ class Trace(dj.Computed):
     -> Segmentation.Roi
     ---
     dff:   longblob     # delta f/f for each cell, 1 x nFrames  # cnmf-spiking?
+    spiking
+    
     """
 
 

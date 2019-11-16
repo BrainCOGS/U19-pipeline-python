@@ -6,6 +6,8 @@ notebooks_dev/*
 # local config file
 dj_local_conf.json
 
+.env*
+
 # IDEA configs
 .idea/
 
