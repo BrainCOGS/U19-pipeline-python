@@ -24,7 +24,7 @@ class TowersSession(dj.Imported):
 @schema
 class TowersBlock(dj.Imported):
     definition = """
-    -> TowersSession
+    -> acquisition.Session
     block                : tinyint                      # block number
     ---
     -> task.TaskLevelParameterSet

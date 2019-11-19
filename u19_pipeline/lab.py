@@ -162,6 +162,7 @@ class Protocol(dj.Lookup):
     reference_weight_pct=null : float                        # percentage of initial allowed
     protocol_description="" : varchar(255)                 # description
     """
+    contents = [['1910', 0.8, 'Tank Lab protocol']]
 
 
 @schema
@@ -196,12 +197,12 @@ class Path(dj.Lookup):
     """
 
     contents = [
-        ['/bezos', 'windows', 'Y:', r'\\bucket.pni.princeton.edu\Bezos-center', ''],
-        ['/bezos', 'mac', '/Volumes/bezos', 'apps.pni.princeton.edu:/jukebox/Bezos', ''],
-        ['/bezos', 'linux', '/mnt/bezos', 'apps.pni.princeton.edu:/jukebox/Bezos', ''],
+        ['/Bezos-center', 'windows', 'Y:', r'\\bucket.pni.princeton.edu\Bezos-center', ''],
+        ['/Bezos-center', 'mac', '/Volumes/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', ''],
+        ['/Bezos-center', 'linux', '/mnt/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', ''],
         ['/braininit', 'windows', 'Z:', r'\\bucket.pni.princeton.edu\braininit', ''],
-        ['/braininit', 'mac', '/Volumes/braininit', 'apps.pni.princeton.edu:/jukebox/braininit', ''],
-        ['/braininit', 'linux', '/mnt/bezos', 'apps.pni.princeton.edu:/jukebox/braininit', '']
+        ['/braininit', 'mac', '/Volumes/braininit', '//bucket.pni.princeton.edu/Bezos-center', ''],
+        ['/braininit', 'linux', '/mnt/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', '']
     ]
 
     def get_local_path(self, path, local_os=None):

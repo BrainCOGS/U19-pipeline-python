@@ -211,8 +211,7 @@ class Trace(dj.Computed):
     -> Segmentation.Roi
     ---
     dff:   longblob     # delta f/f for each cell, 1 x nFrames  # cnmf-spiking?
-    spiking
-    
+    spiking: longblob
     """
 
 

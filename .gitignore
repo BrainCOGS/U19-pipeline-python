@@ -2,6 +2,7 @@
 # Notebooks for the sake of development
 notebooks_dev/*
 
+.vscode*
 
 # local config file
 dj_local_conf.json
