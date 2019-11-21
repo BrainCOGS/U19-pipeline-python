@@ -202,7 +202,7 @@ class Path(dj.Lookup):
         ['/Bezos-center', 'linux', '/mnt/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', ''],
         ['/braininit', 'windows', 'Z:', r'\\bucket.pni.princeton.edu\braininit', ''],
         ['/braininit', 'mac', '/Volumes/braininit', '//bucket.pni.princeton.edu/Bezos-center', ''],
-        ['/braininit', 'linux', '/mnt/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', '']
+        ['/braininit', 'linux', '/mnt/braininit', '//bucket.pni.princeton.edu/Bezos-center', '']
     ]
 
     def get_local_path(self, path, local_os=None):
