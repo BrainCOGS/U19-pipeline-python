@@ -16,7 +16,7 @@ class Weighing(dj.Manual):
     -> lab.User.proj(weigh_person="user_id")
     -> lab.Location
     weight               : float                        # in grams
-    weight_notice=""     : varchar(255)
+    low_weight_alert=""  : varchar(255)
     """
 
 
@@ -81,12 +81,12 @@ class Notification(dj.Manual):
     definition = """
     # This table documents whether a notification has been sent to the users.
     -> subject.Subject
-    notification_date    : date                         # Date of notification
+    notification_date       : date                         # Date of notification
     ---
-    time=null            : datetime                     # Exact time of notification
-    cage_notice=""       : varchar(255)                 # Cage-notice. Cage not returned
-    health_notice=""     : varchar(255)                 # Health-notice. missed action Items
-    weight_notice=""     : varchar(255)                 # Weight-notice. mouse too light
+    notification_time=null  : datetime                     # Exact time of notification
+    cage_notice=""          : varchar(255)                 # Cage-notice. Cage not returned
+    health_notice=""        : varchar(255)                 # Health-notice. missed action Items
+    weight_notice=""        : varchar(255)                 # Weight-notice. mouse too light
     """
 
 

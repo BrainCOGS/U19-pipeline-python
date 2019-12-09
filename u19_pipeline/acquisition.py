@@ -22,6 +22,8 @@ class Session(dj.Manual):
     stimulus_commit=""   : varchar(64)                  # git hash for the version of the function
     session_performance  : float                        # percentage correct on this session
     session_narrative="" : varchar(512)
+    session_protocol=null       : varchar(255)          # function and parameters to generate the stimulus
+    session_code_version=null   : blob                  # code version of the stimulus, maybe a version number, or a githash
     """
 
 

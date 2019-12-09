@@ -98,6 +98,7 @@ class User(dj.Manual):
     definition = """
     user_id              : varchar(32)                  # username
     ---
+    user_nickname        : varchar(32)                  # same as netID for new users, for old users, this is used in the folder name etc.
     full_name=null       : varchar(32)                  # first name
     email=null           : varchar(64)                  # email address
     phone=null           : varchar(12)                  # phone number
