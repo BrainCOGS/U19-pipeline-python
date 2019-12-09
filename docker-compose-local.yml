@@ -6,6 +6,6 @@ services:
     volumes:
       - ./notebooks:/notebooks
       - ./images:/images
-      - .:/src/u19-python-pipeline
+      - .:/src/U19-pipeline
     ports:
       - "8800:8888"
