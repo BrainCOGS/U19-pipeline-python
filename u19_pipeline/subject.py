@@ -216,6 +216,12 @@ class SubjectActItem(dj.Manual):
     -> ActItem
     """
 
+@schema
+class SubjectActWeight(dj.Manual):
+    definition = """
+    -> Subject
+    notification_date        : date                         # date when the weight notification first appeared
+    """
 
 @schema
 class SubjectProject(dj.Manual):
