@@ -210,17 +210,19 @@ class ActItem(dj.Lookup):
 
 
 @schema
-class SubjectActItem(dj.Manual):
+class SubjectActionManual(dj.Manual):
     definition = """
-    -> Subject
+    -> Subject                                                  # For manual actions; links subject to an actionItem from the list
     -> ActItem
     """
 
 @schema
-class SubjectActWeight(dj.Manual):
+class SubjectActionAutomatic(dj.Manual):
     definition = """
     -> Subject
-    notification_date        : date                         # date when the weight notification first appeared
+    notification_date        : datetime                         # datetime when notification was automatically generated
+    ---
+    notification_message     : varchar(255)                     # Notification message e.g. low bodyweight warning
     """
 
 @schema
