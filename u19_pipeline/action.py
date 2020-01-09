@@ -16,7 +16,6 @@ class Weighing(dj.Manual):
     -> lab.User.proj(weigh_person="user_id")
     -> lab.Location
     weight               : float                        # in grams
-    low_weight_alert=""  : varchar(255)
     """
 
 
@@ -33,9 +32,9 @@ class SubjectStatus(dj.Manual):
 
 
 @schema
-class ActionItem(dj.Manual):
+class ActionRecord(dj.Manual):
     definition = """
-    # action item performed every day on each subject
+    # Record of the action items performed every day on each subject
     -> subject.Subject
     action_date          : date                         # date of action
     action_id            : tinyint                      # action id
