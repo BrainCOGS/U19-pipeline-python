@@ -106,7 +106,6 @@ celerybeat-schedule
 # Environments
 .env
 .venv
-princeton_env/
 venv/
 ENV/
 env.bak/
