@@ -1,9 +1,20 @@
 """This module defines tables in the schema U19_behavior"""
 
 import datajoint as dj
-from . import acquisition, task
+from . import acquisition, task, subject
 
 schema = dj.schema(dj.config['database.prefix'] + 'behavior')
+
+
+@schema
+class DataDirectory(dj.Computed):
+    definition = """
+    -> acquisition.Session
+    ---
+    data_dir             : varchar(255)                 # data directory for each session
+    file_name            : varchar(255)                 # file name
+    combined_file_name   : varchar(255)                 # combined filename
+    """
 
 
 @schema
@@ -38,10 +49,9 @@ class TowersBlock(dj.Imported):
     block_performance    : float                        # performance in the current block
     """
 
-
     class Trial(dj.Part):
         definition = """
-        -> TowersBlock
+        -> master
         trial_idx            : int                          # trial index, keep the original number in the file
         ---
         trial_type           : enum('L','R')                # answer of this trial, left or right
@@ -72,3 +82,40 @@ class TowersBlock(dj.Imported):
         trial_prior_p_left   : float                        # prior probablity of this trial for left
         vi_start             : int
         """
+
+
+@schema
+class TowersBlockTrialVideo(dj.Imported):
+    definition = """
+    -> TowersBlock.Trial
+    ---
+    video_path           : varchar(511)                 # the absolute directory created for this video
+    """
+
+
+@schema
+class TowersSubjectCumulativePsych(dj.Computed):
+    definition = """
+    -> TowersSession
+    ---
+    subject_delta_data=null : blob                         # num of right - num of left, x ticks for data
+    subject_pright_data=null : blob                         # percentage went right for each delta bin for data
+    subject_delta_error=null : blob                         # num of right - num of left, x ticks for data confidence interval
+    subject_pright_error=null : blob                         # confidence interval for precentage went right of data
+    subject_delta_fit=null : blob                         # num of right - num of left, x ticks for fitting results
+    subject_pright_fit=null : blob                         # fitting results for percent went right
+    """
+
+
+@schema
+class TowersSessionPsych(dj.Computed):
+    definition = """
+    -> TowersSession
+    ---
+    session_delta_data=null : blob                         # num of right - num of left, x ticks for data
+    session_pright_data=null : blob                         # percentage went right for each delta bin for data
+    session_delta_error=null : blob                         # num of right - num of left, x ticks for data confidence interval
+    session_pright_error=null : blob                         # confidence interval for precentage went right of data
+    session_delta_fit=null : blob                         # num of right - num of left, x ticks for fitting results
+    session_pright_fit=null : blob                         # fitting results for percent went right
+    """

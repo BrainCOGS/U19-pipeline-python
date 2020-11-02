@@ -1,25 +1,8 @@
-"""This module defines tables in the schema U19_imaging"""
-
 import datajoint as dj
-try:
-    from ScanImageTiffReader import ScanImageTiffReader
-    import scanreader
-except:
-    pass
-
-import numpy as np
-import datetime
-import platform
-
-import re
-from . import lab, reference, acquisition
-import os
-import glob
-from os import path
-import scipy.io as sio
+from u19_pipeline import acquisition
 
 
-schema = dj.schema(dj.config['database.prefix'] + 'imaging')
+schema = dj.schema('u19_imaging')
 
 
 @schema
@@ -28,203 +11,247 @@ class Scan(dj.Imported):
     -> acquisition.Session
     ---
     scan_directory       : varchar(255)
-    gdd=null             : float
-    wavelength=920       : float                        # in nm
-    pmt_gain=null        : float
-    -> [nullable] reference.BrainArea.proj(imaging_area="brain_area")
-    frame_time           : longblob
     """
-
-    class File(dj.Part):
-        definition = """
-        -> Scan
-        file_number          : int                          # file number of a given scan
-        ---
-        scan_filename        : varchar(255)
-        """
 
 
 @schema
 class ScanInfo(dj.Imported):
     definition = """
-    # scan meta information from the tiff file
+    # metainfo about imaging session
     -> Scan
     ---
-    nfields=1            : tinyint                      # number of fields
-    nchannels            : tinyint                      # number of channels
-    nframes              : int                          # number of recorded frames
-    nframes_requested    : int                          # number of requested frames (from header)
-    px_height            : smallint                     # lines per frame
-    px_width             : smallint                     # pixels per line
-    um_height=null       : float                        # height in microns
-    um_width=null        : float                        # width in microns
-    x=null               : float                        # (um) center of scan in the motor coordinate system
-    y=null               : float                        # (um) center of scan in the motor coordinate system
-    fps                  : float                        # (Hz) frames per second
-    zoom                 : decimal(5,2)                 # zoom factor
-    bidirectional        : tinyint                      # true = bidirectional scanning
-    usecs_per_line       : float                        # microseconds per scan line
-    fill_fraction_temp   : float                        # raster scan temporal fill fraction (see scanimage)
-    fill_fraction_space  : float                        # raster scan spatial fill fraction (see scanimage)
+    file_name_base       : varchar(255)                 # base name of the file
+    scan_width           : int                          # width of scanning in pixels
+    scan_height          : int                          # height of scanning in pixels
+    acq_time             : datetime                     # acquisition time
+    n_depths             : tinyint                      # number of depths
+    scan_depths          : blob                         # depth values in this scan
+    frame_rate           : float                        # imaging frame rate
+    inter_fov_lag_sec    : float                        # time lag in secs between fovs
+    frame_ts_sec         : longblob                     # frame timestamps in secs 1xnFrames
+    power_percent        : float                        # percentage of power used in this scan
+    channels             : blob                         # is this the channer number or total number of channels
+    cfg_filename         : varchar(255)                 # cfg file path
+    usr_filename         : varchar(255)                 # usr file path
+    fast_z_lag           : float                        # fast z lag
+    fast_z_flyback_time  : float                        # time it takes to fly back to fov
+    line_period          : float                        # scan time per line
+    scan_frame_period    : float
+    scan_volume_rate     : float
+    flyback_time_per_frame : float
+    flyto_time_per_scan_field : float
+    fov_corner_points    : blob                         # coordinates of the corners of the full 5mm FOV, in microns
+    nfovs                : int                          # number of field of view
+    nframes              : int                          # number of frames in the scan
+    nframes_good         : int                          # number of frames in the scan before acceptable sample bleaching threshold is crossed
+    last_good_file       : int                          # number of the file containing the last good frame because of bleaching
     """
-
 
 
 @schema
-class MotionCorrectionMethod(dj.Lookup):
+class FieldOfView(dj.Imported):
     definition = """
-    mcorr_method:           varchar(128)
+    # meta-info about specific FOV within mesoscope imagining session
+    -> Scan
+    fov                  : tinyint                      # number of the field of view in this scan
+    ---
+    fov_directory        : varchar(255)                 # the absolute directory created for this fov
+    fov_name=null        : varchar(32)                  # name of the field of view
+    fov_depth            : float                        # depth of the field of view  should be a number or a vector?
+    fov_center_xy        : blob                         # X-Y coordinate for the center of the FOV in microns. One for each FOV in scan
+    fov_size_xy          : blob                         # X-Y size of the FOV in microns. One for each FOV in scan (sizeXY)
+    fov_rotation_degrees : float                        # rotation of the FOV with respect to cardinal axes in degrees. One for each FOV in scan
+    fov_pixel_resolution_xy : blob                         # number of pixels for rows and columns of the FOV. One for each FOV in scan
+    fov_discrete_plane_mode : tinyint                      # true if FOV is only defined (acquired) at a single specifed depth in the volume. One for each FOV in scan should this be boolean?
     """
 
-    contents = zip(['cv.motionCorrect'])
+    class File(dj.Part):
+        definition = """
+        # list of files per FOV
+        -> master
+        file_number          : int
+        ---
+        fov_filename         : varchar(255)                 # file name of the new fov tiff file
+        file_frame_range     : blob                         # [first last] frame indices in this file, with respect to the whole imaging session
+        """
+
+
+@schema
+class McMethod(dj.Lookup):
+    definition = """
+    # available motion correction method
+    mc_method            : varchar(128)
+    ---
+    correlation_type="Normalized" : enum('Normalized','NonNormalized')
+    tranformation_type="Linear" : enum('Linear','NonLinear')
+    """
+
+
+@schema
+class McParameter(dj.Lookup):
+    definition = """
+    # parameter definition for a motion correction method
+    -> McMethod
+    mc_parameter_name    : varchar(64)
+    ---
+    mc_parameter_description : varchar(255)                 # description of this parameter
+    """
+
+
+@schema
+class McParameterSet(dj.Manual):
+    definition = """
+    # pointer for a pre-saved set of parameter values
+    -> McMethod
+    mc_parameter_set_id  : int                          # parameter set id
+    """
+
+    class Parameter(dj.Part):
+        definition = """
+        # pre-saved parameter values
+        -> master
+        -> McParameter
+        ---
+        mc_parameter_value   : blob                         # value of parameter
+        """
 
 
 @schema
 class MotionCorrection(dj.Imported):
     definition = """
-    -> Scan.File
-    -> MotionCorrectionMethod       # meta file, frameMCorr-method
+    -> FieldOfView
+    -> McParameterSet
     ---
-    x_shifts                        : longblob      # nFrames x 2, meta file, frameMCorr-xShifts
-    y_shifts                        : longblob      # nFrames x 2, meta file, frameMCorr-yShifts
-    reference_image                 : longblob      # 512 x 512, meta file, frameMCorr-reference
-    motion_corrected_average_image  : longblob      # 512 x 512, meta file, activity
-    mcorr_metric                    : varchar(64)   # frameMCorr-metric-name
-    #motion_corrected_movie          : longblob      # in summary file, 1/10 down sampled, need to be externalized
+    mc_results_directory=null : varchar(255)
     """
-    key_source = Scan()
 
-    def make(self, key):
-        scan_dir = (Scan & key).fetch1('scan_directory')
-        files = Scan.File & key
+    class AcrossFiles(dj.Part):
+        definition = """
+        # across tif files, x-y shifts for motion registration
+        -> master
+        ---
+        cross_files_x_shifts : blob                         # nFrames x 2, meta file, fileMCorr-xShifts
+        cross_files_y_shifts : blob                         # nFrames x 2, meta file, fileMCorr-yShifts
+        cross_files_reference_image : longblob                     # 512 x 512, meta file, fileMCorr-reference
+        """
 
-        meta_pattern = key['subject_id'] + '_' + str(key['session_date']).replace('-', '') + '*meta.mat'
-        file_name_pattern = path.join(scan_dir, meta_pattern)
-        f = glob.glob(file_name_pattern)
-        if not len(f):
-            return
-        meta_data = sio.loadmat(f[0], struct_as_record=False, squeeze_me=True)
-
-        for ikey, file_key in enumerate(files.fetch('KEY')):
-            if ikey > 16:
-                return
-            file_number = (files & file_key).fetch1('file_number')
-
-            mcorr = file_key.copy()
-            sync = file_key.copy()
-            frame_mcorr = meta_data['frameMCorr'][ikey]
-            mcorr.update(
-                mcorr_method=frame_mcorr.method,
-                x_shifts=frame_mcorr.xShifts,
-                y_shifts=frame_mcorr.yShifts,
-                reference_image=frame_mcorr.reference,
-                motion_corrected_average_image=meta_data['activity'],
-                mcorr_metric=frame_mcorr.metric.name
-            )
-            self.insert1(mcorr)
-            sync.update(
-                mcorr_method=frame_mcorr.method,
-                frame_behavior_idx=meta_data['imaging'][ikey].iteration,
-                frame_block_idx=meta_data['imaging'][ikey].block,
-                frame_trial_idx=meta_data['imaging'][ikey].trial
-            )
-
-            SyncImagingBehavior.insert1(sync)
-
-
-@schema
-class SyncImagingBehavior(dj.Manual): # info in meta imaging
-    definition = """
-    -> MotionCorrection
-    ---
-    frame_behavior_idx:    longblob   # register the sample number of behavior recording to each frame, some extra zeros in file 1, marking that the behavior recording hasn't started yet.
-                                      #1 x nFrames, metadata-imaging-iteration
-    frame_block_idx:       longblob   # register block number for each frame, metadata-imaging-block
-    frame_trial_idx:       longblob   # register trial number for each frame, metadata-imaging-trial
-    """
+    class WithinFile(dj.Part):
+        definition = """
+        # within each tif file, x-y shifts for motion registration
+        -> master
+        -> FieldOfView.File
+        ---
+        within_file_x_shifts : longblob                     # nFrames x 2, meta file, frameMCorr-xShifts
+        within_file_y_shifts : longblob                     # nFrames x 2, meta file, frameMCorr-yShifts
+        within_reference_image : longblob                     # 512 x 512, meta file, frameMCorr-reference
+        """
 
 
 @schema
 class SegmentationMethod(dj.Lookup):
     definition = """
-    method:    varchar(16)
+    # available segmentation methods
+    seg_method           : varchar(16)
     """
-    contents = zip(['cnmf', 'manual'])
+
+
+@schema
+class SegParameter(dj.Lookup):
+    definition = """
+    # segmentation method parameter
+    -> SegmentationMethod
+    seg_parameter_name   : varchar(64)                  # parameter name of segmentation parameter
+    ---
+    seg_parameter_description : varchar(255)                 # description of this parameter
+    """
+
+
+@schema
+class SegParameterSet(dj.Manual):
+    definition = """
+    # pointer for a pre-saved set of parameter values
+    -> SegmentationMethod
+    seg_parameter_set_id : int                          # parameter set id
+    """
+
+    class Parameter(dj.Part):
+        definition = """
+        # pre-saved parameter values
+        -> master
+        -> SegParameter
+        ---
+        seg_parameter_value  : blob                         # value of parameter
+        """
 
 
 @schema
 class Segmentation(dj.Imported):
     definition = """
-    -> Scan
-    -> SegmentationMethod
+    # ROI segmentation
+    -> MotionCorrection
+    -> SegParameterSet
+    ---
+    num_chunks           : tinyint                      # number of different segmentation chunks within the session
+    cross_chunks_x_shifts : blob                         # nChunks x niter,
+    cross_chunks_y_shifts : blob                         # nChunks x niter,
+    cross_chunks_reference_image : longblob                     # reference image for cross-chunk registration
+    seg_results_directory : varchar(255)                 # directory where segmentation results are stored
     """
-    key_source = (Scan & MotionCorrection) * \
-        (SegmentationMethod & 'method="cnmf"')
-
-    def make(self, key):
-        self.insert1(key)
-        scan_dir = (Scan & key).fetch1('scan_directory')
-        files = Scan.File & key
-        file_numbers = files.fetch('file_number')
-
-        file_name_pattern = key['subject_id'] + '_' + str(key['session_date']).replace('-', '') \
-            + str(min(file_numbers)) + '-' + str(max(file_numbers)) + '*.cnmf-proto-roi-posthoc.mat'
-
-        file_pattern = path.join(scan_dir, file_name_pattern)
-        f = glob.glob(file_pattern)
-        cnmf = sio.loadmat(f[0], struct_as_record=False, squeeze_me=True)
-        image_size = cnmf['cnmf'].region.ImageSize
-        nrois = len(cnmf['roi'])
-
-        for i_roi in range(0, nrois):
-            roi = key.copy()
-            roi['roi_spatial'] = np.reshape(
-                cnmf['cnmf'].spatial.todense()[:, i_roi], image_size)
-            self.Roi.insert1('roi')
-
-    class Background(dj.Part):
-        definition = """
-        -> master
-        ---
-        background_spatial:   longblob   # 505 x 504, last column of cnmf spatial
-        """
 
     class Roi(dj.Part):
         definition = """
+        # metainformation and pixel masks for each ROI
         -> master
-        roi_idx:       int
+        roi_idx              : int                          # index of the roi
         ---
-        roi_spatial:      longblob     # 505 x 504, from cnmf-
+        roi_spatial          : longblob                     # 2d matrix with image for spatial mask for the roi
+        roi_global_xy        : blob                         # roi centroid in global image coordinates
+        roi_is_in_chunks     : blob                         # array with the chunk ids the roi is present in
+        surround_spatial     : longblob                     # same as roi_spatial, for the surrounding neuropil ring
         """
 
-class Morphology(dj.Manual):
-    definition = """
-    -> Segmentation.Roi
-    ---
-    morphology:  enum('Doughnut', 'Blob', 'Puncta', 'Filament', 'Other', 'Noise')
-    """
+    class RoiMorphologyAuto(dj.Part):
+        definition = """
+        # automatic morphological classification of the ROIs
+        -> master.Roi
+        ---
+        morphology           : enum('Doughnut','Blob','Puncta','Filament','Other','Noise') # shape classification
+        """
+
+    class Chunks(dj.Part):
+        definition = """
+        # registration between different segmentation chunks within a recording
+        -> master
+        segmentation_chunk_id : tinyint                      # id for the subsection of the recording this segmentation is for, for cases with multi-chunk segemntation (e.g. because of z drift)
+        ---
+        tif_file_list        : blob                         # cell array with names of tif files that went into this chunk
+        imaging_frame_range  : blob                         # [firstFrame lastFrame] of this chunk with respect to the full session
+        region_image_size    : blob                         # x-y size of the cropped image after accounting for motion correction shifts
+        region_image_x_range : blob                         # x range of the cropped image after accounting for motion correction shifts
+        region_image_y_range : blob                         # x range of the cropped image after accounting for motion correction shifts
+        """
+
+    class Background(dj.Part):
+        definition = """
+        # for each chunck, global background info (from cnmf)
+        -> master.Chunks
+        ---
+        background_spatial   : longblob                     # 2D matrix flagging pixels that belong to global background in cnmf
+        background_temporal  : longblob                     # time course of global background in cnmf
+        """
 
 
 @schema
-class Trace(dj.Computed):
+class Trace(dj.Imported):
     definition = """
+    # activity traces for each ROI
     -> Segmentation.Roi
     ---
-    dff:   longblob     # delta f/f for each cell, 1 x nFrames  # cnmf-spiking?
-    spiking: longblob
+    dff_roi              : longblob                     # delta f/f for each cell, 1 x nFrames. In case of chunks in segmentation, frames with no data are filled with NaN
+    dff_roi_is_significant : longblob                     # same size as dff_roi, true where transitents are significant
+    dff_roi_is_baseline  : longblob                     # same size as dff_roi, true where values correspond to baseline
+    dff_surround         : longblob                     # delta f/f for the surrounding neuropil ring
+    spiking              : longblob                     # recovered firing rate of the trace
+    time_constants       : blob                         # 2 floats per roi, estimated calcium kernel time constants
+    init_concentration   : float                        # estimated initial calcium concentration for estimated kernel
     """
-
-
-# @schema
-# class TrialTrace(dj.Computed):
-#     definition = """
-#     -> Segmentation.Roi
-#     -> behavior.TowersBlock.Trial
-#     ---
-#     trial_diff:     longblob       # cut dff for each trial
-#     cue_range:      blob           # [start_idx, stop_idx]
-#     delay_range:    blob           # [start_idx, stop_idx]
-#     arm_range:      blob           # [start_idx, stop_idx]
-#     iti_range:      blob           # [start_idx, stop_idx]
-#     """
-#     key_source = MotionCorrection
