@@ -1,5 +1,3 @@
-"""This module defines tables in the schema U19_behavior"""
-
 import datajoint as dj
 from . import acquisition, task, subject
 
