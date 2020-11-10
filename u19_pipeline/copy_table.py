@@ -210,6 +210,9 @@ def copy_meso_analysis_tables():
 
 def main():
 
+    copy_behavior_tables()
+    copy_imaging_tables()
+    copy_meso_tables()
     copy_meso_analysis_tables()
 
 
