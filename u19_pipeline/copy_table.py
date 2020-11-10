@@ -1,13 +1,9 @@
 import datajoint as dj
 
-dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-dj.config['database.user'] = 'shans'
-dj.config['database.password'] = 'Linhuiyin8*0823'
-
-
 import traceback
 from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
 from u19_pipeline import subject
+from u19_pipeline import acquisition as acquisition_original
 from tqdm import tqdm
 
 
@@ -58,6 +54,20 @@ def copy_table(target_schema, src_schema, table_name, **kwargs):
             except Exception:
                 print("Error when inserting {}".format(t))
                 traceback.print_exc()
+
+
+def copy_acquisition_tables():
+
+    acquisition.SessionTemp.insert(
+        (acquisition_original.Session - acquisition.SessionTemp.proj()) &
+        acquisition.SessionStarted,
+        skip_duplicates=True)
+
+    acquisition.DataDirectoryTemp.insert(
+        (acquisition_original.DataDirectory - acquisition.DataDirectoryTemp.proj()) &
+        acquisition.SessionStarted,
+        allow_direct_insert=True
+    )
 
 
 def copy_behavior_tables():
@@ -129,10 +139,12 @@ def copy_imaging_tables():
             temp_table = getattr(imaging, table)
             if isinstance(temp_table, dj.Lookup) or \
                     isinstance(temp_table, dj.Manual):
-                copy_table(imaging, imaging_original, table)
+                copy_table(imaging, imaging_original, table,
+                           skip_duplicates=True)
             else:
                 copy_table(imaging, imaging_original, table,
-                           allow_direct_insert=True)
+                           allow_direct_insert=True,
+                           skip_duplicates=True)
 
 
 def copy_meso_tables():
@@ -210,6 +222,7 @@ def copy_meso_analysis_tables():
 
 def main():
 
+    copy_acquisition_tables()
     copy_behavior_tables()
     copy_imaging_tables()
     copy_meso_tables()
