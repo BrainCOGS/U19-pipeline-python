@@ -12,5 +12,4 @@ setup(
     author_email='support@vathes.com',
     packages=find_packages(exclude=[]),
     install_requires=['datajoint>=0.12.dev7', 'scipy'],
-    scripts=['scripts/u19-shell.py'],
 )

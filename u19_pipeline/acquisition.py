@@ -22,7 +22,7 @@ class SessionStarted(dj.Manual):
 
 
 @schema
-class SessionTemp(dj.Manual):
+class Session(dj.Manual):
     definition = """
     -> SessionStarted
     ---
@@ -40,9 +40,9 @@ class SessionTemp(dj.Manual):
 
 
 @schema
-class DataDirectoryTemp(dj.Computed):
+class DataDirectory(dj.Computed):
     definition = """
-    -> SessionTemp
+    -> Session
     ---
     data_dir             : varchar(255)                 # data directory for each session
     file_name            : varchar(255)                 # file name

@@ -1,11 +1,13 @@
 import datajoint as dj
-
 import traceback
 from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
 from u19_pipeline import subject
-from u19_pipeline import acquisition as acquisition_original
 from tqdm import tqdm
 
+
+acquisition_original = dj.create_virtual_module(
+    'acquisition_original', 'u19_acquisition'
+)
 
 behavior_original = dj.create_virtual_module(
     'behavior_original', 'u19_behavior')
@@ -60,12 +62,12 @@ def copy_acquisition_tables():
 
     acquisition.SessionTemp.insert(
         (acquisition_original.Session - acquisition.SessionTemp.proj()) &
-        acquisition.SessionStarted,
+        acquisition.SessionStarted.proj(),
         skip_duplicates=True)
 
     acquisition.DataDirectoryTemp.insert(
         (acquisition_original.DataDirectory - acquisition.DataDirectoryTemp.proj()) &
-        acquisition.SessionStarted,
+        acquisition.SessionStarted.proj(),
         allow_direct_insert=True
     )
 
@@ -116,6 +118,8 @@ def copy_imaging_tables():
         'McParameterSet',
         'McParameterSet.Parameter',
         'MotionCorrection',
+        'MotionCorrection.WithinFile',
+        'MotionCorrection.AcrossFiles',
         'SegmentationMethod',
         'SegParameter',
         'SegParameterSet',
