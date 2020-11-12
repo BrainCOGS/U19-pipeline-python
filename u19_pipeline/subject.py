@@ -234,6 +234,15 @@ class SubjectProject(dj.Manual):
 
 
 @schema
+class SubjectUser(dj.Manual):
+    definition = """
+    -> Subject
+    ---
+    -> lab.User
+    """
+
+
+@schema
 class Weaning(dj.Manual):
     definition = """
     -> Subject

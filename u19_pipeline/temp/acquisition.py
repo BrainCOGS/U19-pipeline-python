@@ -1,4 +1,5 @@
 import datajoint as dj
+
 from u19_pipeline import lab, task, subject
 
 schema = dj.schema('u19_acquisition')
@@ -22,7 +23,7 @@ class SessionStarted(dj.Manual):
 
 
 @schema
-class Session(dj.Manual):
+class SessionTemp(dj.Manual):
     definition = """
     -> SessionStarted
     ---
@@ -40,9 +41,9 @@ class Session(dj.Manual):
 
 
 @schema
-class DataDirectory(dj.Computed):
+class DataDirectoryTemp(dj.Computed):
     definition = """
-    -> Session
+    -> SessionTemp
     ---
     data_dir             : varchar(255)                 # data directory for each session
     file_name            : varchar(255)                 # file name

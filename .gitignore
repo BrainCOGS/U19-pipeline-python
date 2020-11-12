@@ -1,3 +1,4 @@
+princeton_env/*
 +ScanImageTiffReader/*
 # Notebooks for the sake of development
 notebooks_dev/*
