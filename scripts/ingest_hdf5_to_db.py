@@ -224,7 +224,7 @@ for h5_file in h5_files:
             'project_name':project_name,
             'cohort':cohort
         }
-
+        u19_puffs.insert1(puffs_cohort_insert_dict,skip_duplicates=True)
 
         df_trials['rig'] = rig
         df_trials['cohort'] = cohort
