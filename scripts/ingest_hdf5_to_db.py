@@ -21,9 +21,9 @@ u19_subject = dj.create_virtual_module('u19_subject','u19_subject')
 u19_acq = dj.create_virtual_module('u19_acquisition','u19_acquisition')
 
 # Link to new Puffs dbs
-puffs_acq = dj.create_virtual_module('u19_puffs_acquisition','u19_puffs_acquisition')
-puffs_lab = dj.create_virtual_module('u19_puffs_lab','u19_puffs_lab')
-puffs_behavior = dj.create_virtual_module('u19_puffs_behavior','u19_puffs_behavior')
+u19_puffs = dj.create_virtual_module('u19_puffs','u19_puffs')
+# puffs_lab = dj.create_virtual_module('u19_puffs_lab','u19_puffs_lab')
+# puffs_behavior = dj.create_virtual_module('u19_puffs_behavior','u19_puffs_behavior')
 
 # Currently a hardcoded data folder to one of Marlies' cohorts for this example,
 # but in the future will loop over folders starting from 
@@ -176,21 +176,21 @@ u19_subject.Subject.insert(subject_insert_list,skip_duplicates=True)
 # ## Now use h5 files to make inserts into u19_acquisition tables and puffs specific tables
 # 
 # Tables we need to insert into (**In this order**) are:
-# - u19_puffs_lab.PuffsCohort # in case cohort is not already in the database
-# - u19_puffs_acquisition.PuffsFileAcquisition # as we process the various files
+# - u19_puffs.PuffsCohort # in case cohort is not already in the database
+# - u19_puffs.PuffsFileAcquisition # as we process the various files
 # 
 # - u19_acquisition.SessionStarted # as we process the session data in each h5 file
 # - u19_acquisition.Session # as we process the session data in each h5 file
 # 
-# - u19_puffs_behavior.PuffsSession 
-# - u19_puffs_behavior.PuffsSession.Trial 
-# - u19_puffs_behavior.PuffsSession.TrialPhase
-# - u19_puffs_behavior.PuffsSession.Puff
+# - u19_puffs.PuffsSession 
+# - u19_puffs.PuffsSession.Trial 
+# - u19_puffs.PuffsSession.TrialPhase
+# - u19_puffs.PuffsSession.Puff
 # 
 
 # first find list of h5 files that are already processed so we do not
 # repeat the ingestion on those
-already_processed_filenames = puffs_acq.PuffsFileAcquisition().fetch('h5_filename')
+already_processed_filenames = u19_puffs.PuffsFileAcquisition().fetch('h5_filename')
 
 # Loop over h5 files in this cohort/rig folder
 for h5_file in h5_files:
@@ -437,10 +437,10 @@ for h5_file in h5_files:
             with connection.transaction:
                 u19_acq.SessionStarted().insert1(session_started_insert_dict,skip_duplicates=True)
                 u19_acq.Session().insert1(session_insert_dict,skip_duplicates=True)
-                puffs_behavior.PuffsSession().insert1(puffs_session_insert_dict,skip_duplicates=True)
-                puffs_behavior.PuffsSession.Trial().insert(trials_insert_list,skip_duplicates=True)
-                puffs_behavior.PuffsSession.Puff().insert(puffs_insert_list,skip_duplicates=True)
-                puffs_behavior.PuffsSession.TrialPhase().insert(phases_insert_list,skip_duplicates=True)
+                u19_puffs.PuffsSession().insert1(puffs_session_insert_dict,skip_duplicates=True)
+                u19_puffs.PuffsSession.Trial().insert(trials_insert_list,skip_duplicates=True)
+                u19_puffs.PuffsSession.Puff().insert(puffs_insert_list,skip_duplicates=True)
+                u19_puffs.PuffsSession.TrialPhase().insert(phases_insert_list,skip_duplicates=True)
     """ If the inserts for all sessions in this hdf5 file were successful,
     then we need to mark this hdf5 file as processed by inserting it 
     into the PuffsFileAcquisition() table in u19_puffs_acquisition table """
@@ -452,4 +452,4 @@ for h5_file in h5_files:
         'h5_filename':h5_file,
         'ingested':1
     }
-    puffs_acq.PuffsFileAcquisition.insert1(file_acq_insert_dict,replace=True) # want to overwrite with ingested=1 if ingested=0 for some reason
+    u19_puffs.PuffsFileAcquisition.insert1(file_acq_insert_dict,replace=True) # want to overwrite with ingested=1 if ingested=0 for some reason

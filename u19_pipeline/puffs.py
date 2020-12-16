@@ -1,9 +1,31 @@
-"""This module defines tables in the schema ahoag_puffs_behavior_demo"""
+"""This module defines tables in the schema ahoag_puffs_lab_demo"""
 
 import datajoint as dj
-from . import acquisition, task
+from . import lab, acquisition, task
 
-schema = dj.schema(dj.config['database.prefix'] + 'puffs_behavior')
+schema = dj.schema(dj.config['database.prefix'] + 'puffs')
+
+@schema
+class PuffsCohort(dj.Manual):
+    definition = """
+    -> lab.User         
+    project_name         : varchar(64)                  # Corresponds to the path on bucket /puffs/netid/project_name/cohortX/ ...
+    cohort               : varchar(64)                  # Corresponds to the path on bucket /puffs/netid/project_name/cohortX/ ...
+    ---
+    """
+
+@schema
+class PuffsFileAcquisition(dj.Manual):
+    definition = """
+    -> PuffsCohort
+    rig                  : tinyint                      # an integer that describes which rig was used. 0 corresponds to location = "pni-ltl016-05", 1 corresponds to location = "wang-behavior"
+    h5_filename          : varchar(256)                 # The full path name, e.g. "data.h5" or "data_compressed_XX.h5" for the h5 behavior data file
+    ---
+    ingested             : boolean                      # A flag for whether this file has already been ingested.  
+    """
+
+"""This module defines tables in the schema ahoag_puffs_behavior_demo"""
+
 
 @schema
 class PuffsSession(dj.Manual):
