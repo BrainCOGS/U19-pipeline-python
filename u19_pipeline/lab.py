@@ -268,14 +268,3 @@ class EndpointNotification(dj.Lookup):
     email                 : varchar(64)                  # email address
     ---
     """
-
-@schema
-class ManipulationType(dj.Lookup):
-    definition = """
-    manipulation_type           : varchar(64)   
-    ---
-    manipulation_description    : varchar(2555)
-    """
-    contents = [
-        ['optogenetics', 'optogentic manipulation'],
-   ]

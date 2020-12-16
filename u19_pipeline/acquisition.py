@@ -29,8 +29,7 @@ class Session(dj.Manual):
     session_start_time   : datetime                     # start time
     session_end_time=null : datetime                     # end time
     -> lab.Location.proj(session_location="location")
-    -> task.TaskLevelParameterSet.proj(last_level="level")
-    -> [nullable] lab.ManipulationType.proj(manipulation_type="manipulation_type") # The type of manipulation
+    -> task.TaskLevelParameterSet
     stimulus_bank=""     : varchar(255)                 # path to the function to generate the stimulus
     stimulus_commit=""   : varchar(64)                  # git hash for the version of the function
     session_performance  : float                        # percentage correct on this session

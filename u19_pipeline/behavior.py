@@ -81,6 +81,7 @@ class TowersBlock(dj.Imported):
         vi_start             : int
         """
 
+
 @schema
 class TowersBlockTrialVideo(dj.Imported):
     definition = """
@@ -115,35 +116,4 @@ class TowersSessionPsych(dj.Computed):
     session_pright_error=null : blob                         # confidence interval for precentage went right of data
     session_delta_fit=null : blob                         # num of right - num of left, x ticks for fitting results
     session_pright_fit=null : blob                         # fitting results for percent went right
-    """
-
-@schema
-class PuffsSession(dj.Imported):
-    definition = """
-    -> acquisition.Session
-    ---
-    rig                  : tinyint                      # an integer that describes which rig was used. 0 corresponds to location = "pni-ltl016-05", 1 corresponds to location = "wang-behavior"
-    """
-
-@schema
-class PuffsTrial(dj.Part):
-    definition = """
-    -> PuffsSession
-    trial_idx            : int                          # trial index, keep the original number in the hdf5 file
-    ---
-    -> task.TaskLevelParameterSet.proj(level="level")   # The difficulty level of the trial
-    trial_type           : enum('L','R')                # answer of this trial, left or right
-    choice               : enum('L','R','nil')          # choice of this trial, left or right
-    trial_prior_p_left   : float                        # prior probablity of this trial for left
-    trial_rel_start      : float                        # start time of the trial relative to the beginning of the session [seconds]
-    trial_rel_finish     : float                        # end time of the trial relative to the beginning of the session [seconds]
-    trial_duration       : float                        # duration of the trial [seconds]
-    cue_period           : float                        # duration of cue period [seconds]
-    num_puffs_received_L : tinyint                      # number of puffs actually received on the left side
-    num_puffs_intended_L : tinyint                      # number of puffs intended on the left side
-    num_puffs_received_R : tinyint                      # number of puffs actually received on the right side
-    num_puffs_intended_R : tinyint                      # number of puffs intended on the right side
-    reward_rel_start     : float                        # timing of reward relative to the beginning of the session [seconds]
-    reward_scale         : float                        # subject is given 4 microliters * reward_scale as a reward 
-    rule                 : tinyint                      # 
     """
