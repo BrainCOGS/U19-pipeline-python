@@ -6,6 +6,20 @@ from . import lab, acquisition, task
 schema = dj.schema(dj.config['database.prefix'] + 'puffs')
 
 @schema
+class Rig(dj.Lookup):
+    definition = """
+    ->          
+    rig                  : tinyint                      
+    ---
+    -> lab.location 
+    """
+    #  "wang-behavior"
+    contents = [
+        [0, "pni-ltl016-05"],
+        [1, "wang-behavior"]
+    ]
+
+@schema
 class PuffsCohort(dj.Manual):
     definition = """
     -> lab.User         
@@ -18,7 +32,7 @@ class PuffsCohort(dj.Manual):
 class PuffsFileAcquisition(dj.Manual):
     definition = """
     -> PuffsCohort
-    rig                  : tinyint                      # an integer that describes which rig was used. 0 corresponds to location = "pni-ltl016-05", 1 corresponds to location = "wang-behavior"
+    -> Rig.rig 
     h5_filename          : varchar(256)                 # The full path name, e.g. "data.h5" or "data_compressed_XX.h5" for the h5 behavior data file
     ---
     ingested             : boolean                      # A flag for whether this file has already been ingested.  
@@ -33,7 +47,7 @@ class PuffsSession(dj.Manual):
     -> acquisition.Session
     ---
     session_params = NULL       : blob                         # The parameters for this session, e.g. phase_durations, whether puffs are on, etc... 
-    rig                         : tinyint                      # an integer that describes which rig was used. 0 corresponds to location = "pni-ltl016-05", 1 corresponds to location = "wang-behavior"
+    -> Rig.rig 
     notes = ''                  : varchar(1024)                # notes recorded by experimenter during the session
     stdout = NULL               : blob                         # stdout for the GUI during the session
     stderr = NULL               : blob                         # stderr for the GUI during the session
@@ -42,10 +56,10 @@ class PuffsSession(dj.Manual):
 
     class Trial(dj.Part):
     	definition = """
-        -> PuffsSession
+        -> master
         trial_idx            : int                          # trial index, keep the original number in the file
         ---
-		-> task.TaskLevelParameterSet.proj(level="level")   # The difficulty level of the trial
+		-> task.TaskLevelParameterSet                       # The difficulty level of the trial
         trial_type           : enum('L','R')                # answer of this trial, left or right
         choice               : enum('L','R','nil')          # choice of this trial, left or right
         trial_prior_p_left   : float                        # prior probablity of this trial for left
@@ -75,8 +89,8 @@ class PuffsSession(dj.Manual):
     	definition = """
         -> master.Trial
         puff_idx             : tinyint                     # the index of the puff in this particular trial
-        side                 : tinyint                     # 0 = left side, 1 = right side
         ---
+        side                 : tinyint                     # 0 = left side, 1 = right side
 	    puff_rel_time        : float                       # time of the puff relative to the beginning of the trial [seconds]
         """
 
