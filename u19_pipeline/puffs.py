@@ -7,8 +7,7 @@ schema = dj.schema(dj.config['database.prefix'] + 'puffs')
 
 @schema
 class Rig(dj.Lookup):
-    definition = """
-    ->          
+    definition = """         
     rig                  : tinyint                      
     ---
     -> lab.location 
@@ -32,14 +31,11 @@ class PuffsCohort(dj.Manual):
 class PuffsFileAcquisition(dj.Manual):
     definition = """
     -> PuffsCohort
-    -> Rig.rig 
+    -> Rig
     h5_filename          : varchar(256)                 # The full path name, e.g. "data.h5" or "data_compressed_XX.h5" for the h5 behavior data file
     ---
     ingested             : boolean                      # A flag for whether this file has already been ingested.  
     """
-
-"""This module defines tables in the schema ahoag_puffs_behavior_demo"""
-
 
 @schema
 class PuffsSession(dj.Manual):
@@ -47,7 +43,7 @@ class PuffsSession(dj.Manual):
     -> acquisition.Session
     ---
     session_params = NULL       : blob                         # The parameters for this session, e.g. phase_durations, whether puffs are on, etc... 
-    -> Rig.rig 
+    -> Rig
     notes = ''                  : varchar(1024)                # notes recorded by experimenter during the session
     stdout = NULL               : blob                         # stdout for the GUI during the session
     stderr = NULL               : blob                         # stderr for the GUI during the session
