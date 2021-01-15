@@ -12,8 +12,13 @@ import time
 from datetime import datetime, timedelta
 
 dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-dj.config['database.user'] = os.environ.get('DJ_DB_USER')
-dj.config['database.password'] = os.environ.get('DJ_DB_PASS')
+# load dj creds from file
+credfile = '/jukebox/wang/ahoag/.djenv'
+with open(credfile,'r') as infile:
+    cred_dict = json.load(infile)
+
+dj.config['database.user'] = cred_dict.get('DJ_DB_USER')
+dj.config['database.password'] = cred_dict.get('DJ_DB_PASS')
 
 # Link to existing databases
 u19_lab = dj.create_virtual_module('u19_lab','u19_lab')
@@ -22,15 +27,14 @@ u19_acq = dj.create_virtual_module('u19_acquisition','u19_acquisition')
 
 # Link to new Puffs dbs
 u19_puffs = dj.create_virtual_module('u19_puffs','u19_puffs')
-# puffs_lab = dj.create_virtual_module('u19_puffs_lab','u19_puffs_lab')
-# puffs_behavior = dj.create_virtual_module('u19_puffs_behavior','u19_puffs_behavior')
 
 # Currently a hardcoded data folder to one of Marlies' cohorts for this example,
 # but in the future will loop over folders starting from 
 # The root folder: /jukebox/braininit/puffs/
 data_folder = '/jukebox/braininit/puffs/oostland/Tsc1_evidence_accumulation/cohort_10/rig0/'
 h5_files = glob.glob(data_folder + '/data*.h5')
-mouse_info_file = os.path.join(data_folder,'mouse_info_0821_datajoint_format.csv')
+mouse_info_file = os.path.join('/jukebox/braininit/puffs/oostland/Tsc1_evidence_accumulation',
+    'mouse_info_0821_datajoint_format.csv')
 
 # first read in the mouse_info file into a pandas dataframe
 df_info = pd.read_csv(mouse_info_file,keep_default_na=False)
@@ -190,7 +194,8 @@ u19_subject.Subject.insert(subject_insert_list,skip_duplicates=True)
 
 # first find list of h5 files that are already processed so we do not
 # repeat the ingestion on those
-already_processed_filenames = u19_puffs.PuffsFileAcquisition().fetch('h5_filename')
+already_processed_filenames = (u19_puffs.PuffsFileAcquisition() & 'ingested=1').fetch(
+    'h5_filename')
 
 # Loop over h5 files in this cohort/rig folder
 for h5_file in h5_files:
@@ -230,8 +235,21 @@ for h5_file in h5_files:
         df_trials['cohort'] = cohort
         df_trials['project_name'] = project_name
 
-        """ Figure out session performance for each trial """
-        df_trials['answered_correct'] = (df_trials['side'] == df_trials['outcome'].astype(int))
+        """ Make choice column """
+        df_trials['choice'] = (df_trials['side'] == df_trials['outcome'].astype(int))
+        """ set choice to -1 if outcome was > 1 """
+        bad_outcome_mask = df_trials['outcome']>1
+        df_trials.loc[bad_outcome_mask,'choice'] = -1
+        """ Map choice to string values: L,R and nil """
+        df_trials['choice'] = df_trials['choice'].apply(
+            lambda x: 'L' if x==0 else ('R' if x==1 else 'nil'))
+
+        """ Make an answered correct column from outcome column """
+        df_trials['answered_correct'] = (df_trials['outcome'] == 1).astype('int')
+       
+        """ Turn side column into string type """
+        df_trials['side'] = df_trials['side'].apply(lambda x: 'L' if x==0 else ('R' if x==1 else 'nil'))
+
         """ Make a new dataframe for unique sessions, i.e. where subj and session are unique
         in trials """ 
         df_sessions = df_trials.groupby(['subj','session']).max().reset_index().sort_values(
@@ -251,8 +269,10 @@ for h5_file in h5_files:
         df_sessions['session_number'] = session_numbers
 
         """ Figure out fraction correct for each session """
-        fraction_trials_correct_df = df_trials.groupby(['session','subj']).agg({'answered_correct': 'sum','side':'count'})
-        fraction_trials_correct_df['fraction_correct'] = fraction_trials_correct_df['answered_correct']/fraction_trials_correct_df['side']
+        fraction_trials_correct_df = df_trials.groupby(
+            ['session','subj']).agg({'answered_correct': 'sum','side':'count'})
+        fraction_trials_correct_df['fraction_correct'] = \
+            fraction_trials_correct_df['answered_correct']/fraction_trials_correct_df['side']
         fraction_trials_correct_df = fraction_trials_correct_df.sort_values(['subj','session']).reset_index()
         df_sessions['fraction_correct'] = fraction_trials_correct_df['fraction_correct']
         fractions_correct = df_sessions['fraction_correct']
@@ -265,16 +285,16 @@ for h5_file in h5_files:
         """ Loop over sessions and assemble the inserts """
         n_sessions = len(df_sessions)
         for ii in range(len(df_sessions)):
-            print(f"session {ii}/{len(df_sessions)}")
             subj = str(int(subjs.iloc[ii]))
             subject_fullname = '_'.join([username,project_name,subj])
             last_level = last_levels.iloc[ii]
             date = session_dates.iloc[ii]
+            print(f"session {ii+1}/{len(df_sessions)}: {subject_fullname}, {date}")
             session_datetime = sessions.iloc[ii]
             session_end_rel = session_ends_rel[ii]
             session_end_datetime = session_datetime + timedelta(seconds=session_end_rel)
             session_number = session_numbers.iloc[ii]
-            fraction_correct = fractions_correct.iloc[ii]
+            percentage_correct = fractions_correct.iloc[ii]*100
             rig = rigs.iloc[ii]
             
             if rig == 0:
@@ -340,7 +360,7 @@ for h5_file in h5_files:
                 'set_id':1,
                 'stimulus_bank':"",
                 'stimulus_commit':"",
-                'session_performance':fraction_correct,
+                'session_performance':percentage_correct,
                 'session_narrative': '',
 
             }
@@ -360,8 +380,11 @@ for h5_file in h5_files:
             }
             # Trial() table
             df_trials_this_session = df_trials[df_trials['session'] == session_datetime][[
-                'idx','level','side','draw_p','start','end','dur','nL_intended',
+                'idx','level','side','choice','answered_correct',
+                'draw_p','start','end','dur','nL_intended',
                 'nL','nR_intended','nR','reward','reward_scale','rule']]
+            num_trials_this_session = len(df_trials_this_session)
+            session_insert_dict['num_trials'] = num_trials_this_session
             df_trials_this_session['subject_fullname'] = subject_fullname
             df_trials_this_session['session_date'] = date
             df_trials_this_session['session_number'] = session_number
@@ -370,7 +393,6 @@ for h5_file in h5_files:
             df_trials_this_session['trial_duration'] = df_trials_this_session['end'] - df_trials_this_session['start']
             df_trials_this_session.rename(columns={
                 'idx': 'trial_idx',
-                'side': 'choice',
                 'draw_p': 'trial_prior_p_left',
                 'start':'trial_rel_start',
                 'end':'trial_rel_finish',
@@ -379,13 +401,14 @@ for h5_file in h5_files:
                 'nL_intended':'num_puffs_intended_l',
                 'nR':'num_puffs_received_r',
                 'nR_intended':'num_puffs_intended_r',
+                'side':'trial_type',
                 'reward':'reward_rel_start'
             },inplace=True)
-            df_trials_this_session['choice'] = df_trials_this_session['choice'].apply(lambda x: 'L' if x==0 else 'R')
+            
             trials_insert_list = df_trials_this_session.to_dict('records')
             
             # Puff() table
-            df_puffs_this_session = df_puffs[df_puffs['session'] == session_datetime]
+            df_puffs_this_session = df_puffs[df_puffs['session'] == session_datetime].copy()
             df_puffs_this_session['subject_fullname'] = subject_fullname
             df_puffs_this_session['session_date'] = date
             df_puffs_this_session['session_number'] = session_number
@@ -408,7 +431,7 @@ for h5_file in h5_files:
             puffs_insert_list = df_puffs_this_session.to_dict('records')
             
             # TrialPhase() table
-            df_phases_this_session = df_phases[df_phases['session'] == session_datetime]
+            df_phases_this_session = df_phases[df_phases['session'] == session_datetime].copy()
             df_phases_this_session['subject_fullname'] = subject_fullname
             df_phases_this_session['session_date'] = date
             df_phases_this_session['session_number'] = session_number
@@ -439,8 +462,8 @@ for h5_file in h5_files:
                 u19_acq.Session().insert1(session_insert_dict,skip_duplicates=True)
                 u19_puffs.PuffsSession().insert1(puffs_session_insert_dict,skip_duplicates=True)
                 u19_puffs.PuffsSession.Trial().insert(trials_insert_list,skip_duplicates=True)
-                u19_puffs.PuffsSession.Puff().insert(puffs_insert_list,skip_duplicates=True)
-                u19_puffs.PuffsSession.TrialPhase().insert(phases_insert_list,skip_duplicates=True)
+                # u19_puffs.PuffsSession.Puff().insert(puffs_insert_list,skip_duplicates=True)
+                # u19_puffs.PuffsSession.TrialPhase().insert(phases_insert_list,skip_duplicates=True)
     """ If the inserts for all sessions in this hdf5 file were successful,
     then we need to mark this hdf5 file as processed by inserting it 
     into the PuffsFileAcquisition() table in u19_puffs_acquisition table """
