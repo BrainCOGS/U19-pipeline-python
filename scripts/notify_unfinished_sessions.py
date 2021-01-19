@@ -60,12 +60,12 @@ def send_email_users(server, missing_sessions_df, vrrig_mail):
     :param vrrig_mail: vrrig "official" email 
     """
 
-    to_mail = 'alvalunasan@gmail.com'
+    to_mail = 'alvaros@princeton.edu'
 
-    html_body_skel = """<p style="color:black;">{0}<br><br>
-                        The following sessions were not finished properly:
+    html_body_skel = """<html><p style="color:black;">{0}:<br><br>
+                        The following sessions were not finished properly
                         <br><br> </p>"""
-    html_df_skel = """<html><head></head><body>{0}</body></html>"""
+    html_df_skel = """<head></head><body>{0}</body></html>"""
 
     mail_users = set(missing_sessions_df['email'].to_list())
 
@@ -88,14 +88,12 @@ def send_email_users(server, missing_sessions_df, vrrig_mail):
         msg['To'] = to_mail
 
         body = html_body_skel.format(user_name)
-        body = MIMEText(body, 'html')  # convert the body to a MIME compatible string
-        msg.attach(body)  # attach it to your main message
 
         # Format dataframe as html
         styled_df = html_style_basic(user_sessions, index=False)
-        html = html_df_skel.format(styled_df)
-        part1 = MIMEText(html, 'html')
-        msg.attach(part1)
+        df_html = html_df_skel.format(styled_df)
+        body = MIMEText(body+df_html, 'html', 'utf-8')
+        msg.attach(body)
 
         try:
             server.sendmail(msg['From'], msg['To'], msg.as_string())
