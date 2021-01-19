@@ -7,6 +7,5 @@ import os
 if __name__ == '__main__':
 
     dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-    dj.config['database.user'] = 'alvaros'
-    conn = dj.conn(host=dj.config['database.host'], user=dj.config['database.user'])
+    conn = dj.conn(host=dj.config['database.host'])
     send_unfinished_sessions()
