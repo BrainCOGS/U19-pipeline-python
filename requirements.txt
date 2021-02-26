@@ -1,0 +1,1 @@
+elements-imaging @ git+https://github.com/datajoint/elements-imaging.git
