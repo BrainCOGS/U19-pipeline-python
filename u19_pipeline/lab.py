@@ -260,3 +260,11 @@ class Path(dj.Lookup):
             path = path.replace('\\', '/')
 
         return path
+
+
+@schema
+class EndpointNotification(dj.Lookup):
+    definition = """
+    email                 : varchar(64)                  # email address
+    ---
+    """
