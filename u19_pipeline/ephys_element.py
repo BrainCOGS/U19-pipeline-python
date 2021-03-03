@@ -1,7 +1,7 @@
 import datajoint as dj
 import pathlib
 
-from u19_pipeline import acquisition, imaging
+from u19_pipeline import ephys
 
 from elements_ephys import probe as probe_element
 from elements_ephys import ephys as ephys_element
@@ -36,7 +36,7 @@ probe_schema_name = dj.config['database.prefix'] + 'probe_element'
 ephys_schema_name = dj.config['database.prefix'] + 'ephys_element'
 
 # 2. Upstream tables
-from u19_pipeline.acquisition import Session
+from u19_pipeline.ephys import EphysSession as Session
 
 schema = dj.schema(dj.config['database.prefix'] + 'reference')
 
@@ -57,11 +57,15 @@ def get_ephys_root_data_dir():
 
 
 def get_session_directory(session_key):
-    data_dir = get_ephys_root_data_dir()
-    sess_dir = data_dir / (acquisition.DataDirectory & session_key).fetch1('data_dir')
-
+    sess_dir = pathlib.Path((ephys.EphysSession & session_key).fetch1('ephys_directory'))
     return sess_dir.as_posix()
 
 
 # ------------- Activate "ephys" schema -------------
 ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__name__)
+
+
+# ------------- Create Neuropixels probe entries -------------
+for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
+                   'neuropixels 2.0 - SS', 'neuropixels 2.0 - MS'):
+    probe_element.ProbeType.create_neuropixels_probe(probe_type)
