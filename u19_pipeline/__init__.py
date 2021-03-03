@@ -11,6 +11,9 @@ dj.config['database.host'] = os.getenv('DJ_HOST')
 dj.config['database.user'] = os.getenv('DJ_USER')
 dj.config['database.password'] = os.getenv('DJ_PASS')
 
+dj.config['custom'] = dict(
+    imaging_root_data_dir='/mnt/bucket/PNI-centers/Bezos/RigData/scope/bay3/testuser/imaging/')
+
 dj.config['stores'] = {
     'meso':
     {

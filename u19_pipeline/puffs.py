@@ -11,7 +11,11 @@ class Rig(dj.Lookup):
     definition = """
     rig                  : tinyint
     ---
+<<<<<<< HEAD
     -> lab.location
+=======
+    -> lab.Location 
+>>>>>>> 8ffb90d44b73a69382fcd6a80890150ea90719e1
     """
     #  "wang-behavior"
     contents = [

@@ -6,7 +6,6 @@ from . import lab
 
 schema = dj.schema(dj.config['database.prefix'] + 'subject')
 
-
 @schema
 class Species(dj.Lookup):
     definition = """
