@@ -59,12 +59,7 @@ def get_imaging_root_data_dir():
 
 
 def get_scan_image_files(scan_key):
-    # Folder structure: root / subject / session / .tif (raw)
-    # data_dir = get_imaging_root_data_dir()
-
     sess_key = (acquisition.Session & scan_key).fetch1('KEY')
-    # scan_dir = data_dir / (imaging.Scan & sess_key).fetch1('scan_directory')
-
     scan_dir = pathlib.Path((imaging.FieldOfView & sess_key &
                              {'fov': scan_key['scan_id']}).fetch1('fov_directory'))
 
@@ -79,8 +74,6 @@ def get_scan_image_files(scan_key):
 
 
 def get_suite2p_dir(processing_task_key):
-    # Folder structure: root / subject / session / suite2p / plane / suite2p_ops.npy
-
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
     scan_dir = pathlib.Path((imaging.FieldOfView & sess_key
                             & {'fov': processing_task_key['scan_id']}).fetch1(
