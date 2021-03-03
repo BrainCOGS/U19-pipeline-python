@@ -1,6 +1,6 @@
 import re
 
-from u19_pipeline import acquisition
+from u19_pipeline import ephys
 from u19_pipeline.ephys_element import (probe_element, ephys_element,
                                         get_ephys_root_data_dir, get_session_directory)
 from elements_ephys.readers import spikeglx
@@ -52,9 +52,9 @@ def process_session(sess_key):
         probe_insertion_list.append({**sess_key, 'probe': spikeglx_meta.probe_SN, 'insertion_number': int(probe_number)})
 
     probe_element.Probe.insert(probe_list)
-    probe_element.ProbeInsertion.insert(probe_insertion_list)
+    ephys_element.ProbeInsertion.insert(probe_insertion_list)
 
 
 if __name__ == '__main__':
-    for sess_key in acquisition.Session.fetch('KEY'):
+    for sess_key in ephys.EphysSession.fetch('KEY'):
         process_session(sess_key)
