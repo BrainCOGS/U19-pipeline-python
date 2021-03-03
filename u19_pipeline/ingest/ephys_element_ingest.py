@@ -1,4 +1,5 @@
 import re
+import pathlib
 
 from u19_pipeline import ephys
 from u19_pipeline.ephys_element import (probe_element, ephys_element,
@@ -9,10 +10,10 @@ from elements_ephys.readers import spikeglx
 The ingestion routine for imaging element includes:
 
 Manual insertion:
-1. ephys_element.ProbeInsertion 
+1. ephys_element.ProbeInsertion
     + this can stem from Session, check ephys data and create probe insertion(s) accordingly
 
-2. ephys_element.ClusteringTask 
+2. ephys_element.ClusteringTask
     + this requires users to add new ClusteringParamSet (use ClusteringParamSet.insert_new_params method)
     (for an example, see: https://github.com/ttngu207/workflow-ephys/blob/main/notebooks/run_workflow.ipynb)
     + manually insert new ClusteringTask for each ProbeInsertion
@@ -30,7 +31,7 @@ def process_session(sess_key):
 
     :param scan_key: a `KEY` of `acquisition.Session`
     """
-    sess_dir = get_session_directory(sess_key)
+    sess_dir = pathlib.Path(get_session_directory(sess_key))
     ephys_meta_filepaths = [fp for fp in sess_dir.rglob('*.ap.meta')]
 
     if not len(ephys_meta_filepaths):
