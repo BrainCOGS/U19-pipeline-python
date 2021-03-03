@@ -63,13 +63,9 @@ This will provide you a mini environment to work with python.
 
 3. To use a conda environment setup, we could
 
-> * install `virtualenv` by `pip3 install virtualenv`
+> * Create a conda environment by `conda create -n u19_datajoint python==3.7`
 
-> * Create a virtual environment by 'virtualenv princeton_env'
-
-> * Activate the virtual environment by `source princeton_env/bin/activate`
-
-> * With the virtual environment, we could install the package that allows edits: `pip3 install .`
+> * With the virtual environment, we could install the package that allows edits: `pip install -e .`
 
 
 ## Undocumented datajoint features
