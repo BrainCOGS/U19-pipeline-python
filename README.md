@@ -44,9 +44,11 @@ Currently, the main schemas in the data pipeline are as follows:
 
 To use and contribute to the developement of the package, we recommend either using a Docker setup or creating a virtual environment, as follows:
 
-1. In either way, we first clone the directory `git clone https://github.com/BrainCOGS/U19-pipeline_python`
+1. In either way, we first fork from this current repo
 
-2. To use a docker setup, after installing docker, inside this directory, we
+2. Clone the repository on your fork `git clone https://github.com/BrainCOGS/U19-pipeline_python`
+
+3. To use a docker setup, after installing docker, inside this directory, we
 
 > *  set up the `.env` file, as follows:
 ```
@@ -59,7 +61,7 @@ DJ_PASSWORD = {your_password}
 > * Then, we could run `docker exec -it u19_pipeline_python_datajoint_1 /bin/bash`
 This will provide you a mini environment to work with python.
 
-3. To use a virtual environment setup, we could
+3. To use a conda environment setup, we could
 
 > * install `virtualenv` by `pip3 install virtualenv`
 

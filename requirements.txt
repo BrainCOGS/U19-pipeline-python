@@ -1,2 +1,3 @@
+scipy
+python-dotenv
 elements-imaging @ git+https://github.com/datajoint/elements-imaging.git
-elements-ephys @ git+https://github.com/datajoint/elements-ephys.git

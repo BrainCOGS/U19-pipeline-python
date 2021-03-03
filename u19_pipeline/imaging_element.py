@@ -16,7 +16,7 @@ To activate the imaging elements, we need to provide:
     + schema name for the imaging module
 
 2. Upstream tables
-    + Session table 
+    + Session table
     + Location table (location of the scan - e.g. brain region)
     + Equipment table (scanner information)
 
@@ -26,7 +26,7 @@ To activate the imaging elements, we need to provide:
     + get_suite2p_dir()
 
 For more detail, check the docstring of the imaging element:
-    
+
     help(scan_element.activate)
     help(imaging_element.activate)
 
@@ -47,7 +47,7 @@ schema = dj.schema(dj.config['database.prefix'] + 'lab')
 @schema
 class Equipment(dj.Manual):
     definition = """
-    scanner: varchar(32) 
+    scanner: varchar(32)
     """
 
 
@@ -60,10 +60,13 @@ def get_imaging_root_data_dir():
 
 def get_scan_image_files(scan_key):
     # Folder structure: root / subject / session / .tif (raw)
-    data_dir = get_imaging_root_data_dir()
+    # data_dir = get_imaging_root_data_dir()
 
     sess_key = (acquisition.Session & scan_key).fetch1('KEY')
-    scan_dir = data_dir / (imaging.Scan & sess_key).fetch1('scan_directory')
+    # scan_dir = data_dir / (imaging.Scan & sess_key).fetch1('scan_directory')
+
+    scan_dir = pathlib.Path((imaging.FieldOfView & sess_key &
+                             {'fov': scan_key['scan_id']}).fetch1('fov_directory'))
 
     if not scan_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({scan_dir})')
@@ -77,10 +80,11 @@ def get_scan_image_files(scan_key):
 
 def get_suite2p_dir(processing_task_key):
     # Folder structure: root / subject / session / suite2p / plane / suite2p_ops.npy
-    data_dir = get_imaging_root_data_dir()
 
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
-    scan_dir = data_dir / (imaging.Scan & sess_key).fetch1('scan_directory')
+    scan_dir = pathlib.Path((imaging.FieldOfView & sess_key
+                            & {'fov': processing_task_key['scan_id']}).fetch1(
+                                'fov_directory'))
 
     if not scan_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({scan_dir})')
