@@ -14,6 +14,9 @@ def populate(display_progress=True):
     print('\n---- Populate ephys.Clustering ----')
     ephys_element.Clustering.populate(**populate_settings)
 
+    print('\n---- Populate ephys.CuratedClustering ----')
+    ephys_element.CuratedClustering.populate(**populate_settings)
+
     print('\n---- Populate ephys.Waveform ----')
     ephys_element.Waveform.populate(**populate_settings)
 

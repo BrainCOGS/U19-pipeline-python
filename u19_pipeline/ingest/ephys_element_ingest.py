@@ -52,8 +52,8 @@ def process_session(sess_key):
 
         probe_insertion_list.append({**sess_key, 'probe': spikeglx_meta.probe_SN, 'insertion_number': int(probe_number)})
 
-    probe_element.Probe.insert(probe_list)
-    ephys_element.ProbeInsertion.insert(probe_insertion_list)
+    probe_element.Probe.insert(probe_list, skip_duplicates=True)
+    ephys_element.ProbeInsertion.insert(probe_insertion_list, skip_duplicates=True)
 
 
 if __name__ == '__main__':
