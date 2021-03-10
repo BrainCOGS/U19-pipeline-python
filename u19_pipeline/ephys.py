@@ -24,10 +24,3 @@ class EphysSync(dj.Imported):
     iteration_numbers   : longblob
     ephys_timestamps    : longblob   # time stamps on the ephys clock corresponding to each iteration number on the behavior rig.
     """
-
-
-# @schema
-# class EphysBehaviorSync(dj.Imported):
-#     definition = """
-#     -> EphysSync
-#     """
