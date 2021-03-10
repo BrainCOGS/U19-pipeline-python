@@ -8,27 +8,20 @@ from elements_ephys import ephys as ephys_element
 
 """
 ------ Gathering requirements to activate the ephys elements ------
-
 To activate the ephys elements, we need to provide:
-
 1. Schema names
     + schema name for the probe module
     + schema name for the ephys module
-
 2. Upstream tables
-    + Session table 
+    + Session table
     + SkullReference table - Reference table for InsertionLocation, specifying the skull reference
                  used for probe insertion location (e.g. Bregma, Lambda)
-
 3. Utility functions
     + get_ephys_root_data_dir()
     + get_session_directory()
-
 For more detail, check the docstring of the imaging element:
-
     help(probe_element.activate)
     help(ephys_element.activate)
-
 """
 
 # 1. Schema names
