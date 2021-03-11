@@ -14,7 +14,9 @@ dj.config['database.password'] = os.getenv('DJ_PASS')
 dj.config['enable_python_native_blobs'] = True
 
 dj.config['custom'] = dict(
-    ephys_root_data_dir='/mnt/bucket/labs/tank/schottdorf/NPX/')
+    ephys_root_data_dir='/mnt/bucket/labs/tank/schottdorf/NPX/',
+    imaging_root_data_dir='/mnt/bucket/PNI-centers/Bezos/RigData/scope/bay3/testuser/imaging/
+)
 
 dj.config['stores'] = {
     'meso':
