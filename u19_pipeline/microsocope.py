@@ -1,19 +1,29 @@
 import datajoint as dj
 
-schema = dj.schema('U19_microscope')
+schema = dj.schema(dj.config['database.prefix'] + 'microscope')
 
+@schema
+class Center(dj.Lookup):
+    definition = """
+    center                      :   varchar(100)
+    ---
+    description = ""                  :   varchar(500)
+    """
+    contents = [
+        ["Bezos Center",""],["McDonnell Center",""]
+        ]
 
 @schema
 class Microscope(dj.Lookup):
     definition = """
     microscope_name             :   varchar(32)
     ---
+    -> Center
     room_number                 :   varchar(16)
     optical_bay                 :   varchar(8)
     loc_on_table                :   varchar(16)
     microscope_description=''   :   varchar(2047)
     """
-
 
 @schema
 class Laser(dj.Manual):
