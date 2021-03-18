@@ -39,12 +39,13 @@ def process_scan(scan_key):
         scan_key = {**scan_key, 'scan_id': fov_key['fov']}
         if scan_key not in scan_element.Scan():
             Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
-            scan_element.Scan.insert1({**scan_key, 'scanner': scanner, 'acq_software': acq_software})
+            scan_element.Scan.insert1(
+                {**scan_key, 'scanner': scanner, 'acq_software': acq_software})
 
 
 if __name__ == '__main__':
 
-    key = dict(session_date='2021-03-01',
+    key = dict(session_date='2021-03-02',
                subject_fullname='testuser_imaging_pipe1')
     for scan_key in (imaging.Scan & key).fetch('KEY'):
         process_scan(scan_key)
