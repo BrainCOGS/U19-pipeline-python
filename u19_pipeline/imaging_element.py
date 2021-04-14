@@ -5,6 +5,7 @@ from u19_pipeline import acquisition, imaging
 
 from elements_imaging import scan as scan_element
 from elements_imaging import imaging as imaging_element
+from u19_pipeline.lab import Path
 
 """
 ------ Gathering requirements to activate the imaging elements ------
@@ -60,8 +61,11 @@ def get_imaging_root_data_dir():
 
 def get_scan_image_files(scan_key):
     sess_key = (acquisition.Session & scan_key).fetch1('KEY')
-    scan_dir = pathlib.Path((imaging.FieldOfView & sess_key &
-                             {'fov': scan_key['scan_id']}).fetch1('fov_directory'))
+    bucket_scan_dir = (imaging.FieldOfView & sess_key &
+                             {'fov': scan_key['scan_id']}).fetch1('fov_directory')
+
+    scan_dir = Path().get_local_path2(bucket_scan_dir)
+    print(scan_dir)
 
     if not scan_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({scan_dir})')
@@ -75,9 +79,11 @@ def get_scan_image_files(scan_key):
 
 def get_suite2p_dir(processing_task_key):
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
-    scan_dir = pathlib.Path((imaging.FieldOfView & sess_key
+    bucket_scan_dir = (imaging.FieldOfView & sess_key
                             & {'fov': processing_task_key['scan_id']}).fetch1(
-                                'fov_directory'))
+                                'fov_directory')
+
+    scan_dir = Path().get_local_path2(bucket_scan_dir)
 
     if not scan_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({scan_dir})')

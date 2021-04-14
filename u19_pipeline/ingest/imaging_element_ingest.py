@@ -1,4 +1,4 @@
-from u19_pipeline import acquisition, imaging
+from u19_pipeline import acquisition, imaging, lab
 from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
                                           get_imaging_root_data_dir, get_scan_image_files)
 
@@ -27,8 +27,11 @@ def process_scan(scan_key):
     :param scan_key: a `KEY` of `imaging.Scan`
     """
     for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
-        scan_filepaths = list((imaging.FieldOfView.File * imaging.FieldOfView & scan_key).proj(
+        scan_filepaths_ori = list((imaging.FieldOfView.File * imaging.FieldOfView & scan_key).proj(
             full_path='concat(fov_directory, "/", fov_filename)').fetch('full_path'))
+
+        scan_filepaths = [str(lab.Path().get_local_path2(x)) for x in scan_filepaths_ori]
+
         try:  # attempt to read .tif as a scanimage file
             loaded_scan = scanreader.read_scan(scan_filepaths)
             header = parse_scanimage_header(loaded_scan)

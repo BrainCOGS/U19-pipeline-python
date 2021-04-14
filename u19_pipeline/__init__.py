@@ -15,7 +15,7 @@ dj.config['enable_python_native_blobs'] = True
 
 dj.config['custom'] = dict(
     ephys_root_data_dir='/mnt/bucket/labs/tank/schottdorf/NPX/',
-    imaging_root_data_dir='/mnt/bucket/braininit/RigData/mesoscope/imaging/imaging_pipe1/'
+    imaging_root_data_dir='/mnt/bucket/braininit/RigData/mesoscope/imaging/'
 )
 
 dj.config['stores'] = {
