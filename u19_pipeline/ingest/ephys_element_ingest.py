@@ -4,7 +4,7 @@ import pathlib
 from u19_pipeline import ephys
 from u19_pipeline.ephys_element import (probe_element, ephys_element,
                                         get_ephys_root_data_dir, get_session_directory)
-from elements_ephys.readers import spikeglx
+from element_array_ephys.readers import spikeglx
 
 """
 The ingestion routine for imaging element includes:

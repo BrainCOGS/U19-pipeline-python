@@ -3,8 +3,8 @@ import pathlib
 
 from u19_pipeline import ephys
 
-from elements_ephys import probe as probe_element
-from elements_ephys import ephys as ephys_element
+from element_array_ephys import probe as probe_element
+from element_array_ephys import ephys as ephys_element
 
 """
 ------ Gathering requirements to activate the ephys elements ------
