@@ -2,12 +2,10 @@
 
 
 import datajoint as dj
-import sys
-import os
 import numpy as np
 import pandas as pd
 import pathlib
-from utils.is_this_spock import *
+from u19_pipeline.utility import is_this_spock
 
 schema = dj.schema(dj.config['database.prefix'] + 'lab')
 
