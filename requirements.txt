@@ -3,4 +3,5 @@ python-dotenv
 pandas
 numpy
 astropy
+jupyterlab
 element-calcium-imaging
