@@ -6,6 +6,33 @@ The data pipeline is mainly ingested and maintained with the matlab repository: 
 
 This repository is the mirrored table definitions for the tables.
 
+## Installation of package for usage and development.
+
+To use and contribute to the developement of the package, we recommend either using a Docker setup or creating a virtual environment, as follows:
+
+1. In either way, we first fork from this current repo
+
+2. Clone the repository on your fork `git clone https://github.com/BrainCOGS/U19-pipeline_python`
+
+3a. To use a conda environment setup (recommended), we could
+
+> * Create a conda environment by `conda create -n u19_datajoint python==3.7`
+
+> * With the virtual environment, we could install the package that allows edits: `pip install -e .`
+
+3b. To use a docker setup, after installing docker, inside this directory, we
+
+> *  set up the `.env` file, as follows:
+```
+DJ_HOST = 'datajoint00.pni.princeton.edu'
+DJ_USER = {your_user_name}
+DJ_PASSWORD = {your_password}
+```
+> *  run `docker-compose up -d`
+
+> * Then, we could run `docker exec -it u19_pipeline_python_datajoint_1 /bin/bash`
+This will provide you a mini environment to work with python.
+
 ## Major schemas
 
 Currently, the main schemas in the data pipeline are as follows:
@@ -37,35 +64,6 @@ Currently, the main schemas in the data pipeline are as follows:
 - behavior
 
 ![Behavior Diagram](images/behavior_erd.png)
-
-
-
-## Installation of package for usage and development.
-
-To use and contribute to the developement of the package, we recommend either using a Docker setup or creating a virtual environment, as follows:
-
-1. In either way, we first fork from this current repo
-
-2. Clone the repository on your fork `git clone https://github.com/BrainCOGS/U19-pipeline_python`
-
-3. To use a docker setup, after installing docker, inside this directory, we
-
-> *  set up the `.env` file, as follows:
-```
-DJ_HOST = 'datajoint00.pni.princeton.edu'
-DJ_USER = {your_user_name}
-DJ_PASSWORD = {your_password}
-```
-> *  run `docker-compose up -d`
-
-> * Then, we could run `docker exec -it u19_pipeline_python_datajoint_1 /bin/bash`
-This will provide you a mini environment to work with python.
-
-3. To use a conda environment setup, we could
-
-> * Create a conda environment by `conda create -n u19_datajoint python==3.7`
-
-> * With the virtual environment, we could install the package that allows edits: `pip install -e .`
 
 
 ## Undocumented datajoint features
