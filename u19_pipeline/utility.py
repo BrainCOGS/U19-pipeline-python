@@ -2,7 +2,7 @@
 
 import sys
 import os
-import math
+import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
 from astropy.stats import binom_conf_interval
@@ -28,6 +28,10 @@ def is_this_spock():
 
 
 def basic_dj_configuration(dj):
+    """
+    Configure host and external storage locations for datajoint
+    """
+
     dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
     dj.config['enable_python_native_blobs'] = True
 
@@ -49,11 +53,53 @@ def basic_dj_configuration(dj):
     }
 
 
+def smart_dj_join(t1, t2):
+    """
+    Join two datajoint tables even if they have matching secondary field names
+    Matching secondary fields from t2 will be rewritten as 'field -> t2.table_name+"_"+field'
+    """
+
+    # Get all fields from tables
+    fields_t1 = pd.DataFrame.from_dict(t1.heading.attributes, orient='index')
+    fields_t2 = pd.DataFrame.from_dict(t2.heading.attributes, orient='index')
+
+    # Get only secondary fields and check matches
+    fields_t1_list = set(fields_t1.loc[fields_t1['in_key'] == False].index.to_list())
+    fields_t2_list = set(fields_t2.loc[fields_t2['in_key'] == False].index.to_list())
+    intersected_fields = fields_t2_list.intersection(fields_t1_list)
+
+    # If there are:
+    if len(intersected_fields) > 0:
+        # Create a dictionary to rename matching ones
+        suffix = t2.table_name
+        new_name_attr_dict = dict()
+        for i in intersected_fields:
+            new_name_attr_dict[suffix + '_' + i] = i
+
+        # List non matching ones
+        non_intersected_fields = list(fields_t2_list - intersected_fields)
+
+        # Finally merge
+        t = t1 * t2.proj(*non_intersected_fields, **new_name_attr_dict)
+    # If there are not, normal merge
+    else:
+        t = t1 * t2
+
+    return t
+
+
 def psychometrics_function(x, O, A, lambd, x0):
+    """
+    Standard sigmoid function
+    """
     return O + A/(1+np.exp(-(x-x0)/lambd))
 
 
 def psychFit(deltaBins, numR, numL, choices):
+    """
+    Get psychometric curve fit from # of cues to Right & Left side and choice made by subject
+    (Evidence vs % Choice Left)
+    """
     numRight = np.zeros(len(deltaBins))
     numTrials = np.zeros(len(deltaBins))
     trialDelta = np.zeros(len(deltaBins))
@@ -170,18 +216,25 @@ def translate_choice_trials_cues(session_df):
 
 
 def get_cols_rows_plot(num_plots, fig_size):
+    """
+    Get the "best" # of rows and columns a figure should have given the number of plots to consider and the figure size
+    """
 
+    # Check width vs height relation
     fig_rel = fig_size[1] / fig_size[0]
-    num_rows = math.floor(math.sqrt(num_plots))
-    num_cols = num_rows
+
+    #Let's start with square root
+    num_rows = 1
+    num_cols = 1
     while 1:
 
+        # Add rows and columns to closely match desired width height relationship and surpass number of desired plots
         ac_rel = num_cols / num_rows
 
         if num_cols * num_rows >= num_plots:
             break
 
-        if ac_rel < fig_rel:
+        if ac_rel >= fig_rel:
             num_rows += 1
         else:
             num_cols += 1
