@@ -33,7 +33,7 @@ ephys_schema_name = dj.config['database.prefix'] + 'ephys_element'
 
 # 2. Upstream tables
 schema_reference = dj.schema(dj.config['database.prefix'] + 'reference')
-schema_ephys = dj.schema(dj.config['database.prefix'] + 'ephys')
+schema = dj.schema(dj.config['database.prefix'] + 'ephys')
 
 
 @schema_reference
@@ -44,7 +44,7 @@ class SkullReference(dj.Lookup):
     contents = zip(['Bregma', 'Lambda'])
 
 
-@schema_ephys
+@schema
 class EphysSession(dj.Manual):
     definition = """
     # General information of an ephys session
@@ -81,7 +81,7 @@ for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
 
 
 # downstream tables for ephys element
-@schema_ephys
+@schema
 class BehaviorSync(dj.Imported):
     definition = """
     -> ephys.EphysSession
@@ -137,7 +137,7 @@ class BehaviorSync(dj.Imported):
                      ephys_sampling_rate=imec_meta['imSampRate']))
 
 
-@schema_ephys
+@schema
 class CuratedClustersIteration(dj.Computed):
     definition = """
     -> ephys_element.CuratedClustering
