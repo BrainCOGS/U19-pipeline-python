@@ -3,8 +3,8 @@ import pathlib
 
 from u19_pipeline import acquisition, imaging
 
-from elements_imaging import scan as scan_element
-from elements_imaging import imaging as imaging_element
+from element_calcium_imaging import scan as scan_element
+from element_calcium_imaging import imaging as imaging_element
 from u19_pipeline.lab import Path
 
 """

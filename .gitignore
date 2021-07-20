@@ -3,12 +3,14 @@ princeton_env/*
 # Notebooks for the sake of development
 notebooks_dev/*
 
-.vscode*
+# vscode
+*.vscode*
+*.code-workspace*
 
 # local config file
 dj_local_conf.json
 
-.env*
+*.env*
 
 # IDEA configs
 .idea/
@@ -130,4 +132,3 @@ data/*
 
 # svg file
 *.svg
-
