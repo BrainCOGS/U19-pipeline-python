@@ -3,3 +3,7 @@ python-dotenv
 element-calcium-imaging
 element-array-ephys
 scanreader @ git+https://github.com/atlab/scanreader.git
+pandas
+numpy
+astropy
+jupyterlab
