@@ -2,6 +2,9 @@ from u19_pipeline import acquisition, imaging, lab
 from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
                                           get_imaging_root_data_dir, get_scan_image_files)
 
+import os
+import datajoint as dj
+import pathlib
 import scanreader
 from element_calcium_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
 
@@ -27,10 +30,8 @@ def process_scan(scan_key):
     :param scan_key: a `KEY` of `imaging.Scan`
     """
     for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
-        scan_filepaths_ori = list((imaging.FieldOfView.File * imaging.FieldOfView & scan_key).proj(
-            full_path='concat(fov_directory, "/", fov_filename)').fetch('full_path'))
 
-        scan_filepaths = [str(lab.Path().get_local_path2(x)) for x in scan_filepaths_ori]
+        scan_filepaths = get_scan_image_files(fov_key)
 
         try:  # attempt to read .tif as a scanimage file
             loaded_scan = scanreader.read_scan(scan_filepaths)
@@ -39,6 +40,7 @@ def process_scan(scan_key):
         except Exception as e:
             print(f'ScanImage loading error: {scan_filepaths}\n{str(e)}')
             return
+
         scan_key = {**scan_key, 'scan_id': fov_key['fov']}
         if scan_key not in scan_element.Scan():
             Equipment.insert1({'scanner': scanner}, skip_duplicates=True)

@@ -1,5 +1,6 @@
 import datajoint as dj
 import pathlib
+import os
 
 from u19_pipeline import acquisition, imaging
 
@@ -56,39 +57,39 @@ class Equipment(dj.Manual):
 
 def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
+    
     return pathlib.Path(data_dir) if data_dir else None
+    
 
 
 def get_scan_image_files(scan_key):
-    sess_key = (acquisition.Session & scan_key).fetch1('KEY')
-    bucket_scan_dir = (imaging.FieldOfView & sess_key &
-                             {'fov': scan_key['scan_id']}).fetch1('fov_directory')
-
-    scan_dir = Path().get_local_path2(bucket_scan_dir)
-    print(scan_dir)
-
-    if not scan_dir.exists():
-        raise FileNotFoundError(f'Session directory not found ({scan_dir})')
-
-    tiff_filepaths = [fp.as_posix() for fp in scan_dir.glob('*.tif')]
+    fov_key = scan_key.copy()
+    #Replace scan_id with fov, we are going to search files by fov
+    if 'scan_id' in fov_key:
+        fov_key['fov'] = fov_key.pop('scan_id')
+    scan_filepaths_ori = list((imaging.FieldOfView.File * imaging.FieldOfView & fov_key).proj(
+    full_path='concat(relative_fov_directory, fov_filename)').fetch('full_path'))
+    
+    data_dir = get_imaging_root_data_dir()
+    tiff_filepaths = [str(data_dir) + x for x in scan_filepaths_ori]
     if tiff_filepaths:
         return tiff_filepaths
     else:
-        raise FileNotFoundError(f'No tiff file found in {scan_dir}')
+        raise FileNotFoundError(f'No tiff file found in {data_dir}')
 
 
 def get_suite2p_dir(processing_task_key):
-    sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
-    bucket_scan_dir = (imaging.FieldOfView & sess_key
-                            & {'fov': processing_task_key['scan_id']}).fetch1(
-                                'fov_directory')
+    sess_key = (acquisition.Session & scan_key).fetch1('KEY')
+    bucket_scan_dir = (imaging.FieldOfView & sess_key &
+                             {'fov': scan_key['scan_id']}).fetch1('relative_fov_directory')
 
-    scan_dir = Path().get_local_path2(bucket_scan_dir)
+    data_dir = get_imaging_root_data_dir()
+    sess_dir = data_dir + bucket_scan_dir
 
-    if not scan_dir.exists():
+    if not sess_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({scan_dir})')
 
-    suite2p_dirs = set([fp.parent.parent for fp in scan_dir.rglob('*ops.npy')])
+    suite2p_dirs = set([fp.parent.parent for fp in sess_dir.rglob('*ops.npy')])
     if len(suite2p_dirs) != 1:
         raise FileNotFoundError(f'Error searching for Suite2p output directory in {scan_dir} - Found {suite2p_dirs}')
 
