@@ -207,16 +207,7 @@ class BehaviorSync(dj.Imported):
             dict(key, nidq_sampling_rate = nidq_sampling_rate,
                  iteration_index_nidq = framenumber_in_trial,
                  trial_index_nidq = trialnumber))
-
-        # get the imec sampling rate for a particular probe
-        for probe_insertion in (ephys_element.ProbeInsertion & key).fetch('KEY'):
-            imec_bin_filepath = list(
-                session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion["insertion_number"])))[0]
-            imec_meta = readMeta(imec_bin_filepath)
-            self.ImecSamplingRate.insert1(
-                dict(probe_insertion,
-                     ephys_sampling_rate=imec_meta['imSampRate']))
-
+        print('done')
 
 @schema
 class CuratedClustersIteration(dj.Computed):
