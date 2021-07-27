@@ -258,7 +258,10 @@ class CuratedClustersIteration(dj.Computed):
                 'nidq_sampling_rate', 'iteration_index_nidq')
 
         # iteration times on the same clock as ephys data
-        iteration_times = iteration_index_nidq/nidq_sampling_rate
+        ls = np.diff(iteration_index_nidq)
+        ls[ls<0] = 1
+        ls[np.isnan(ls)] = 0
+        iteration_times = np.where(ls)[0]/nidq_sampling_rate
 
         # get end of time from nidq metadata
         session_dir = pathlib.Path(get_session_directory(key))
