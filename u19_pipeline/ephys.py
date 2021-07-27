@@ -88,8 +88,8 @@ class BehaviorSync(dj.Imported):
     -> ephys.EphysSession
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
-    iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of iterations in the behavior recording
-    trial_index_nidq=null : longblob     # Trial index time series. length of this longblob should be the number of iterations in the behavior recording
+    iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
+    trial_index_nidq=null : longblob     # Trial index time series. length of this longblob should be the number of samples in the nidaq file.
     """
 
     class ImecSamplingRate(dj.Part):
@@ -101,18 +101,16 @@ class BehaviorSync(dj.Imported):
         """
 
     def make(self, key):
-        print(key)
+        # Pull the Nidaq file/record
         session_dir = pathlib.Path(get_session_directory(key))
         nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
-
-        # Second, get the datajoint record
+        # And get the datajoint record
         behavior = dj.create_virtual_module('behavior', 'u19_behavior')
         thissession = behavior.TowersBlock().Trial() & key
         time, iterstart = thissession.fetch('trial_time', 'vi_start')
         print("Step 0 done")
 
-        # 0: load meta data
-        print("Step 1...")
+        # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
         nidq_meta = readMeta(nidq_bin_full_path)
         t_start = 0
         t_end = np.float(nidq_meta['fileTimeSecs'])
@@ -125,9 +123,8 @@ class BehaviorSync(dj.Imported):
         digital_array = ExtractDigital(                               # extract interation index
             nidq_raw_data, first_sample_index, last_sample_index,
             dw, d_line_list, nidq_meta)
-        print("Step 1 done")
         
-        # First, transform digital lines into a number, save in an array of integers
+        # 2: transform the digital lines into a number, save in an array of integers
         #      ... and also get start and end time
         framenumber = np.zeros(digital_array.shape[1])
         for i in range(digital_array.shape[1]):
@@ -137,13 +134,17 @@ class BehaviorSync(dj.Imported):
         recording_start = np.min(np.where(iterations_raw>0)) #Get start of recording: first change of testlist
         dt = np.int(0.04*nidq_sampling_rate)
         recording_end = np.where(np.abs(np.diff(iterations_raw))>0)[0][-1] + dt  #Get end of recording
-        print("Step 2 done")
 
-        # Third, transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
+        # 3: transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
+        # iterations_raw is just a number between 0 and 128. Some math has to be done to obtain:
+        # framenumber_in_trial has the length of the number of samples of the NIDAQ card, and every entry is the currently presented iteration number of the VR in the respective trial.
+        # trialnumber has the length of the number of samples of the NIDAQ card, and every entry is the current trial.
+        #
+        # NOTE: some minor glitches have to be catched, if a NIDAQ sample happenes to be recorded while the VR System updates the iteration number. 
         framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
         trialnumber = np.zeros(len(iterations_raw))*np.NaN
         current_trial = 0
-        overflow = 0
+        overflow = 0 # This variable keep track whenever the reset from 127 to 0 happens.
         for idx, frame_number in enumerate(iterations_raw):
             if (idx>recording_start) & (idx<recording_end):
                 if (frame_number==0) & (iterations_raw[idx-1]==127): # At the reset, add 128
@@ -152,20 +153,18 @@ class BehaviorSync(dj.Imported):
                     overflow = overflow + 1
                     framenumber_in_trial[idx-1] = frame_number + overflow*128 - 1 # In case this happened, the previous sample has to be corrected
                 # Keep track of trial number
-                endflag = framenumber_in_trial[idx-1] == (len(time[current_trial])) #Trial end has been reached.
+                endflag = framenumber_in_trial[idx-1] == (len(time[current_trial])) # Trial end has been reached.
                 transitionflag = frame_number < 3 # Next trial should start at zero again
                 if endflag & transitionflag:      # Only at the transitions
                     current_trial = current_trial + 1  # Increases trial count
-                    overflow = 0                       # Reset the 7 bit counter
+                    overflow = 0                       # Reset the 7 bit counter for the next trial
                 framenumber_in_trial[idx] = frame_number + overflow*128 - 1
                 trialnumber[idx] = current_trial
         trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype = np.int)
-        print("Step 3 done")
 
-        # Fourth, find and remove the nidaq glitches 
-        # These are single samples where the iteration number is corrupted
-        # ... likely because sampling happeneded faster than output of the behvior PC.
-        # This is also where skipped frames are detected.
+        # 4: find and remove additional NIDAQ glitches of two types: 
+        # a) single samples where the iteration number is corrupted because sampling happened faster than output of the behevior PC.
+        # b) Skipped frames are detected and filled in.
         # Find the glitches
         din = np.diff(framenumber_in_trial)
         trial_transitions = np.where(np.diff(trialnumber))
@@ -183,7 +182,6 @@ class BehaviorSync(dj.Imported):
                     skipped_frames = skipped_frames + 1
                 else:                          # If random number, nidaq sample in the middle of update.
                     framenumber_in_trial[g+1] = framenumber_in_trial[g]
-        print("Step 4 done")
 
         # A set of final asserts, making sure that the code worked as intended  
         assert len(trial_list) == len(thissession)          # Make sure the trial number is correct.
@@ -257,9 +255,10 @@ class CuratedClustersIteration(dj.Computed):
             (BehaviorSync * BehaviorSync.ImecSamplingRate & key).fetch1(
                 'nidq_sampling_rate', 'iteration_index_nidq')
 
-        # iteration times on the same clock as ephys data
+        # Obtain the precise times when the frames transition.
+        # This is obtained from iteration_index_nidq
         ls = np.diff(iteration_index_nidq)
-        ls[ls<0] = 1
+        ls[ls<0] = 1 # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others. 
         ls[np.isnan(ls)] = 0
         iteration_times = np.where(ls)[0]/nidq_sampling_rate
 
@@ -289,6 +288,3 @@ class CuratedClustersIteration(dj.Computed):
                      firing_rate_after_last_iteration=firing_rate_after_last_iteration)
             )
         self.Unit.insert(unit_spike_counts)
-
-
-# Find particular position in the maze and look at the firing rates (find place fields)
