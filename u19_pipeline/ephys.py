@@ -108,7 +108,6 @@ class BehaviorSync(dj.Imported):
         behavior = dj.create_virtual_module('behavior', 'u19_behavior')
         thissession = behavior.TowersBlock().Trial() & key
         time, iterstart = thissession.fetch('trial_time', 'vi_start')
-        print("Step 0 done")
 
         # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
         nidq_meta = readMeta(nidq_bin_full_path)
@@ -203,27 +202,22 @@ class BehaviorSync(dj.Imported):
             dict(key, nidq_sampling_rate = nidq_sampling_rate,
                  iteration_index_nidq = framenumber_in_trial,
                  trial_index_nidq = trialnumber))
-        print('done')
 
         # get the imec sampling rate for a particular probe
         here = ephys_element.ProbeInsertion & key
-        print(here)
-        # for probe_insertion in here.fetch('insertion_number'):
         for probe_insertion in here.fetch('KEY'):
-            print(probe_insertion)
             imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
             
-            if len(imec_bin_filepath) == 1:
+            if len(imec_bin_filepath) == 1:    # find the binary file to get meta data
                 imec_bin_filepath = imec_bin_filepath[0]
-            else:
+            else:                               # if this fails, get the ap.meta file.
                 imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.meta'.format(probe_insertion['insertion_number'])))
                 if len(imec_bin_filepath) == 1:
                     s = str(imec_bin_filepath[0])
                     imec_bin_filepath = pathlib.Path(s.replace(".meta", ".bin"))
-                else:
+                else:   # If this fails too, no imec file exists at the path.
                     raise NameError("No imec meta file found.")
 
-            print(imec_bin_filepath)
             imec_meta = readMeta(imec_bin_filepath)
             self.ImecSamplingRate.insert1(
                 dict(probe_insertion,
