@@ -185,8 +185,6 @@ class BehaviorSync(dj.Imported):
                     framenumber_in_trial[g+1] = framenumber_in_trial[g]
         print("Step 4 done")
 
-        #iteration_index_nidq = np.where(np.abs(np.diff(np.double(digital_array[1, :]))) > 0.5)[0]
-
         # A set of final asserts, making sure that the code worked as intended  
         assert len(trial_list) == len(thissession)          # Make sure the trial number is correct.
         assert np.sum(np.diff(framenumber_in_trial)>1) == 0 # No frames should be skipped
@@ -208,6 +206,31 @@ class BehaviorSync(dj.Imported):
                  iteration_index_nidq = framenumber_in_trial,
                  trial_index_nidq = trialnumber))
         print('done')
+
+        # get the imec sampling rate for a particular probe
+        here = ephys_element.ProbeInsertion & key
+        print(here)
+        # for probe_insertion in here.fetch('insertion_number'):
+        for probe_insertion in here.fetch('KEY'):
+            print(probe_insertion)
+            imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
+            
+            if len(imec_bin_filepath) == 1:
+                imec_bin_filepath = imec_bin_filepath[0]
+            else:
+                imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.meta'.format(probe_insertion['insertion_number'])))
+                if len(imec_bin_filepath) == 1:
+                    s = str(imec_bin_filepath[0])
+                    imec_bin_filepath = pathlib.Path(s.replace(".meta", ".bin"))
+                else:
+                    raise NameError("No imec meta file found.")
+
+            print(imec_bin_filepath)
+            imec_meta = readMeta(imec_bin_filepath)
+            self.ImecSamplingRate.insert1(
+                dict(probe_insertion,
+                     ephys_sampling_rate=imec_meta['imSampRate']))
+
 
 @schema
 class CuratedClustersIteration(dj.Computed):
