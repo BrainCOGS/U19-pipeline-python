@@ -1,10 +1,7 @@
-from u19_pipeline import acquisition, imaging, lab
+from u19_pipeline import acquisition, imaging
 from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
                                           get_imaging_root_data_dir, get_scan_image_files)
 
-import os
-import datajoint as dj
-import pathlib
 import scanreader
 from element_calcium_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
 
