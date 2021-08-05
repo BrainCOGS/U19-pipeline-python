@@ -3,7 +3,7 @@
 import datajoint as dj
 from . import lab, acquisition, task
 
-schema = dj.schema(dj.config['database.prefix'] + 'puffs')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'puffs')
 
 
 @schema

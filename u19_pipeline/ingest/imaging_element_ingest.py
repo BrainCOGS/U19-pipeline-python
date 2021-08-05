@@ -40,7 +40,6 @@ def process_scan(scan_key):
         except Exception as e:
             print(f'ScanImage loading error: {scan_filepaths}\n{str(e)}')
             return
-
         scan_key = {**scan_key, 'scan_id': fov_key['fov']}
         if scan_key not in scan_element.Scan():
             Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
