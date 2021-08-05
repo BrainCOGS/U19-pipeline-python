@@ -1,12 +1,10 @@
 import datajoint as dj
 import pathlib
-import os
 
 from u19_pipeline import acquisition, imaging
 
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
-from u19_pipeline.lab import Path
 
 """
 ------ Gathering requirements to activate the imaging elements ------
