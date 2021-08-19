@@ -1,4 +1,9 @@
 scipy
 python-dotenv
-elements-imaging @ git+https://github.com/datajoint/elements-imaging.git
-elements-ephys @ git+https://github.com/datajoint/elements-ephys.git
+element-calcium-imaging
+element-array-ephys
+scanreader @ git+https://github.com/atlab/scanreader.git
+pandas
+numpy
+astropy
+jupyterlab

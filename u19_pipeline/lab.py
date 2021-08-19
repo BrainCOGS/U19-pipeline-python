@@ -2,9 +2,10 @@
 
 
 import datajoint as dj
-import sys
-import os
 import numpy as np
+import pandas as pd
+import pathlib
+from u19_pipeline.utility import is_this_spock
 
 schema = dj.schema(dj.config['database.prefix'] + 'lab')
 
@@ -260,6 +261,64 @@ class Path(dj.Lookup):
             path = path.replace('\\', '/')
 
         return path
+
+    def get_local_path2(self, bucket_path):
+
+        local_os = sys.platform
+        local_os = local_os[:(min(3, len(local_os)))]
+
+        if local_os.lower() == 'lin':
+            system = 'linux'
+        elif local_os.lower() == 'win':
+            system = 'windows'
+        elif local_os.lower() == 'dar':
+            system = 'mac'
+
+        # Get path table from db and filter by OS
+        path_df = self.get_path_table()
+        path_df = path_df[path_df['system'] == system]
+
+        # Search in path which of the main buckets we are referring from
+        path_df['idx_global_path'] = path_df['global_path'].apply(lambda x: bucket_path.find(x))
+        path_df = path_df[path_df['idx_global_path'] != -1]
+        path_df = path_df[path_df['idx_global_path'] == path_df['idx_global_path'].min()].squeeze()
+        path_df = path_df.to_dict()
+
+        # Remove bucket "base" dir from path
+        bucket_base_dir = path_df['bucket_path']
+
+        if bucket_path.find('/mnt/bucket/') != -1:
+            extra_bucket_dir = bucket_path.replace(bucket_base_dir + '/', '');
+        else:
+            extra_bucket_dir = bucket_path.replace('/' + path_df['global_path'] + '/', '');
+
+        # If we are in spock already directory is the bucket_path column
+        if is_this_spock():
+            baseDir = path_df['bucket_path']
+        elif system == 'windows':
+            # For pc the accesible path is the net_location field
+            baseDir = path_df['net_location']
+
+            # Correct extra bucket dir to adjust windows filesep
+            extra_bucket_dir = extra_bucket_dir.replace('/', '\\');
+
+        else:
+            # For mac and linux the accesible path is the local_path field
+            baseDir = path_df['local_path']
+
+        format_dir = pathlib.PurePath(baseDir, extra_bucket_dir)
+        format_dir = pathlib.Path(format_dir)
+
+        return format_dir
+
+    def get_path_table(self):
+        """
+        get path table as a dataframe
+        path table serves to corresponding paths between local system and bucket cloud.
+        """
+        path_df = pd.DataFrame(self.fetch())
+        path_df['global_path'] = path_df['global_path'].str.replace('/', '')
+        return path_df
 
 
 @schema
