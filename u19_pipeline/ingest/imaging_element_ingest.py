@@ -27,8 +27,9 @@ def process_scan(scan_key):
     :param scan_key: a `KEY` of `imaging.Scan`
     """
     for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
-        scan_filepaths = list((imaging.FieldOfView.File * imaging.FieldOfView & scan_key).proj(
-            full_path='concat(fov_directory, "/", fov_filename)').fetch('full_path'))
+
+        scan_filepaths = get_scan_image_files(fov_key)
+
         try:  # attempt to read .tif as a scanimage file
             loaded_scan = scanreader.read_scan(scan_filepaths)
             header = parse_scanimage_header(loaded_scan)

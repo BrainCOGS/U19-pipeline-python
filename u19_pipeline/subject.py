@@ -4,7 +4,7 @@
 import datajoint as dj
 from . import lab
 
-schema = dj.schema(dj.config['database.prefix'] + 'subject')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'subject')
 
 @schema
 class Species(dj.Lookup):
