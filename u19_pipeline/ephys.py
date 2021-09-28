@@ -3,7 +3,7 @@ import pathlib
 import numpy as np
 from bitstring import BitArray
 
-from u19_pipeline import ephys
+from u19_pipeline import ephys, behavior
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
@@ -63,12 +63,17 @@ Session = EphysSession
 
 def get_ephys_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('ephys_root_data_dir', None)
-    return pathlib.Path(data_dir) if data_dir else None
+    data_dir = pathlib.Path(data_dir)
+    data_dir = data_dir.as_posix()
+    return data_dir if data_dir else None
 
 
 def get_session_directory(session_key):
-    sess_dir = pathlib.Path((ephys.EphysSession & session_key).fetch1('ephys_directory'))
-    return sess_dir.as_posix()
+
+    data_dir = str(get_ephys_root_data_dir())
+    sess_dir = (ephys.EphysSession & session_key).fetch1('ephys_directory')    
+    session_dir =  pathlib.Path(data_dir + sess_dir)
+    return session_dir.as_posix()
 
 
 # ------------- Activate "ephys" schema -------------
@@ -177,8 +182,9 @@ class BehaviorSync(dj.Imported):
         for g in glitches:
             if framenumber_in_trial[g] < framenumber_in_trial[g+2]:
                 if framenumber_in_trial[g+2] -  framenumber_in_trial[g] == 2:  # skipped frame, should be very rare
+                    pass
                     framenumber_in_trial[g+1] = framenumber_in_trial[g]+1
-                    skipped_frames = skipped_frames + 1
+                    #skipped_frames = skipped_frames + 1
                 else:                          # If random number, nidaq sample in the middle of update.
                     framenumber_in_trial[g+1] = framenumber_in_trial[g]
 
@@ -249,11 +255,29 @@ class CuratedClustersIteration(dj.Computed):
             (BehaviorSync * BehaviorSync.ImecSamplingRate & key).fetch1(
                 'nidq_sampling_rate', 'iteration_index_nidq')
 
+        key_session = key.copy()
+        del key_session["insertion_number"]
+
+        thissession = behavior.TowersBlock().Trial() & key
+        iterstart = thissession.fetch('vi_start')
+
+        first_vr_iteration = iterstart[0]
+
         # Obtain the precise times when the frames transition.
         # This is obtained from iteration_index_nidq
         ls = np.diff(iteration_index_nidq)
         ls[ls<0] = 1 # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others. 
         ls[np.isnan(ls)] = 0
+        iteration_transition_indexes = np.where(ls)[0]
+
+        # First iterations captured not in virmen because vr was not started yet
+        for i in range(first_vr_iteration):
+
+            if iteration_index_nidq[iteration_transition_indexes[i]] <= first_vr_iteration:
+                ls[iteration_transition_indexes[i]] = 0
+
+        print('sum_iterationtrans', np.sum(ls))
+
         iteration_times = np.where(ls)[0]/nidq_sampling_rate
 
         # get end of time from nidq metadata
