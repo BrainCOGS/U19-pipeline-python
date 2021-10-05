@@ -14,15 +14,16 @@ This repository is the mirrored table definitions for the tables in the matlab p
 2. If running in Windows get [git](https://gitforwindows.org/)
 3. (Optional for ERDs) [Install graphviz](https://graphviz.org/download/)
 
-## Using conda (preferred method)
+## Installation with conda
 
-3. Clone this repository: `git@github.com:BrainCOGS/U19-pipeline_python.git`
+1. Open a new terminal 
+2. Clone this repository: `git@github.com:BrainCOGS/U19-pipeline_python.git`
     - If you cannot clone repositories with ssh, [set keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
-4. Create a conda environment: `conda create -n u19_datajoint_env python==3.7`.
-5. Activate environment: `conda activate u19_datajoint_env`.   **(Activate environment each time you use the project)**
-6. Change directory to this repository `cd U19_pipeline_python`.
-7. Install all required libraries `pip install -e .`
-8. Datajoint Configuration: `jupyter notebook notebooks/00-datajoint-configuration.ipynb` 
+3. Create a conda environment: `conda create -n u19_datajoint_env python==3.7`.
+4. Activate environment: `conda activate u19_datajoint_env`.   **(Activate environment each time you use the project)**
+5. Change directory to this repository `cd U19_pipeline_python`.
+6. Install all required libraries `pip install -e .`
+7. Datajoint Configuration: `jupyter notebook notebooks/00-datajoint-configuration.ipynb` 
 
 Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
 
