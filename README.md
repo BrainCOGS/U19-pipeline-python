@@ -25,6 +25,18 @@ This repository is the mirrored table definitions for the tables in the matlab p
 6. Install all required libraries `pip install -e .`
 7. Datajoint Configuration: `jupyter notebook notebooks/00-datajoint-configuration.ipynb` 
 
+## Tutorials
+
+We have created some tutorial notebooks to help you start working with datajoint
+
+1. Querying data (**Strongly recommended**) 
+ - `jupyter notebook notebooks/tutorials/1-Explore U19 data pipeline with DataJoint.ipynb`
+
+2. Building analysis pipeline (Recommended only if you are going to create new databases or tables for analysis)
+- `jupyter notebook 2-Analyze data with U19 pipeline and save results.ipynb`
+- `jupyter notebook 3-Build a simple data pipeline.ipynb`
+
+
 Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
 
 - [Ephys element Configuration](notebooks/ephys_element/00-Set-up-configuration.ipynb)
