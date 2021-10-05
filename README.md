@@ -33,8 +33,8 @@ We have created some tutorial notebooks to help you start working with datajoint
  - `jupyter notebook notebooks/tutorials/1-Explore U19 data pipeline with DataJoint.ipynb`
 
 2. Building analysis pipeline (Recommended only if you are going to create new databases or tables for analysis)
-- `jupyter notebook 2-Analyze data with U19 pipeline and save results.ipynb`
-- `jupyter notebook 3-Build a simple data pipeline.ipynb`
+- `jupyter notebook notebooks/tutorials/2-Analyze data with U19 pipeline and save results.ipynb`
+- `jupyter notebook notebooks/tutorials/3-Build a simple data pipeline.ipynb`
 
 
 Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
