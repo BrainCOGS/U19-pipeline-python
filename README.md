@@ -6,35 +6,24 @@ The data pipeline is mainly ingested and maintained with the matlab repository: 
 
 This repository is the mirrored table definitions for the tables in the matlab pipeline.
 
+# Installation
 
-## Set up the configuration
+## Prerequisites
 
-DataJoint database credentials could be configured in the global variable `dj.config` and saved in configuration file `dj_local_conf.json` at the root of the repository folder.
+1. Install conda on your system:  https://conda.io/projects/conda/en/latest/user-guide/install/index.html
+2. If in Windows OS get [git](https://gitforwindows.org/)
+3. (Optional for ERDs) [Install graphviz](https://graphviz.org/download/)
 
-```json
-{
-    "database.host": "datajoint00.pni.princeton.edu",
-    "database.user": "<username>",
-    "database.password": "<password>",
-    "loglevel": "INFO",
-    "safemode": true,
-    "display.limit": 7,
-    "display.width": 14,
-    "display.show_tuple_count": true,
-    "stores": {
-        'extstorage':
-        {
-            'location': '/Volumes/u19_dj/external_dj_blobs/', # varies across different operating systems.
-            'protocol': 'file'
-        }
-    }
-}
-```
-`stores` specifies the external storage information. DataJoint external fields save links to data saved on the harddrive.
-The `location` of `extstorage` is the filepath to the external storage, which varies for different operating systems.
-For MacOS: '/Volumes/u19_dj/external_dj_blobs/',
-For Windows: '\\\\bucket.pni.princeton.edu\\u19_dj\\external_dj_blobs\\'
-For Linux: '/mnt/bucket/u19_dj/external_dj_blobs/'
+## Using conda (preferred method)
+
+3. Clone this repository: `git@github.com:BrainCOGS/U19-pipeline_python.git`
+    - [Instructions for setting ssh keys in your system](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+4. Create a conda environment: `conda create -n u19_datajoint_env python==3.7`.
+5. Activate environment: `conda activate u19_datajoint_env`.   **(Activate environment each time you use the project)**
+6. Change directory to this repository `cd U19_pipeline_python`.
+7. Install all required libraries `pip install -e .`
+8. Datajoint Configuration: `jupyter notebook notebooks/00-datajoint-configuration.ipynb` 
+
 
 Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
 
@@ -42,34 +31,7 @@ Ephys element and imaging element require root paths for ephys and imaging data.
 [Imaging element Configuration](notebooks/imaging_element/00-Set-up-configration.ipynb)
 
 
-## Installation of package for usage and development.
-
-To use and contribute to the developement of the package, we recommend either using a Docker setup or creating a virtual environment, as follows:
-
-1. In either way, we first fork from this current repo
-
-2. Clone the repository on your fork `git clone https://github.com/BrainCOGS/U19-pipeline_python`
-
-3a. To use a conda environment setup (recommended), we could
-
-> * Create a conda environment by `conda create -n u19_datajoint python==3.7`
-
-> * With the virtual environment, we could install the package that allows edits: `pip install -e .`
-
-3b. To use a docker setup, after installing docker, inside this directory, we
-
-> *  set up the `.env` file, as follows:
-```
-DJ_HOST = 'datajoint00.pni.princeton.edu'
-DJ_USER = {your_user_name}
-DJ_PASSWORD = {your_password}
-```
-> *  run `docker-compose up -d`
-
-> * Then, we could run `docker exec -it u19_pipeline_python_datajoint_1 /bin/bash`
-This will provide you a mini environment to work with python.
-
-## Major schemas
+# Major schemas
 
 Currently, the main schemas in the data pipeline are as follows:
 
