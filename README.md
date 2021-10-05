@@ -27,8 +27,8 @@ This repository is the mirrored table definitions for the tables in the matlab p
 
 Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
 
-[Ephys element Configuration](notebooks/ephys_element/00-Set-up-configuration.ipynb)
-[Imaging element Configuration](notebooks/imaging_element/00-Set-up-configration.ipynb)
+- [Ephys element Configuration](notebooks/ephys_element/00-Set-up-configuration.ipynb)
+- [Imaging element Configuration](notebooks/imaging_element/00-Set-up-configration.ipynb)
 
 # Major schemas
 
