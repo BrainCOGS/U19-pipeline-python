@@ -3,7 +3,7 @@
 
 import datajoint as dj
 
-schema = dj.schema(dj.config['database.prefix'] + 'reference')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
 
 
 @schema

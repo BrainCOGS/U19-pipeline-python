@@ -7,7 +7,7 @@ import pandas as pd
 import pathlib
 from u19_pipeline.utility import is_this_spock
 
-schema = dj.schema(dj.config['database.prefix'] + 'lab')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
 
 @schema

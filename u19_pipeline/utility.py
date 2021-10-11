@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
 from astropy.stats import binom_conf_interval
-
+import datajoint as dj
 
 def is_this_spock():
     """
@@ -40,7 +40,7 @@ def basic_dj_configuration(dj):
     elif sys.platform == "darwin":
         ext_storage_location = '/Volumes/u19_dj/external_dj_blobs'
     elif sys.platform == "win32":
-        ext_storage_location = '\\\\bucket.pni.princeton.edu\\u19_dj\\external_dj_blobs'
+        ext_storage_location = '//bucket.pni.princeton.edu/u19_dj/external_dj_blobs'
     elif sys.platform == "linux" or sys.platform == "linux2":
         ext_storage_location = '/mnt/u19_dj/external_dj_blobs'
 
@@ -51,6 +51,39 @@ def basic_dj_configuration(dj):
                 'protocol': 'file'
             }
     }
+
+
+def get_network_path(path_name):
+    """
+    Get network root path depnding on os and path required
+    Args:
+        path_name (str): One of the main paths for data storage (Bezos, braininit, u19_dj)
+    Returns:
+        network_path: (str): String with network path as mounted by the corresponding os
+    """
+
+    key = dict()
+    # Check if path name to search starts with needed / at start 
+    if path_name[0] != '/':
+        key['global_path'] = '/' + path_name
+    else:
+        key['global_path'] = path_name
+    
+    field_get = ['local_path']
+
+    if is_this_spock():
+        field_get = ['bucket_path']
+        key['system'] = 'linux'
+    elif sys.platform == "darwin":
+        key['system'] = 'mac'
+    elif os.name == 'nt':
+        key['system'] = 'windows'
+    else:
+        key['system'] = 'linux'
+
+    lab         = dj.create_virtual_module('lab', dj.config['custom']['database.prefix']+'lab')
+    network_path = (lab.Path & key).fetch1(*field_get)
+    return network_path
 
 
 def smart_dj_join(t1, t2):

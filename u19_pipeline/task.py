@@ -3,7 +3,7 @@
 import datajoint as dj
 
 
-schema = dj.schema(dj.config['database.prefix'] + 'task')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'task')
 
 
 @schema

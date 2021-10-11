@@ -3,7 +3,7 @@
 import datajoint as dj
 from . import lab, acquisition, task
 
-schema = dj.schema(dj.config['database.prefix'] + 'puffs')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'puffs')
 
 
 @schema
@@ -11,11 +11,7 @@ class Rig(dj.Lookup):
     definition = """
     rig                  : tinyint
     ---
-<<<<<<< HEAD
     -> lab.location
-=======
-    -> lab.Location 
->>>>>>> 8ffb90d44b73a69382fcd6a80890150ea90719e1
     """
     #  "wang-behavior"
     contents = [
