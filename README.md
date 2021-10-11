@@ -105,8 +105,7 @@ Behavior data for Towers task.
 
 - ephys_element
 
-Ephys related tables were created with [DataJoint Element Array Ephys](https://github.com/datajoint/element-array-ephys), processing ephys data aquired with SpikeGLX and pre-processed by
-Kilosort2.
+Ephys related tables were created with [DataJoint Element Array Ephys](https://github.com/datajoint/element-array-ephys), processing ephys data aquired with SpikeGLX and pre-processed by Kilosort2.  For this pipeline we are using the (acute) `ephys` module from `element-array-ephys`.
 
 ![Ephys Diagram](images/ephys_element_erd.png)
 
@@ -116,15 +115,15 @@ Imaging pipeline processed with customized algorithm for motion correction and C
 ![Imaging Diagram](images/imaging_erd.png)
 
 
-- scan_element and imagine_element
+- scan_element and imaging_element
 
-Scan and imaging tables created with [DataJoint Element Calcium Imaging](https://github.com/datajoint/element-calcium-imaging), processing imaging data acquired with Scan Image and pre-processed by Suite2p.
+Scan and imaging tables created with [DataJoint Element Calcium Imaging](https://github.com/datajoint/element-calcium-imaging), processing imaging data acquired with ScanImage and pre-processed by Suite2p.
 
 ![Scan element and imaging element Diagram](images/imaging_element_erd.png)
 
 
-## Undocumented datajoint features
-For all code below, I am assuming datajoint has been imported like:
+## Datajoint features
+Import datajoint as follows:
 ```python
 import datajoint as dj
 ```
