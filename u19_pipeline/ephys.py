@@ -1,14 +1,16 @@
 import datajoint as dj
 import pathlib
 import numpy as np
-from bitstring import BitArray
 
 from u19_pipeline import ephys, behavior
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
 
-from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta, SampRate, makeMemMapRaw, ExtractDigital
+import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
+import u19_pipeline.utils.ephys_utils as ephys_utils
+
+from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
 """
 ------ Gathering requirements to activate the ephys elements ------
@@ -112,102 +114,38 @@ class BehaviorSync(dj.Imported):
         # And get the datajoint record
         behavior = dj.create_virtual_module('behavior', 'u19_behavior')
         thissession = behavior.TowersBlock().Trial() & key
-        time, iterstart = thissession.fetch('trial_time', 'vi_start')
+        behavior_time, iterstart = thissession.fetch('trial_time', 'vi_start')
 
         # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
-        nidq_meta = readMeta(nidq_bin_full_path)
-        t_start = 0
-        t_end = np.float(nidq_meta['fileTimeSecs'])
-        dw = 0
-        d_line_list = [0, 1, 2, 3, 4, 5, 6, 7]
-        nidq_sampling_rate = SampRate(nidq_meta)
-        first_sample_index = int(nidq_sampling_rate * t_start)
-        last_sample_index = int(nidq_sampling_rate * t_end) - 1
-        nidq_raw_data = makeMemMapRaw(nidq_bin_full_path, nidq_meta)  # Pull raw bin data
-        digital_array = ExtractDigital(                               # extract interation index
-            nidq_raw_data, first_sample_index, last_sample_index,
-            dw, d_line_list, nidq_meta)
+        nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
+        nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
+        digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+
+        # Synchronize between pulses and get iteration # vector for each sample
+        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate)
+        # Check # of trials and iterations match
+        status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
+
+        #They didn't match, try counter method (if available)
+        if (not status) and (digital_array.shape[0] > 3):
+            [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5)
+            iteration_dict['framenumber_vector_samples'] = framenumber_in_trial
+            iteration_dict['trialnumber_vector_samples'] = trialnumber
+
+
+        final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
+               iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
+               trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
+
+        print(final_key)
+
+        ephys.BehaviorSync.insert1(final_key,allow_direct_insert=True)
+
+        self.insert_imec_sampling_rate(key, session_dir)
+
         
-        # 2: transform the digital lines into a number, save in an array of integers
-        #      ... and also get start and end time
-        framenumber = np.zeros(digital_array.shape[1])
-        for i in range(digital_array.shape[1]):
-            a = BitArray(np.flip(digital_array[1:, i])) # ignore 0-bit, as this is the NPX sync puls, and not virmen.
-            framenumber[i] = a.uint
-        iterations_raw = np.array(framenumber, dtype=np.int) # Transform frames into integer
-        recording_start = np.min(np.where(iterations_raw>0)) #Get start of recording: first change of testlist
-        dt = np.int(0.04*nidq_sampling_rate)
-        recording_end = np.where(np.abs(np.diff(iterations_raw))>0)[0][-1] + dt  #Get end of recording
 
-        # 3: transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
-        # iterations_raw is just a number between 0 and 128. Some math has to be done to obtain:
-        # framenumber_in_trial has the length of the number of samples of the NIDAQ card, and every entry is the currently presented iteration number of the VR in the respective trial.
-        # trialnumber has the length of the number of samples of the NIDAQ card, and every entry is the current trial.
-        #
-        # NOTE: some minor glitches have to be catched, if a NIDAQ sample happenes to be recorded while the VR System updates the iteration number. 
-        framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
-        trialnumber = np.zeros(len(iterations_raw))*np.NaN
-        current_trial = 0
-        overflow = 0 # This variable keep track whenever the reset from 127 to 0 happens.
-        for idx, frame_number in enumerate(iterations_raw):
-            if (idx>recording_start) & (idx<recording_end):
-                if (frame_number==0) & (iterations_raw[idx-1]==127): # At the reset, add 128
-                    overflow = overflow + 1
-                if (frame_number==0) & (iterations_raw[idx-1]!=127) & (iterations_raw[idx-1]!=0) &  (iterations_raw[idx-2]==127): # Unlucky reset if happened to be sampled at the wrong time
-                    overflow = overflow + 1
-                    framenumber_in_trial[idx-1] = frame_number + overflow*128 - 1 # In case this happened, the previous sample has to be corrected
-                # Keep track of trial number
-                endflag = framenumber_in_trial[idx-1] == (len(time[current_trial])) # Trial end has been reached.
-                transitionflag = frame_number < 3 # Next trial should start at zero again
-                if endflag & transitionflag:      # Only at the transitions
-                    current_trial = current_trial + 1  # Increases trial count
-                    overflow = 0                       # Reset the 7 bit counter for the next trial
-                framenumber_in_trial[idx] = frame_number + overflow*128 - 1
-                trialnumber[idx] = current_trial
-        trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype = np.int)
-
-        # 4: find and remove additional NIDAQ glitches of two types: 
-        # a) single samples where the iteration number is corrupted because sampling happened faster than output of the behevior PC.
-        # b) Skipped frames are detected and filled in.
-        # Find the glitches
-        din = np.diff(framenumber_in_trial)
-        trial_transitions = np.where(np.diff(trialnumber))
-        glitches = []
-        for candidate in np.where( np.logical_or(din>1, din<0) )[0]: # skipped frames or counting down
-            if np.sum(candidate == trial_transitions) == 0:
-                glitches = np.append(glitches, candidate)
-        glitches = np.array(glitches, dtype = np.int)
-        # Attempt to remove them
-        skipped_frames = 0
-        for g in glitches:
-            if framenumber_in_trial[g] < framenumber_in_trial[g+2]:
-                if framenumber_in_trial[g+2] -  framenumber_in_trial[g] == 2:  # skipped frame, should be very rare
-                    pass
-                    framenumber_in_trial[g+1] = framenumber_in_trial[g]+1
-                    #skipped_frames = skipped_frames + 1
-                else:                          # If random number, nidaq sample in the middle of update.
-                    framenumber_in_trial[g+1] = framenumber_in_trial[g]
-
-        # A set of final asserts, making sure that the code worked as intended  
-        assert len(trial_list) == len(thissession)          # Make sure the trial number is correct.
-        assert np.sum(np.diff(framenumber_in_trial)>1) == 0 # No frames should be skipped
-        assert np.sum(np.diff(framenumber_in_trial)<0)<len(trial_list) # Negative iterations only at trial transitions
-        iterations_test = 0
-        for t in trial_list:
-            iterations_test = iterations_test + framenumber_in_trial[trialnumber==t][-1]  # Integrate number of iterations
-            assert framenumber_in_trial[trialnumber==t][-1] == len(time[t])  # Make sure number of nidaq-frames in each trial is identical to dj record:
-            nidaqtime = np.sum(trialnumber == t)/nidq_sampling_rate
-            matlabtime = np.max(time[t])
-            assert ((nidaqtime - matlabtime) / matlabtime) < 0.1 # # Make sure the nidaq-trial-duration and dj records are consistent; 10% arbitrarily chosen
-        nidaq_duration = iterations_test + skipped_frames
-        dj_duration = iterstart[-1] + len(time[-1])
-        assert np.abs(nidaq_duration - dj_duration) < 3 # at most two frames off - sometimes this happens at the beginning/end of the recording
-
-        # If this is done, and the asserts are passed, insert the data into the database
-        self.insert1(
-            dict(key, nidq_sampling_rate = nidq_sampling_rate,
-                 iteration_index_nidq = framenumber_in_trial,
-                 trial_index_nidq = trialnumber))
+    def insert_imec_sampling_rate(self, key, session_dir):
 
         # get the imec sampling rate for a particular probe
         here = ephys_element.ProbeInsertion & key
@@ -227,7 +165,7 @@ class BehaviorSync(dj.Imported):
             imec_meta = readMeta(imec_bin_filepath)
             self.ImecSamplingRate.insert1(
                 dict(probe_insertion,
-                     ephys_sampling_rate=imec_meta['imSampRate']))
+                        ephys_sampling_rate=imec_meta['imSampRate']))
 
 
 @schema
@@ -271,10 +209,10 @@ class CuratedClustersIteration(dj.Computed):
         iteration_transition_indexes = np.where(ls)[0]
 
         # First iterations captured not in virmen because vr was not started yet
-        for i in range(first_vr_iteration):
+        #for i in range(first_vr_iteration):
 
-            if iteration_index_nidq[iteration_transition_indexes[i]] <= first_vr_iteration:
-                ls[iteration_transition_indexes[i]] = 0
+        #    if iteration_index_nidq[iteration_transition_indexes[i]] <= first_vr_iteration:
+        #        ls[iteration_transition_indexes[i]] = 0
 
         print('sum_iterationtrans', np.sum(ls))
 
