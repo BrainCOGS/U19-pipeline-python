@@ -122,7 +122,8 @@ class BehaviorSync(dj.Imported):
         digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
 
         # Synchronize between pulses and get iteration # vector for each sample
-        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate)
+        mode='counter_bit0'
+        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], mode)
         # Check # of trials and iterations match
         status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
 
@@ -150,8 +151,9 @@ class BehaviorSync(dj.Imported):
         # get the imec sampling rate for a particular probe
         here = ephys_element.ProbeInsertion & key
         for probe_insertion in here.fetch('KEY'):
-            imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
-            
+            #imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
+            imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.meta'.format(probe_insertion['insertion_number'])))
+
             if len(imec_bin_filepath) == 1:    # find the binary file to get meta data
                 imec_bin_filepath = imec_bin_filepath[0]
             else:                               # if this fails, get the ap.meta file.

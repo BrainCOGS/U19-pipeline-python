@@ -41,7 +41,69 @@ class spice_glx_utility:
         return digital_array
 
 
-def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate):
+def get_idx_trial_start(trial_pulse_signal):
+    #Get index of samples when trial has started based on a pulse signal
+
+    #Get idx samples trial starts
+    trial_start_idx = np.where(np.diff(trial_pulse_signal) == 1) 
+    trial_start_idx = trial_start_idx[0]
+
+    #Detect fake trial init pulses (a single sample in 1 instead of 5ms signal)
+    fake_trial_init = []
+    for idx, sample in enumerate(trial_start_idx):
+        #Get the mean value of next samples after rising edge detected
+        mean_pulse = np.mean(trial_pulse_signal[sample+1:sample+10])
+        # Average value should be 1
+        if mean_pulse < 0.9:
+            fake_trial_init.append(idx)
+
+    trial_start_idx = np.delete(trial_start_idx, fake_trial_init)
+    return trial_start_idx
+
+
+def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx):
+    #Get index of iteration starts on a trial based on a pulse start signal
+
+    #Get idx of iteration start during trial
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1) 
+    iter_samples = iter_samples + trial_start_idx
+    # First iteration is at trial start, just align first trial start
+    iter_samples[0, 0] = trial_start_idx
+
+    iter_samples = np.squeeze(iter_samples)
+
+    return iter_samples
+
+
+def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx):
+    #Get index of iteration starts on a trial based on a iteration bit0 counter
+
+
+    #Get idx of odd iteration during trial
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1) 
+    iter_samples = iter_samples + trial_start_idx
+
+    if iteration_pulse_signal_trial[0] == 1:
+        #If last iteration was odd, insert a iteration at start
+        iter_samples = np.insert(iter_samples, 0, trial_start_idx)
+    else:
+        # First iteration is at trial start, just align first trial start
+        iter_samples[0, 0] = trial_start_idx
+
+    iter_samples = np.squeeze(iter_samples)
+
+    #Get idx of even iteration during trial
+    iter_samples2 = np.where(np.diff(iteration_pulse_signal_trial) == 255) 
+    iter_samples2 = iter_samples2 + trial_start_idx
+    iter_samples2 = np.squeeze(iter_samples2)
+
+    iter_samples = np.concatenate([iter_samples, iter_samples2])
+    iter_samples = np.sort(iter_samples) 
+
+    return iter_samples
+
+
+def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate, num_behavior_trials, mode='counter_bit0'):
 
     #Output as a dictionary
     iteration_vector_output = dict()
@@ -51,25 +113,30 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.NaN
 
     #Get idx samples trial starts
-    trial_start_idx = np.where(np.diff(trial_pulse_signal) == 1) 
-    trial_start_idx = trial_start_idx[0]
+    trial_start_idx = get_idx_trial_start(trial_pulse_signal)
 
     # Just to make sure we get corresponding iter pulse (trial and iter pulse at same time !!)
     ms_before_pulse = 2
     samples_before_pulse = int(nidq_sampling_rate*(ms_before_pulse/1000))
 
+    # num Trials to sync (if behavior stopped before last trial was saved)
+    num_trials_sync = min([trial_start_idx.shape[0], num_behavior_trials])
+
     iter_start_idx = []
     iter_times_idx = []
-    for i in range(trial_start_idx.shape[0]-1):
+    for i in range(num_trials_sync):
         #Trial starts and ends idxs ()
         idx_start = trial_start_idx[i] -samples_before_pulse
-        idx_end = trial_start_idx[i+1] -samples_before_pulse
+        if i < trial_start_idx.shape[0]-1:
+            idx_end = trial_start_idx[i+1] -samples_before_pulse
+        else:
+            idx_end = trial_pulse_signal.shape[0] - samples_before_pulse
 
         #Get idx of iteration start of current trial
-        iter_samples, = np.where(np.diff(iteration_pulse_signal[idx_start:idx_end]) == 1) 
-        iter_samples = iter_samples + trial_start_idx[i]
-        #Make sure iteration 1 and trial starts at same time
-        iter_samples[0] = trial_start_idx[i]
+        if mode == 'counter_bit0':
+            iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
+        else:
+            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
         
         #Append as an array of arrays (each trial is an array with idx of iterations)
         iter_start_idx.append(iter_samples)
@@ -78,17 +145,24 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
         times = times - times[0]
         iter_times_idx.append(times)
         
-        #Fill vector samples
-        iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:trial_start_idx[i+1]] = i+1
+        #Fill vector samples  
         for j in range(iter_samples.shape[0]-1):
             iteration_vector_output['framenumber_vector_samples'][iter_samples[j]:iter_samples[j+1]] = j+1
+
         #Last iteration # is from start of iteration to end of trial
-        iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:trial_start_idx[i+1]] = iter_samples.shape[0]
+        if i < trial_start_idx.shape[0]-1:
+            iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:trial_start_idx[i+1]] = i+1
+            iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:trial_start_idx[i+1]] = iter_samples.shape[0]
+        # For last trial, lets finish it 1s after last iteration detected
+        else:
+            iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:iter_samples[-1]+int(nidq_sampling_rate)] = i+1
+            iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:iter_samples[-1]+int(nidq_sampling_rate)] = iter_samples.shape[0]
 
     iteration_vector_output['iter_start_idx'] = np.asarray(iter_start_idx.copy(), dtype=object)
     iteration_vector_output['iter_times_idx'] = np.asarray(iter_times_idx.copy(), dtype=object)
 
     return iteration_vector_output
+
 
 def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_vector):
     #Assert that vector sync pulses match behavior time vector
@@ -108,6 +182,7 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     return status
 
 
+# Deprecated
 def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, session_trial_keys, nidq_sampling_rate, bit_start, number_bits):
 
     max_count = np.power(2, number_bits)-1
@@ -200,10 +275,33 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
     return (framenumber_in_trial, trialnumber)
 
 
+def future_counter_get_signal():
+    # Cleaner way to get iteration number from counter, still need debugging, if necessary
 
 
+    framenumber = np.zeros(idx_end-idx_start)
+    for idx, ii in enumerate(range(idx_start,idx_end)):
+        a = BitArray(np.flip(digital_array[start_iteration_counter_bit:, ii])) # ignore 0-bit, as this is the NPX sync puls, and not virmen.
+        framenumber[idx] = a.uint
+    iterations_raw = np.array(framenumber, dtype=np.int) # Transform frames into integer
+
+    framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
+    
+    current_trial = 0
+    almost_overflow = 0
+    overflow = 0 # This variable keep track whenever the reset from max_count to 0 happens.
+    for idx, frame_number in enumerate(iterations_raw):
+        #print(iterations_raw2[idx], frame_number)
+        if (frame_number > 15*max_count/16):
+            almost_overflow = 1
+        if (frame_number < max_count/16) and almost_overflow == 1:
+            overflow += 1
+            almost_overflow = 0
 
 
+        framenumber_in_trial[idx] = frame_number + overflow*(max_count+1)
+
+    print(np.max(framenumber_in_trial))
 
 
 def load_open_ephys_digital_file(file_path):
