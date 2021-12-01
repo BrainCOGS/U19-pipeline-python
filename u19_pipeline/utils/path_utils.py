@@ -3,7 +3,7 @@ import pathlib
 import os
 import glob
 import subprocess
-
+import sys
 
 file_patterns_acq = {
     "raw_imaging": ['/*.tiff', '/*.tif'],
@@ -36,6 +36,9 @@ def check_file_pattern_dir(filepath, file_patterns):
         return 0
 
 def get_size_directory(path):
+    """
+    get directory size of a folder for linux systems
+    """
     command = ["du", path, '-s']
     s = subprocess.run(command, capture_output=True)
     output = s.stdout.decode('UTF-8')
@@ -44,3 +47,27 @@ def get_size_directory(path):
     else:
         kbytes = -1
     return kbytes
+
+
+def get_size_directory_time(path):
+    """
+    get directory size divided by date of a folder for linux systems
+    """
+
+    command = ["du", "--separate-dirs", "--time", path]
+    output = subprocess.check_output(command)
+    output = output.decode('UTF-8')
+    list_values = output.split("\n")
+    list_return = []
+    for line in list_values:
+        line_values = line.split("\t")
+        dict_line = dict()
+        if len(line_values) == 3:
+            dict_line['size'] = line_values[0]
+            dict_line['date'] = line_values[1]
+            dict_line['directory'] = line_values[2]
+            list_return.append(dict_line)
+        
+    return list_return
+
+
