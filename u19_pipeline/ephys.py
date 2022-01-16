@@ -2,7 +2,7 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import ephys, behavior
+from u19_pipeline import ephys, behavior, acquisition, subject
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
@@ -56,6 +56,26 @@ class EphysSession(dj.Manual):
     ephys_directory: varchar(255)      # the absolute directory where the ephys data for this session will be stored in bucket
     """
 
+
+@schema
+class EphysAcquisitions(dj.Manual):
+     definition = """
+     acquisition_id:                   INT(11) AUTO_INCREMENT        # Unique number assigned to each acquisition   
+     -----
+     -> [nullable] acquisition.Session                               # acquisition Session key
+     -> [nullable] subject.Subject.proj(acquisition_subject='subject_fullname') # subject inherited from subjects table (in case there is no related session)
+     ephys_directory:                  varchar(255)                  # the relative directory where the ephys data for this session will be stored in bucket
+     """    
+
+
+@schema
+class EphysSortings(dj.Manual):
+     definition = """
+     sorting_id:                       INT(11) AUTO_INCREMENT    # Unique number assigned to each sorting       
+     -----
+     ->EphysAcquisitions                                         # acquisition id (id to raw path of acquisition)
+     sorting_directory=null:            VARCHAR(255)             # relative path to specific sorting
+     """      
 
 # ephys element requires table with name Session
 Session = EphysSession
