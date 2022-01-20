@@ -1,20 +1,34 @@
 import datajoint as dj
-from u19_pipeline import acquisition
 
-from u19_pipeline import acquisition, subject
+from u19_pipeline import acquisition, subject, recording
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_acq')
 
 
 @schema
-class Scan(dj.Imported):
+class Scan(dj.Computed):
     definition = """
-    scan_id              : INT(11) AUTO_INCREMENT           # Unique number assigned to each scan 
+    # General information of an ephys session
+    -> recording.Recording
     ---
-    -> [nullable] acquisition.Session                               # acquisition Session key
-    -> [nullable] subject.Subject.proj(scan_subject='subject_fullname') # subject inherited from subjects table (in case there is no related session)
-    scan_directory       : varchar(255)                             # the relative directory where the ephys data for this session will be stored in bucket
     """
+    key_source = recording.Recording & {'recording_modality': 'imaging'}
+
+    def make(self, key):
+        self.insert(key)
+
+
+@schema
+class ImagingSegmentation(dj.Computed):
+    definition = """
+    -> Scan
+    -> recording.RecordingProcess
+    -----
+    """  
+
+    def make(self, key):
+        self.insert(key[''])
+
 
 @schema
 class ScanInfo(dj.Imported):

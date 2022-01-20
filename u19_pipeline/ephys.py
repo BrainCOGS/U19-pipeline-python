@@ -2,7 +2,7 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import ephys, behavior, acquisition, subject
+from u19_pipeline import behavior, recording
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
@@ -48,37 +48,33 @@ class SkullReference(dj.Lookup):
 
 
 @schema
-class EphysSession(dj.Manual):
+class EphysRecording(dj.Computed):
     definition = """
     # General information of an ephys session
-    -> acquisition.Session
+    -> recording.Recording
     ---
-    ephys_directory: varchar(255)      # the absolute directory where the ephys data for this session will be stored in bucket
     """
+    key_source = recording.Recording & {'recording_modality': 'ephys'}
+
+    def make(self, key):
+        self.insert(key)
 
 
 @schema
-class EphysAcquisitions(dj.Manual):
-     definition = """
-     acquisition_id:                   INT(11) AUTO_INCREMENT        # Unique number assigned to each acquisition   
-     -----
-     -> [nullable] acquisition.Session                               # acquisition Session key
-     -> [nullable] subject.Subject.proj(acquisition_subject='subject_fullname') # subject inherited from subjects table (in case there is no related session)
-     ephys_directory:                  varchar(255)                  # the relative directory where the ephys data for this session will be stored in bucket
-     """    
+class EphysSorting(dj.Computed):
+    definition = """
+    -> EphysRecording
+    -> recording.RecordingProcess
+    -----
+    """  
+
+    def make(self, key):
+        self.insert(key[''])
 
 
-@schema
-class EphysSortings(dj.Manual):
-     definition = """
-     sorting_id:                       INT(11) AUTO_INCREMENT    # Unique number assigned to each sorting       
-     -----
-     ->EphysAcquisitions                                         # acquisition id (id to raw path of acquisition)
-     sorting_directory=null:            VARCHAR(255)             # relative path to specific sorting
-     """      
 
 # ephys element requires table with name Session
-Session = EphysSession
+Session = EphysSorting
 
 
 # 3. Utility functions
@@ -112,7 +108,7 @@ for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> ephys.EphysSession
+    -> ephys.EphysRecording
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
