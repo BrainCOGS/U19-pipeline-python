@@ -8,7 +8,7 @@ This repository is the mirrored table definitions for the tables in the matlab p
 
 # Installation
 
-## Prerequisites
+## Prerequisites (for recommended conda installation)
 
 1. Install conda on your system:  https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 2. If running in Windows get [git](https://gitforwindows.org/)
