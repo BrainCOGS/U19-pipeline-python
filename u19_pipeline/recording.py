@@ -9,15 +9,16 @@ from u19_pipeline import acquisition, subject
 @schema
 class RecordingModality(dj.Lookup):
      definition = """
-     recording_modality:   varchar(64)                  # modalities for recording (ephys, imaging, video_recording, etc.) 
+     recording_modality:        varchar(64)          # modalities for recording (ephys, imaging, video_recording, etc.) 
      ---
-     modality_description: varchar(255)                 # description for the modality
-     root_direcory:        varchar(255)                 # root directory where that modality is stored (e.g. ephys = /braininit/Data/eletrophysiology)
+     modality_description:      varchar(255)         # description for the modality
+     root_direcory:             varchar(255)         # root directory where that modality is stored (e.g. ephys = /braininit/Data/eletrophysiology)
+     recording_file_extensions: blob                 # file extensions specific for this modality
      """
      contents = [
-        ['ephys',             '', '/braininit/Data/eletrophysiology'],
-        ['imaging',           '', '/braininit/Data/eletrophysiology'],
-        ['video_acquisition', '', '/braininit/Data/video_acquisition']
+        ['ephys',             '', '/braininit/Data/eletrophysiology', ['ap.bin', 'ap.meta']],
+        ['imaging',           '', '/braininit/Data/eletrophysiology', ['.avi', '.tiff','.tif']],
+        ['video_acquisition', '', '/braininit/Data/video_acquisition', ['.avi', '.mp4']]
      ]
 
 

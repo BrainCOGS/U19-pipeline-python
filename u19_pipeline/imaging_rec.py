@@ -2,7 +2,7 @@ import datajoint as dj
 
 from u19_pipeline import acquisition, subject, recording
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_acq')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_rec')
 
 
 @schema
