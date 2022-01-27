@@ -2,7 +2,7 @@ import datajoint as dj
 from u19_pipeline import acquisition
 
 
-schema = dj.schema(dj.config['database.prefix'] + 'imaging')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging')
 
 
 @schema

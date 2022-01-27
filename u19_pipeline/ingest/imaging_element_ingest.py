@@ -3,7 +3,7 @@ from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipme
                                           get_imaging_root_data_dir, get_scan_image_files)
 
 import scanreader
-from elements_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
+from element_calcium_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
 
 """
 The ingestion routine for imaging element includes:
@@ -27,8 +27,9 @@ def process_scan(scan_key):
     :param scan_key: a `KEY` of `imaging.Scan`
     """
     for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
-        scan_filepaths = list((imaging.FieldOfView.File * imaging.FieldOfView & scan_key).proj(
-            full_path='concat(fov_directory, "/", fov_filename)').fetch('full_path'))
+
+        scan_filepaths = get_scan_image_files(fov_key)
+
         try:  # attempt to read .tif as a scanimage file
             loaded_scan = scanreader.read_scan(scan_filepaths)
             header = parse_scanimage_header(loaded_scan)
