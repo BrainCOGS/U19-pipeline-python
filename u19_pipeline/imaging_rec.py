@@ -8,7 +8,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_rec')
 @schema
 class Scan(dj.Computed):
     definition = """
-    # General information of an ephys session
+    # General information of an imaging session
     -> recording.Recording
     ---
     """
