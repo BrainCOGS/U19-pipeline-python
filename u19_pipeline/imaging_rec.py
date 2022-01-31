@@ -27,7 +27,7 @@ class ImagingSegmentation(dj.Computed):
     """  
 
     def make(self, key):
-        self.insert(key[''])
+        self.insert1(key)
 
 
 @schema
