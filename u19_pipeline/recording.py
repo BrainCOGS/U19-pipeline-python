@@ -1,5 +1,5 @@
 import datajoint as dj
-from u19_pipeline import lab, task, subject
+from u19_pipeline import lab, task, subject, acquisition
 
 schema = dj.schema('u19_recording')
 
