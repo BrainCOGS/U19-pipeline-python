@@ -57,7 +57,7 @@ class EphysRecording(dj.Computed):
     key_source = recording.Recording & {'recording_modality': 'ephys'}
 
     def make(self, key):
-        self.insert(key)
+        self.insert1(key)
 
 
 @schema
