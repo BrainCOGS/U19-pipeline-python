@@ -99,7 +99,7 @@ class Recording(dj.Manual):
      -> [nullable] subject.Subject.proj(acquisition_subject='subject_fullname') # Recording subject when no behavior Session present
      recording_datetime=null:           datetime                                # Recording datetime when no bheavior Session present
      -> RecordingModality                         
-     recording_directory:               varchar(255)                            # the relative directory where the ephys data for this session will be stored in bucket
+     recording_directory:               varchar(255)                            # relative directory where the data for this session will be stored on cup
      """    
 
 
