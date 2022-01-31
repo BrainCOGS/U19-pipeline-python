@@ -3,7 +3,6 @@ from u19_pipeline import lab, task, subject, acquisition
 
 schema = dj.schema('u19_recording')
 
-from u19_pipeline import acquisition, subject
 
 
 @schema
