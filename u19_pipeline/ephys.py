@@ -54,7 +54,9 @@ class EphysRecording(dj.Computed):
     -> recording.Recording
     ---
     """
-    key_source = recording.Recording & {'recording_modality': 'ephys'}
+    @property
+    def key_source(self):
+        return recording.Recording & {'recording_modality': 'ephys'}
 
     def make(self, key):
         self.insert1(key)
