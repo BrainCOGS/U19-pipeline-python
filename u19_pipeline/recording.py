@@ -15,8 +15,8 @@ class RecordingModality(dj.Lookup):
      recording_file_extensions: blob                 # file extensions specific for this modality
      """
      contents = [
-        ['ephys',             '', '/braininit/Data/eletrophysiology', ['ap.bin', 'ap.meta']],
-        ['imaging',           '', '/braininit/Data/eletrophysiology', ['.avi', '.tiff','.tif']],
+        ['ephys',             '', '/braininit/Data/electrophysiology', ['ap.bin', 'ap.meta']],
+        ['imaging',           '', '/braininit/Data/imaging', ['.avi', '.tiff','.tif']],
         ['video_acquisition', '', '/braininit/Data/video_acquisition', ['.avi', '.mp4']]
      ]
 
