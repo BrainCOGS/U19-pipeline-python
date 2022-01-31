@@ -15,7 +15,7 @@ class Scan(dj.Computed):
     key_source = recording.Recording & {'recording_modality': 'imaging'}
 
     def make(self, key):
-        self.insert(key)
+        self.insert1(key)
 
 
 @schema
