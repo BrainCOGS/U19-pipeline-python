@@ -12,7 +12,9 @@ class Scan(dj.Computed):
     -> recording.Recording
     ---
     """
-    key_source = recording.Recording & {'recording_modality': 'imaging'}
+    @property
+    def key_source(self):
+        return recording.Recording & {'recording_modality': 'imaging'}
 
     def make(self, key):
         self.insert1(key)
