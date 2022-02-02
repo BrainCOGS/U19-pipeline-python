@@ -15,8 +15,13 @@ class RecordingModality(dj.Lookup):
      recording_file_extensions: blob                 # file extensions specific for this modality
      """
      contents = [
+<<<<<<< Updated upstream
         ['ephys',             '', '/braininit/Data/electrophysiology', ['ap.bin', 'ap.meta']],
         ['imaging',           '', '/braininit/Data/imaging', ['.avi', '.tiff','.tif']],
+=======
+        ['electrophysiology', '', '/braininit/Data/eletrophysiology', ['ap.bin', 'ap.meta']],
+        ['imaging',           '', '/braininit/Data/eletrophysiology', ['.avi', '.tiff','.tif']],
+>>>>>>> Stashed changes
         ['video_acquisition', '', '/braininit/Data/video_acquisition', ['.avi', '.mp4']]
      ]
 
@@ -25,12 +30,12 @@ class RecordingModality(dj.Lookup):
 class PreprocessingParamSet(dj.Lookup):
     definition = """
     # Parameter set to be used in the preprocessing steps
-    preprocess_paramset_idx:  smallint
+    preprocessing_paramset_idx:  int(11) AUTO_INCREMENT
     ---
     -> RecordingModality    
-    preprocess_paramset_desc: varchar(128)
-    preprocess_param_set_hash: uuid
-    unique index (preprocess_param_set_hash)
+    preprocessing_paramset_desc: varchar(128)
+    preprocessing_paramset_hash: uuid
+    unique index (preprocessing_paramset_hash)
     preprocessing_params: longblob  # dictionary of all applicable parameters
     """
 
@@ -38,14 +43,14 @@ class PreprocessingParamSet(dj.Lookup):
     def insert_new_params(cls, recording_modality: str, paramset_idx: int,
                           paramset_desc: str, params: dict):
         param_dict = {'recording_modality': recording_modality,
-                      'preprocess_paramset_idx': paramset_idx,
-                      'preprocess_paramset_desc': paramset_desc,
+                      'preprocessing_paramset_idx': paramset_idx,
+                      'preprocessing_paramset_desc': paramset_desc,
                       'preprocessing_params': params,
-                      'preprocess_param_set_hash':  dict_to_uuid(params)}
-        param_query = cls & {'preprocess_param_set_hash': param_dict['preprocess_param_set_hash']}
+                      'preprocessing_paramset_hash':  dict_to_uuid(params)}
+        param_query = cls & {'preprocessing_paramset_hash': param_dict['preprocessing_paramset_hash']}
 
         if param_query:  # If the specified param-set already exists
-            existing_paramset_idx = param_query.fetch1('preprocess_paramset_idx')
+            existing_paramset_idx = param_query.fetch1('preprocessing_paramset_idx')
             if existing_paramset_idx == paramset_idx:  # If the existing set has the same paramset_idx: job done
                 return
             else:  # If not same name: human error, trying to add the same paramset with different name
@@ -60,12 +65,12 @@ class PreprocessingParamSet(dj.Lookup):
 class ProcessingParamSet(dj.Lookup):
     definition = """
     # Parameter set to be used in the preprocessing steps
-    processing_paramset_idx:  smallint
+    processing_paramset_idx:  int(11) AUTO_INCREMENT
     ---
     -> RecordingModality    
     processing_paramset_desc: varchar(128)
-    processing_param_set_hash: uuid
-    unique index (processing_param_set_hash)
+    processing_paramset_hash: uuid
+    unique index (processing_paramset_hash)
     processing_params: longblob  # dictionary of all applicable parameters
     """
 
@@ -76,8 +81,8 @@ class ProcessingParamSet(dj.Lookup):
                       'processing_paramset_idx': paramset_idx,
                       'processing_paramset_desc': paramset_desc,
                       'processing_params': params,
-                      'processing_param_set_hash':  dict_to_uuid(params)}
-        param_query = cls & {'processing_param_set_hash': param_dict['processing_param_set_hash']}
+                      'processing_paramset_hash':  dict_to_uuid(params)}
+        param_query = cls & {'processing_paramset_hash': param_dict['processing_paramset_hash']}
 
         if param_query:  # If the specified param-set already exists
             existing_paramset_idx = param_query.fetch1('processing_paramset_idx')
@@ -96,10 +101,16 @@ class Recording(dj.Manual):
      recording_id:                      INT(11) AUTO_INCREMENT                  # Unique number assigned to each recording   
      -----
      -> [nullable] acquisition.Session                                          # acquisition Session key
-     -> [nullable] subject.Subject.proj(acquisition_subject='subject_fullname') # Recording subject when no behavior Session present
-     recording_datetime=null:           datetime                                # Recording datetime when no bheavior Session present
      -> RecordingModality                         
+<<<<<<< Updated upstream
      recording_directory:               varchar(255)                            # relative directory where the data for this session will be stored on cup
+=======
+     -> lab.Location
+     recording_directory:               varchar(255)                            # the relative directory where the ephys data for this session will be stored in braininit drive
+     local_directory:                   varchar(255)                            # local directory where this file is stored on the recording system
+     -> [nullable] subject.Subject.proj(acquisition_subject='subject_fullname') # Recording subject when no behavior Session present
+     recording_datetime=null:           datetime                                # Recording datetime when no behavior Session present
+>>>>>>> Stashed changes
      """    
 
 
@@ -111,25 +122,34 @@ status_pipeline_dict = {
     'NEW_SESSION':       {'Value': 0,
                          'Label': 'New session',
                          'Task_Field': None},
-    'RAW_FILE_REQUEST':  {'Value': 1,
+    'PNI_DRIVE_TRANSFER_REQUEST':       {'Value': 1,
+                                        'Label': 'Recording directory transfer to PNI requested',
+                         '               Task_Field': 'task_copy_id_pni'},
+    'PNI_DRIVE_TRANSFER_END':           {'Value': 2,
+                                        'Label': 'Recording directory transferred to PNI',
+                         '               Task_Field': None},
+    'MODALITY_PREINGESTION':           {'Value': 3,
+                                        'Label': 'Preprocessing & Syncing jobs',
+                         '               Task_Field': None},
+    'RAW_FILE_REQUEST':  {'Value': 4,
                           'Label': 'Raw file transfer requested',
                           'Task_Field': 'task_copy_id_pre_path'},
-    'RAW_FILE_CLUSTER':  {'Value': 2,
+    'RAW_FILE_CLUSTER':  {'Value': 5,
                          'Label': 'Raw file transferred to cluster',
                          'Task_Field': None},
-    'JOB_QUEUE':         {'Value': 3,
+    'JOB_QUEUE':         {'Value': 6,
                          'Label': 'Processing job in queue',
                          'Task_Field': 'slurm_id_sorting'},
-    'JOB_FINISHED':      {'Value': 4,
+    'JOB_FINISHED':      {'Value': 7,
                          'Label': 'Processing job finished',
                          'Task_Field': None},
-    'PROC_FILE_REQUEST': {'Value': 5,
+    'PROC_FILE_REQUEST': {'Value': 8,
                          'Label': 'Processed file transfer requested',
                          'Task_Field': 'task_copy_id_pos_path'},
-    'PROC_FILE_HOME':    {'Value': 6,
+    'PROC_FILE_HOME':    {'Value': 9,
                          'Label': 'Processed file transferred to PNI',
                          'Task_Field': None},
-    'CANONICAL_PIPELINE': {'Value': 7,
+    'CANONICAL_PIPELINE': {'Value': 10,
                          'Label': 'Processed with Canonical pipeline',
                          'Task_Field': None},
 }
@@ -161,9 +181,9 @@ class RecordingProcess(dj.Manual):
      -> PreprocessingParamSet                                     # reference to params to preprocess recording
      -> ProcessingParamSet                                        # reference to params to process recording
      recording_process_path=null:       VARCHAR(200)              # relative path for processed recording
+     task_copy_id_pni=null:             UUID                      # id for globus transfer task raw file local->cup
      task_copy_id_pre=null:             UUID                      # id for globus transfer task raw file cup->tiger  
      task_copy_id_pos=null:             UUID                      # id for globus transfer task sorted file tiger->cup
-
      slurm_id=null:                     VARCHAR(16)               # id for slurm process in tiger
      """    
 
