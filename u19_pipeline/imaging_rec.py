@@ -70,7 +70,8 @@ class ScanInfo(dj.Imported):
 @schema
 class FieldOfView(dj.Imported):
     definition = """
-    # meta-info about specific FOV within mesoscope imagining session
+    # meta-info about specific FOV within mesoscope imaging session
+    # `make` function is declared in the `U19-pipeline-matlab` repository
     -> Scan
     fov                  : tinyint                      # number of the field of view in this scan
     ---
