@@ -191,7 +191,7 @@ class RecordingProcess(dj.Manual):
 @schema
 class RecordingProcessStatus(dj.Manual):
      definition = """
-     ->RecordingProcess
+     -> RecordingProcess
      -----
      -> StatusProcessDefinition.proj(status_pipeline_old='status_pipeline') # old status in the pipeline
      -> StatusProcessDefinition.proj(status_pipeline_new='status_pipeline') # current status in the pipeline
