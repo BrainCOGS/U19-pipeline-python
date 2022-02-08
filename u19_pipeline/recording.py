@@ -163,7 +163,7 @@ def get_content_list_from_status_dict():
 @schema
 class StatusProcessDefinition(dj.Lookup):
      definition = """
-     status_pipeline:                    TINYINT(1)      # status in the automate process pipeline
+     status_pipeline_idx:                    TINYINT(1)      # status in the automate process pipeline
      ---
      status_definition:                  VARCHAR(256)    # Status definition 
      """
