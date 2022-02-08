@@ -58,7 +58,7 @@ class PreprocessingParamSet(dj.Lookup):
                     'The specified param-set'
                     ' already exists - preprocess_paramset_idx: {}'.format(existing_paramset_idx))
         else:
-            cls.insert1(param_dict)
+            cls.insert1(paramset_dict)
 
 
 @schema
