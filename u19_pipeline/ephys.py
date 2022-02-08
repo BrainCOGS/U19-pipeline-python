@@ -63,7 +63,7 @@ class EphysRecording(dj.Computed):
 
 
 @schema
-class EphysSorting(dj.Computed):
+class EphysProcessing(dj.Computed):
     definition = """
     -> EphysRecording
     -> recording.RecordingProcess
