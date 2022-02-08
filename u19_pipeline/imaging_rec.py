@@ -36,6 +36,7 @@ class ImagingProcessing(dj.Computed):
 class ScanInfo(dj.Imported):
     definition = """
     # metainfo about imaging session
+    # `make` function is declared in the `U19-pipeline-matlab`
     -> Scan
     ---
     file_name_base       : varchar(255)                 # base name of the file
