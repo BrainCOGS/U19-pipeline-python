@@ -56,7 +56,7 @@ class PreprocessingParamSet(dj.Lookup):
             else:  # If not same name: human error, trying to add the same paramset with different name
                 raise dj.DataJointError(
                     'The specified param-set'
-                    ' already exists - paramset_idx: {}'.format(existing_paramset_idx))
+                    ' already exists - preprocess_paramset_idx: {}'.format(existing_paramset_idx))
         else:
             cls.insert1(param_dict)
 
