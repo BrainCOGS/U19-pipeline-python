@@ -114,7 +114,6 @@ class Recording(dj.Manual):
      """    
 
 
-#Status pipeline dictionary
 status_pipeline_dict = {
     'ERROR':             {'Value': -1,
                          'Label': 'Error in process',
