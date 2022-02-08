@@ -154,10 +154,7 @@ status_pipeline_dict = {
 }
 
 def get_content_list_from_status_dict():
-    contents = list()
-    for i in status_pipeline_dict.keys():    
-        contents.append([status_pipeline_dict[i]['Value'], status_pipeline_dict[i]['Label']])
-    return contents
+    return [[status_pipeline_dict[i]['Value'], status_pipeline_dict[i]['Label']] for i in status_pipeline_dict.keys()]
 
 
 @schema
