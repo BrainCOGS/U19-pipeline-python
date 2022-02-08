@@ -1,7 +1,7 @@
 import datajoint as dj
 from u19_pipeline import lab, task, subject, acquisition
 
-schema = dj.schema('u19_recording')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
 
 
