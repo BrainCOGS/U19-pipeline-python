@@ -21,7 +21,7 @@ class Scan(dj.Computed):
 
 
 @schema
-class ImagingSegmentation(dj.Computed):
+class ImagingProcessing(dj.Computed):
     definition = """
     -> Scan
     -> recording.RecordingProcess
