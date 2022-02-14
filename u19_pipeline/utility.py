@@ -85,7 +85,7 @@ def get_network_path(path_name):
     network_path = (lab.Path & key).fetch1(*field_get)
     return network_path
 
-
+# Function copied in dj_shorts
 def smart_dj_join(t1, t2):
     """
     Join two datajoint tables even if they have matching secondary field names
@@ -274,3 +274,10 @@ def get_cols_rows_plot(num_plots, fig_size):
 
     return num_rows, num_cols
 
+
+def create_str_from_dict(key_dict):
+
+    slurm_file_name = ''
+    for i in key_dict.keys():
+        slurm_file_name += str(i) + '_' +  str(key_dict[i])
+    return slurm_file_name

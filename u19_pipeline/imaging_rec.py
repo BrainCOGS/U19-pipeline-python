@@ -2,7 +2,7 @@ import datajoint as dj
 
 from u19_pipeline import acquisition, subject, recording
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_rec')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'imaging_rec')
 
 
 @schema
@@ -17,18 +17,9 @@ class Scan(dj.Computed):
         return recording.Recording & {'recording_modality': 'imaging'}
 
     def make(self, key):
-        self.insert1(key)
 
+        print('population here....', key)
 
-@schema
-class ImagingProcessing(dj.Computed):
-    definition = """
-    -> Scan
-    -> recording.RecordingProcess
-    -----
-    """  
-
-    def make(self, key):
         self.insert1(key)
 
 
@@ -64,6 +55,11 @@ class ScanInfo(dj.Imported):
     nframes              : int                          # number of frames in the scan
     nframes_good         : int                          # number of frames in the scan before acceptable sample bleaching threshold is crossed
     last_good_file       : int                          # number of the file containing the last good frame because of bleaching
+    motion_correction_enabled=0 : tinyint               # 
+    motion_correction_mode='N/A': varchar(64)           # 
+    stacks_enabled=0            : tinyint               # 
+    stack_actuator='N/A'        : varchar(64)           # 
+    stack_definition='N/A'      : varchar(64)           # 
     """
 
 
@@ -81,8 +77,9 @@ class FieldOfView(dj.Imported):
     fov_center_xy        : blob                         # X-Y coordinate for the center of the FOV in microns. One for each FOV in scan
     fov_size_xy          : blob                         # X-Y size of the FOV in microns. One for each FOV in scan (sizeXY)
     fov_rotation_degrees : float                        # rotation of the FOV with respect to cardinal axes in degrees. One for each FOV in scan
-    fov_pixel_resolution_xy : blob                         # number of pixels for rows and columns of the FOV. One for each FOV in scan
-    fov_discrete_plane_mode : tinyint                      # true if FOV is only defined (acquired) at a single specifed depth in the volume. One for each FOV in scan should this be boolean?
+    fov_pixel_resolution_xy : blob                      # number of pixels for rows and columns of the FOV. One for each FOV in scan
+    fov_discrete_plane_mode : tinyint                   # true if FOV is only defined (acquired) at a single specifed depth in the volume. One for each FOV in scan should this be boolean?
+    power_percent           :  float          # percentage of power used for this field of view
     """
 
     class File(dj.Part):
@@ -94,3 +91,12 @@ class FieldOfView(dj.Imported):
         fov_filename         : varchar(255)                 # file name of the new fov tiff file
         file_frame_range     : blob                         # [first last] frame indices in this file, with respect to the whole imaging session
         """
+
+
+@schema
+class ImagingProcessing(dj.Manual):
+    definition = """
+    -> recording.RecordingProcess
+    -----
+    -> FieldOfView
+    """
