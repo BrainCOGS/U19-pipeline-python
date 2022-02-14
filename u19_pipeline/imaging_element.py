@@ -1,7 +1,10 @@
 import datajoint as dj
 import pathlib
+import re
+import os
 
-from u19_pipeline import acquisition, imaging
+from numpy import full
+from u19_pipeline import acquisition, imaging, subject
 
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
@@ -41,7 +44,7 @@ from u19_pipeline.acquisition import Session
 from u19_pipeline.reference import BrainArea as Location
 
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
+schema = dj.schema('u19_' + 'lab')
 
 
 @schema
@@ -63,44 +66,43 @@ def get_scan_image_files(scan_key):
     #Replace scan_id with fov, we are going to search files by fov
     if 'scan_id' in fov_key:
         fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = list((imaging.FieldOfView.File * imaging.FieldOfView & fov_key).proj(
-    full_path='concat(relative_fov_directory, fov_filename)').fetch('full_path'))
-
-    # if rel paths start with / remove it for Pathlib library
-    scan_filepaths_ori = [x[1:] if x[0] == '/' else x for x in scan_filepaths_ori]
-    
-    data_dir = get_imaging_root_data_dir()
-    tiff_filepaths = [(data_dir / x).as_posix() for x in scan_filepaths_ori]
- 
-    if tiff_filepaths:
-        return tiff_filepaths
+    relative_fov_directory, fov_filename = (imaging.FieldOfView.File * imaging.FieldOfView & fov_key).fetch('relative_fov_directory', 'fov_filename')
+    # relative_fov_directory = [re.findall("braininit/RigData/mesoscope/imaging", x) for x in relative_fov_directory]
+    relative_fov_directory = [x[37:] for x in relative_fov_directory]
+    subject_name = (subject.Subject & fov_key).fetch1('user_id')
+    relative_fov_directory = [subject_name+ '_K' + str(x) for x in relative_fov_directory]
+    data_dir = get_imaging_root_data_dir().as_posix()
+    scan_filepaths_ori = [data_dir + '/' + subject_name +'/'+ relative_fov_directory[i] + '/' + fov_filename[i] for i in range(0,len(relative_fov_directory))]
+    if scan_filepaths_ori:
+        return scan_filepaths_ori
     else:
-        raise FileNotFoundError(f'No tiff file found in {data_dir}')
+        raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
 
 def get_suite2p_dir(processing_task_key):
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
     bucket_scan_dir = (imaging.FieldOfView & sess_key &
                              {'fov': processing_task_key['scan_id']}).fetch1('relative_fov_directory')
-
-    if bucket_scan_dir[0] == '/':
-        bucket_scan_dir = bucket_scan_dir[1:]
-        
+    # if bucket_scan_dir[0] == '/':
+    #     bucket_scan_dir = bucket_scan_dir[1:]
+    bucket_scan_dir = bucket_scan_dir[37:]
+    bucket_scan_dir = pathlib.Path('koay_'+str(bucket_scan_dir))
+    #TODO: The imaging root data dir can be a list, modify the code to support list
     data_dir = get_imaging_root_data_dir()
-    sess_dir = data_dir / bucket_scan_dir  / 'suite2p'
-    relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / 'suite2p').as_posix()
-
+    sess_dir = data_dir / 'koay_' / bucket_scan_dir / 'suite2p'
+    relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
     # Check if suite2p dir exists
     if not sess_dir.exists():
-        raise FileNotFoundError(f'Session directory not found ({scan_dir})')
+        raise FileNotFoundError(f'Session directory not found ({bucket_scan_dir})')
 
     # Check if ops.npy is inside suite2pdir
     suite2p_dirs = set([fp.parent.parent for fp in sess_dir.rglob('*ops.npy')])
     if len(suite2p_dirs) != 1:
-        raise FileNotFoundError(f'Error searching for Suite2p output directory in {scan_dir} - Found {suite2p_dirs}')
-    
-    return relative_suite2p_dir
+        raise FileNotFoundError(f'Error searching for Suite2p output directory in {bucket_scan_dir} - Found {suite2p_dirs}')
+    return sess_dir
 
 
 # ------------- Activate "imaging" schema -------------
-imaging_element.activate(imaging_schema_name,  scan_schema_name,  linking_module=__name__)
+imaging_element.activate(imaging_schema_name,  
+                         scan_schema_name,  
+                         linking_module=__name__)

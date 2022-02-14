@@ -1,26 +1,23 @@
-# from scripts.conf_file_finding import try_find_conf_file
-# try_find_conf_file()
-
 import os 
 import datajoint as dj
 import numpy as np
 from u19_pipeline import imaging, acquisition, subject
-from u19_pipeline.imaging_element import imaging_element, scan_element, get_suite2p_dir
+from u19_pipeline.imaging_element import imaging_element, scan_element, \
+                                        get_suite2p_dir, Equipment,\
+                                          get_imaging_root_data_dir, \
+                                        get_scan_image_files
 from u19_pipeline.ingest.imaging_element_ingest import process_scan
-from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
-                                          get_imaging_root_data_dir, get_scan_image_files)
-from element_calcium_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
+from element_interface.scanimage_utils import get_scanimage_acq_time, parse_scanimage_header
 import scanreader
 import pathlib
+import tifffile
+import datetime
 
-subject = 'emdia_gps24'
-date = '2022-01-11'
-acq_software = 'mesoscope'
-# subject = 'emdia_teto6s_12'
-# date = '2021-11-14'
-# acq_software = 'mesoscope'
-# ingest parameters for Suite2p
-pars = {
+subject = 'koay_K65'
+date = '2018-02-02'
+acq_software = 'ScanImage'
+
+parameters = {
     'look_one_level_down': 0.0,
     'fast_disk': [],
     'delete_bin': False,
@@ -83,67 +80,67 @@ pars = {
     'xrange': np.array([0, 0]),
     'yrange': np.array([0, 0])}
 
-key = (imaging.Scan & dict(session_date =date, subject_fullname=subject)).fetch1('KEY')
+key = (imaging.Scan & dict(session_date=date, subject_fullname=subject)).fetch1('KEY')
 
 for scan_key in (imaging.Scan & key).fetch('KEY'):
-
     for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
 
         scan_filepaths = get_scan_image_files(fov_key)
-
-        # for scan_folder in scan_filepaths:
-        try:  # attempt to read .tif as a scanimage file
-            #TODO: Can use tiffile function to load
-            # scan_folder = scan_folder.rsplit('/', maxsplit=1)[0]
-            # if os.path.exists(str(scan_folder) + '/' +'suite2p'):
-            # else:
+        try: 
+            #TODO: Can use tiffile function to loads
+            print('LOADED Scan using Scanreader')
             loaded_scan = scanreader.read_scan(scan_filepaths) #TODO: Try except scanreader and tiffile
             header = parse_scanimage_header(loaded_scan)
             scanner = header['SI_imagingSystem'].strip('\'') #TODO: If using tiffile, hardcode it to `mesoscope`
         except Exception as e:
-            print(f'ScanImage loading error: {scan_filepaths}\n{str(e)}')
+            print('LOADED Scan using Tifffile')
+            # scan_filepaths = scan_filepaths[:25] # TODO load all TIFF files from session possibly using TIFFSequence
+            loaded_scan = tifffile.imread(scan_filepaths)
+            scanner = 'mesoscope'
+        else: #TODO: Use except instead of except)
+            print(f'ScanImage loading error')  #TODO: Modify the error message
+
         scan_key = {**scan_key, 'scan_id': fov_key['fov']}
         if scan_key not in scan_element.Scan():
             Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
             scan_element.Scan.insert1(
                 {**scan_key, 'scanner': scanner, 'acq_software': acq_software})
-            scan_element.ScanInfo.populate(key, display_progress=True)
+            scan_element.ScanInfo.populate(scan_key, display_progress=True)
 
-    imaging_element.ProcessingParamSet.insert_new_params(
-        'suite2p', 0, 'Calcium imaging analysis with Suite2p using default Suite2p parameters', pars)
+        imaging_element.ProcessingParamSet.insert_new_params(
+        'suite2p', 0, 'Calcium imaging analysis with Suite2p using default Suite2p parameters', parameters) #TODO: element-calcium-imaging (scan and imaging module)
 
-    #TODO: Test if another for loop is even required - logically shouldn't be needed
-    scan_keys = (scan_element.Scan & key).fetch('KEY')
-    scan_folder = scan_filepaths.rsplit('/', maxsplit=1)[0]
-    if os.path.exists(str(scan_folder) + '/' +'suite2p'): #TODO: Check pathlib.Path to be more consistent 
-        for scan_key in scan_keys:
+        #TODO: Test if another for loop is even required - logically shouldn't be needed
+        output_dir = [x.rsplit('/', maxsplit=1)[0] for x in scan_filepaths]
+        output_dir = [pathlib.Path(x) for x in output_dir]
+        scan_folder = [x / 'suite2p' for x in output_dir]
+        if (scan_folder[0]).exists(): 
             output_dir = get_suite2p_dir(scan_key)
-        #TODO: Check if the `suite2p` folder already exists in the output_dir, if yes load, otherwise trigger
-        #  https://github.com/datajoint/element-interface/blob/5860916aa560749c9899e8cef83addacf160f0e3/element_interface/suite2p_loader.py#L79
-            ops_filepaths = list(output_dir.rglob('*ops.npy'))
-            fpath = pathlib.Path(output_dir) #TODO: Check pathlib.Path to be more consistent 
-            ops_fp = fpath / 'ops.npy'
-            if not ops_fp.exists():
-                raise FileNotFoundError(
-                    'No "ops.npy" found. Invalid suite2p plane folder: {}'.format(self.fpath))
-            self.creation_time = datetime.fromtimestamp(ops_fp.stat().st_ctime)
+            print(output_dir)
+            p = pathlib.Path(output_dir).glob('**/*')
+            plane_filepaths = [x for x in p if x.is_dir()]
+            for plane_filepath in plane_filepaths:
+                ops_fp = plane_filepath / 'ops.npy'
+                if not ops_fp.exists():
+                    raise FileNotFoundError(
+                        'No "ops.npy" found. Invalid suite2p plane folder: {}'.format(ops_fp))
+                iscell_fp = plane_filepath / 'iscell.npy'
+                if not iscell_fp.exists():
+                    raise FileNotFoundError(
+                        'No "iscell.npy" found. Invalid suite2p plane folder: {}'.format(iscell_fp))
+                imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=plane_filepath, task_mode='load'), skip_duplicates=True)
+        else:
+            print(output_dir)
+            imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=output_dir[0], task_mode='trigger'), skip_duplicates=True)
+            imaging_element.Processing.populate(scan_key, display_progress=True)
 
-            iscell_fp = self.fpath / 'iscell.npy'
-            if not iscell_fp.exists():
-                raise FileNotFoundError(
-                    'No "iscell.npy" found. Invalid suite2p plane folder: {}'.format(self.fpath))
+            processing_keys = imaging_element.Processing.fetch('KEY')
+            for processing_key in processing_keys:
+                imaging_element.Curation().create1_from_processing_task(processing_key)
 
-        imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=output_dir, task_mode='load'), skip_duplicates=True)
+            imaging_element.MotionCorrection.populate(scan_key, display_progress=True)
+            imaging_element.Segmentation.populate(scan_key, display_progress=True)
 
-    imaging_element.Processing.populate(key, display_progress=True)
-
-    processing_keys = imaging_element.Processing.fetch('KEY')
-    for processing_key in processing_keys:
-        imaging_element.Curation().create1_from_processing_task(processing_key)
-
-    imaging_element.MotionCorrection.populate(key, display_progress=True)
-    imaging_element.Segmentation.populate(key, display_progress=True)
-
-    imaging_element.Fluorescence.populate(key, display_progress=True)
-    # This table computes the activity such as df/f or deconvoluted inferred spikes
-    imaging_element.Activity.populate(key, display_progress=True)
+            imaging_element.Fluorescence.populate(scan_key, display_progress=True)
+            # This table computes the activity such as df/f or deconvoluted inferred spikes
+            imaging_element.Activity.populate(scan_key, display_progress=True)
