@@ -1,16 +1,5 @@
-import datajoint as dj
-import pathlib
-import re
-import os
-
-from numpy import full
-from u19_pipeline import acquisition, imaging, subject
-
-from element_calcium_imaging import scan as scan_element
-from element_calcium_imaging import imaging as imaging_element
-
 """
------- Gathering requirements to activate the imaging elements ------
+Requirements to activate the imaging element
 
 To activate the imaging elements, we need to provide:
 
@@ -28,23 +17,30 @@ To activate the imaging elements, we need to provide:
     + get_scan_image_files()
     + get_suite2p_dir()
 
-For more detail, check the docstring of the imaging element:
-
+For more detail, check the docstring of the element:
     help(scan_element.activate)
     help(imaging_element.activate)
 
 """
 
-# 1. Schema names
+# 1. Schema names --------------------------------------------------------------
+import datajoint as dj
+import pathlib
+
+from u19_pipeline import acquisition, imaging
+
+from element_calcium_imaging import scan as scan_element
+from element_calcium_imaging import imaging as imaging_element
+
 imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
 scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
 
-# 2. Upstream tables
+
+# 2. Upstream tables -----------------------------------------------------------
 from u19_pipeline.acquisition import Session
 from u19_pipeline.reference import BrainArea as Location
 
-
-schema = dj.schema('u19_' + 'lab')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
 
 @schema
@@ -54,7 +50,7 @@ class Equipment(dj.Manual):
     """
 
 
-# 3. Utility functions
+# 3. Utility functions ---------------------------------------------------------
 
 def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
@@ -102,7 +98,7 @@ def get_suite2p_dir(processing_task_key):
     return sess_dir
 
 
-# ------------- Activate "imaging" schema -------------
-imaging_element.activate(imaging_schema_name,  
-                         scan_schema_name,  
+# 4. Activate imaging schema ---------------------------------------------------
+imaging_element.activate(imaging_schema_name, 
+                         scan_schema_name, 
                          linking_module=__name__)

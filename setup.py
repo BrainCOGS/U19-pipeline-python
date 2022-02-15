@@ -10,8 +10,8 @@ setup(
     name='u19_pipeline',
     version='0.3.0',
     description='Datajoint schemas for Princeton U19',
-    author='Vathes',
-    author_email='support@vathes.com',
+    author='DataJoint',
+    author_email='support@datajoint.com',
     packages=find_packages(exclude=[]),
     install_requires=requirements,
 )
