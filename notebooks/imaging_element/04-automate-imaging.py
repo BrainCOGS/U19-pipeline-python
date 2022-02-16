@@ -13,8 +13,18 @@ import pathlib
 import tifffile
 import datetime
 
-subject = 'koay_K65'
-date = '2018-02-02'
+# subject = 'koay_K65'
+# date = '2018-02-02'
+# session_number = 0
+subject_fullname = 'emdiamanti_gps8'
+session_date = '2021-02-27'
+session_number = 0
+
+# subject_fullname = os.environ['subject_fullname']
+# # date = datetime.date(os.environ['session_date'])
+# session_date = os.environ['session_date']
+# session_number = os.environ['session_number']
+
 acq_software = 'ScanImage'
 
 parameters = {
@@ -80,67 +90,66 @@ parameters = {
     'xrange': np.array([0, 0]),
     'yrange': np.array([0, 0])}
 
-key = (imaging.Scan & dict(session_date=date, subject_fullname=subject)).fetch1('KEY')
+scan_key = (imaging.Scan & dict(session_date=session_date, session_number=session_number, subject_fullname=subject_fullname)).fetch1('KEY')
 
-for scan_key in (imaging.Scan & key).fetch('KEY'):
-    for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
 
-        scan_filepaths = get_scan_image_files(fov_key)
-        try: 
-            #TODO: Can use tiffile function to loads
-            print('LOADED Scan using Scanreader')
-            loaded_scan = scanreader.read_scan(scan_filepaths) #TODO: Try except scanreader and tiffile
-            header = parse_scanimage_header(loaded_scan)
-            scanner = header['SI_imagingSystem'].strip('\'') #TODO: If using tiffile, hardcode it to `mesoscope`
-        except Exception as e:
-            print('LOADED Scan using Tifffile')
-            # scan_filepaths = scan_filepaths[:25] # TODO load all TIFF files from session possibly using TIFFSequence
-            loaded_scan = tifffile.imread(scan_filepaths)
-            scanner = 'mesoscope'
-        else: #TODO: Use except instead of except)
-            print(f'ScanImage loading error')  #TODO: Modify the error message
+for fov_key in (imaging.FieldOfView & scan_key).fetch('KEY'):
 
-        scan_key = {**scan_key, 'scan_id': fov_key['fov']}
-        if scan_key not in scan_element.Scan():
-            Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
-            scan_element.Scan.insert1(
-                {**scan_key, 'scanner': scanner, 'acq_software': acq_software})
-            scan_element.ScanInfo.populate(scan_key, display_progress=True)
+    scan_filepaths = get_scan_image_files(fov_key)
+    try: 
+        #TODO: Can use tiffile function to loads
+        print('LOADED Scan using Scanreader')
+        loaded_scan = scanreader.read_scan(scan_filepaths) #TODO: Try except scanreader and tiffile
+        header = parse_scanimage_header(loaded_scan)
+        scanner = header['SI_imagingSystem'].strip('\'') #TODO: If using tiffile, hardcode it to `mesoscope`
+    except Exception as e:
+        print('LOADED Scan using Tifffile')
+        # scan_filepaths = scan_filepaths[:25] # TODO load all TIFF files from session possibly using TIFFSequence
+        loaded_scan = tifffile.imread(scan_filepaths)
+        scanner = 'mesoscope'
+    else: #TODO: Use except instead of except)
+        print(f'ScanImage loading error')  #TODO: Modify the error message
 
-        imaging_element.ProcessingParamSet.insert_new_params(
-        'suite2p', 0, 'Calcium imaging analysis with Suite2p using default Suite2p parameters', parameters) #TODO: element-calcium-imaging (scan and imaging module)
+    scan_key = {**scan_key, 'scan_id': fov_key['fov']}
+    if scan_key not in scan_element.Scan():
+        Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
+        scan_element.Scan.insert1(
+            {**scan_key, 'scanner': scanner, 'acq_software': acq_software})
+        scan_element.ScanInfo.populate(scan_key, display_progress=True)
 
-        #TODO: Test if another for loop is even required - logically shouldn't be needed
-        output_dir = [x.rsplit('/', maxsplit=1)[0] for x in scan_filepaths]
-        output_dir = [pathlib.Path(x) for x in output_dir]
-        scan_folder = [x / 'suite2p' for x in output_dir]
-        if (scan_folder[0]).exists(): 
-            output_dir = get_suite2p_dir(scan_key)
-            print(output_dir)
-            p = pathlib.Path(output_dir).glob('**/*')
-            plane_filepaths = [x for x in p if x.is_dir()]
-            for plane_filepath in plane_filepaths:
-                ops_fp = plane_filepath / 'ops.npy'
-                if not ops_fp.exists():
-                    raise FileNotFoundError(
-                        'No "ops.npy" found. Invalid suite2p plane folder: {}'.format(ops_fp))
-                iscell_fp = plane_filepath / 'iscell.npy'
-                if not iscell_fp.exists():
-                    raise FileNotFoundError(
-                        'No "iscell.npy" found. Invalid suite2p plane folder: {}'.format(iscell_fp))
-                imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=plane_filepath, task_mode='load'), skip_duplicates=True)
-        else:
-            print(output_dir)
-            imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=output_dir[0], task_mode='trigger'), skip_duplicates=True)
-            imaging_element.Processing.populate(scan_key, display_progress=True)
+    imaging_element.ProcessingParamSet.insert_new_params(
+    'suite2p', 0, 'Calcium imaging analysis with Suite2p using default Suite2p parameters', parameters) #TODO: element-calcium-imaging (scan and imaging module)
 
-            processing_keys = imaging_element.Processing.fetch('KEY')
-            for processing_key in processing_keys:
-                imaging_element.Curation().create1_from_processing_task(processing_key)
+    #TODO: Test if another for loop is even required - logically shouldn't be needed
+    output_dir = [x.rsplit('/', maxsplit=1)[0] for x in scan_filepaths]
+    output_dir = [pathlib.Path(x) for x in output_dir]
+    scan_folder = [x / 'suite2p' for x in output_dir]
+    temp_output_folder = '/usr/people/gs6614/temp_output'
+    if (scan_folder[0]).exists(): 
+        output_dir = get_suite2p_dir(scan_key)
+        p = pathlib.Path(output_dir).glob('**/*')
+        plane_filepaths = [x for x in p if x.is_dir()]
+        for plane_filepath in plane_filepaths:
+            ops_fp = plane_filepath / 'ops.npy'
+            if not ops_fp.exists():
+                raise FileNotFoundError(
+                    'No "ops.npy" found. Invalid suite2p plane folder: {}'.format(ops_fp))
+            iscell_fp = plane_filepath / 'iscell.npy'
+            if not iscell_fp.exists():
+                raise FileNotFoundError(
+                    'No "iscell.npy" found. Invalid suite2p plane folder: {}'.format(iscell_fp))
+            imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=plane_filepath, task_mode='load'), skip_duplicates=True)
+    else:
+        imaging_element.ProcessingTask.insert1(dict(**scan_key, paramset_idx=0, processing_output_dir=temp_output_folder, task_mode='load'), skip_duplicates=True)
+    imaging_element.Processing.populate(scan_key, display_progress=True)
 
-            imaging_element.MotionCorrection.populate(scan_key, display_progress=True)
-            imaging_element.Segmentation.populate(scan_key, display_progress=True)
+    processing_keys = imaging_element.Processing.fetch('KEY')
+    for processing_key in processing_keys:
+        imaging_element.Curation().create1_from_processing_task(processing_key)
 
-            imaging_element.Fluorescence.populate(scan_key, display_progress=True)
-            # This table computes the activity such as df/f or deconvoluted inferred spikes
-            imaging_element.Activity.populate(scan_key, display_progress=True)
+    imaging_element.MotionCorrection.populate(scan_key, display_progress=True)
+    imaging_element.Segmentation.populate(scan_key, display_progress=True)
+
+    imaging_element.Fluorescence.populate(scan_key, display_progress=True)
+    # This table computes the activity such as df/f or deconvoluted inferred spikes
+    imaging_element.Activity.populate(scan_key, display_progress=True)
