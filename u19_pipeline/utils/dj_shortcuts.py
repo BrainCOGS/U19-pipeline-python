@@ -49,3 +49,22 @@ def smart_dj_join(t1, t2):
         t = t1 * t2
 
     return t
+
+
+def get_string_key(key):
+    """
+    Translate list or dict key to string
+    """
+
+    str_key = ''
+    if isinstance(key, list):
+        str_key = [[k + '=' + str(v) for k,v in x.items()] for x in key]
+        str_key = ['('+' and '.join(sublist)+')' for sublist in str_key]
+        str_key = ' or '.join(str_key)
+    elif isinstance(key, dict):
+        str_key = [k + '=' + str(v) for k,v in key.items()] 
+        str_key = ' and '.join(str_key)
+    elif isinstance(key,str):
+        str_key = key
+    
+    return str_key

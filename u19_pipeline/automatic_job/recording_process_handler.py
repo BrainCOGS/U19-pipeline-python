@@ -4,13 +4,15 @@ import subprocess
 import json
 import time
 import re
+import traceback
 import pandas as pd
 import datajoint as dj
 import u19_pipeline.recording as recording
 import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.automatic_job.file_transfers as ft
+import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utility import create_str_from_dict
 
 recording_process_status_df = pd.DataFrame(config.recording_process_status_dict)
 
@@ -37,38 +39,53 @@ class RecProcessHandler():
             #Filter current process job
             rec_process_series = df_all_process_job.loc[i, :]
 
-            preprocess_paramset = recording.PreprocessParamSet.get_preprocess_params(rec_process_series['preprocess_paramset_idx'])
-            process_paramset    = recording.ProcessParamSet.get_process_params(rec_process_series['process_paramset_idx'])
+            preprocess_paramset = recording.PreprocessParamSet().get_preprocess_params({'preprocess_paramset_idx':rec_process_series['preprocess_paramset_idx']})
+            process_paramset    = recording.ProcessParamSet().get_process_params({'process_paramset_idx': rec_process_series['process_paramset_idx']})
+
+            #ALS, correct preprocess params if OLD or outdated
 
             #Get params inside the recording process series
             rec_process_series['preprocess_paramset'] = preprocess_paramset
             rec_process_series['process_paramset'] = process_paramset
 
             #Filter current status info
-            curent_status = rec_process_series['status_pipeline_idx']
-            current_status_series = df_status_pipeline.loc[df_status_pipeline['Value'] == current_status, :].squeeze()
-            next_status_series    = df_status_pipeline.loc[df_status_pipeline['Value'] == current_status+1, :].squeeze()
+            current_status = rec_process_series['status_pipeline_idx']
+            current_status_series = config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status, :].squeeze()
+            next_status_series    = config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status+1, :].squeeze()
 
             # Get processing function    
-            function_status_process = next_status_series['ProcessFunction']
+            function_status_process = getattr(RecProcessHandler, next_status_series['ProcessFunction'])
 
             #Trigger process, if success update recording process record
-            success_process, update_dict = function_status_process(rec_process_series, next_status_series, preprocess_paramset, process_paramset) 
+            try:
+                success_process, update_dict = function_status_process(rec_process_series, next_status_series) 
 
-            if success_process:
-                #Get dictionary of record process
-                key = rec_process_series['query_key']
-                #Get values to update
-                next_status = next_status_series['Value']
-                value_update = update_dict['value_update']
-                field_update = next_status_series['UpdateField']
+                print('update_dict', update_dict)
 
-                RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
+                if success_process:
+                    #Get dictionary of record process
+                    key = rec_process_series['query_key']
+                    #Get values to update
+                    next_status = next_status_series['Value']
+                    value_update = update_dict['value_update']
+                    field_update = next_status_series['UpdateField']
+
+                    print('key to update', key)
+                    print('old status', current_status, 'new status', next_status)
+                    print('value_update', value_update, 'field_update', field_update)
+                    print('function executed:', next_status_series['ProcessFunction'])
+
+                    RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
+            except Exception as err:
+                raise(err)
+                print(traceback.format_exc())
+                ## Send notification error, update recording to error
 
             time.sleep(2)
 
+
     @staticmethod
-    def transfer_request(rec_series, status_series, preprocess_paramset, process_paramset)
+    def transfer_request(rec_series, status_series):
         """
         Request a transfer from PNI to Tiger Cluster
         Input:
@@ -84,18 +101,27 @@ class RecProcessHandler():
         """
 
         status_update = False
-        update_value_dict = RecProcessHandler.default_update_value_dict
+        update_value_dict = RecProcessHandler.default_update_value_dict.copy()
         directory_path = status_series['FunctionField']
 
-        if status_series['Key'] is 'RAW_FILE_TRANSFER_REQUEST':
-            transfer_request = globus_transfer_raw_ephys_pni_tiger(directory_path)
-        elif status_series['Key'] is 'PROC_FILE_TRANSFER_REQUEST':
-            #ALS, which recording directory for processed file
-            transfer_request = globus_transfer_sorted_ephys_tiger_pni(directory_path)
+        print('process_cluter:', rec_series['preprocess_paramset']['process_cluster'])
 
-        if transfer_request['code'] == 'Accepted':
+        # If tiger, we trigger globus transfer 
+        if rec_series['preprocess_paramset']['process_cluster'] == "tiger":
+            print('si fue tiger')
+            if status_series['Key'] is 'RAW_FILE_TRANSFER_REQUEST':
+                transfer_request = ft.globus_transfer_to_tiger(directory_path)
+            elif status_series['Key'] is 'PROC_FILE_TRANSFER_REQUEST':
+                #ALS, which recording directory for processed file
+                transfer_request = ft.globus_transfer_to_pni(directory_path)
+
+            if transfer_request['code'] == 'Accepted':
+                status_update = True
+                update_value_dict['value_update'] = transfer_request['task_id']
+        # If not tiger let's go to next status
+        else:
+            print('si fue spock')
             status_update = True
-            update_value_dict['value_update'] = transfer_request['task_id']
 
         return (status_update, update_value_dict)
 
@@ -116,14 +142,15 @@ class RecProcessHandler():
         """
 
         status_update = False
-        value_update = RecProcessHandler.default_update_value_dict
+        update_value_dict = RecProcessHandler.default_update_value_dict.copy()
         id_task = status_series['FunctionField']
 
-        transfer_request = request_globus_transfer_status(str(id_task))
-            if transfer_request['status'] == 'SUCCEEDED':
-                status_update = True
+        transfer_request = ft.request_globus_transfer_status(str(id_task))
+        if transfer_request['status'] == 'SUCCEEDED':
+            status_update = True
 
         return (status_update, update_value_dict)
+    
 
     @staticmethod
     def slurm_job_queue(rec_series, status_series):
@@ -142,24 +169,26 @@ class RecProcessHandler():
         """
         
         status_update = False
-        update_value_dict = RecProcessHandler.default_update_value_dict
+        update_value_dict = RecProcessHandler.default_update_value_dict.copy()
 
-        slurm_text = slurmlib.generate_slurm_file(rec_series)
-        slurm_file_name = 'slurm_' + create_str_from_dict(key) +  '.slurm'
-        slurm_file_path = str(pathlib.Path("slurm_files",slurm_file_name))
+        status = slurmlib.generate_slurm_file(rec_series)
+        #slurm_file_name = 'slurm_' + create_str_from_dict(rec_series['query_key']) +  '.slurm'
+        #slurm_file_path = str(pathlib.Path("slurm_files",slurm_file_name))
 
-        write_slurm_file(slurm_file_path, slurm_text)
+        #slurmlib.write_slurm_file(slurm_file_path, slurm_text)
             
-        tiger_slurm_user = default_user+'@'+tiger_gpu_host
-        tiger_slurm_location = tiger_slurm_user+':'+tiger_slurm_files_dir+slurm_file_name
-        transfer_request = scp_file_transfer(slurm_file_path, tiger_slurm_location)
+        #tiger_slurm_user = default_user+'@'+tiger_gpu_host
+        #tiger_slurm_location = tiger_slurm_user+':'+tiger_slurm_files_dir+slurm_file_name
+        #transfer_request = scp_file_transfer(slurm_file_path, tiger_slurm_location)
         
-        if transfer_request == config.system_process['SUCCESS']:
-            slurm_queue_status, slurm_jobid = queue_slurm_file(tiger_slurm_user, tiger_slurm_files_dir+slurm_file_name)
+        if status == config.system_process['SUCCESS']:
+            #slurm_queue_status, slurm_jobid = slurmlib.queue_slurm_file(tiger_slurm_user, tiger_slurm_files_dir+slurm_file_name)
+            slurm_jobid = 0
 
-            if transfer_request == config.system_process['SUCCESS']:
+            if status == config.system_process['SUCCESS']:
                 status_update = True
-                update_status_pipeline(key, status_dict['JOB_QUEUE']['Task_Field'], slurm_jobid, status_dict['JOB_QUEUE']['Value'])
+                update_value_dict['value_update'] = slurm_jobid
+                #update_status_pipeline(key, status_dict['JOB_QUEUE']['Task_Field'], slurm_jobid, status_dict['JOB_QUEUE']['Value'])
 
         return (status_update, update_value_dict)
 
@@ -180,10 +209,10 @@ class RecProcessHandler():
         """
 
         status_update = False
-        value_update = RecProcessHandler.default_update_value_dict
+        update_value_dict = RecProcessHandler.default_update_value_dict.copy()
         slurm_jobid = status_series['FunctionField']
 
-        ssh_user = tiger_slurm_user = default_user+'@'+tiger_gpu_host
+        ssh_user = default_user+'@'+tiger_gpu_host
         job_status = check_slurm_job(ssh_user, slurm_jobid)
 
         print('job status', job_status)
@@ -217,9 +246,6 @@ class RecProcessHandler():
 
         return df_process_jobs
 
-    
-RecProcessHandler.get_preprocess_params(rec_process_series['query_key'])
-
     @staticmethod
     def update_status_pipeline(recording_process_key_dict, status, update_field=None, update_value=None):
         """
@@ -236,7 +262,7 @@ RecProcessHandler.get_preprocess_params(rec_process_series['query_key'])
             update_task_id_dict[update_field] = update_value
             recording.RecordingProcess.update1(update_task_id_dict)
         
-        update_status_dict = recording_process_dict.copy()
+        update_status_dict = recording_process_key_dict.copy()
         update_status_dict['status_pipeline_idx'] = status
         recording.RecordingProcess.update1(update_status_dict)
 

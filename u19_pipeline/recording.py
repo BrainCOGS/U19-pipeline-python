@@ -2,6 +2,8 @@ import datajoint as dj
 import numpy as np
 from u19_pipeline import lab, task, subject, acquisition
 import u19_pipeline.automatic_job.params_config as config
+from element_interface.utils import dict_to_uuid
+from u19_pipeline.utility import numpy_array_to_dict
 
 schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording')
 
@@ -16,6 +18,7 @@ class RecordingModality(dj.Lookup):
      recording_file_pattern:     blob                 # directory pattern to find recordings in path
      process_unit_file_pattern:  blob                 # process "unit" pattern to find in path
      process_unit_dir_fieldname: varchar(64)          # FieldName that stores process unit directory for specific modality
+     process_unit_fieldname:     varchar(32)          # FieldName that stores process unit for specific modality (fov, probe, etc)
      """
      contents = config.recording_modality_list
 
@@ -63,15 +66,21 @@ class PreprocessParamSet(dj.Lookup):
         else:
             cls.insert1(paramset_dict)
 
-    @classmethod
-    def get_preprocess_params(preprocess_param_idx):
+
+    def get_preprocess_params(self, preprocess_param_idx):
         '''
         Get process params for current recording process
         Return:
             preprocess_paramset (dict): preprocess params associated with recording process
         '''
 
-        preprocess_paramset =  (recording.ProcessParamSet & preprocess_param_idx).fetch1('preprocess_paramset')
+        preprocess_paramset =  (self & preprocess_param_idx).fetch1('preprocess_paramset')
+
+        #If stored in MATLAB this is a numpy array to be converted to dictionary
+        if isinstance(preprocess_paramset, np.ndarray):
+            preprocess_paramset = numpy_array_to_dict(preprocess_paramset)
+
+
         return preprocess_paramset
 
 
@@ -109,15 +118,20 @@ class ProcessParamSet(dj.Lookup):
         else:
             cls.insert1(paramset_dict)
 
-    @staticmethod
-    def get_process_params(process_param_idx):
+
+    def get_process_params(self, process_param_idx):
         '''
         Get process params for current recording process
         Return:
             process_paramset (dict): process params associated with recording process
         '''
 
-        process_paramset =  (recording.ProcessParamSet & process_param_idx).fetch1('process_paramset')
+        process_paramset =  (self & process_param_idx).fetch1('process_paramset')
+
+        #If stored in MATLAB this is a numpy array to be converted to dictionary
+        if isinstance(process_paramset, np.ndarray):
+            process_paramset = numpy_array_to_dict(process_paramset)
+
         return process_paramset
 
 
@@ -129,8 +143,8 @@ class Recording(dj.Manual):
      -> RecordingModality    
      -> lab.Location                        
      -> StatusRecordingDefinition                                               # current status for recording in the pipeline
-     -> PreprocessParamSet                                                      # reference to params to preprocess recording (possible to inherit to recordigprocess)
-     -> ProcessParamSet                                                         # reference to params to process recording  (possible to inherit to recordigprocess)
+     -> PreprocessParamSet.proj(def_preprocess_paramset_idx='preprocess_paramset_idx')  # reference to params to default preprocess recording (possible to inherit to recordigprocess)
+     -> ProcessParamSet.proj(def_process_paramset_idx='process_paramset_idx')   # reference to params to default process recording  (possible to inherit to recordigprocess)
      task_copy_id_pni=null:             UUID                                    # id for globus transfer task raw file local->cup
      inherit_params_recording=1:        boolean                                 # all RecordingProcess from a recording will have same paramSets
      recording_directory:               varchar(255)                            # relative directory where the recording will be stored on cup
@@ -172,14 +186,15 @@ class RecordingProcess(dj.Manual):
      -> StatusProcessDefinition                                   # current status in the pipeline
      -> PreprocessParamSet                                        # reference to params to preprocess recording
      -> ProcessParamSet                                           # reference to params to process recording
+     fragment_number:                   TINYINT(1)                # fov# or probe#, etc. reference from the corresponding modality 
      recording_process_pre_path=null:   VARCHAR(200)              # relative path for raw data recording subdirectory that will be processed (ephys-> probe, imaging->fieldofview)
      recording_process_post_path=null:  VARCHAR(200)              # relative path for processed data recording
      task_copy_id_pre=null:             UUID                      # id for globus transfer task raw file cup->tiger  
-     task_copy_id_post=null:             UUID                      # id for globus transfer task sorted file tiger->cup
+     task_copy_id_post=null:            UUID                      # id for globus transfer task sorted file tiger->cup
      slurm_id=null:                     VARCHAR(16)               # id for slurm process in tiger
      """  
 
-     def insert_recording_process(self, recording_key, rec_unit, unit_directory_fieldname):
+     def insert_recording_process(self, recording_key, rec_unit, unit_directory_fieldname, unit_fieldname):
         '''
         #Insert RecordingProcess(es) from recording.
         # For each processing "unit" of a recording add a new recordingProcess (imaging ->field of view, electrophysiology->probe)
@@ -187,6 +202,7 @@ class RecordingProcess(dj.Manual):
         recording_key            (dict) = Dictionary with recording record
         rec_unit                 (dict) = Dictionary of recording "unit" to be processed
         unit_directory_fieldname (str)  = Unit directory fieldname to be read (ephys-> probe_directory, imaging->fov_directory)
+        unit_fieldname           (str)  = Unit fieldname to be read (ephys-> probe_, imaging->fov)
         '''
 
         # Get directory fieldname for specific modality (probe_directory, fov_directory, etc.)
@@ -196,6 +212,7 @@ class RecordingProcess(dj.Manual):
         this_recprocess_key['recording_id']               = recording_key['recording_id']
         this_recprocess_key['preprocess_paramset_idx']    = recording_key['preprocess_paramset_idx']
         this_recprocess_key['process_paramset_idx']       = recording_key['process_paramset_idx']
+        this_recprocess_key['fragment_number']            = rec_unit[unit_fieldname]
         this_recprocess_key['recording_process_pre_path'] = rec_unit[unit_directory_fieldname]
         this_recprocess_key['status_pipeline_idx'] = 0
 

@@ -9,11 +9,9 @@ import pandas as pd
 import datajoint as dj
 from u19_pipeline import recording, ephys, imaging_rec
 import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.automatic_job.file_transfers as ft
+import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.params_config as config
-
-recording_status_df = pd.DataFrame(config.recording_status_dict)
 
 class RecordingHandler():
 
@@ -40,8 +38,8 @@ class RecordingHandler():
 
             #Filter current status info
             current_status = recording_series['status_recording_idx']
-            current_status_series = recording_status_df.loc[recording_status_df['Value'] == current_status, :].squeeze()
-            next_status_series    = recording_status_df.loc[recording_status_df['Value'] == current_status+1, :].squeeze()
+            current_status_series = config.recording_status_df.loc[config.recording_status_df['Value'] == current_status, :].squeeze()
+            next_status_series    = config.recording_status_df.loc[config.recording_status_df['Value'] == current_status+1, :].squeeze()
 
             print('function to apply:', next_status_series['ProcessFunction'])
 
@@ -87,7 +85,7 @@ class RecordingHandler():
         """
 
         status_update = False
-        update_value_dict = RecordingHandler.default_update_value_dict
+        update_value_dict = RecordingHandler.default_update_value_dict.copy()
         directory_path = status_series['FunctionField']
 
         status_update = True
@@ -119,7 +117,7 @@ class RecordingHandler():
         """
 
         status_update = False
-        update_value_dict = RecordingHandler.default_update_value_dict
+        update_value_dict = RecordingHandler.default_update_value_dict.copy()
         id_task = status_series['FunctionField']
 
         status_update = True
@@ -143,12 +141,15 @@ class RecordingHandler():
         """
         
         status_update = False
-        update_value_dict = RecordingHandler.default_update_value_dict
+        update_value_dict = RecordingHandler.default_update_value_dict.copy()
 
-        # Get fieldname for processing unit for current recording modality
-        process_unit_dir_fieldname = \
+        # Get fieldname directory for processing unit for current recording modality
+        process_unit_fieldnames = \
         config.recording_modality_df.loc[config.recording_modality_df['RecordingModality'] == rec_series['recording_modality'], 
-        'ProcessUnitDirectoryField'].squeeze()
+        ['ProcessUnitDirectoryField', 'ProcessUnitField']].squeeze()
+        process_unit_dir_fieldname = process_unit_fieldnames['ProcessUnitDirectoryField']
+        process_unit_fieldname     = process_unit_fieldnames['ProcessUnitField']
+
 
         if rec_series['recording_modality'] == 'electrophysiology':
 
@@ -158,21 +159,22 @@ class RecordingHandler():
 
             print('this_modality_recording_table', this_modality_recording_table)
 
-            # Insert this modality recording and recording "unit"
-            this_modality_recording_table.populate(rec_series['query_key'])
-            this_modality_recording_unit_table.populate(rec_series['query_key'])
-
         elif rec_series['recording_modality'] == 'imaging':
             
             this_modality_recording_table = imaging_rec.Scan
             this_modality_recording_unit_table = imaging_rec.FieldOfView
             this_modality_processing_unit_table = imaging_rec.ImagingProcessing
 
-            print('imaging scan insert', rec_series)
-            this_modality_recording_table.populate(rec_series['query_key'])
+            #print('imaging scan insert', rec_series)
+            #this_modality_recording_table.populate(rec_series['query_key'])
 
             # Insert this modality recording and recording "unit"
-            # -------------  Call matlab insertion ---------
+            #imaging_rec.ScanInfo.populate(rec_series['query_key'])
+            
+        
+        # Insert this modality recording and recording "unit"
+        this_modality_recording_table.populate(rec_series['query_key'])
+        this_modality_recording_unit_table.populate(rec_series['query_key']) # In imaging this is to call imaging.ScanInfo populate Script
 
         # Get all recording probes ("units") from this recording 
         recording_units = (this_modality_recording_unit_table  & rec_series['query_key']).fetch(as_dict=True)
@@ -180,24 +182,29 @@ class RecordingHandler():
         print('recording_units', recording_units)
 
         if len(recording_units) > 0:
-            # Select only primary keys for recording unit
+            # Select only primary keys for recording unit (EphysRecordingProbes, FieldOfView, etc)
             rec_units_primary_key_fields = dj_short.get_primary_key_fields(this_modality_recording_unit_table)
+            
+            rec_process_table = recording.RecordingProcess()
+
+            # rename default process params (from recording) to process params
+            rec_series['preprocess_paramset_idx'] = rec_series.pop('def_preprocess_paramset_idx')
+            rec_series['process_paramset_idx'] = rec_series.pop('def_process_paramset_idx')
 
             #Insert recording Process for all ("units") (one by one to get matching recording process id)
             connection = recording.RecordingProcess.connection 
             with connection.transaction:
                 for rec_unit in recording_units:
 
-                    #Insert recording process and associated ephysProcessing records for this probe
-                    rec_process_table = recording.RecordingProcess()
-                    rec_process_table.insert_recording_process(rec_series, rec_unit, process_unit_dir_fieldname)
+                    #Insert recording process and associated ephysProcessing records for this probe                    
+                    rec_process_table.insert_recording_process(rec_series, rec_unit, process_unit_dir_fieldname, process_unit_fieldname)
                     recording_process = recording.RecordingProcess.fetch('recording_process_id', order_by='recording_process_id DESC', limit=1)
-
-                    # Get recording unit key fields
-                    recording_unit_key = {k: v for k, v in rec_unit.items() if k in rec_units_primary_key_fields}
 
                     print('recording_process', recording_process)
 
+                    # Get recording unit key fields
+                    recording_unit_key = {k: v for k, v in rec_unit.items() if k in rec_units_primary_key_fields}
+                   
                     #Insert modality processing unit
                     this_mod_processing = recording_unit_key.copy()
                     this_mod_processing['recording_process_id'] = recording_process[0] 
@@ -218,8 +225,8 @@ class RecordingHandler():
             df_recordings (pd.DataFrame): all recordings that are going to be processed in the pipeline
         '''
 
-        status_query = 'status_recording_idx > ' + str(recording_status_df['Value'].min())
-        status_query += ' and status_recording_idx < ' + str(recording_status_df['Value'].max())
+        status_query = 'status_recording_idx > ' + str(config.recording_status_df['Value'].min())
+        status_query += ' and status_recording_idx < ' + str(config.recording_status_df['Value'].max())
 
         recordings_active = recording.Recording & status_query
         df_recordings = pd.DataFrame(recordings_active.fetch(as_dict=True))

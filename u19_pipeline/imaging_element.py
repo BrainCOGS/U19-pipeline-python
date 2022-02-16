@@ -63,14 +63,17 @@ def get_scan_image_files(scan_key):
     #Replace scan_id with fov, we are going to search files by fov
     if 'scan_id' in fov_key:
         fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = list((imaging.FieldOfView.File * imaging.FieldOfView & fov_key).proj(
-    full_path='concat(relative_fov_directory, fov_filename)').fetch('full_path'))
+    scan_filepaths_ori = (imaging.FieldOfView.File * imaging.FieldOfView & fov_key).fetch('relative_fov_directory', 'fov_filename', as_dict=True)
+
+    scan_filepaths_conc = list()
+    for i in range(len(scan_filepaths_ori)):
+        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['relative_fov_directory']) / scan_filepaths_ori[i]['fov_filename']).as_posix())
 
     # if rel paths start with / remove it for Pathlib library
-    scan_filepaths_ori = [x[1:] if x[0] == '/' else x for x in scan_filepaths_ori]
-    
+    scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
+
     data_dir = get_imaging_root_data_dir()
-    tiff_filepaths = [(data_dir / x).as_posix() for x in scan_filepaths_ori]
+    tiff_filepaths = [(pathlib.Path(data_dir) / x).as_posix() for x in scan_filepaths_conc]
  
     if tiff_filepaths:
         return tiff_filepaths
@@ -90,9 +93,12 @@ def get_suite2p_dir(processing_task_key):
     sess_dir = data_dir / bucket_scan_dir  / 'suite2p'
     relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / 'suite2p').as_posix()
 
+    print(bucket_scan_dir)
+    
+
     # Check if suite2p dir exists
     if not sess_dir.exists():
-        raise FileNotFoundError(f'Session directory not found ({scan_dir})')
+        raise FileNotFoundError(f'Session directory not found ({sess_dir})')
 
     # Check if ops.npy is inside suite2pdir
     suite2p_dirs = set([fp.parent.parent for fp in sess_dir.rglob('*ops.npy')])

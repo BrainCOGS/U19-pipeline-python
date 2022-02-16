@@ -10,6 +10,8 @@ recording_modality_dict = [
         'RecordingFilePattern': np.asarray(['/*g[0-9]/*imec[0-9]']),
         'ProcessUnitFilePattern': np.asarray(['/*imec[0-9]/']),
         'ProcessUnitDirectoryField': 'probe_directory',
+        'ProcessUnitField': 'probe',
+        'ProcessingRepository': 'BrainCogsEphysSorters',
     },
     {
         'RecordingModality': 'imaging',
@@ -19,6 +21,8 @@ recording_modality_dict = [
         'RecordingFilePattern': np.asarray(['']),
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'fov_directory',
+        'ProcessUnitField': 'fov',
+        'ProcessingRepository': 'BrainCogsImagingSegmentation',
     },
     {
         'RecordingModality': 'video_acquisition',
@@ -27,7 +31,9 @@ recording_modality_dict = [
         'FileExtensions': np.asarray(['.avi', '.mp4']),
         'RecordingFilePattern': np.asarray(['']),
         'ProcessUnitFilePattern': np.asarray(['']),
-        'ProcessUnitDirectoryField': 'video_directory'
+        'ProcessUnitDirectoryField': 'video_directory',
+        'ProcessUnitField': '',
+        'ProcessingRepository': 'None',
     },
 ]
 
@@ -103,7 +109,7 @@ recording_process_status_dict = [
         'Value': 1,
         'Key': 'RAW_FILE_TRANSFER_REQUEST',
         'Label': 'Raw file transfer requested',
-        'UpdateField': 'task_copy_id_pre_path',
+        'UpdateField': 'task_copy_id_pre',
         'ProcessFunction': 'transfer_request',
         'FunctionField': 'recording_process_pre_path',
     },
@@ -113,7 +119,7 @@ recording_process_status_dict = [
         'Label': 'Raw file transferred to cluster',
         'UpdateField': None,
         'ProcessFunction': 'transfer_check',
-        'FunctionField': 'task_copy_id_pre_path',
+        'FunctionField': 'task_copy_id_pre', 
     },
     {
         'Value': 3,
@@ -166,7 +172,23 @@ recording_process_status_dict = [
     }
 ]
 
+all_preprocess_params = {
+"process_cluster": [
+    "tiger",
+    "spock"],
+"dj_element_processing":[ 
+    "trigger",
+    "load",
+],  
+"processing_algorithm": [
+    "kilosort2",
+    "suite2p",
+]
+}
+
+
 recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
+recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 
 system_process = {
     'SUCCESS': 0
@@ -174,3 +196,4 @@ system_process = {
 
 
 startup_pipeline_matlab_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline-matlab/scripts'
+ingest_scaninfo_script = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/ingest_scaninfo_shell.sh'
