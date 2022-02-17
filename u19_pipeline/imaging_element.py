@@ -27,7 +27,7 @@ For more detail, check the docstring of the element:
 import datajoint as dj
 import pathlib
 
-from u19_pipeline import acquisition, imaging
+from u19_pipeline import acquisition, imaging, subject
 
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
@@ -40,7 +40,7 @@ scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
 from u19_pipeline.acquisition import Session
 from u19_pipeline.reference import BrainArea as Location
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
+schema = dj.schema('u19_' + 'lab')
 
 
 @schema
@@ -64,11 +64,18 @@ def get_scan_image_files(scan_key):
         fov_key['fov'] = fov_key.pop('scan_id')
     relative_fov_directory, fov_filename = (imaging.FieldOfView.File * imaging.FieldOfView & fov_key).fetch('relative_fov_directory', 'fov_filename')
     # relative_fov_directory = [re.findall("braininit/RigData/mesoscope/imaging", x) for x in relative_fov_directory]
-    relative_fov_directory = [x[37:] for x in relative_fov_directory]
-    subject_name = (subject.Subject & fov_key).fetch1('user_id')
-    relative_fov_directory = [subject_name+ '_K' + str(x) for x in relative_fov_directory]
-    data_dir = get_imaging_root_data_dir().as_posix()
-    scan_filepaths_ori = [data_dir + '/' + subject_name +'/'+ relative_fov_directory[i] + '/' + fov_filename[i] for i in range(0,len(relative_fov_directory))]
+    user_id, subject_nickname = (subject.Subject & fov_key).fetch1('user_id', 'subject_nickname')
+    if user_id == 'emdia':
+        relative_fov_directory = [x[5:] for x in relative_fov_directory]
+        relative_fov_directory = [str(x) for x in relative_fov_directory]
+        data_dir = get_imaging_root_data_dir().as_posix()
+        scan_filepaths_ori = [data_dir + '/' + user_id + '/' + user_id + '_' + subject_nickname + '/'+ relative_fov_directory[i] + fov_filename[i] for i in range(0,len(relative_fov_directory))]
+
+    else:
+        relative_fov_directory = [x[37:] for x in relative_fov_directory]
+        relative_fov_directory = [user_id + '_K' + str(x) for x in relative_fov_directory]
+        data_dir = get_imaging_root_data_dir().as_posix()
+        scan_filepaths_ori = [data_dir + '/' + user_id + '/' + relative_fov_directory[i] + '/' + fov_filename[i] for i in range(0,len(relative_fov_directory))]
     if scan_filepaths_ori:
         return scan_filepaths_ori
     else:
@@ -79,15 +86,22 @@ def get_suite2p_dir(processing_task_key):
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
     bucket_scan_dir = (imaging.FieldOfView & sess_key &
                              {'fov': processing_task_key['scan_id']}).fetch1('relative_fov_directory')
-    # if bucket_scan_dir[0] == '/':
-    #     bucket_scan_dir = bucket_scan_dir[1:]
-    bucket_scan_dir = bucket_scan_dir[37:]
-    bucket_scan_dir = pathlib.Path('koay_'+str(bucket_scan_dir))
-    #TODO: The imaging root data dir can be a list, modify the code to support list
-    data_dir = get_imaging_root_data_dir()
-    sess_dir = data_dir / 'koay_' / bucket_scan_dir / 'suite2p'
-    relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
-    # Check if suite2p dir exists
+    user_id = (subject.Subject & processing_task_key).fetch1('user_id')
+    if user_id == 'emdia':
+        bucket_scan_dir = bucket_scan_dir[1:]
+        bucket_scan_dir = pathlib.Path(user_id + '_' +str(bucket_scan_dir))
+        #TODO: The imaging root data dir can be a list, modify the code to support list
+        data_dir = get_imaging_root_data_dir()
+        sess_dir = data_dir / user_id / bucket_scan_dir / 'suite2p'
+        relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
+    else:
+        bucket_scan_dir = bucket_scan_dir[37:]
+        bucket_scan_dir = pathlib.Path(user_id + '_' +str(bucket_scan_dir))
+        #TODO: The imaging root data dir can be a list, modify the code to support list
+        data_dir = get_imaging_root_data_dir()
+        sess_dir = data_dir / user_id / bucket_scan_dir / 'suite2p'
+        relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
+        # Check if suite2p dir exists
     if not sess_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({bucket_scan_dir})')
 
