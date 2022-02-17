@@ -8,11 +8,12 @@ import json
 import re
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
+import u19_pipeline.automatic_job.params_config as config 
 
 # Functions to create slurm jobs
 
 #Slurm default values for queue job
-slurm_dict_default = {
+slurm_dict_tiger_default = {
     'job-name': 'kilosort2',
     'nodes': 1,
     'ntasks': 1,
@@ -21,13 +22,27 @@ slurm_dict_default = {
     'gres': 'gpu:1',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['begin', 'END'],
-    'output': 'job_log/kilojob.log'
+    'output': 'job_log/recording_process_${recording_process_id}".log'
 }
+slurm_dict_spock_default = {
+    'job-name': 'dj_ingestion',
+    'nodes': 1,
+    'cpus-per-task': 1,
+    'time': '00:30:00',
+    'mem': '16G',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['begin', 'END'],
+    'output': 'job_log/recording_process_${recording_process_id}".log'
+}
+
 
 slurm_states = {
     'SUCCESS': 'COMPLETED'
 }
 
+default_slurm_filename = 'slurm_real.slurm'
+
+default_process_script_path = "slurm_files/test.py"
 
 default_preprocessing_tool = 'kilosort2'
 default_matlab_ver = 'R2020b'
@@ -48,32 +63,30 @@ def generate_slurm_file(record_process_series):
     str_key = create_str_from_dict(key)
 
     # Start with default values
-    slurm_dict = slurm_dict_default.copy()
-    print(preprocess_params['sorting_algorithm'])
-    print(str_key)
-    print(type(str_key))
-    print(type(preprocess_params['sorting_algorithm']))
+    slurm_dict = slurm_dict_spock_default.copy()
     slurm_dict['job-name'] = preprocess_params['sorting_algorithm'] + "_" + str_key
 
     #Get all associated directories given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(preprocess_params['process_cluster'])
     slurm_dict['output'] = str(pathlib.Path(cluster_vars['log_files_dir'],str_key + '.log'))
 
-    if preprocess_params['process_cluster'] == 'spock' and preprocess_params["dj_element_processing"] == "trigger":
-        slurm_text = generate_slurm_dj_trigger(slurm_dict)
+    if preprocess_params['process_cluster'] == 'spock':
+        slurm_text = generate_slurm_spock(slurm_dict)
     else:
-        slurm_text = generate_slurm_kilosort_text(slurm_dict, default_matlab_ver, ft.default_user, rel_path)
-    slurm_file_name = 'slurm_' + str_key +  '.slurm'
+        slurm_text = generate_slurm_tigger(slurm_dict,)
+    slurm_file_name = default_slurm_filename
     slurm_file_local_path = str(pathlib.Path("slurm_files",slurm_file_name))
 
     write_slurm_file(slurm_file_local_path, slurm_text)
 
     if preprocess_params['process_cluster'] == 'spock' and is_this_spock():
-        status = copy_spock_local_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars)
+        #status, slurm_destination = copy_spock_local_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars)
+        status = config.system_process['SUCCESS']
+        slurm_destination = slurm_file_local_path
     else:
-        status = transfer_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars)
+        status, slurm_destination = transfer_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars)
     
-    return status
+    return status, slurm_destination
 
 def transfer_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars):
     '''
@@ -84,7 +97,7 @@ def transfer_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars):
     slurm_destination = user_host+':'+str(pathlib.Path(cluster_vars['slurm_files_dir'], slurm_file_name))
     status = ft.scp_file_transfer(slurm_file_local_path, slurm_destination)
 
-    return status
+    return status, slurm_destination
 
 def copy_spock_local_slurm_file(slurm_file_local_path, slurm_file_name, cluster_vars):
     '''
@@ -94,7 +107,7 @@ def copy_spock_local_slurm_file(slurm_file_local_path, slurm_file_name, cluster_
     p = subprocess.Popen(["cp", slurm_file_local_path, slurm_destination])
     status = p.wait()
 
-    return status
+    return status, slurm_destination
 
 def create_slurm_params_file(slurm_dict):
 
@@ -116,58 +129,63 @@ def write_slurm_file(slurm_path, slurm_text):
     f_slurm.write(slurm_text)
     f_slurm.close()
 
+# ALS revisit, slurm for element ingestion vs out processing
+# Spock vs tiger only send export variable initial directory
 
-def generate_slurm_kilosort_text(slurm_dict, matlab_ver, user_run, raw_file_path):
-
-    slurm_text = '#!/bin/bash\n'
-    slurm_text += create_slurm_params_file(slurm_dict)
-    slurm_text += 'module load matlab/' + matlab_ver + '\n'
-    slurm_text += 'cd /tigress/' + user_run + '\n'
-    slurm_text += 'matlab -singleCompThread -nodisplay -nosplash -r "pause(1); ' + "disp('aqui la chides'); exit" + '"'
-    #slurm_text += 'matlab -singleCompThread -nodisplay -nosplash -r "addpath(''/tigress/' + user_run +  "/run_kilosort/spikesorters/'); "
-    #slurm_text += "run_ks2('/tigress/" + user_run + "/ephys_raw" + raw_file_path + "','/tigress/" + user_run + "/run_kilosort/tmp/'); exit" + '"' 
-
-    return slurm_text
-
-
-def generate_slurm_text(slurm_dict, matlab_ver, user_run, raw_file_path):
-
-    slurm_text = '#!/bin/bash\n'
-    slurm_text += create_slurm_params_file(slurm_dict)
-    slurm_text += 'module load matlab/' + matlab_ver + '\n'
-    slurm_text += 'cd /tigress/' + user_run + '\n'
-    slurm_text += 'matlab -singleCompThread -nodisplay -nosplash -r "pause(1); ' + "disp('aqui la chides'); exit" + '"'
-    #slurm_text += 'matlab -singleCompThread -nodisplay -nosplash -r "addpath(''/tigress/' + user_run +  "/run_kilosort/spikesorters/'); "
-    #slurm_text += "run_ks2('/tigress/" + user_run + "/ephys_raw" + raw_file_path + "','/tigress/" + user_run + "/run_kilosort/tmp/'); exit" + '"' 
-
-    return slurm_text   
-
-
-def generate_slurm_dj_trigger(slurm_dict):
+def generate_slurm_spock(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
-    echo "SESSID: ${sessid}"
+    echo "RECORDING_PROCESS_ID: ${recording_process_id}"
+    echo "REPOSITORY_DIR: ${repository_dir}"
+    echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     module load anacondapy/2021.11
 
-    conda activate U19-pipeline_python
+    conda activate u19_pipeline_python_env
 
-    cd /usr/people/kg7524/U19-pipeline_python
-
-    python /usr/people/kg7524/slurm/test.py   
+    cd ${repository_dir}
+    python ${process_script_path} ${recording_process_id}
     '''
     
     return slurm_text   
 
 
-def queue_slurm_file(ssh_user, slurm_file):
+def generate_slurm_tiggert(slurm_dict, matlab_ver, user_run, raw_file_path):
+
+    slurm_text = '#!/bin/bash\n'
+    slurm_text += create_slurm_params_file(slurm_dict)
+    slurm_text += '''
+    module load matlab/R2020b\n
+    cd /tigress/alvaros
+    matlab -singleCompThread -nodisplay -nosplash -r "pause(1); disp('aqui la chides'); exit"
+    '''
+
+    return slurm_text
+
+
+def queue_slurm_file(record_process_series, slurm_location):
 
     id_slurm_job = -1
-    command = ['ssh', ssh_user, 'sbatch', slurm_file]
+
+    #get preprocess params (some of these will change slurm creation)
+    preprocess_params = record_process_series['preprocess_paramset']
+    recording_id = str(record_process_series['recording_process_id'])
+
+    #Get all associated variables given the selected processing cluster
+    cluster_vars = ft.get_cluster_vars(preprocess_params['process_cluster'])
+
+    command = ['ssh', cluster_vars['user'], 'sbatch', 
+    "--export=recording_process_id="+recording_id+
+    ",repository_dir="+cluster_vars['home_dir']+
+    ",process_script_path="+str(pathlib.Path(cluster_vars['home_dir'],default_process_script_path)), slurm_location]
+
+    if preprocess_params['process_cluster'] == 'spock' and is_this_spock():
+        command = command[2:]
+
     print(command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
@@ -176,7 +194,7 @@ def queue_slurm_file(ssh_user, slurm_file):
     print('aftercommand after comm')
     print(stdout.decode('UTF-8'))
     print(stderr.decode('UTF-8'))
-    if p.returncode == system_process['SUCCESS']:
+    if p.returncode == config.system_process['SUCCESS']:
         batch_job_sentence = stdout.decode('UTF-8')
         id_slurm_job   = batch_job_sentence.replace("Submitted batch job ","")
         id_slurm_job   = re.sub(r"[\n\t\s]*", "", id_slurm_job)
@@ -184,15 +202,19 @@ def queue_slurm_file(ssh_user, slurm_file):
     return p.returncode, id_slurm_job
 
 
-def check_slurm_job(ssh_user, jobid):
+def check_slurm_job(ssh_user, jobid, local_user=False):
     
     state_job = 'FAIL'
-    command = ['ssh', ssh_user, 'sacct', '--job', jobid, '--format=state']
+    if local_user:
+        command = ['sacct', '--job', jobid, '--format=state']
+    else:
+        command = ['ssh', ssh_user, 'sacct', '--job', jobid, '--format=state']
+
     print(command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
     stdout, stderr = p.communicate()
-    if p.returncode == system_process['SUCCESS']:
+    if p.returncode == config.system_process['SUCCESS']:
         stdout = stdout.decode('UTF-8')
         state_job = stdout.split("\n")[2].strip()
         print(stdout)

@@ -23,7 +23,7 @@ tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
 
 
 tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
-spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/ProcessJobsPipeline'
+spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python'
 #Cluster directories
 cluster_vars = {
     "tiger": {
