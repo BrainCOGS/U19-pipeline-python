@@ -34,6 +34,7 @@ def process_scan(scan_key):
             loaded_scan = scanreader.read_scan(scan_filepaths)
             header = parse_scanimage_header(loaded_scan)
             scanner = header['SI_imagingSystem'].strip('\'')
+            print(scanner)
         except Exception as e:
             print(f'ScanImage loading error: {scan_filepaths}\n{str(e)}')
             return

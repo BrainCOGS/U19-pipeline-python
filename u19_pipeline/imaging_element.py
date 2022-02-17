@@ -62,22 +62,20 @@ def get_scan_image_files(scan_key):
     #Replace scan_id with fov, we are going to search files by fov
     if 'scan_id' in fov_key:
         fov_key['fov'] = fov_key.pop('scan_id')
-    relative_fov_directory, fov_filename = (imaging.FieldOfView.File * imaging.FieldOfView & fov_key).fetch('relative_fov_directory', 'fov_filename')
-    # relative_fov_directory = [re.findall("braininit/RigData/mesoscope/imaging", x) for x in relative_fov_directory]
-    user_id, subject_nickname = (subject.Subject & fov_key).fetch1('user_id', 'subject_nickname')
-    if user_id == 'emdia':
-        relative_fov_directory = [x[5:] for x in relative_fov_directory]
-        relative_fov_directory = [str(x) for x in relative_fov_directory]
-        data_dir = get_imaging_root_data_dir().as_posix()
-        scan_filepaths_ori = [data_dir + '/' + user_id + '/' + user_id + '_' + subject_nickname + '/'+ relative_fov_directory[i] + fov_filename[i] for i in range(0,len(relative_fov_directory))]
+    scan_filepaths_ori = (imaging.FieldOfView.File * imaging.FieldOfView & fov_key).fetch('relative_fov_directory', 'fov_filename', as_dict=True)
 
-    else:
-        relative_fov_directory = [x[37:] for x in relative_fov_directory]
-        relative_fov_directory = [user_id + '_K' + str(x) for x in relative_fov_directory]
-        data_dir = get_imaging_root_data_dir().as_posix()
-        scan_filepaths_ori = [data_dir + '/' + user_id + '/' + relative_fov_directory[i] + '/' + fov_filename[i] for i in range(0,len(relative_fov_directory))]
-    if scan_filepaths_ori:
-        return scan_filepaths_ori
+    scan_filepaths_conc = list()
+    for i in range(len(scan_filepaths_ori)):
+        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['relative_fov_directory']) / scan_filepaths_ori[i]['fov_filename']).as_posix())
+
+    # if rel paths start with / remove it for Pathlib library
+    scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
+
+    data_dir = get_imaging_root_data_dir()
+    tiff_filepaths = [(pathlib.Path(data_dir) / x).as_posix() for x in scan_filepaths_conc]
+ 
+    if tiff_filepaths:
+        return tiff_filepaths
     else:
         raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
@@ -89,21 +87,17 @@ def get_suite2p_dir(processing_task_key):
     user_id = (subject.Subject & processing_task_key).fetch1('user_id')
     if user_id == 'emdia':
         bucket_scan_dir = bucket_scan_dir[1:]
-        bucket_scan_dir = pathlib.Path(user_id + '_' +str(bucket_scan_dir))
-        #TODO: The imaging root data dir can be a list, modify the code to support list
-        data_dir = get_imaging_root_data_dir()
-        sess_dir = data_dir / user_id / bucket_scan_dir / 'suite2p'
-        relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
-    else:
-        bucket_scan_dir = bucket_scan_dir[37:]
-        bucket_scan_dir = pathlib.Path(user_id + '_' +str(bucket_scan_dir))
-        #TODO: The imaging root data dir can be a list, modify the code to support list
-        data_dir = get_imaging_root_data_dir()
-        sess_dir = data_dir / user_id / bucket_scan_dir / 'suite2p'
-        relative_suite2p_dir = bucket_scan_dir  / 'suite2p'
-        # Check if suite2p dir exists
+        
+    data_dir = get_imaging_root_data_dir()
+    sess_dir = data_dir / bucket_scan_dir  / 'suite2p'
+    relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / 'suite2p').as_posix()
+
+    print(bucket_scan_dir)
+    
+
+    # Check if suite2p dir exists
     if not sess_dir.exists():
-        raise FileNotFoundError(f'Session directory not found ({bucket_scan_dir})')
+        raise FileNotFoundError(f'Session directory not found ({sess_dir})')
 
     # Check if ops.npy is inside suite2pdir
     suite2p_dirs = set([fp.parent.parent for fp in sess_dir.rglob('*ops.npy')])

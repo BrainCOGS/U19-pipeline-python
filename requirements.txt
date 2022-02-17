@@ -1,3 +1,4 @@
+globus-cli
 scipy
 python-dotenv
 element-calcium-imaging
@@ -8,3 +9,4 @@ numpy
 astropy
 jupyterlab
 bitstring
+element-interface @ git+https://github.com/datajoint/element-interface.git
