@@ -35,6 +35,14 @@ def check_file_pattern_dir(filepath, file_patterns):
     else:
         return 0
 
+def get_filepattern_paths(filepath, file_pattern):
+    """
+    Check directory/files that correspond to file pattern in filepath
+    """
+    found_patterns = glob.glob(filepath+file_pattern)
+
+    return found_patterns
+
 def get_size_directory(path):
     """
     get directory size of a folder for linux systems
