@@ -19,6 +19,7 @@ class RecordingModality(dj.Lookup):
      process_unit_file_pattern:  blob                 # process "unit" pattern to find in path
      process_unit_dir_fieldname: varchar(64)          # FieldName that stores process unit directory for specific modality
      process_unit_fieldname:     varchar(32)          # FieldName that stores process unit for specific modality (fov, probe, etc)
+     process_repository:         varchar(64)          # Name of the repository that handles the processing of these modality
      """
      contents = config.recording_modality_list
 

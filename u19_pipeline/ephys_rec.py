@@ -2,13 +2,15 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import ephys, behavior
+from u19_pipeline import behavior, recording
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
+import u19_pipeline.utils.path_utils as pu
+import u19_pipeline.automatic_job.params_config as config
 
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
@@ -36,7 +38,7 @@ ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_element'
 
 # 2. Upstream tables
 schema_reference = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'ephys_rec')
 
 
 @schema_reference
@@ -48,17 +50,65 @@ class SkullReference(dj.Lookup):
 
 
 @schema
-class EphysSession(dj.Manual):
+class EphysRecording(dj.Computed):
     definition = """
     # General information of an ephys session
-    -> acquisition.Session
+    -> recording.Recording
     ---
-    ephys_directory: varchar(255)      # the absolute directory where the ephys data for this session will be stored in bucket
+    """
+    @property
+    def key_source(self):
+        return recording.Recording & {'recording_modality': 'electrophysiology'}
+
+    def make(self, key):
+        self.insert1(key)
+
+
+@schema
+class EphysRecordingProbes(dj.Computed):
+    definition = """
+    # General information of an ephys session
+    -> EphysRecording
+    probe                  : tinyint                      # probe number for the recording
+    ---
+    probe_directory        : varchar(255)                 # probe specific directory
+    """
+
+    def make(self, key):
+
+        root_dir = get_ephys_root_data_dir()
+        rec_diro = (recording.Recording & key).fetch1('recording_directory')   
+        rec_dir =  str(pathlib.Path(root_dir, rec_diro))
+
+        ephys_probe_pattern = \
+        config.recording_modality_df.loc[config.recording_modality_df['RecordingModality'] == 'electrophysiology', 'ProcessUnitFilePattern'].squeeze()
+
+        probe_dirs = pu.get_filepattern_paths(rec_dir, ephys_probe_pattern[0])
+
+        probe_keys = []
+        for idx, probe_dir in enumerate(probe_dirs):
+            probe_dir = probe_dir.replace(root_dir, "")
+            this_key = key.copy()
+            this_key['probe'] = idx
+            this_key['probe_directory'] = probe_dir
+            probe_keys.append(this_key)
+
+        if len(probe_keys) > 0:
+            self.insert(probe_keys)
+
+
+@schema
+class EphysProcessing(dj.Manual):
+    definition = """
+    -> recording.RecordingProcess
+    -----
+    -> EphysRecordingProbes
     """
 
 
+
 # ephys element requires table with name Session
-Session = EphysSession
+Session = EphysProcessing
 
 
 # 3. Utility functions
@@ -73,7 +123,7 @@ def get_ephys_root_data_dir():
 def get_session_directory(session_key):
 
     data_dir = str(get_ephys_root_data_dir())
-    sess_dir = (ephys.EphysSession & session_key).fetch1('ephys_directory')    
+    sess_dir = (ephys_rec.EphysSession & session_key).fetch1('ephys_directory')    
     session_dir =  pathlib.Path(data_dir + sess_dir)
     return session_dir.as_posix()
 
@@ -92,7 +142,7 @@ for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> ephys.EphysSession
+    -> EphysRecording
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
@@ -140,7 +190,7 @@ class BehaviorSync(dj.Imported):
 
         print(final_key)
 
-        ephys.BehaviorSync.insert1(final_key,allow_direct_insert=True)
+        ephys_rec.BehaviorSync.insert1(final_key,allow_direct_insert=True)
 
         self.insert_imec_sampling_rate(key, session_dir)
 

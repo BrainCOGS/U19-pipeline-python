@@ -7,7 +7,7 @@ import time
 import re
 import pandas as pd
 import datajoint as dj
-from u19_pipeline import recording, ephys, imaging_rec
+from u19_pipeline import recording, ephys_rec, imaging_rec
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
@@ -153,9 +153,9 @@ class RecordingHandler():
 
         if rec_series['recording_modality'] == 'electrophysiology':
 
-            this_modality_recording_table = ephys.EphysRecording
-            this_modality_recording_unit_table = ephys.EphysRecordingProbes
-            this_modality_processing_unit_table = ephys.EphysProcessing
+            this_modality_recording_table = ephys_rec.EphysRecording
+            this_modality_recording_unit_table = ephys_rec.EphysRecordingProbes
+            this_modality_processing_unit_table = ephys_rec.EphysProcessing
 
             print('this_modality_recording_table', this_modality_recording_table)
 
