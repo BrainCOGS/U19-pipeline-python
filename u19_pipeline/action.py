@@ -4,7 +4,7 @@
 import datajoint as dj
 from . import lab, reference, subject
 
-schema = dj.schema(dj.config['database.prefix'] + 'action')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'action')
 
 
 @schema

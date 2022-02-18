@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['database.prefix'] + 'microscope')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'microscope')
 
 @schema
 class Center(dj.Lookup):
