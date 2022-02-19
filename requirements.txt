@@ -10,4 +10,3 @@ numpy
 astropy
 jupyterlab
 bitstring
-element-interface @ git+https://github.com/datajoint/element-interface.git
