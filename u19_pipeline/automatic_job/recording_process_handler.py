@@ -12,7 +12,7 @@ import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.params_config as config
-from u19_pipeline.utility import create_str_from_dict
+from u19_pipeline.utility import create_str_from_dict, is_this_spock
 
 recording_process_status_df = pd.DataFrame(config.recording_process_status_dict)
 
@@ -171,20 +171,11 @@ class RecProcessHandler():
         status_update = False
         update_value_dict = RecProcessHandler.default_update_value_dict.copy()
 
-        status = slurmlib.generate_slurm_file(rec_series)
-        #slurm_file_name = 'slurm_' + create_str_from_dict(rec_series['query_key']) +  '.slurm'
-        #slurm_file_path = str(pathlib.Path("slurm_files",slurm_file_name))
-
-        #slurmlib.write_slurm_file(slurm_file_path, slurm_text)
-            
-        #tiger_slurm_user = default_user+'@'+tiger_gpu_host
-        #tiger_slurm_location = tiger_slurm_user+':'+tiger_slurm_files_dir+slurm_file_name
-        #transfer_request = scp_file_transfer(slurm_file_path, tiger_slurm_location)
+        status, slurm_filepath = slurmlib.generate_slurm_file(rec_series)
         
         if status == config.system_process['SUCCESS']:
-            #slurm_queue_status, slurm_jobid = slurmlib.queue_slurm_file(tiger_slurm_user, tiger_slurm_files_dir+slurm_file_name)
-            slurm_jobid = 0
-
+            slurm_queue_status, slurm_jobid = slurmlib.queue_slurm_file(rec_series, slurm_filepath)
+            
             if status == config.system_process['SUCCESS']:
                 status_update = True
                 update_value_dict['value_update'] = slurm_jobid
@@ -210,19 +201,29 @@ class RecProcessHandler():
 
         status_update = False
         update_value_dict = RecProcessHandler.default_update_value_dict.copy()
-        slurm_jobid = status_series['FunctionField']
+        
+        local_user = False
+        preprocess_params = rec_series['preprocess_paramset']
+        if preprocess_params['process_cluster'] == 'spock' and is_this_spock():
+            local_user = True
 
-        ssh_user = default_user+'@'+tiger_gpu_host
-        job_status = check_slurm_job(ssh_user, slurm_jobid)
+        ssh_user = ft.cluster_vars[preprocess_params['process_cluster']]['user']
+
+        slurm_jobid_field = status_series['FunctionField']
+        slurm_jobid = rec_series[slurm_jobid_field]
+
+        job_status = slurmlib.check_slurm_job(ssh_user, slurm_jobid, local_user=local_user)
 
         print('job status', job_status)
-        print(slurm_states['SUCCESS'])
+        print(slurmlib.slurm_states['SUCCESS'])
 
         print('job status encode uft8 ', job_status.encode('UTF-8'))
-        print(slurm_states['SUCCESS'].encode('UTF-8'))
+        print(slurmlib.slurm_states['SUCCESS'].encode('UTF-8'))
 
-        if job_status == slurm_states['SUCCESS']:
+        if job_status == slurmlib.slurm_states['SUCCESS']:
             status_update = True
+            print('si fue successss')
+
 
         return (status_update, update_value_dict)
 
