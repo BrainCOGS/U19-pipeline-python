@@ -2,7 +2,7 @@
 
 The python data pipeline defined with DataJoint for U19 projects
 
-The data pipeline is mainly ingested and maintained with the matlab repository: https://github.com/shenshan/U19-pipeline-matlab
+The data pipeline is mainly ingested and maintained with the matlab repository: https://github.com/BrainCOGS/U19-pipeline-matlab
 
 This repository is the mirrored table definitions for the tables in the matlab pipeline.
 
