@@ -132,3 +132,5 @@ data/*
 
 # svg file
 *.svg
+
+slurm_files/slurm_recording_process_id*

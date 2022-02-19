@@ -3,6 +3,7 @@
 import sys
 import os
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import numpy as np
 from scipy.optimize import curve_fit
 from astropy.stats import binom_conf_interval
@@ -85,7 +86,7 @@ def get_network_path(path_name):
     network_path = (lab.Path & key).fetch1(*field_get)
     return network_path
 
-
+# Function copied in dj_shorts
 def smart_dj_join(t1, t2):
     """
     Join two datajoint tables even if they have matching secondary field names
@@ -274,3 +275,37 @@ def get_cols_rows_plot(num_plots, fig_size):
 
     return num_rows, num_cols
 
+
+def create_str_from_dict(key_dict):
+
+    slurm_file_name = ''
+    for i in key_dict.keys():
+        slurm_file_name += str(i) + '_' +  str(key_dict[i])
+    return slurm_file_name
+
+
+def numpy_array_to_dict(np_array, as_int=True):
+    '''
+    Transform a numpy array to dictionary:
+    (numpy array are stored when saving Blobs in  MATLAB Datajoint, normally a dictionary will be the fit)
+    '''
+
+    # Transform numpy array to DF
+    out_dict = pd.DataFrame(np_array.flatten())
+
+    # Flatten each column and get the "real value of it"
+    out_dict = out_dict.applymap(lambda x: x.flatten())
+    columns = out_dict.columns.copy()
+
+    out_dict = out_dict.applymap(lambda x: x[0]).squeeze()
+
+    #Transform numeric columns to int (normally for params)
+    if as_int:
+        for i in columns:
+
+            if (is_numeric_dtype(out_dict[i].dtype)):
+                out_dict[i] = out_dict[i].astype('int')
+
+    out_dict = out_dict.to_dict()
+
+    return out_dict

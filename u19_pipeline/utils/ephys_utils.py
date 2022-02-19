@@ -173,7 +173,13 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     if iteration_sample_idx_output.shape[0] != (behavior_time_vector.shape[0]):
         status = False
         return status
+
+    count = 0
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
+        count += 1
+        print(count)
+        print(iter_trials.shape[0])
+        print(behavior_time_vector[idx_trial].shape[0])
         #For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
             status = False
