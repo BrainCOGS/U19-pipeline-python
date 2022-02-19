@@ -1,7 +1,5 @@
 """
-Requirements to activate the imaging element
-
-To activate the imaging elements, we need to provide:
+Requirements to activate the imaging element:
 
 1. Schema names
     + schema name for the scan module
@@ -20,23 +18,23 @@ To activate the imaging elements, we need to provide:
 For more detail, check the docstring of the element:
     help(scan_element.activate)
     help(imaging_element.activate)
-
 """
 
-# 1. Schema names --------------------------------------------------------------
+# 1. Schema names ----------------------------------------------------------------------
 import datajoint as dj
 import pathlib
 
-from u19_pipeline import acquisition, imaging
+from u19_pipeline import acquisition, imaging, utility, subject
 
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
+from element_interface.utils import find_full_path
 
 imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
 scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
 
 
-# 2. Upstream tables -----------------------------------------------------------
+# 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.acquisition import Session
 from u19_pipeline.reference import BrainArea as Location
 
@@ -50,11 +48,12 @@ class Equipment(dj.Manual):
     """
 
 
-# 3. Utility functions ---------------------------------------------------------
+# 3. Utility functions -----------------------------------------------------------------
 
 def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
-    return pathlib.Path(data_dir) if data_dir else None
+    data_dir = pathlib.Path(utility.get_network_path('braininit')) / data_dir
+    return data_dir if data_dir else None
 
 
 def get_scan_image_files(scan_key):
@@ -85,8 +84,7 @@ def get_suite2p_dir(processing_task_key):
     if bucket_scan_dir[0] == '/':
         bucket_scan_dir = bucket_scan_dir[1:]
         
-    data_dir = get_imaging_root_data_dir()
-    sess_dir = data_dir / bucket_scan_dir  / 'suite2p'
+    sess_dir = find_full_path(get_imaging_root_data_dir(), bucket_scan_dir)
     relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / 'suite2p').as_posix()
 
     # Check if suite2p dir exists
@@ -101,7 +99,7 @@ def get_suite2p_dir(processing_task_key):
     return relative_suite2p_dir
 
 
-# 4. Activate imaging schema ---------------------------------------------------
+# 4. Activate imaging schema -----------------------------------------------------------
 imaging_element.activate(imaging_schema_name, 
                          scan_schema_name, 
                          linking_module=__name__)
