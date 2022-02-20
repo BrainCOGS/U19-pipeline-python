@@ -99,34 +99,34 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   <summary>Click to expand details</summary>
 
     #### Install DataJoint
-      + Activate the conda environment
-        ```bash
-        conda activate <environment_name>
-        ```
-      
-      + Install DataJoint
+    + Activate the conda environment
       ```bash
-      pip install datajoint
+      conda activate <environment_name>
       ```
+    
+    + Install DataJoint
+    ```bash
+    pip install datajoint
+    ```
 
     #### Access the database
-      + In a new Jupyter notebook, run the following commands.
-        ```
-        import getpass
-        import datajoint as dj
-        
-        dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-        dj.config['database.user'] = '<username>'
-        dj.config['database.password'] = getpass.getpass() # enter the password securily
+    + In a new Jupyter notebook, run the following commands.
+      ```
+      import getpass
+      import datajoint as dj
+      
+      dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
+      dj.config['database.user'] = '<username>'
+      dj.config['database.password'] = getpass.getpass() # enter the password securily
 
-        scan = dj.create_virtual_module('scan', 'u19_scan_element')
-        imaging = dj.create_virtual_module('imaging', 'u19_imaging_element')
+      scan = dj.create_virtual_module('scan', 'u19_scan_element')
+      imaging = dj.create_virtual_module('imaging', 'u19_imaging_element')
 
-        probe = dj.create_virtual_module('probe', 'u19_probe_element')
-        ephys = dj.create_virtual_module('ephys', 'u19_ephys_element')
-        ```
+      probe = dj.create_virtual_module('probe', 'u19_probe_element')
+      ephys = dj.create_virtual_module('ephys', 'u19_ephys_element')
+      ```
 
-      + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
+    + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
 
   </details>
 
