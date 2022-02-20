@@ -112,7 +112,9 @@ class FieldOfView(dj.Imported):
 @schema
 class ImagingProcessing(dj.Manual):
     definition = """
-    -> recording.RecordingProcess
+    -> recording.RecordingProcess    
     -----
     -> FieldOfView
     """
+
+Session = ImagingProcessing

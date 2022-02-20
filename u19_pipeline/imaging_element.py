@@ -29,13 +29,13 @@ import pathlib
 
 from u19_pipeline import acquisition, subject, imaging_rec
 
-from u19_pipeline.imaging_rec import Scan as Session
+from u19_pipeline.imaging_rec import Session
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
 from element_interface.utils import find_full_path
 
-imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
-scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_rec_element'
+scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_rec_element'
 
 
 # 2. Upstream tables -----------------------------------------------------------
@@ -59,12 +59,22 @@ def get_imaging_root_data_dir():
     return data_dir if data_dir else None
 
 
-def get_scan_image_files(scan_key):
-    fov_key = scan_key.copy()
+def get_scan_image_files(rec_process_key):
+
+    data_dir = get_imaging_root_data_dir()
+
+    rec_process = (imaging_rec.ImagingProcessing & rec_process_key).fetch1()
+    scan_key = rec_process.copy()
+    scan_key.pop('recording_process_id')
+
+    print('get_scan_image_files  .........')
+    print('rec_process_key', rec_process_key, 'scan_key', scan_key)
+
+    #fov_key = scan_key.copy()
     #Replace scan_id with fov, we are going to search files by fov
-    if 'scan_id' in fov_key:
-        fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = (imaging_rec.FieldOfView.File * imaging_rec.FieldOfView & fov_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    #if 'scan_id' in fov_key:
+    #    fov_key['fov'] = fov_key.pop('scan_id')
+    scan_filepaths_ori = (imaging_rec.FieldOfView.File * imaging_rec.FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
 
     scan_filepaths_conc = list()
     for i in range(len(scan_filepaths_ori)):
@@ -73,6 +83,7 @@ def get_scan_image_files(scan_key):
     # if rel paths start with / remove it for Pathlib library
     # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
 
+    
     tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), x).as_posix() for x in scan_filepaths_conc]
  
     if tiff_filepaths:
