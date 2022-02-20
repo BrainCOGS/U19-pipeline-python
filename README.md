@@ -28,17 +28,17 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
     #### Connect to PNI resources
 
-      + The Princeton Neuroscience Institute (PNI) provides computing resources.  You can optionally use these resources or setup the pipeline on your local machine.
-  
-      + Spock is the high performance computational cluster
-        ```
-        ssh -XY username@spock.pni.princeton.edu
-        ```
+    + The Princeton Neuroscience Institute (PNI) provides computing resources.  You can optionally use these resources or setup the pipeline on your local machine.
 
-      + Scotty is used for interactive sessions
-        ```
-        ssh -XY username@scotty.pni.princeton.edu
-        ```
+    + Spock is the high performance computational cluster
+      ```
+      ssh -XY username@spock.pni.princeton.edu
+      ```
+
+    + Scotty is used for interactive sessions
+      ```
+      ssh -XY username@scotty.pni.princeton.edu
+      ```
 
     #### Install a virtual environment
 
