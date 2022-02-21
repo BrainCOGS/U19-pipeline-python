@@ -2,7 +2,7 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import ephys, behavior
+from u19_pipeline import acquisition, behavior
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
@@ -13,7 +13,7 @@ import u19_pipeline.utils.ephys_utils as ephys_utils
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
 """
------- Gathering requirements to activate the ephys elements ------
+------ Gathering requirements to activate the ephys element ------
 To activate the ephys elements, we need to provide:
 1. Schema names
     + schema name for the probe module
@@ -71,11 +71,9 @@ def get_ephys_root_data_dir():
 
 
 def get_session_directory(session_key):
+    session_dir = (EphysSession & session_key).fetch1('ephys_directory')
 
-    data_dir = str(get_ephys_root_data_dir())
-    sess_dir = (ephys.EphysSession & session_key).fetch1('ephys_directory')    
-    session_dir =  pathlib.Path(data_dir + sess_dir)
-    return session_dir.as_posix()
+    return session_dir
 
 
 # ------------- Activate "ephys" schema -------------
@@ -92,7 +90,7 @@ for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> ephys.EphysSession
+    -> EphysSession
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.

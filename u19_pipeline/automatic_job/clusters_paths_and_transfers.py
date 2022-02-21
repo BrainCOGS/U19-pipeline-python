@@ -33,7 +33,8 @@ cluster_vars = {
         "slurm_files_dir": tiger_home_dir + "/slurm_files", 
         "log_files_dir":   tiger_home_dir + "/job_log", 
         "user":            default_user, 
-        "hostname":        'tigergpu.princeton.edu',
+        "hostname":        "tigergpu.princeton.edu",
+        "script_path":      ""
     },
     "spock": {
         "home_dir":        spock_home_dir, 
@@ -41,7 +42,8 @@ cluster_vars = {
         "slurm_files_dir": spock_home_dir + "/slurm_files", 
         "log_files_dir":   spock_home_dir + "/job_log", 
         "user":            default_user,
-        "hostname":        'spock.princeton.edu',
+        "hostname":        "spock.princeton.edu",
+        "script_path":      "scripts/automate_imaging_element.py"
     }
 }
 

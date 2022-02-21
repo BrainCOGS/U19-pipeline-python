@@ -3,7 +3,7 @@ from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipme
                                           get_imaging_root_data_dir, get_scan_image_files)
 
 import scanreader
-from element_calcium_imaging.readers import get_scanimage_acq_time, parse_scanimage_header
+from element_interface.scanimage_utils import get_scanimage_acq_time, parse_scanimage_header
 
 """
 The ingestion routine for imaging element includes:

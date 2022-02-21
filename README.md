@@ -283,7 +283,6 @@ We have created some tutorial notebooks to help you start working with DataJoint
 
   ![Imaging Diagram](images/imaging_erd.png)
 
-
   ### scan_element and imaging_element
   + Scan and imaging tables created with [DataJoint Element Calcium Imaging](https://github.com/datajoint/element-calcium-imaging), processing imaging data acquired with ScanImage and pre-processed by Suite2p.
 
