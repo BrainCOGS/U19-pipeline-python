@@ -5,7 +5,7 @@ import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import subprocess
 
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'imaging_rec')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_rec')
 
 
 @schema

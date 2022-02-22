@@ -5,7 +5,7 @@ import u19_pipeline.automatic_job.params_config as config
 from element_interface.utils import dict_to_uuid
 from u19_pipeline.utility import numpy_array_to_dict
 
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
 @schema
 class RecordingModality(dj.Lookup):

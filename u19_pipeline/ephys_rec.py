@@ -38,7 +38,7 @@ ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_rec_element'
 
 # 2. Upstream tables
 schema_reference = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'ephys_rec')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_rec')
 
 
 @schema_reference
