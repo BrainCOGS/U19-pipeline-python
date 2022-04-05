@@ -21,17 +21,17 @@ slurm_dict_tiger_default = {
     'mem': '200G',
     'gres': 'gpu:1',
     'mail-user': 'alvaros@princeton.edu',
-    'mail-type': ['begin', 'END'],
+    'mail-type': ['END'],
     'output': 'job_log/recording_process_${recording_process_id}".log'
 }
 slurm_dict_spock_default = {
     'job-name': 'dj_ingestion',
     'nodes': 1,
     'cpus-per-task': 1,
-    'time': '00:30:00',
-    'mem': '16G',
+    'time': '02:00:00',
+    'mem': '24G',
     'mail-user': 'alvaros@princeton.edu',
-    'mail-type': ['begin', 'END'],
+    'mail-type': ['END'],
     'output': 'job_log/recording_process_${recording_process_id}".log'
 }
 
@@ -42,7 +42,7 @@ slurm_states = {
 
 default_slurm_filename = 'slurm_real.slurm'
 
-default_process_script_path = "slurm_files/test.py"
+default_process_script_path = "scripts/automate_imaging_element.py"
 
 default_preprocessing_tool = 'kilosort2'
 default_matlab_ver = 'R2020b'
@@ -64,16 +64,18 @@ def generate_slurm_file(record_process_series):
 
     # Start with default values
     slurm_dict = slurm_dict_spock_default.copy()
-    slurm_dict['job-name'] = preprocess_params['sorting_algorithm'] + "_" + str_key
+    slurm_dict['job-name'] = str_key
 
     #Get all associated directories given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(preprocess_params['process_cluster'])
     slurm_dict['output'] = str(pathlib.Path(cluster_vars['log_files_dir'],str_key + '.log'))
 
+    print(record_process_series)
+
     if preprocess_params['process_cluster'] == 'spock':
         slurm_text = generate_slurm_spock(slurm_dict)
     else:
-        slurm_text = generate_slurm_tigger(slurm_dict,)
+        slurm_text = generate_slurm_tiger(slurm_dict)
     slurm_file_name = default_slurm_filename
     slurm_file_local_path = str(pathlib.Path("slurm_files",slurm_file_name))
 
@@ -148,13 +150,14 @@ def generate_slurm_spock(slurm_dict):
     conda activate u19_pipeline_python_env
 
     cd ${repository_dir}
-    python ${process_script_path} ${recording_process_id}
+    python ${process_script_path}
+    #python ${process_script_path} ${recording_process_id}
     '''
     
     return slurm_text   
 
 
-def generate_slurm_tiggert(slurm_dict, matlab_ver, user_run, raw_file_path):
+def generate_slurm_tiger(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
     slurm_text += create_slurm_params_file(slurm_dict)
@@ -173,15 +176,17 @@ def queue_slurm_file(record_process_series, slurm_location):
 
     #get preprocess params (some of these will change slurm creation)
     preprocess_params = record_process_series['preprocess_paramset']
-    recording_id = str(record_process_series['recording_process_id'])
+    process_params = record_process_series['process_paramset']
+    recording_process_id = str(record_process_series['recording_process_id'])
+    recording_id = str(record_process_series['recording_id'])
 
     #Get all associated variables given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(preprocess_params['process_cluster'])
 
     command = ['ssh', cluster_vars['user'], 'sbatch', 
-    "--export=recording_process_id="+recording_id+
+    "--export=recording_process_id="+recording_process_id+
     ",repository_dir="+cluster_vars['home_dir']+
-    ",process_script_path="+str(pathlib.Path(cluster_vars['home_dir'],default_process_script_path)), slurm_location]
+    ",process_script_path="+str(pathlib.Path(cluster_vars['home_dir'],cluster_vars['script_path'])), slurm_location]
 
     if preprocess_params['process_cluster'] == 'spock' and is_this_spock():
         command = command[2:]
