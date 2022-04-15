@@ -12,3 +12,5 @@ bitstring
 element-interface @ git+https://github.com/datajoint/element-interface.git
 suite2p @ git+https://github.com/MouseLand/suite2p.git
 cellpose
+scp
+paramiko

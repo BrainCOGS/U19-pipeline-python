@@ -11,6 +11,7 @@ import u19_pipeline.recording as recording
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
+import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
 
@@ -37,7 +38,7 @@ class RecProcessHandler():
         for i in range(df_all_process_job.shape[0]):
 
             #Filter current process job
-            rec_process_series = df_all_process_job.loc[i, :]
+            rec_process_series = df_all_process_job.loc[i, :].copy()
 
             preprocess_paramset = recording.PreprocessParamSet().get_preprocess_params({'preprocess_paramset_idx':rec_process_series['preprocess_paramset_idx']})
             process_paramset    = recording.ProcessParamSet().get_process_params({'process_paramset_idx': rec_process_series['process_paramset_idx']})
@@ -171,15 +172,21 @@ class RecProcessHandler():
         status_update = False
         update_value_dict = RecProcessHandler.default_update_value_dict.copy()
 
-        status, slurm_filepath = slurmlib.generate_slurm_file(rec_series)
+        #Create and transfer parameter files
+        status = paramfilelib.generate_parameter_file(rec_series)
+
+        #Create and transfer slurm file
+        if status == config.system_process['SUCCESS']:
+            status, slurm_filepath = slurmlib.generate_slurm_file(rec_series)
         
+        #Queue slurm file
         if status == config.system_process['SUCCESS']:
             slurm_queue_status, slurm_jobid = slurmlib.queue_slurm_file(rec_series, slurm_filepath)
             
-            if status == config.system_process['SUCCESS']:
-                status_update = True
-                update_value_dict['value_update'] = slurm_jobid
-                #update_status_pipeline(key, status_dict['JOB_QUEUE']['Task_Field'], slurm_jobid, status_dict['JOB_QUEUE']['Value'])
+        if status == config.system_process['SUCCESS']:
+            status_update = True
+            update_value_dict['value_update'] = slurm_jobid
+            #update_status_pipeline(key, status_dict['JOB_QUEUE']['Task_Field'], slurm_jobid, status_dict['JOB_QUEUE']['Value'])
 
         return (status_update, update_value_dict)
 
@@ -238,11 +245,11 @@ class RecProcessHandler():
         status_query = 'status_pipeline_idx > ' + str(recording_process_status_df['Value'].min())
         status_query += ' and status_pipeline_idx < ' + str(recording_process_status_df['Value'].max())
 
-        jobs_active = recording.RecordingProcess & status_query
+        jobs_active = (recording.Recording.proj('recording_modality') * recording.RecordingProcess & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
         if df_process_jobs.shape[0] > 0:
-            key_list = dj_short.get_primary_key_fields(recording.RecordingProcess)
+            key_list = dj_short.get_primary_key_fields(jobs_active)
             df_process_jobs['query_key'] = df_process_jobs.loc[:, key_list].to_dict(orient='records')
 
         return df_process_jobs

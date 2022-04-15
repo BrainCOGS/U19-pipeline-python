@@ -125,7 +125,7 @@ class RecordingHandler():
         #smbclient copy check ???
 
     @staticmethod
-    def modality_preingestion(rec_series, status_series):
+    def modality_preingestion(in_rec_series, status_series):
         """
         Ingest "first" tables of modality specific recordings
         Input:
@@ -142,6 +142,7 @@ class RecordingHandler():
         
         status_update = False
         update_value_dict = RecordingHandler.default_update_value_dict.copy()
+        rec_series = in_rec_series.copy()
 
         # Get fieldname directory for processing unit for current recording modality
         process_unit_fieldnames = \
@@ -173,6 +174,8 @@ class RecordingHandler():
             
         
         # Insert this modality recording and recording "unit"
+        print('............... before ')
+        print(rec_series['query_key'])
         this_modality_recording_table.populate(rec_series['query_key'])
         this_modality_recording_unit_table.populate(rec_series['query_key']) # In imaging this is to call imaging.ScanInfo populate Script
 

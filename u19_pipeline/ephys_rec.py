@@ -77,6 +77,7 @@ class EphysRecordingProbes(dj.Computed):
     def make(self, key):
 
         root_dir = get_ephys_root_data_dir()
+        root_dir_p = pathlib.Path(root_dir)
         rec_diro = (recording.Recording & key).fetch1('recording_directory')   
         rec_dir =  str(pathlib.Path(root_dir, rec_diro))
 
@@ -84,13 +85,16 @@ class EphysRecordingProbes(dj.Computed):
         config.recording_modality_df.loc[config.recording_modality_df['RecordingModality'] == 'electrophysiology', 'ProcessUnitFilePattern'].squeeze()
 
         probe_dirs = pu.get_filepattern_paths(rec_dir, ephys_probe_pattern[0])
+        probe_dirs.sort()
 
         probe_keys = []
         for idx, probe_dir in enumerate(probe_dirs):
-            probe_dir = probe_dir.replace(root_dir, "")
+
+            probe_dir_p = pathlib.Path(probe_dir)
+            rel_probe_dir = probe_dir_p.relative_to(root_dir_p).as_posix()
             this_key = key.copy()
             this_key['probe'] = idx
-            this_key['probe_directory'] = probe_dir
+            this_key['probe_directory'] = rel_probe_dir
             probe_keys.append(this_key)
 
         if len(probe_keys) > 0:

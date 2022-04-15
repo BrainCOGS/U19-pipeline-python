@@ -133,4 +133,4 @@ data/*
 # svg file
 *.svg
 
-slurm_files/slurm_recording_process_id*
+u19_pipeline/automatic_job/ParameterFiles/*
