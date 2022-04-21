@@ -2,9 +2,8 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import acquisition, behavior
+from u19_pipeline import behavior
 
-from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys as ephys_element
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
@@ -12,81 +11,8 @@ import u19_pipeline.utils.ephys_utils as ephys_utils
 
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
-"""
------- Gathering requirements to activate the ephys element ------
-To activate the ephys elements, we need to provide:
-1. Schema names
-    + schema name for the probe module
-    + schema name for the ephys module
-2. Upstream tables
-    + Session table
-    + SkullReference table - Reference table for InsertionLocation, specifying the skull reference
-                 used for probe insertion location (e.g. Bregma, Lambda)
-3. Utility functions
-    + get_ephys_root_data_dir()
-    + get_session_directory()
-For more detail, check the docstring of the imaging element:
-    help(probe_element.activate)
-    help(ephys_element.activate)
-"""
 
-# 1. Schema names
-probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_element'
-ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_element'
-
-# 2. Upstream tables
-schema_reference = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys')
-
-
-@schema_reference
-class SkullReference(dj.Lookup):
-    definition = """
-    skull_reference   : varchar(60)
-    """
-    contents = zip(['Bregma', 'Lambda'])
-
-
-@schema
-class EphysSession(dj.Manual):
-    definition = """
-    # General information of an ephys session
-    -> acquisition.Session
-    ---
-    ephys_directory: varchar(255)      # the absolute directory where the ephys data for this session will be stored in bucket
-    """
-
-
-# ephys element requires table with name Session
-Session = EphysSession
-
-
-# 3. Utility functions
-
-def get_ephys_root_data_dir():
-    data_dir = dj.config.get('custom', {}).get('ephys_root_data_dir', None)
-    data_dir = pathlib.Path(data_dir)
-    data_dir = data_dir.as_posix()
-    return data_dir if data_dir else None
-
-
-def get_session_directory(session_key):
-    session_dir = (EphysSession & session_key).fetch1('ephys_directory')
-
-    return session_dir
-
-
-# ------------- Activate "ephys" schema -------------
-ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__name__)
-
-
-# ------------- Create Neuropixels probe entries -------------
-for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
-                   'neuropixels 2.0 - SS', 'neuropixels 2.0 - MS'):
-    probe_element.ProbeType.create_neuropixels_probe(probe_type)
-
-
-# downstream tables for ephys element
+# Tables downstream from `ephys_element` module
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
@@ -110,7 +36,6 @@ class BehaviorSync(dj.Imported):
         session_dir = pathlib.Path(get_session_directory(key))
         nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
         # And get the datajoint record
-        behavior = dj.create_virtual_module('behavior', 'u19_behavior')
         thissession = behavior.TowersBlock().Trial() & key
         behavior_time, iterstart = thissession.fetch('trial_time', 'vi_start')
 
