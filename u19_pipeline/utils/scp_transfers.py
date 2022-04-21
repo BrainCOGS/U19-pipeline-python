@@ -4,6 +4,24 @@ from paramiko import SSHClient, AutoAddPolicy, RSAKey
 from paramiko.auth_handler import AuthenticationException, SSHException
 from scp import SCPClient, SCPException
 
+#Steps on windows machine
+#   PowerShell
+#     Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+#     Start-Service sshd
+#     Set-Service -Name sshd -StartupType 'Automatic'
+# Copy ssh key pub to ~\.ssh\authorized_keys
+# Modify C:\ProgramData\ssh\sshd_config
+#   Uncomment
+#       PasswordAuthentication no
+#       StrictModes no
+#       AuthorizedKeysFile	.ssh/authorized_keys
+#   Comment
+#       Match Group administrators
+#           AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
+#   PowerShell
+#         restart-service sshd
+
+
 class RemoteClient:
     """Client to interact with a remote host via SSH & SCP."""
 
