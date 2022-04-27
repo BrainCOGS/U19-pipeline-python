@@ -24,7 +24,7 @@ Requirements to activate the imaging element:
 3. Utility functions
     + get_imaging_root_data_dir()
     + get_scan_image_files()
-    + get_suite2p_dir()
+    + get_processed_dir()
 
 For more detail, check the docstring of the element:
     help(scan_element.activate)
@@ -36,13 +36,13 @@ imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
 scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
-from u19_pipeline.acquisition import Session
 from u19_pipeline.reference import BrainArea as Location
 
-schema = dj.schema('u19_' + 'lab')
+Session = recording.FieldOfView
 
+lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
-@schema
+@lab_schema
 class Equipment(dj.Manual):
     definition = """
     scanner: varchar(32)
@@ -78,7 +78,6 @@ def get_scan_image_files(rec_process_key):
     # if rel paths start with / remove it for Pathlib library
     # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
 
-    
     tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), x).as_posix() for x in scan_filepaths_conc]
  
     if tiff_filepaths:
@@ -95,13 +94,11 @@ def get_processed_dir(processing_task_key, process_method):
     sess_dir = find_full_path(get_imaging_root_data_dir(), bucket_scan_dir)
     relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / process_method).as_posix()
 
-    print(bucket_scan_dir)
-    
     if not sess_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({sess_dir})')
 
     if process_method == 'suite2p':
-        # Check if ops.npy is inside suite2pdir
+        # Check if ops.npy is inside suite2p_dir
         suite2p_dirs = set([fp.parent.parent for fp in sess_dir.rglob('*ops.npy')])
         if len(suite2p_dirs) != 1:
             raise FileNotFoundError(f'Error searching for Suite2p output directory in {bucket_scan_dir} - Found {suite2p_dirs}')
