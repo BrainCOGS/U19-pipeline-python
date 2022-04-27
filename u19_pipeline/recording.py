@@ -4,7 +4,7 @@ import u19_pipeline.automatic_job.params_config as config
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
-
+# Declare recording tables -------------------------------------------------------------
 @schema
 class RecordingModality(dj.Lookup):
      definition = """
@@ -69,6 +69,7 @@ class Recording(dj.Manual):
          recording_datetime: datetime
          """
 
+# Declare upstream ephys table ---------------------------------------------------------
 @schema
 class EphysRecordingSession(dj.Computed):
     definition = """
