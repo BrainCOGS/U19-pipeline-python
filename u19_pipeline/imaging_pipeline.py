@@ -1,125 +1,14 @@
+
 import datajoint as dj
+import pathlib
 
 from u19_pipeline import acquisition, subject, recording
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.utils.dj_shortcuts as dj_short
-import subprocess
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_rec')
+from element_calcium_imaging import scan as scan_element
+from element_calcium_imaging import imaging as imaging_element
+from element_interface.utils import find_full_path
 
-
-@schema
-class Scan(dj.Computed):
-    definition = """
-    # General information of an imaging session
-    -> recording.Recording
-    ---
-    """
-    @property
-    def key_source(self):
-        return recording.Recording & {'recording_modality': 'imaging'}
-
-    def make(self, key):
-
-        print('population here....', key)
-
-        self.insert1(key)
-
-
-@schema
-class ScanInfo(dj.Imported):
-    definition = """
-    # metainfo about imaging session
-    # `make` function is declared in the `U19-pipeline-matlab`
-    -> Scan
-    ---
-    file_name_base       : varchar(255)                 # base name of the file
-    scan_width           : int                          # width of scanning in pixels
-    scan_height          : int                          # height of scanning in pixels
-    acq_time             : datetime                     # acquisition time
-    n_depths             : tinyint                      # number of depths
-    scan_depths          : blob                         # depth values in this scan
-    frame_rate           : float                        # imaging frame rate
-    inter_fov_lag_sec    : float                        # time lag in secs between fovs
-    frame_ts_sec         : longblob                     # frame timestamps in secs 1xnFrames
-    power_percent        : float                        # percentage of power used in this scan
-    channels             : blob                         # is this the channer number or total number of channels
-    cfg_filename         : varchar(255)                 # cfg file path
-    usr_filename         : varchar(255)                 # usr file path
-    fast_z_lag           : float                        # fast z lag
-    fast_z_flyback_time  : float                        # time it takes to fly back to fov
-    line_period          : float                        # scan time per line
-    scan_frame_period    : float
-    scan_volume_rate     : float
-    flyback_time_per_frame : float
-    flyto_time_per_scan_field : float
-    fov_corner_points    : blob                         # coordinates of the corners of the full 5mm FOV, in microns
-    nfovs                : int                          # number of field of view
-    nframes              : int                          # number of frames in the scan
-    nframes_good         : int                          # number of frames in the scan before acceptable sample bleaching threshold is crossed
-    last_good_file       : int                          # number of the file containing the last good frame because of bleaching
-    motion_correction_enabled=0 : tinyint               # 
-    motion_correction_mode='N/A': varchar(64)           # 
-    stacks_enabled=0            : tinyint               # 
-    stack_actuator='N/A'        : varchar(64)           # 
-    stack_definition='N/A'      : varchar(64)           # 
-    """
-
-
-@schema
-class FieldOfView(dj.Imported):
-    definition = """
-    # meta-info about specific FOV within mesoscope imaging session
-    # `make` function is declared in the `U19-pipeline-matlab` repository
-    -> Scan
-    fov                  : tinyint                      # number of the field of view in this scan
-    ---
-    fov_directory        : varchar(255)                 # the absolute directory created for this fov
-    fov_name=null        : varchar(32)                  # name of the field of view
-    fov_depth            : float                        # depth of the field of view  should be a number or a vector?
-    fov_center_xy        : blob                         # X-Y coordinate for the center of the FOV in microns. One for each FOV in scan
-    fov_size_xy          : blob                         # X-Y size of the FOV in microns. One for each FOV in scan (sizeXY)
-    fov_rotation_degrees : float                        # rotation of the FOV with respect to cardinal axes in degrees. One for each FOV in scan
-    fov_pixel_resolution_xy : blob                      # number of pixels for rows and columns of the FOV. One for each FOV in scan
-    fov_discrete_plane_mode : tinyint                   # true if FOV is only defined (acquired) at a single specifed depth in the volume. One for each FOV in scan should this be boolean?
-    power_percent           :  float                    # percentage of power used for this field of view
-    """
-
-    def populate(self, key):
-    
-        str_key = dj_short.get_string_key(key)
-        command = [config.ingest_scaninfo_script, config.startup_pipeline_matlab_dir, str_key]
-        print(command)
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.wait()
-        print('aftercommand before comm')
-        stdout, stderr = p.communicate()
-        print('aftercommand after comm')
-        print(stdout.decode('UTF-8'))
-        print(stderr.decode('UTF-8'))
-
-    class File(dj.Part):
-        definition = """
-        # list of files per FOV
-        -> master
-        file_number          : int
-        ---
-        fov_filename         : varchar(255)                 # file name of the new fov tiff file
-        file_frame_range     : blob                         # [first last] frame indices in this file, with respect to the whole imaging session
-        """
-
-
-@schema
-class ImagingProcessing(dj.Manual):
-    definition = """
-    -> recording.RecordingProcess    
-    -----
-    -> FieldOfView
-    """
-
-Session = ImagingProcessing
-
-
+# Gathering requirements to activate the imaging element -------------------------------
 """
 Requirements to activate the imaging element:
 
@@ -143,19 +32,8 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-import datajoint as dj
-import pathlib
-
-from u19_pipeline import acquisition, subject, imaging_rec
-
-from u19_pipeline.imaging_rec import Session
-from element_calcium_imaging import scan as scan_element
-from element_calcium_imaging import imaging as imaging_element
-from element_interface.utils import find_full_path
-
-imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_rec_element'
-scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_rec_element'
-
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
+scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.acquisition import Session
@@ -170,19 +48,17 @@ class Equipment(dj.Manual):
     scanner: varchar(32)
     """
 
-
 # 3. Utility functions -----------------------------------------------------------------
 
 def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
     return data_dir if data_dir else None
 
-
 def get_scan_image_files(rec_process_key):
 
     data_dir = get_imaging_root_data_dir()
 
-    rec_process = (imaging_rec.ImagingProcessing & rec_process_key).fetch1()
+    rec_process = (recording.ImagingProcessing & rec_process_key).fetch1()
     scan_key = rec_process.copy()
     scan_key.pop('recording_process_id')
 
@@ -193,7 +69,7 @@ def get_scan_image_files(rec_process_key):
     #Replace scan_id with fov, we are going to search files by fov
     #if 'scan_id' in fov_key:
     #    fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = (imaging_rec.FieldOfView.File * imaging_rec.FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    scan_filepaths_ori = (recording.FieldOfView.File * recording.FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
 
     scan_filepaths_conc = list()
     for i in range(len(scan_filepaths_ori)):
@@ -210,10 +86,9 @@ def get_scan_image_files(rec_process_key):
     else:
         raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
-
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (acquisition.Session & processing_task_key).fetch1('KEY')
-    bucket_scan_dir = (imaging_rec.FieldOfView & sess_key &
+    bucket_scan_dir = (recording.FieldOfView & sess_key &
                              {'fov': processing_task_key['scan_id']}).fetch1('fov_directory')
     user_id = (subject.Subject & processing_task_key).fetch1('user_id')
 
@@ -235,8 +110,5 @@ def get_processed_dir(processing_task_key, process_method):
     
     return sess_dir
 
-
 # 4. Activate imaging schema -----------------------------------------------------------
-imaging_element.activate(imaging_schema_name, 
-                         scan_schema_name, 
-                         linking_module=__name__)
+imaging_element.activate(imaging_schema_name, scan_schema_name, linking_module=__name__)
