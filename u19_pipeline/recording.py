@@ -1,8 +1,6 @@
 import datajoint as dj
-import subprocess
 from u19_pipeline import lab, subject, acquisition
 import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.utils.dj_shortcuts as dj_short
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
