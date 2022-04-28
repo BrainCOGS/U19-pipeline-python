@@ -71,21 +71,6 @@ class Recording(dj.Manual):
          recording_datetime: datetime
          """
 
-# Declare upstream ephys table ---------------------------------------------------------
-@schema
-class EphysRecordingSession(dj.Computed):
-    definition = """
-    -> Recording
-    """
-
-    @property
-    def key_source(self):
-        return Recording & {'recording_modality': 'electrophysiology'}
-
-    def make(self, key):
-        self.insert1(key)
-
-
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
 class Scan(dj.Computed):
