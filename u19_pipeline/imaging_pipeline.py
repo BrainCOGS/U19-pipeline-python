@@ -32,8 +32,8 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
-scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_pipeline'
+scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_pipeline'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location
