@@ -6,7 +6,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
 # Declare recording tables -------------------------------------------------------------
 @schema
-class RecordingModality(dj.Lookup):
+class Modality(dj.Lookup):
      definition = """
      recording_modality:         varchar(64)  # recording modalities 
                                               # (ephys, imaging, video_recording, etc.) 
@@ -27,7 +27,7 @@ class RecordingModality(dj.Lookup):
 
 
 @schema
-class RecordingStatusDefinition(dj.Lookup):
+class Status(dj.Lookup):
      definition = """
      status_recording_id: TINYINT(1)      # Status in the automatic processing pipeline
      ---
@@ -41,16 +41,12 @@ class Recording(dj.Manual):
      definition = """
      recording_id:  INT(11) AUTO_INCREMENT    # Unique number assigned to recording   
      -----
-     -> RecordingModality
+     -> Modality
      -> lab.Location
-     -> RecordingStatusDefinition             # current status for recording in the pipeline
-     
-     task_copy_id_pni=null:      UUID         # id for globus transfer task raw file local->cup
-     
+     -> Status                                # current status for recording
+     task_copy_id_pni=null:      UUID         # globus transfer task raw file local->cup
      inherit_params_recording=1: boolean      # all RecordingProcess from a recording will have same paramSets
-     
-     recording_directory:        varchar(255) # relative directory where the recording will be stored on cup
-     
+     recording_directory:        varchar(255) # relative directory on cup
      local_directory:            varchar(255) # local directory where the recording is stored on system
      """    
 
