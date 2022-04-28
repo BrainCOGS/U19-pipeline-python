@@ -5,7 +5,7 @@ import numpy as np
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys_precluster as ephys_element
 
-from u19_pipeline import acquisition, behavior, recording
+from u19_pipeline import acquisition, behavior, recording, ephys_recording
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
@@ -30,8 +30,8 @@ For more detail, check the docstring of the ephys element:
 """
 
 # 1. Schema names
-probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_element'
-ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_element'
+probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_pipeline'
+ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_pipeline'
 
 # 2. Upstream tables
 reference_schema = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
@@ -43,7 +43,7 @@ class SkullReference(dj.Lookup):
     """
     contents = zip(['Bregma', 'Lambda'])
 
-Session = recording.EphysRecordingSession
+Session = ephys_recording.EphysRecordingSession
 
 # 3. Utility functions
 def get_ephys_root_data_dir():
@@ -69,7 +69,7 @@ ephys_element_schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys
 @ephys_element_schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> EphysRecordingSession
+    -> ephys_recording.EphysRecordingSession
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
