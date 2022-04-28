@@ -5,7 +5,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_recording')
 
 # Declare upstream ephys table ---------------------------------------------------------
 @schema
-class EphysRecordingSession(dj.Computed):
+class EphysRecording(dj.Computed):
     definition = """
     -> recording.Recording
     """

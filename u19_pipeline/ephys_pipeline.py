@@ -43,7 +43,7 @@ class SkullReference(dj.Lookup):
     """
     contents = zip(['Bregma', 'Lambda'])
 
-Session = ephys_recording.EphysRecordingSession
+Session = ephys_recording.EphysRecording
 
 # 3. Utility functions
 def get_ephys_root_data_dir():
@@ -69,7 +69,7 @@ ephys_element_schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys
 @ephys_element_schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> ephys_recording.EphysRecordingSession
+    -> ephys_recording.EphysRecording
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
