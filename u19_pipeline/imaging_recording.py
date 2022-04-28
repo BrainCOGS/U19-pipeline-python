@@ -8,7 +8,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_recording')
 
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
-class ImagingRecordingSession(dj.Computed):
+class ImagingRecording(dj.Computed):
     definition = """
     # General information of an imaging session
     -> recording.Recording
@@ -26,7 +26,7 @@ class ScanInfo(dj.Imported):
     definition = """
     # metainfo about imaging session
     # `make` function is declared in the `U19-pipeline-matlab`
-    -> ImagingRecordingSession
+    -> ImagingRecording
     ---
     file_name_base       : varchar(255)                 # base name of the file
     scan_width           : int                          # width of scanning in pixels
@@ -66,7 +66,7 @@ class FieldOfView(dj.Imported):
     definition = """
     # meta-info about specific FOV within mesoscope imaging session
     # `make` function is declared in the `U19-pipeline-matlab` repository
-    -> ImagingRecordingSession
+    -> ImagingRecording
     fov                  : tinyint                      # number of the field of view in this scan
     ---
     fov_directory        : varchar(255)                 # the absolute directory created for this fov

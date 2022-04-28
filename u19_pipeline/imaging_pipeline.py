@@ -2,7 +2,7 @@
 import datajoint as dj
 import pathlib
 
-from u19_pipeline import acquisition, subject, recording
+from u19_pipeline import acquisition, subject, recording, imaging_recording
 
 from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging as imaging_element
@@ -38,7 +38,7 @@ scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_pipeline'
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location
 
-Session = recording.FieldOfView
+Session = imaging_recording.ImagingRecording
 
 lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
