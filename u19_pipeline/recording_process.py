@@ -3,11 +3,11 @@ from u19_pipeline.ephys_pipeline import ephys_element
 from u19_pipeline.imaging_pipeline import imaging_element
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
 
 # Declare recording processing tables --------------------------------------------------
 @schema
-class ProcessingStatusDefinition(dj.Lookup):
+class Status(dj.Lookup):
      definition = """
      status_processing_id: TINYINT(1)      # Status in the automatic processing pipeline
      ---
@@ -25,7 +25,7 @@ class Processing(dj.Manual):
                                                     # unit
      ---
      -> Recording
-     -> ProcessingStatusDefinition                  # current status in the pipeline
+     -> Status                                      # current status in the pipeline
      fragment_number:                  TINYINT(1)   # fov# or probe#, etc. reference 
                                                     # from the corresponding modality 
      recording_process_pre_path=null:  VARCHAR(200) # relative path for raw data 
@@ -83,17 +83,14 @@ class Processing(dj.Manual):
 
 
 @schema
-class ProcessingLog(dj.Manual):
+class Log(dj.Manual):
      definition = """
-     log_id: INT(11) AUTO_INCREMENT
-                                              # Unique number assigned to each change 
+     log_id: INT(11) AUTO_INCREMENT           # Unique number assigned to each change 
                                               # of status for all processing jobs
      -----
      -> Processing
-     -> ProcessingStatusDefinition.proj(status_processing_id_old='status_processing_id') 
-                                              # Previous status in the pipeline
-     -> ProcessingStatusDefinition.proj(status_processing_id_new='status_processing_id') 
-                                              # Current status in the pipeline
+     -> Status.proj(status_processing_id_old='status_processing_id') # Previous status
+     -> Status.proj(status_processing_id_new='status_processing_id') # Current status
      status_timestamp:        DATETIME        # Timestamp when status change ocurred
      error_message=null:      VARCHAR(4096)   # Error message if status now is failed
      error_exception=null:    BLOB            # Error exception if status now is failed
