@@ -1,3 +1,4 @@
+from optparse import Values
 import pandas as pd
 import numpy as np
 
@@ -86,7 +87,21 @@ recording_status_dict = [
 
 recording_status_list = [[i['Value'], i['Label']] for i in recording_status_dict]
 recording_status_df = pd.DataFrame(recording_status_dict)
+RECORDING_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
+status_update_idx = {
+    'NEXT_STATUS': 1,
+    'NO_CHANGE': 0,
+    'ERROR_STATUS':-1
+}
+
+default_update_value_dict ={
+    'value_update': None,
+    'error_info': {
+        'recording_error_message': None,
+        'recording_error_exception': None,
+    },
+}
 
 recording_process_status_dict = [
     {
@@ -189,6 +204,7 @@ all_preprocess_params = {
 
 recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
 recording_process_status_df = pd.DataFrame(recording_process_status_dict)
+RECORDING_PROCESS_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
 system_process = {
     'SUCCESS': 0

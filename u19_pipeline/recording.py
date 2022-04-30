@@ -146,7 +146,7 @@ class Recording(dj.Manual):
      -> StatusRecordingDefinition                                               # current status for recording in the pipeline
      -> PreprocessParamSet.proj(def_preprocess_paramset_idx='preprocess_paramset_idx')  # reference to params to default preprocess recording (possible to inherit to recordigprocess)
      -> ProcessParamSet.proj(def_process_paramset_idx='process_paramset_idx')   # reference to params to default process recording  (possible to inherit to recordigprocess)
-     task_copy_id_pni=null:             UUID                                    # id for globus transfer task raw file local->cup
+     task_copy_id_pni=null:             INT(11)                                 # id for globus transfer task raw file local->cup
      inherit_params_recording=1:        boolean                                 # all RecordingProcess from a recording will have same paramSets
      recording_directory:               varchar(255)                            # relative directory where the recording will be stored on cup
      local_directory:                   varchar(255)                            # local directory where the recording is stored on system
@@ -222,6 +222,21 @@ class RecordingProcess(dj.Manual):
         self.insert1(this_recprocess_key)  
 
 
+
+@schema
+class RecordingStatus(dj.Manual):
+     definition = """
+     recording_status_id:            INT(11) AUTO_INCREMENT    # Unique number assigned to each change of status for all recordings
+     -----
+     -> Recording
+     -> StatusRecordingDefinition.proj(status_recording_idx_old='status_recording_idx') # old status of recording in the pipeline
+     -> StatusRecordingDefinition.proj(status_recording_idx_new='status_recording_idx') # current status of recording in the pipeline
+     recording_status_timestamp:        DATETIME        # timestamp when status change ocurred
+     recording_error_message=null:      VARCHAR(4096)   # Error message if status now is failed
+     recording_error_exception=null:    VARCHAR(4096)   # Error exception if status now is failed
+     """
+
+
 @schema
 class RecordingProcessStatus(dj.Manual):
      definition = """
@@ -230,7 +245,8 @@ class RecordingProcessStatus(dj.Manual):
      -> RecordingProcess
      -> StatusProcessDefinition.proj(status_pipeline_idx_old='status_pipeline_idx') # old status in the pipeline
      -> StatusProcessDefinition.proj(status_pipeline_idx_new='status_pipeline_idx') # current status in the pipeline
-     status_timestamp:                  DATETIME        # timestamp when status change ocurred
-     error_message=null:                VARCHAR(4096)   # Error message if status now is failed
-     error_exception=null:              BLOB            # Error exception if status now is failed
+     job_status_timestamp:              DATETIME        # timestamp when status change ocurred
+     job_error_message=null:            VARCHAR(4096)   # Error message if status now is failed
+     job_error_exception=null:          VARCHAR(4096)   # Error exception if status now is failed
      """
+

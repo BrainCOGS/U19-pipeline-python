@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=recording_process_id_105
+#SBATCH --job-name=recording_process_id_103
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=5:00:00
@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mail-user=alvaros@princeton.edu
 #SBATCH --mail-type=END
-#SBATCH --output=/scratch/gpfs/BRAINCOGS/OutputLog/recording_process_id_105.log
+#SBATCH --output=/scratch/gpfs/BRAINCOGS/OutputLog/recording_process_id_103.log
 
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"

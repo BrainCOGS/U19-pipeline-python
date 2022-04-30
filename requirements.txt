@@ -14,3 +14,4 @@ suite2p @ git+https://github.com/MouseLand/suite2p.git
 cellpose
 scp
 paramiko
+psutil
