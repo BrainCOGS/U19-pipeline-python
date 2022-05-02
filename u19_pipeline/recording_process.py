@@ -1,6 +1,7 @@
 import datajoint as dj
-from u19_pipeline.ephys_pipeline import ephys_element
-from u19_pipeline.imaging_pipeline import imaging_element
+from u19_pipeline import recording
+from u19_pipeline.ephys_pipeline import *
+from u19_pipeline.imaging_pipeline import *
 import u19_pipeline.automatic_job.params_config as config
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
@@ -24,7 +25,7 @@ class Processing(dj.Manual):
                                                     # processing job for a recording
                                                     # unit
      ---
-     -> Recording
+     -> recording.Recording
      -> Status                                      # current status in the pipeline
      fragment_number:                  TINYINT(1)   # fov# or probe#, etc. reference 
                                                     # from the corresponding modality 
@@ -45,17 +46,17 @@ class Processing(dj.Manual):
           definition="""
           -> master
           ---
-          -> ephys_pipeline.PreClusterParamList
-          -> ephys_pipeline.ClusteringParamSet
+          -> ephys_element.PreClusterParamList
+          -> ephys_element.ClusteringParamSet
           """
 
      class ImagingParams(dj.Part):
         definition="""
         -> master
         ---
-        -> imaging_pipeline.ProcessingParamSet
+        -> imaging_element.ProcessingParamSet
         """  
-     
+
      # This table would control ingestion of PreClusteringTask
      def insert_recording_process(self, recording_key, rec_unit, unit_directory_fieldname, unit_fieldname):
         '''
