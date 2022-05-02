@@ -52,3 +52,27 @@ class DataDirectory(dj.Computed):
     file_name            : varchar(255)                 # file name
     combined_file_name   : varchar(255)                 # combined filename
     """
+
+
+@schema
+class SessionManipulation(dj.Manual):
+    definition = """
+    # Relationship between session & videos acquired
+    -> acquisition.Session
+    -> lab.VideoType
+    ---
+    local_path_video_file    : varchar(255)                  # absolute path were video file is stored in local computer
+    remote_path_video_file   : varchar(255)                  # relative path were video file will be stored in braininit drive
+    """
+
+
+@schema
+class SessionVideo(dj.Manual):
+    definition = """
+    # Relationship between session & videos acquired
+    -> acquisition.Session
+    -> lab.VideoType
+    ---
+    local_path_video_file    : varchar(255)                  # absolute path were video file is stored in local computer
+    remote_path_video_file   : varchar(255)                  # relative path were video file will be stored in braininit drive
+    """

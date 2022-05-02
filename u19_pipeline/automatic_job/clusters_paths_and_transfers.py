@@ -19,7 +19,28 @@ default_user     = 'alvaros'                         # This will change to our a
 tiger_gpu_host = 'tigergpu.princeton.edu'
 tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
 
-
+#Slurm default values for queue job
+slurm_dict_tiger_default = {
+    'job-name': 'kilosort2',
+    'nodes': 1,
+    'ntasks': 1,
+    'time': '5:00:00',
+    'mem': '200G',
+    'gres': 'gpu:1',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['END'],
+    'output': 'OutputLog/recording_process_${recording_process_id}".log'
+}
+slurm_dict_spock_default = {
+    'job-name': 'dj_ingestion',
+    'nodes': 1,
+    'cpus-per-task': 1,
+    'time': '5:00:00',
+    'mem': '24G',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['END'],
+    'output': 'OutputLog/recording_process_${recording_process_id}".log'
+}
 
 
 tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
@@ -27,23 +48,31 @@ spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipe
 #Cluster directories
 cluster_vars = {
     "tiger": {
-        "home_dir":        tiger_home_dir, 
-        "root_data_dir":   tiger_home_dir + "/Data", 
-        "sorted_data_dir": tiger_home_dir + "/DataSorted", 
-        "slurm_files_dir": tiger_home_dir + "/slurm_files", 
-        "log_files_dir":   tiger_home_dir + "/job_log", 
-        "user":            default_user, 
-        "hostname":        "tigergpu.princeton.edu",
-        "script_path":      ""
+        "home_dir":                      tiger_home_dir, 
+        "root_data_dir":                 tiger_home_dir + "/Data/Raw", 
+        "sorted_data_dir":               tiger_home_dir + "/Data/Sorted", 
+        "slurm_files_dir":               tiger_home_dir + "/SlurmFiles", 
+        "params_files_dir":              tiger_home_dir + "/ParameterFiles", 
+        "electrophysiology_process_dir": tiger_home_dir + "/electorphysiology_processing", 
+        "imaging_process_dir":           tiger_home_dir + "/imaging_processing", 
+        "log_files_dir":                 tiger_home_dir + "/OutputLog", 
+        "user":                          default_user, 
+        "slurm_default":                 slurm_dict_tiger_default, 
+        "hostname":                      "tigergpu.princeton.edu",
+        "script_path":                   ""
     },
     "spock": {
-        "home_dir":        spock_home_dir, 
-        "root_data_dir":   dj.config['custom']['root_data_dir'], 
-        "slurm_files_dir": spock_home_dir + "/slurm_files", 
-        "log_files_dir":   spock_home_dir + "/job_log", 
-        "user":            default_user,
-        "hostname":        "spock.princeton.edu",
-        "script_path":      "scripts/automate_imaging_element.py"
+        "home_dir":                      spock_home_dir, 
+        "root_data_dir":                 dj.config['custom']['root_data_dir'], 
+        "slurm_files_dir":               spock_home_dir + "/SlurmFiles", 
+        "params_files_dir":              spock_home_dir + "/ParameterFiles",
+        "electrophysiology_process_dir": spock_home_dir + "/electorphysiology_processing", 
+        "imaging_process_dir":           spock_home_dir + "/imaging_processing",  
+        "log_files_dir":                 spock_home_dir + "/OutputLog", 
+        "user":                          default_user,
+        "slurm_default":                 slurm_dict_spock_default, 
+        "hostname":                      "spock.princeton.edu",
+        "script_path":                   ""
     }
 }
 
@@ -61,6 +90,7 @@ def scp_file_transfer(source, dest):
     print("scp", source, dest)
     p = subprocess.Popen(["scp", "-i", "~/.ssh/id_rsa_alvaros_tiger.pub", source, dest])
     transfer_status = p.wait()
+    print(transfer_status)
     return transfer_status
 
 
