@@ -5,7 +5,7 @@ import numpy as np
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys_precluster as ephys_element
 
-from u19_pipeline import recording, ephys_recording
+from u19_pipeline import recording
 
 ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_pipeline'
 schema = dj.schema(ephys_schema_name)
@@ -53,7 +53,7 @@ class SkullReference(dj.Lookup):
     """
     contents = zip(['Bregma', 'Lambda'])
 
-Session = ephys_recording.EphysRecording
+Session = EphysRecording
 
 # 3. Utility functions
 def get_ephys_root_data_dir():
