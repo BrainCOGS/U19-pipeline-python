@@ -31,7 +31,7 @@ class Status(dj.Lookup):
      definition = """
      status_recording_id: TINYINT(1)      # Status in the automatic processing pipeline
      ---
-     status_definition:   VARCHAR(256)    # Status definition 
+     status_recording_definition:   VARCHAR(256)    # Status definition 
      """
      contents = config.recording_status_list
 
