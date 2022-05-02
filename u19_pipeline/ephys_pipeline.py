@@ -12,7 +12,7 @@ schema = dj.schema(ephys_schema_name)
 
 # Declare upstream table ---------------------------------------------------------------
 @schema
-class EphysRecording(dj.Computed):
+class EphysPipelineSession(dj.Computed):
     definition = """
     -> recording.Recording
     """
@@ -53,7 +53,7 @@ class SkullReference(dj.Lookup):
     """
     contents = zip(['Bregma', 'Lambda'])
 
-Session = EphysRecording
+Session = EphysPipelineSession
 
 # 3. Utility functions
 def get_ephys_root_data_dir():

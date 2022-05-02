@@ -16,7 +16,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
 
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
-class ImagingRecording(dj.Computed):
+class ImagingPipelineSession(dj.Computed):
     definition = """
     # General information of an imaging session
     -> recording.Recording
@@ -34,7 +34,7 @@ class ScanInfo(dj.Imported):
     definition = """
     # metainfo about imaging session
     # `make` function is declared in the `U19-pipeline-matlab`
-    -> ImagingRecording
+    -> ImagingPipelineSession
     ---
     file_name_base       : varchar(255)                 # base name of the file
     scan_width           : int                          # width of scanning in pixels
@@ -74,7 +74,7 @@ class FieldOfView(dj.Imported):
     definition = """
     # meta-info about specific FOV within mesoscope imaging session
     # `make` function is declared in the `U19-pipeline-matlab` repository
-    -> ImagingRecording
+    -> ImagingPipelineSession
     fov                  : tinyint                      # number of the field of view in this scan
     ---
     fov_directory        : varchar(255)                 # the absolute directory created for this fov
@@ -142,7 +142,7 @@ imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_pipeline
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location
 
-Session = ImagingRecording
+Session = ImagingPipelineSession
 
 lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
@@ -162,7 +162,7 @@ def get_scan_image_files(rec_process_key):
 
     data_dir = get_imaging_root_data_dir()
 
-    rec_process = (ImagingRecording & rec_process_key).fetch1()
+    rec_process = (ImagingPipelineSession & rec_process_key).fetch1()
     scan_key = rec_process.copy()
     # scan_key.pop('recording_process_id')
 
@@ -190,7 +190,7 @@ def get_scan_image_files(rec_process_key):
         raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
 def get_processed_dir(processing_task_key, process_method):
-    sess_key = (ImagingRecording & processing_task_key).fetch1('KEY')
+    sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
     bucket_scan_dir = (FieldOfView & sess_key &
                              {'fov': processing_task_key['scan_id']}).fetch1('fov_directory')
     user_id = (subject.Subject & processing_task_key).fetch1('user_id')
