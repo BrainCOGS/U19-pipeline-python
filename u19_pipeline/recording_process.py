@@ -45,15 +45,15 @@ class Processing(dj.Manual):
           definition="""
           -> master
           ---
-          -> ephys_element.PreClusterParamList
-          -> ephys_element.ClusteringParamSet
+          -> ephys_pipeline.PreClusterParamList
+          -> ephys_pipeline.ClusteringParamSet
           """
 
      class ImagingParams(dj.Part):
         definition="""
         -> master
         ---
-        -> imaging_element.ProcessingParamSet
+        -> imaging_pipeline.ProcessingParamSet
         """  
      
      # This table would control ingestion of PreClusteringTask
