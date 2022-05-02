@@ -12,7 +12,7 @@ class Modality(dj.Lookup):
                                               # (ephys, imaging, video_recording, etc.) 
      ---
      modality_description:       varchar(255) # description for the modality
-     root_directory:              varchar(255) # root directory where modality is stored
+     root_directory:             varchar(255) # root directory where modality is stored
      recording_file_extensions:  blob         # file extensions for this modality
      recording_file_pattern:     blob         # directory pattern to find recordings in path
      process_unit_file_pattern:  blob         # process "unit" pattern to find in path
