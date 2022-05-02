@@ -12,6 +12,21 @@ import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.path_utils as pu
 import u19_pipeline.automatic_job.params_config as config
 
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_pipeline')
+
+# Declare upstream ephys table ---------------------------------------------------------
+@schema
+class EphysRecording(dj.Computed):
+    definition = """
+    -> recording.Recording
+    """
+
+    @property
+    def key_source(self):
+        return recording.Recording & {'recording_modality': 'electrophysiology'}
+
+    def make(self, key):
+        self.insert1(key)
 
 # Gathering requirements to activate the ephys element ---------------------------------
 """
