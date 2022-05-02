@@ -2,7 +2,8 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import behavior, ephys_pipeline
+from u19_pipeline import behavior
+from u19_pipeline.ephys_pipeline import *
 from u19_pipeline.ephys_pipeline import get_session_directory
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
@@ -16,7 +17,7 @@ schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_sync')
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> ephys_pipeline.EphysRecording
+    -> ephys_element.EphysRecording
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
@@ -26,7 +27,7 @@ class BehaviorSync(dj.Imported):
     class ImecSamplingRate(dj.Part):
         definition = """
         -> master
-        -> ephys_pipeline.ProbeInsertion
+        -> ephys_element.ProbeInsertion
         ---
         ephys_sampling_rate: float     # sampling rate of the headstage of a probe, imSampRate in imec meta file
         """
@@ -72,7 +73,7 @@ class BehaviorSync(dj.Imported):
     def insert_imec_sampling_rate(self, key, session_dir):
 
         # get the imec sampling rate for a particular probe
-        here = ephys_pipeline.ProbeInsertion & key
+        here = ephys_element.ProbeInsertion & key
         for probe_insertion in here.fetch('KEY'):
             #imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
             imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.meta'.format(probe_insertion['insertion_number'])))
@@ -96,14 +97,14 @@ class BehaviorSync(dj.Imported):
 @schema
 class CuratedClustersIteration(dj.Computed):
     definition = """
-    -> ephys_pipeline.CuratedClustering
+    -> ephys_element.CuratedClustering
     -> BehaviorSync
     """
 
     class Unit(dj.Part):
         definition = """
         -> master
-        -> ephys_pipeline.CuratedClustering.Unit
+        -> ephys_element.CuratedClustering.Unit
         ---
         spike_counts_iteration:   longblob   # number of spikes during each iteration. have length as the number of iterations - 1
         firing_rate_before_first_iteration: float
@@ -151,8 +152,8 @@ class CuratedClustersIteration(dj.Computed):
 
         unit_spike_counts = []
 
-        for unit_key in (ephys_pipeline.CuratedClustering.Unit & key).fetch('KEY'):
-            spike_times = (ephys_pipeline.CuratedClustering.Unit & unit_key).fetch1('spike_times')
+        for unit_key in (ephys_element.CuratedClustering.Unit & key).fetch('KEY'):
+            spike_times = (ephys_element.CuratedClustering.Unit & unit_key).fetch1('spike_times')
             # vector with length n_iterations + 1
             spike_counts_iteration = np.bincount(np.digitize(spike_times, iteration_times))
 
