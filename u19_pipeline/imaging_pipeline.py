@@ -3,7 +3,7 @@ import datajoint as dj
 import pathlib
 import subprocess
 
-from u19_pipeline import acquisition, subject, recording, imaging_recording
+from u19_pipeline import acquisition, subject, recording
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
 
@@ -136,13 +136,13 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_pipeline'
 scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_pipeline'
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_pipeline'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location
 
-Session = imaging_recording.ImagingRecording
+Session = ImagingRecording
 
 lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 
@@ -162,7 +162,7 @@ def get_scan_image_files(rec_process_key):
 
     data_dir = get_imaging_root_data_dir()
 
-    rec_process = (recording.ImagingRecording & rec_process_key).fetch1()
+    rec_process = (ImagingRecording & rec_process_key).fetch1()
     scan_key = rec_process.copy()
     # scan_key.pop('recording_process_id')
 
@@ -173,7 +173,7 @@ def get_scan_image_files(rec_process_key):
     #Replace scan_id with fov, we are going to search files by fov
     #if 'scan_id' in fov_key:
     #    fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = (recording.FieldOfView.File * recording.FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    scan_filepaths_ori = (FieldOfView.File * FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
 
     scan_filepaths_conc = list()
     for i in range(len(scan_filepaths_ori)):
@@ -190,8 +190,8 @@ def get_scan_image_files(rec_process_key):
         raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
 def get_processed_dir(processing_task_key, process_method):
-    sess_key = (imaging_recording.ImagingRecording & processing_task_key).fetch1('KEY')
-    bucket_scan_dir = (recording.FieldOfView & sess_key &
+    sess_key = (ImagingRecording & processing_task_key).fetch1('KEY')
+    bucket_scan_dir = (FieldOfView & sess_key &
                              {'fov': processing_task_key['scan_id']}).fetch1('fov_directory')
     user_id = (subject.Subject & processing_task_key).fetch1('user_id')
 
@@ -208,7 +208,7 @@ def get_processed_dir(processing_task_key, process_method):
             raise FileNotFoundError(f'Error searching for Suite2p output directory in {bucket_scan_dir} - Found {suite2p_dirs}')
     elif process_method == 'caiman':
         pass #TODO
-    
+
     return sess_dir
 
 # 4. Activate imaging schema -----------------------------------------------------------
