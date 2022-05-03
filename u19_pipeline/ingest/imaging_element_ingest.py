@@ -1,10 +1,3 @@
-from u19_pipeline import acquisition, imaging
-from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
-                                          get_imaging_root_data_dir, get_scan_image_files)
-
-import scanreader
-from element_interface.scanimage_utils import get_scanimage_acq_time, parse_scanimage_header
-
 """
 The ingestion routine for imaging element includes:
 
@@ -17,6 +10,15 @@ Manual insertion:
     (for an example, see: https://github.com/datajoint/workflow-imaging/blob/main/notebooks/run_workflow.ipynb)
     + manually insert new ProcessingTask for each scan
 """
+
+
+from u19_pipeline import acquisition, imaging
+from u19_pipeline.imaging_element import (scan_element, imaging_element, Equipment,
+                                          get_imaging_root_data_dir, get_scan_image_files)
+
+import scanreader
+from element_interface.scanimage_utils import get_scanimage_acq_time, parse_scanimage_header
+
 
 acq_software = 'ScanImage'
 
@@ -39,6 +41,7 @@ def process_scan(scan_key):
             print(f'ScanImage loading error: {scan_filepaths}\n{str(e)}')
             return
         scan_key = {**scan_key, 'scan_id': fov_key['fov']}
+
         if scan_key not in scan_element.Scan():
             Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
             scan_element.Scan.insert1(

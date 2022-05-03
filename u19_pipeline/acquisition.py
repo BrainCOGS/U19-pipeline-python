@@ -1,7 +1,7 @@
 import datajoint as dj
 from u19_pipeline import lab, task, subject
 
-schema = dj.schema('u19_acquisition')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'acquisition')
 
 
 @schema
@@ -58,7 +58,7 @@ class DataDirectory(dj.Computed):
 class SessionManipulation(dj.Manual):
     definition = """
     # Relationship between session & videos acquired
-    -> acquisition.Session
+    -> Session
     -> lab.VideoType
     ---
     local_path_video_file    : varchar(255)                  # absolute path were video file is stored in local computer
@@ -70,7 +70,7 @@ class SessionManipulation(dj.Manual):
 class SessionVideo(dj.Manual):
     definition = """
     # Relationship between session & videos acquired
-    -> acquisition.Session
+    -> Session
     -> lab.VideoType
     ---
     local_path_video_file    : varchar(255)                  # absolute path were video file is stored in local computer

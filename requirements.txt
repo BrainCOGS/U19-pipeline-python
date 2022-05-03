@@ -2,14 +2,14 @@ globus-cli
 scipy
 python-dotenv
 element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
-element-array-ephys
+element-array-ephys @ git+https://github.com/kabilar/element-array-ephys.git
+element-interface @ git+https://github.com/datajoint/element-interface.git
 scanreader @ git+https://github.com/atlab/scanreader.git
 pandas
 numpy
 astropy
 jupyterlab
 bitstring
-element-interface @ git+https://github.com/datajoint/element-interface.git
 suite2p @ git+https://github.com/MouseLand/suite2p.git
 cellpose
 scp

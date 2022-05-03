@@ -2,151 +2,22 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-from u19_pipeline import behavior, recording
-
-from element_array_ephys import probe as probe_element
-from element_array_ephys import ephys as ephys_element
+from u19_pipeline import behavior
+from u19_pipeline.ephys_pipeline import *
+from u19_pipeline.ephys_pipeline import get_session_directory
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.path_utils as pu
 import u19_pipeline.automatic_job.params_config as config
 
-from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
+# Tables downstream from `ephys_pipeline` module ---------------------------------------
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_sync')
 
-"""
------- Gathering requirements to activate the ephys elements ------
-To activate the ephys elements, we need to provide:
-1. Schema names
-    + schema name for the probe module
-    + schema name for the ephys module
-2. Upstream tables
-    + Session table
-    + SkullReference table - Reference table for InsertionLocation, specifying the skull reference
-                 used for probe insertion location (e.g. Bregma, Lambda)
-3. Utility functions
-    + get_ephys_root_data_dir()
-    + get_session_directory()
-For more detail, check the docstring of the imaging element:
-    help(probe_element.activate)
-    help(ephys_element.activate)
-"""
-
-# 1. Schema names
-probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_rec_element'
-ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_rec_element'
-
-# 2. Upstream tables
-schema_reference = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_rec')
-
-
-@schema_reference
-class SkullReference(dj.Lookup):
-    definition = """
-    skull_reference   : varchar(60)
-    """
-    contents = zip(['Bregma', 'Lambda'])
-
-
-@schema
-class EphysRecording(dj.Computed):
-    definition = """
-    # General information of an ephys session
-    -> recording.Recording
-    ---
-    """
-    @property
-    def key_source(self):
-        return recording.Recording & {'recording_modality': 'electrophysiology'}
-
-    def make(self, key):
-        self.insert1(key)
-
-
-@schema
-class EphysRecordingProbes(dj.Computed):
-    definition = """
-    # General information of an ephys session
-    -> EphysRecording
-    probe                  : tinyint                      # probe number for the recording
-    ---
-    probe_directory        : varchar(255)                 # probe specific directory
-    """
-
-    def make(self, key):
-
-        root_dir = get_ephys_root_data_dir()
-        root_dir_p = pathlib.Path(root_dir)
-        rec_diro = (recording.Recording & key).fetch1('recording_directory')   
-        rec_dir =  str(pathlib.Path(root_dir, rec_diro))
-
-        ephys_probe_pattern = \
-        config.recording_modality_df.loc[config.recording_modality_df['RecordingModality'] == 'electrophysiology', 'ProcessUnitFilePattern'].squeeze()
-
-        probe_dirs = pu.get_filepattern_paths(rec_dir, ephys_probe_pattern[0])
-        probe_dirs.sort()
-
-        probe_keys = []
-        for idx, probe_dir in enumerate(probe_dirs):
-
-            probe_dir_p = pathlib.Path(probe_dir)
-            rel_probe_dir = probe_dir_p.relative_to(root_dir_p).as_posix()
-            this_key = key.copy()
-            this_key['probe'] = idx
-            this_key['probe_directory'] = rel_probe_dir
-            probe_keys.append(this_key)
-
-        if len(probe_keys) > 0:
-            self.insert(probe_keys)
-
-
-@schema
-class EphysProcessing(dj.Manual):
-    definition = """
-    -> recording.RecordingProcess
-    -----
-    -> EphysRecordingProbes
-    """
-
-
-
-# ephys element requires table with name Session
-Session = EphysProcessing
-
-
-# 3. Utility functions
-
-def get_ephys_root_data_dir():
-    data_dir = dj.config.get('custom', {}).get('ephys_root_data_dir', None)
-    data_dir = pathlib.Path(data_dir)
-    data_dir = data_dir.as_posix()
-    return data_dir if data_dir else None
-
-
-def get_session_directory(session_key):
-
-    data_dir = str(get_ephys_root_data_dir())
-    sess_dir = (ephys_rec.EphysSession & session_key).fetch1('ephys_directory')    
-    session_dir =  pathlib.Path(data_dir + sess_dir)
-    return session_dir.as_posix()
-
-
-# ------------- Activate "ephys" schema -------------
-ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__name__)
-
-
-# ------------- Create Neuropixels probe entries -------------
-for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
-                   'neuropixels 2.0 - SS', 'neuropixels 2.0 - MS'):
-    probe_element.ProbeType.create_neuropixels_probe(probe_type)
-
-
-# downstream tables for ephys element
 @schema
 class BehaviorSync(dj.Imported):
     definition = """
-    -> EphysRecording
+    -> ephys_element.EphysRecording
     ---
     nidq_sampling_rate    : float        # sampling rate of behavioral iterations niSampRate in nidq meta file
     iteration_index_nidq  : longblob     # Virmen index time series. Length of this longblob should be the number of samples in the nidaq file.
@@ -166,7 +37,6 @@ class BehaviorSync(dj.Imported):
         session_dir = pathlib.Path(get_session_directory(key))
         nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
         # And get the datajoint record
-        behavior = dj.create_virtual_module('behavior', 'u19_behavior')
         thissession = behavior.TowersBlock().Trial() & key
         behavior_time, iterstart = thissession.fetch('trial_time', 'vi_start')
 
@@ -194,7 +64,7 @@ class BehaviorSync(dj.Imported):
 
         print(final_key)
 
-        ephys_rec.BehaviorSync.insert1(final_key,allow_direct_insert=True)
+        self.insert1(final_key,allow_direct_insert=True)
 
         self.insert_imec_sampling_rate(key, session_dir)
 
@@ -218,7 +88,7 @@ class BehaviorSync(dj.Imported):
                 else:   # If this fails too, no imec file exists at the path.
                     raise NameError("No imec meta file found.")
 
-            imec_meta = readMeta(imec_bin_filepath)
+            imec_meta = readSGLX.readMeta(imec_bin_filepath)
             self.ImecSamplingRate.insert1(
                 dict(probe_insertion,
                         ephys_sampling_rate=imec_meta['imSampRate']))
@@ -277,7 +147,7 @@ class CuratedClustersIteration(dj.Computed):
         # get end of time from nidq metadata
         session_dir = pathlib.Path(get_session_directory(key))
         nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
-        nidq_meta = readMeta(nidq_bin_full_path)
+        nidq_meta = readSGLX.readMeta(nidq_bin_full_path)
         t_end = np.float(nidq_meta['fileTimeSecs'])
 
         unit_spike_counts = []

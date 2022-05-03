@@ -1,8 +1,8 @@
 import re
 import pathlib
 
-from u19_pipeline import ephys
-from u19_pipeline.ephys import (probe_element, ephys_element,
+from u19_pipeline import ephys_pipeline
+from u19_pipeline.ephys_pipeline import (probe_element, ephys_element,
                                         get_ephys_root_data_dir, get_session_directory)
 from element_array_ephys.readers import spikeglx
 
