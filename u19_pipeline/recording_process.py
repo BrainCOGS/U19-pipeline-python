@@ -4,7 +4,7 @@ from u19_pipeline.ephys_pipeline import *
 from u19_pipeline.imaging_pipeline import *
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording_process_test')
 
 # Declare recording processing tables --------------------------------------------------
 @schema
@@ -93,6 +93,6 @@ class Log(dj.Manual):
      -> Status.proj(status_processing_id_old='status_processing_id') # Previous status
      -> Status.proj(status_processing_id_new='status_processing_id') # Current status
      status_timestamp:        DATETIME        # Timestamp when status change ocurred
-     error_message=null:      VARCHAR(4096)   # Error message if status now is failed
-     error_exception=null:    BLOB            # Error exception if status now is failed
+     error_message=null:      VARCHAR(256)    # Error message if status now is failed
+     error_exception=null:    VARCHAR(4096)   # Error exception if status now is failed
      """

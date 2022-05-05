@@ -1,7 +1,7 @@
 import re
 import pathlib
-
 from u19_pipeline import ephys_pipeline
+
 from u19_pipeline.ephys_pipeline import (probe_element, ephys_element,
                                         get_ephys_root_data_dir, get_session_directory)
 from element_array_ephys.readers import spikeglx
@@ -57,5 +57,5 @@ def process_session(sess_key):
 
 
 if __name__ == '__main__':
-    for sess_key in ephys.EphysSession.fetch('KEY'):
+    for sess_key in ephys_pipeline.EphysPipelineSession.fetch('KEY'):
         process_session(sess_key)

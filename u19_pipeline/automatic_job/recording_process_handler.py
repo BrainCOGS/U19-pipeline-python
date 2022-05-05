@@ -8,6 +8,7 @@ import traceback
 import pandas as pd
 import datajoint as dj
 import u19_pipeline.recording as recording
+import u19_pipeline.recording as recording_process
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
@@ -40,8 +41,11 @@ class RecProcessHandler():
             #Filter current process job
             rec_process_series = df_all_process_job.loc[i, :].copy()
 
-            preprocess_paramset = recording.PreprocessParamSet().get_preprocess_params({'preprocess_paramset_idx':rec_process_series['preprocess_paramset_idx']})
-            process_paramset    = recording.ProcessParamSet().get_process_params({'process_paramset_idx': rec_process_series['process_paramset_idx']})
+            #TODO get params
+            preprocess_paramset = None
+            process_paramset = None
+            #preprocess_paramset = recording_process.PreprocessParamSet().get_preprocess_params({'preprocess_paramset_idx':rec_process_series['preprocess_paramset_idx']})
+            #process_paramset    = recording_process.ProcessParamSet().get_process_params({'process_paramset_idx': rec_process_series['process_paramset_idx']})
 
             #ALS, correct preprocess params if OLD or outdated
 
@@ -245,7 +249,8 @@ class RecProcessHandler():
         status_query = 'status_pipeline_idx > ' + str(recording_process_status_df['Value'].min())
         status_query += ' and status_pipeline_idx < ' + str(recording_process_status_df['Value'].max())
 
-        jobs_active = (recording.Recording.proj('recording_modality') * recording.RecordingProcess & status_query)
+        
+        jobs_active = (recording.Recording.proj('recording_modality') * recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
         if df_process_jobs.shape[0] > 0:
@@ -268,11 +273,11 @@ class RecProcessHandler():
         if update_field is not None:
             update_task_id_dict = recording_process_key_dict.copy()
             update_task_id_dict[update_field] = update_value
-            recording.RecordingProcess.update1(update_task_id_dict)
+            recording_process.Status.update1(update_task_id_dict)
         
         update_status_dict = recording_process_key_dict.copy()
         update_status_dict['status_pipeline_idx'] = status
-        recording.RecordingProcess.update1(update_status_dict)
+        recording_process.Status.update1(update_status_dict)
 
 
     '''

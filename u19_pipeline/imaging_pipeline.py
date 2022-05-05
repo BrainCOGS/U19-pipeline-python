@@ -12,7 +12,7 @@ from element_calcium_imaging import imaging as imaging_element
 from element_interface.utils import find_full_path
 
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'imaging_pipeline_test')
 
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
@@ -136,8 +136,8 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-scan_schema_name = dj.config['custom']['database.prefix'] + 'scan_element'
-imaging_schema_name = dj.config['custom']['database.prefix'] + 'imaging_element'
+scan_schema_name = dj.config['custom']['database.test.prefix'] + 'scan_element_test'
+imaging_schema_name = dj.config['custom']['database.test.prefix'] + 'imaging_element_test'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location

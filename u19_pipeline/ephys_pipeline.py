@@ -7,7 +7,7 @@ from element_array_ephys import ephys_precluster as ephys_element
 
 from u19_pipeline import recording
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_pipeline')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'ephys_pipeline_test')
 
 # Declare upstream table ---------------------------------------------------------------
 @schema
@@ -40,8 +40,8 @@ For more detail, check the docstring of the ephys element:
 """
 
 # 1. Schema names
-probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_element'
-ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_element'
+probe_schema_name = dj.config['custom']['database.test.prefix'] + 'probe_element_test'
+ephys_schema_name = dj.config['custom']['database.test.prefix'] + 'ephys_element_test'
 
 # 2. Upstream tables
 reference_schema = dj.schema(dj.config['custom']['database.prefix'] + 'reference')
