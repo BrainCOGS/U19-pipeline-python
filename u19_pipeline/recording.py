@@ -2,7 +2,7 @@ import datajoint as dj
 from u19_pipeline import lab, subject, acquisition
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
+schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording_test')
 
 # Declare recording tables -------------------------------------------------------------
 @schema
@@ -44,7 +44,7 @@ class Recording(dj.Manual):
      -> Modality
      -> lab.Location
      -> Status                                # current status for recording
-     task_copy_id_pni=null:      UUID         # globus transfer task raw file local->cup
+     task_copy_id_pni=null:      int(11)      # globus transfer task raw file local->cup
      inherit_params_recording=1: boolean      # all RecordingProcess from a recording will have same paramSets
      recording_directory:        varchar(255) # relative directory on cup
      local_directory:            varchar(255) # local directory where the recording is stored on system
@@ -65,3 +65,17 @@ class Recording(dj.Manual):
          recording_datetime: datetime
          """
 
+
+@schema
+class Log(dj.Manual):
+     definition = """
+     recording_log_id: INT(11) AUTO_INCREMENT # Unique number assigned to each change 
+                                              # of status for all recordings
+     -----
+     -> Recording
+     -> Status.proj(status_recording_id_old='status_recording_id') # Previous status
+     -> Status.proj(status_recording_id_new='status_recording_id') # Current status
+     recording_status_timestamp:  DATETIME          # Timestamp when status change ocurred
+     recording_error_message=null: VARCHAR(256)     # Error message if status now is failed
+     recording_error_exception=null: VARCHAR(4096)  # Error exception if status now is failed
+     """

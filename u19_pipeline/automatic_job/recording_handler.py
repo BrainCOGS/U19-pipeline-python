@@ -11,12 +11,23 @@ import datajoint as dj
 import copy
 
 from datetime import datetime
-from u19_pipeline import recording, ephys_rec, imaging_rec, lab
+from u19_pipeline import recording, ephys_pipeline, imaging_pipeline, recording, recording_process, lab
+import u19_pipeline
+
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.utils.scp_transfers as scp_tr
+import u19_pipeline.utils.path_utils as pu
+
+import u19_pipeline.ingest as element_ingest
+
+from u19_pipeline.ingest import ephys_element_ingest
+
+
+
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.params_config as config
+
 
 def exception_handler(func):
     def inner_function(*args, **kwargs):
@@ -51,7 +62,7 @@ class RecordingHandler():
             recording_series = df_all_recordings.loc[i, :]
 
             #Filter current status info
-            current_status = recording_series['status_recording_idx']
+            current_status = recording_series['status_recording_id']
             next_status_series    = config.recording_status_df.loc[config.recording_status_df['Value'] == current_status+1, :].squeeze()
 
             print('function to apply:', next_status_series['ProcessFunction'])
@@ -109,9 +120,7 @@ class RecordingHandler():
         """
 
         status_update = config.status_update_idx['NO_CHANGE']
-        print('default_update_value_dict', config.default_update_value_dict)
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        print('update_value_dict', update_value_dict)
 
         full_remote_path = pathlib.Path(dj.config['custom']['root_data_dir'], rec_series['recording_modality'], rec_series['recording_directory']).as_posix()
         pathlib.Path(full_remote_path).mkdir(parents=True, exist_ok=True)
@@ -178,9 +187,7 @@ class RecordingHandler():
         """
         
         status_update = config.status_update_idx['NO_CHANGE']
-        print('default_update_value_dict', config.default_update_value_dict)
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        print('update_value_dict', update_value_dict)
 
         rec_series = in_rec_series.copy()
 
@@ -192,19 +199,21 @@ class RecordingHandler():
         process_unit_fieldname     = process_unit_fieldnames['ProcessUnitField']
 
 
+
         if rec_series['recording_modality'] == 'electrophysiology':
 
-            this_modality_recording_table = ephys_rec.EphysRecording
-            this_modality_recording_unit_table = ephys_rec.EphysRecordingProbes
-            this_modality_processing_unit_table = ephys_rec.EphysProcessing
+            this_modality_recording_table = ephys_pipeline.EphysPipelineSession
+            this_modality_recording_table.populate(rec_series['query_key'])
+            ephys_element_ingest.process_session(rec_series['query_key'])
+            
 
             print('this_modality_recording_table', this_modality_recording_table)
 
+        '''
         elif rec_series['recording_modality'] == 'imaging':
             
-            this_modality_recording_table = imaging_rec.Scan
-            this_modality_recording_unit_table = imaging_rec.FieldOfView
-            this_modality_processing_unit_table = imaging_rec.ImagingProcessing
+            this_modality_recording_table = imaging_pipeline.ImagingPipelineSession
+            element_recording_table       = imaging_pipeline.scan_element.Scan
 
             #print('imaging scan insert', rec_series)
             #this_modality_recording_table.populate(rec_series['query_key'])
@@ -217,8 +226,7 @@ class RecordingHandler():
         print('............... before ')
         print(rec_series['query_key'])
         this_modality_recording_table.populate(rec_series['query_key'])
-        this_modality_recording_unit_table.populate(rec_series['query_key']) # In imaging this is to call imaging.ScanInfo populate Script
-
+       
         # Get all recording probes ("units") from this recording 
         recording_units = (this_modality_recording_unit_table  & rec_series['query_key']).fetch(as_dict=True)
 
@@ -235,13 +243,13 @@ class RecordingHandler():
             rec_series['process_paramset_idx'] = rec_series.pop('def_process_paramset_idx')
 
             #Insert recording Process for all ("units") (one by one to get matching recording process id)
-            connection = recording.RecordingProcess.connection 
+            connection = recording_process.Processing.connection 
             with connection.transaction:
                 for rec_unit in recording_units:
 
                     #Insert recording process and associated ephysProcessing records for this probe                    
                     rec_process_table.insert_recording_process(rec_series, rec_unit, process_unit_dir_fieldname, process_unit_fieldname)
-                    recording_process = recording.RecordingProcess.fetch('recording_process_id', order_by='recording_process_id DESC', limit=1)
+                    recording_process = recording_process.Processing.fetch('recording_process_id', order_by='recording_process_id DESC', limit=1)
 
                     print('recording_process', recording_process)
 
@@ -257,6 +265,8 @@ class RecordingHandler():
                     this_modality_processing_unit_table.insert1(this_mod_processing)
             status_update = config.status_update_idx['NEXT_STATUS']
 
+        '''
+        
         return (status_update, update_value_dict)
 
 
@@ -268,8 +278,8 @@ class RecordingHandler():
             df_recordings (pd.DataFrame): all recordings that are going to be processed in the pipeline
         '''
 
-        status_query = 'status_recording_idx > ' + str(config.recording_status_df['Value'].min())
-        status_query += ' and status_recording_idx < ' + str(config.recording_status_df['Value'].max())
+        status_query = 'status_recording_id > ' + str(config.recording_status_df['Value'].min())
+        status_query += ' and status_recording_id < ' + str(config.recording_status_df['Value'].max())
 
         recordings_active = recording.Recording * lab.Location.proj('ip_address', 'system_user') & status_query
         df_recordings = pd.DataFrame(recordings_active.fetch(as_dict=True))
@@ -304,7 +314,7 @@ class RecordingHandler():
             recording.Recording.update1(update_task_id_dict)
         
         update_status_dict = recording_key_dict.copy()
-        update_status_dict['status_recording_idx'] = status
+        update_status_dict['status_recording_id'] = status
         print('update_status_dict', update_status_dict)
         recording.Recording.update1(update_status_dict)
 
@@ -323,10 +333,11 @@ class RecordingHandler():
 
         key = dict()
         key['recording_id'] = recording_id
-        key['status_recording_idx_old'] = current_status
-        key['status_recording_idx_new'] = next_status
+        key['status_recording_id_old'] = current_status
+        key['status_recording_id_new'] = next_status
         key['recording_status_timestamp'] = date_time
         key['recording_error_message'] = error_info_dict['recording_error_message']
         key['recording_error_exception'] = error_info_dict['recording_error_exception']
 
-        recording.RecordingStatus.insert1(key)
+        recording.Log.insert1(key)
+
