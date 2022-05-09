@@ -86,18 +86,12 @@ class RemoteClient:
         self.scp.get(remote_path, local_path=local_path, recursive=True)
 
 
-def transfer_scp(host, username, remote_path, local_path):
+def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
     rc = RemoteClient(host, username, public_key_location, remote_path)
     rc._get_ssh_key()
     rc.scp
     rc.download_folder(remote_path=remote_path, local_path=local_path)
     rc.disconnect()
-
-
-if __name__ == "__main__":
-    args = sys.argv[1:]
-    print(args)
-    transfer_scp(args[0], args[1], args[2], args[3])
 
 
 def call_scp_background(rec_series, full_remote_path):
@@ -111,6 +105,7 @@ def call_scp_background(rec_series, full_remote_path):
     rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path,  "&"])
 
     return True,p.pid
+
 
 def check_scp_transfer(pid):
 
@@ -135,3 +130,8 @@ def check_directory_copied_correctly():
     pass
     # diff -r -q /path/to/dir1 /path/to/dir2
 
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    print(args)
+    transfer_scp(host=args[0], username=args[1], remote_path=args[2], local_path=args[3])

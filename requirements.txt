@@ -15,3 +15,4 @@ cellpose
 scp
 paramiko
 psutil
+deeplabcut

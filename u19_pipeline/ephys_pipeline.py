@@ -61,7 +61,11 @@ def get_ephys_root_data_dir():
     return data_dir if data_dir else None
 
 def get_session_directory(session_key):
+
+    root_dir = get_ephys_root_data_dir()
+
     session_dir = (recording.Recording & session_key).fetch1('recording_directory')
+    session_dir = pathlib.Path(root_dir, session_dir).as_posix()
 
     return session_dir
 
