@@ -202,13 +202,15 @@ class RecordingHandler():
 
         if rec_series['recording_modality'] == 'electrophysiology':
 
-            this_modality_recording_table = ephys_pipeline.EphysPipelineSession
-            this_modality_recording_table.populate(rec_series['query_key'])
+            ephys_pipeline.EphysPipelineSession.populate(rec_series['query_key'])
             ephys_element_ingest.process_session(rec_series['query_key'])
+            ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
+
+            probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch("KEY")
+            recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
+
+            #recording_process.Processing.insert
             
-
-            print('this_modality_recording_table', this_modality_recording_table)
-
         '''
         elif rec_series['recording_modality'] == 'imaging':
             

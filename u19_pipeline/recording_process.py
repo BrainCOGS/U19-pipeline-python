@@ -58,29 +58,29 @@ class Processing(dj.Manual):
         """  
 
      # This table would control ingestion of PreClusteringTask
-     def insert_recording_process(self, recording_key, rec_unit, unit_directory_fieldname, unit_fieldname):
+     def insert_recording_process(self, fragment_keys, fragment_fieldname):
         '''
         # Insert RecordingTask(s) from recording.
         # For each processing "unit" of a recording add a new RecordingTask (imaging ->field of view, electrophysiology->probe)
         Input:
         recording_key            (dict) = Dictionary with recording record
         rec_unit                 (dict) = Dictionary of recording "unit" to be processed
-        unit_directory_fieldname (str)  = Unit directory fieldname to be read (ephys-> probe_directory, imaging->fov_directory)
         unit_fieldname           (str)  = Unit fieldname to be read (ephys-> probe_, imaging->fov)
         '''
 
         # Get directory fieldname for specific modality (probe_directory, fov_directory, etc.)
 
         # Append data for the unit to insert
-        this_recprocess_key = dict()
-        this_recprocess_key['recording_id'] = recording_key['recording_id']
-        this_recprocess_key['fragment_number'] = rec_unit[unit_fieldname]
-        this_recprocess_key['recording_process_pre_path'] = rec_unit[unit_directory_fieldname]
-        this_recprocess_key['status_processing_id'] = 0
+        this_recprocess_key = list()
+        for idx, fragment_key in enumerate(fragment_keys):
+          this_recprocess_key.append(dict())
+          this_recprocess_key[idx]['recording_id'] = fragment_key['recording_id']
+          this_recprocess_key[idx]['fragment_number'] = fragment_key[fragment_fieldname]
+          this_recprocess_key[idx]['status_processing_id'] = 0
 
         print('this_recprocess_key', this_recprocess_key)
 
-        self.insert1(this_recprocess_key)  
+        self.insert(this_recprocess_key)  
 
 
 @schema

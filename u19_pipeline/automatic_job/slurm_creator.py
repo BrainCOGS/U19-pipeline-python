@@ -152,6 +152,28 @@ def generate_slurm_tiger(slurm_dict):
     return slurm_text
 
 
+def generate_slurm_dlc(slurm_dict):
+
+    slurm_text = '#!/bin/bash\n'
+    slurm_text += create_slurm_params_file(slurm_dict)
+    slurm_text += '''
+    echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
+    echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
+    echo "RAW_DATA_DIRECTORY: ${raw_data_directory}"
+    echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
+    echo "REPOSITORY_DIR: ${repository_dir}"
+    echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
+    echo "MODEL_PATH: ${model_path}"
+
+    module load anacondapy/2021.11
+    conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
+
+    python ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
+    '''
+
+    return slurm_text 
+
+
 def queue_slurm_file(record_process_series, slurm_location):
 
     id_slurm_job = -1
