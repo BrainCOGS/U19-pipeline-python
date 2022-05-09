@@ -1,561 +1,1873 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2096pt" height="682pt" viewBox="0.00 0.00 2095.88 682.00">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 678)">
-<title>%3</title>
-<polygon fill="#ffffff" stroke="transparent" points="-4,4 -4,-678 2091.875,-678 2091.875,4 -4,4"/>
-<!-- 1903 -->
-<g id="node1" class="node">
-<title>1903</title>
-<ellipse fill="#ff8800" fill-opacity="0.501961" stroke="#ff8800" stroke-opacity="0.501961" cx="472.375" cy="-514.5" rx="2" ry="2"/>
-<text text-anchor="middle" x="472.375" y="-514.2" font-family="arial" font-size="1.00" fill="#ff8800">1903</text>
-</g>
-<!-- recording.Log -->
-<g id="node12" class="node">
-<title>recording.Log</title>
-<g id="a_node12"><a xlink:title="recording_log_id     ------------------------------→ recording.Recording→ recording.Status.proj(status_recording_id_old=&quot;status_recording_id&quot;)→ recording.Status.proj(status_recording_id_new=&quot;status_recording_id&quot;)recording_status_timestamp recording_error_message=null recording_error_exception=null ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="484.375,-461 384.375,-461 384.375,-426 484.375,-426 484.375,-461"/>
-<text text-anchor="start" x="392.375" y="-441.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">recording.Log</text>
-</a>
-</g>
-</g>
-<!-- 1903&#45;&gt;recording.Log -->
-<g id="edge1" class="edge">
-<title>1903-&gt;recording.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M471.2787,-512.4517C467.3116,-505.0395 453.4352,-479.1125 443.8767,-461.2532"/>
-</g>
-<!-- 1906 -->
-<g id="node2" class="node">
-<title>1906</title>
-<ellipse fill="#ff8800" fill-opacity="0.501961" stroke="#ff8800" stroke-opacity="0.501961" cx="921.375" cy="-372.5" rx="2" ry="2"/>
-<text text-anchor="middle" x="921.375" y="-372.2" font-family="arial" font-size="1.00" fill="#ff8800">1906</text>
-</g>
-<!-- recording_process.Log -->
-<g id="node14" class="node">
-<title>recording_process.Log</title>
-<g id="a_node14"><a xlink:title="log_id               ------------------------------→ recording_process.Processing→ recording_process.Status.proj(status_processing_id_old=&quot;status_processing_id&quot;)→ recording_process.Status.proj(status_processing_id_new=&quot;status_processing_id&quot;)status_timestamp     error_message=null   error_exception=null ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1081.375,-319 929.375,-319 929.375,-284 1081.375,-284 1081.375,-319"/>
-<text text-anchor="start" x="937.375" y="-299.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">recording_process.Log</text>
-</a>
-</g>
-</g>
-<!-- 1906&#45;&gt;recording_process.Log -->
-<g id="edge2" class="edge">
-<title>1906-&gt;recording_process.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M923.1263,-370.8259C926.4409,-367.6712 933.8818,-360.6548 940.375,-355 954.483,-342.7137 970.733,-329.3387 983.456,-319.0353"/>
-</g>
-<!-- 1905 -->
-<g id="node3" class="node">
-<title>1905</title>
-<ellipse fill="#ff8800" fill-opacity="0.501961" stroke="#ff8800" stroke-opacity="0.501961" cx="959.375" cy="-372.5" rx="2" ry="2"/>
-<text text-anchor="middle" x="959.375" y="-372.2" font-family="arial" font-size="1.00" fill="#ff8800">1905</text>
-</g>
-<!-- 1905&#45;&gt;recording_process.Log -->
-<g id="edge3" class="edge">
-<title>1905-&gt;recording_process.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M960.5121,-370.7449C965.05,-363.7407 982.1855,-337.2925 993.9155,-319.1875"/>
-</g>
-<!-- 1904 -->
-<g id="node4" class="node">
-<title>1904</title>
-<ellipse fill="#ff8800" fill-opacity="0.501961" stroke="#ff8800" stroke-opacity="0.501961" cx="434.375" cy="-514.5" rx="2" ry="2"/>
-<text text-anchor="middle" x="434.375" y="-514.2" font-family="arial" font-size="1.00" fill="#ff8800">1904</text>
-</g>
-<!-- 1904&#45;&gt;recording.Log -->
-<g id="edge4" class="edge">
-<title>1904-&gt;recording.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M434.375,-512.4517C434.375,-505.0395 434.375,-479.1125 434.375,-461.2532"/>
-</g>
-<!-- acquisition.SessionStarted -->
-<g id="node5" class="node">
-<title>acquisition.SessionStarted</title>
-<g id="a_node5"><a xlink:title="→ subject.Subjectsession_date         session_number       ------------------------------session_start_time   → lab.Location.proj(session_location=&quot;location&quot;)→ task.Tasklocal_path_behavior_file remote_path_behavior_file is_finished=0        invalid_session=0    ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1607.875,-603 1434.875,-603 1434.875,-568 1607.875,-568 1607.875,-603"/>
-<text text-anchor="middle" x="1521.375" y="-582.4" font-family="arial" font-size="12.00" fill="#006400">acquisition.SessionStarted</text>
-</a>
-</g>
-</g>
-<!-- acquisition.Session -->
-<g id="node13" class="node">
-<title>acquisition.Session</title>
-<g id="a_node13"><a xlink:title="→ acquisition.SessionStarted------------------------------session_start_time   session_end_time=null → lab.Location.proj(session_location=&quot;location&quot;)→ task.TaskLevelParameterSetstimulus_bank=&quot;&quot;     stimulus_commit=&quot;&quot;   session_performance  num_trials=null      num_trials_try=null  session_narrative=&quot;&quot; session_protocol=null session_code_version=null is_bad_session=null  session_comments=null ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1583.875,-532 1454.875,-532 1454.875,-497 1583.875,-497 1583.875,-532"/>
-<text text-anchor="middle" x="1519.375" y="-511.4" font-family="arial" font-size="12.00" fill="#006400">acquisition.Session</text>
-</a>
-</g>
-</g>
-<!-- acquisition.SessionStarted&#45;&gt;acquisition.Session -->
-<g id="edge5" class="edge">
-<title>acquisition.SessionStarted-&gt;acquisition.Session</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1520.8806,-567.9494C1520.5752,-557.1083 1520.1845,-543.2366 1519.8776,-532.3418"/>
-</g>
-<!-- recording.Modality -->
-<g id="node6" class="node">
-<title>recording.Modality</title>
-<g id="a_node6"><a xlink:title="recording_modality   ------------------------------modality_description root_directory       recording_file_extensions recording_file_pattern process_unit_file_pattern process_unit_dir_fieldname process_unit_fieldname process_repository   ">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="1416.875,-603 1309.875,-603 1309.875,-568 1416.875,-568 1416.875,-603"/>
-<text text-anchor="start" x="1317.875" y="-584" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">recording.Modality</text>
-</a>
-</g>
-</g>
-<!-- recording.Recording -->
-<g id="node28" class="node">
-<title>recording.Recording</title>
-<g id="a_node28"><a xlink:title="recording_id         ------------------------------→ recording.Modality→ lab.Location→ recording.Statustask_copy_id_pni=null : int                          # globus transfer task raw file local→cupinherit_params_recording=1 recording_directory  local_directory      ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1435.375,-532 1297.375,-532 1297.375,-497 1435.375,-497 1435.375,-532"/>
-<text text-anchor="start" x="1305.375" y="-512.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">recording.Recording</text>
-</a>
-</g>
-</g>
-<!-- recording.Modality&#45;&gt;recording.Recording -->
-<g id="edge6" class="edge">
-<title>recording.Modality-&gt;recording.Recording</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1364.1166,-567.9494C1364.5746,-557.1083 1365.1608,-543.2366 1365.6211,-532.3418"/>
-</g>
-<!-- scan_element.Scan -->
-<g id="node7" class="node">
-<title>scan_element.Scan</title>
-<g id="a_node7"><a xlink:title="→ imaging_pipeline.ImagingPipelineSessionscan_id              ------------------------------→ imaging_pipeline.Equipment→ scan_element.AcquisitionSoftwarescan_notes=&quot;&quot;        ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="436.875,-390 303.875,-390 303.875,-355 436.875,-355 436.875,-390"/>
-<text text-anchor="start" x="311.875" y="-370.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">scan_element.Scan</text>
-</a>
-</g>
-</g>
-<!-- imaging_element.ProcessingTask -->
-<g id="node27" class="node">
-<title>imaging_element.ProcessingTask</title>
-<g id="a_node27"><a xlink:title="→ scan_element.Scan→ imaging_element.ProcessingParamSet------------------------------processing_output_dir task_mode=&quot;load&quot;     ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="654.375,-319 440.375,-319 440.375,-284 654.375,-284 654.375,-319"/>
-<text text-anchor="middle" x="547.375" y="-298.4" font-family="arial" font-size="12.00" fill="#006400">imaging_element.ProcessingTask</text>
-</a>
-</g>
-</g>
-<!-- scan_element.Scan&#45;&gt;imaging_element.ProcessingTask -->
-<g id="edge7" class="edge">
-<title>scan_element.Scan-&gt;imaging_element.ProcessingTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M414.1278,-354.9494C441.3589,-344.0262 476.2603,-330.0262 503.5121,-319.0947"/>
-</g>
-<!-- scan_element.ScanInfo -->
-<g id="node35" class="node">
-<title>scan_element.ScanInfo</title>
-<g id="a_node35"><a xlink:title="→ scan_element.Scan------------------------------nfields              nchannels            ndepths              nframes              nrois                x=null               y=null               z=null               fps                  bidirectional        usecs_per_line=null  fill_fraction=null   ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="325.375" cy="-301.5" rx="97.5" ry="17.5"/>
-<text text-anchor="middle" x="325.375" y="-298.4" font-family="arial" font-size="12.00" fill="#00007f">scan_element.ScanInfo</text>
-</a>
-</g>
-</g>
-<!-- scan_element.Scan&#45;&gt;scan_element.ScanInfo -->
-<g id="edge8" class="edge">
-<title>scan_element.Scan-&gt;scan_element.ScanInfo</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M359.2514,-354.9494C352.3803,-344.1083 343.5883,-330.2366 336.6832,-319.3418"/>
-</g>
-<!-- recording_process.Processing -->
-<g id="node8" class="node">
-<title>recording_process.Processing</title>
-<g id="a_node8"><a xlink:title="job_id               ------------------------------→ recording.Recording→ recording_process.Statusfragment_number      recording_process_pre_path=null recording_process_post_path=null task_copy_id_pre=null task_copy_id_post=null slurm_id=null        ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1181.875,-390 986.875,-390 986.875,-355 1181.875,-355 1181.875,-390"/>
-<text text-anchor="start" x="994.875" y="-370.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">recording_process.Processing</text>
-</a>
-</g>
-</g>
-<!-- recording_process.Processing.ImagingParams -->
-<g id="node9" class="node">
-<title>recording_process.Processing.ImagingParams</title>
-<g id="a_node9"><a xlink:title="→ recording_process.Processing------------------------------→ imaging_element.ProcessingParamSet">
-<polygon fill="transparent" stroke="transparent" points="910.875,-311 671.875,-311 671.875,-292 910.875,-292 910.875,-311"/>
-<text text-anchor="middle" x="791.375" y="-299" font-family="arial" font-size="10.00" fill="#000000">recording_process.Processing.ImagingParams</text>
-</a>
-</g>
-</g>
-<!-- recording_process.Processing&#45;&gt;recording_process.Processing.ImagingParams -->
-<g id="edge9" class="edge">
-<title>recording_process.Processing-&gt;recording_process.Processing.ImagingParams</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1011.948,-354.9494C954.6691,-341.0696 876.8892,-322.2219 830.6384,-311.0144"/>
-</g>
-<!-- recording_process.Processing&#45;&gt;recording_process.Log -->
-<g id="edge10" class="edge">
-<title>recording_process.Processing-&gt;recording_process.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1064.8469,-354.9494C1052.6929,-344.0262 1037.1154,-330.0262 1024.9522,-319.0947"/>
-</g>
-<!-- recording_process.Processing.EphysParams -->
-<g id="node30" class="node">
-<title>recording_process.Processing.EphysParams</title>
-<g id="a_node30"><a xlink:title="→ recording_process.Processing------------------------------→ ephys_element.PreClusterParamList→ ephys_element.ClusteringParamSet">
-<polygon fill="transparent" stroke="transparent" points="1328.875,-311 1099.875,-311 1099.875,-292 1328.875,-292 1328.875,-311"/>
-<text text-anchor="middle" x="1214.375" y="-299" font-family="arial" font-size="10.00" fill="#000000">recording_process.Processing.EphysParams</text>
-</a>
-</g>
-</g>
-<!-- recording_process.Processing&#45;&gt;recording_process.Processing.EphysParams -->
-<g id="edge11" class="edge">
-<title>recording_process.Processing-&gt;recording_process.Processing.EphysParams</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1116.5098,-354.9494C1141.9237,-341.0696 1176.4336,-322.2219 1196.9544,-311.0144"/>
-</g>
-<!-- imaging_element.Processing -->
-<g id="node10" class="node">
-<title>imaging_element.Processing</title>
-<g id="a_node10"><a xlink:title="→ imaging_element.ProcessingTask------------------------------processing_time      package_version=&quot;&quot;   ">
-<ellipse fill="#ff0000" fill-opacity="0.125490" stroke="#ff0000" stroke-opacity="0.125490" cx="547.375" cy="-230.5" rx="13" ry="13"/>
-<text text-anchor="middle" x="547.375" y="-227.4" font-family="arial" font-size="12.00" fill="#7f0000">imaging_element.Processing</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.ClusteringTask -->
-<g id="node11" class="node">
-<title>ephys_element.ClusteringTask</title>
-<g id="a_node11"><a xlink:title="→ ephys_element.PreCluster→ ephys_element.ClusteringParamSet------------------------------clustering_output_dir task_mode=&quot;load&quot;     ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1697.875,-106 1500.875,-106 1500.875,-71 1697.875,-71 1697.875,-106"/>
-<text text-anchor="middle" x="1599.375" y="-85.4" font-family="arial" font-size="12.00" fill="#006400">ephys_element.ClusteringTask</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.Clustering -->
-<g id="node16" class="node">
-<title>ephys_element.Clustering</title>
-<g id="a_node16"><a xlink:title="→ ephys_element.ClusteringTask------------------------------clustering_time      package_version=&quot;&quot;   ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="1599.375" cy="-17.5" rx="106.7501" ry="17.5"/>
-<text text-anchor="middle" x="1599.375" y="-14.4" font-family="arial" font-size="12.00" fill="#00007f">ephys_element.Clustering</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.ClusteringTask&#45;&gt;ephys_element.Clustering -->
-<g id="edge12" class="edge">
-<title>ephys_element.ClusteringTask-&gt;ephys_element.Clustering</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1599.375,-70.9494C1599.375,-60.1083 1599.375,-46.2366 1599.375,-35.3418"/>
-</g>
-<!-- recording.Recording.BehaviorSession -->
-<g id="node15" class="node">
-<title>recording.Recording.BehaviorSession</title>
-<g id="a_node15"><a xlink:title="→ recording.Recording→ acquisition.Session">
-<polygon fill="transparent" stroke="transparent" points="1516.875,-453 1319.875,-453 1319.875,-434 1516.875,-434 1516.875,-453"/>
-<text text-anchor="middle" x="1418.375" y="-441" font-family="arial" font-size="10.00" fill="#000000">recording.Recording.BehaviorSession</text>
-</a>
-</g>
-</g>
-<!-- acquisition.Session&#45;&gt;recording.Recording.BehaviorSession -->
-<g id="edge13" class="edge">
-<title>acquisition.Session-&gt;recording.Recording.BehaviorSession</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1494.4087,-496.9494C1474.6641,-483.0696 1447.8526,-464.2219 1431.9095,-453.0144"/>
-</g>
-<!-- ephys_element.ClusteringParamSet -->
-<g id="node17" class="node">
-<title>ephys_element.ClusteringParamSet</title>
-<g id="a_node17"><a xlink:title="paramset_idx         ------------------------------→ ephys_element.ClusteringMethodparamset_desc        param_set_hash       params               UNIQUE INDEX (param_set_hash)">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="1661.875,-390 1470.875,-390 1470.875,-355 1661.875,-355 1661.875,-390"/>
-<text text-anchor="start" x="1478.875" y="-371" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">ephys_element.ClusteringParamSet</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.ClusteringParamSet&#45;&gt;ephys_element.ClusteringTask -->
-<g id="edge14" class="edge">
-<title>ephys_element.ClusteringParamSet-&gt;ephys_element.ClusteringTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1609.4354,-354.9985C1624.5534,-346.5145 1639.8753,-334.6942 1648.375,-319 1685.8379,-249.8265 1676.878,-215.3214 1648.375,-142 1642.9444,-128.0302 1631.9746,-115.4876 1621.7889,-106.0641"/>
-</g>
-<!-- ephys_element.ClusteringParamSet&#45;&gt;recording_process.Processing.EphysParams -->
-<g id="edge15" class="edge">
-<title>ephys_element.ClusteringParamSet-&gt;recording_process.Processing.EphysParams</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1479.3637,-354.9494C1410.5509,-341.0696 1317.1087,-322.2219 1261.5447,-311.0144"/>
-</g>
-<!-- ephys_element.PreClusterParamList.ParamOrder -->
-<g id="node18" class="node">
-<title>ephys_element.PreClusterParamList.ParamOrder</title>
-<g id="a_node18"><a xlink:title="→ ephys_element.PreClusterParamListorder_id             ------------------------------→ [nullable] ephys_element.PreClusterParamSet">
-<polygon fill="transparent" stroke="transparent" points="1639.375,-311 1385.375,-311 1385.375,-292 1639.375,-292 1639.375,-311"/>
-<text text-anchor="start" x="1393.375" y="-300" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">ephys_element.PreClusterParamList.ParamOrder</text>
-</a>
-</g>
-</g>
-<!-- ephys_pipeline.EphysPipelineSession -->
-<g id="node19" class="node">
-<title>ephys_pipeline.EphysPipelineSession</title>
-<g id="a_node19"><a xlink:title="→ recording.Recording">
-<ellipse fill="#ff0000" fill-opacity="0.125490" stroke="#ff0000" stroke-opacity="0.125490" cx="1184.375" cy="-443.5" rx="13" ry="13"/>
-<text text-anchor="middle" x="1184.375" y="-440.4" font-family="arial" font-size="12.00" fill="#7f0000">ephys_pipeline.EphysPipelineSession</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.ProbeInsertion -->
-<g id="node26" class="node">
-<title>ephys_element.ProbeInsertion</title>
-<g id="a_node26"><a xlink:title="→ ephys_pipeline.EphysPipelineSessioninsertion_number     ------------------------------→ probe_element.Probe">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="2087.875,-390 1888.875,-390 1888.875,-355 2087.875,-355 2087.875,-390"/>
-<text text-anchor="start" x="1896.875" y="-370.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">ephys_element.ProbeInsertion</text>
-</a>
-</g>
-</g>
-<!-- ephys_pipeline.EphysPipelineSession&#45;&gt;ephys_element.ProbeInsertion -->
-<g id="edge16" class="edge">
-<title>ephys_pipeline.EphysPipelineSession-&gt;ephys_element.ProbeInsertion</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1197.2152,-441.3923C1219.9593,-437.7315 1268.8452,-430.1895 1310.375,-426 1562.9312,-400.5221 1628.1233,-418.3345 1880.375,-390 1883.112,-389.6926 1885.8854,-389.3638 1888.6824,-389.0171"/>
-</g>
-<!-- imaging_pipeline.ImagingPipelineSession -->
-<g id="node20" class="node">
-<title>imaging_pipeline.ImagingPipelineSession</title>
-<g id="a_node20"><a xlink:title="→ recording.Recording">
-<ellipse fill="#ff0000" fill-opacity="0.125490" stroke="#ff0000" stroke-opacity="0.125490" cx="633.375" cy="-443.5" rx="13" ry="13"/>
-<text text-anchor="middle" x="633.375" y="-440.4" font-family="arial" font-size="12.00" fill="#7f0000">imaging_pipeline.ImagingPipelineSession</text>
-</a>
-</g>
-</g>
-<!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;scan_element.Scan -->
-<g id="edge17" class="edge">
-<title>imaging_pipeline.ImagingPipelineSession-&gt;scan_element.Scan</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M620.69,-440.0755C587.8041,-431.1976 498.0047,-406.9552 435.4311,-390.0627"/>
-</g>
-<!-- imaging_pipeline.FieldOfView -->
-<g id="node22" class="node">
-<title>imaging_pipeline.FieldOfView</title>
-<g id="a_node22"><a xlink:title="→ imaging_pipeline.ImagingPipelineSessionfov                  ------------------------------fov_directory        fov_name=null        fov_depth            fov_center_xy        fov_size_xy          fov_rotation_degrees fov_pixel_resolution_xy fov_discrete_plane_mode power_percent        ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="119.375" cy="-372.5" rx="119.2501" ry="17.5"/>
-<text text-anchor="start" x="31.875" y="-370.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#00007f">imaging_pipeline.FieldOfView</text>
-</a>
-</g>
-</g>
-<!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;imaging_pipeline.FieldOfView -->
-<g id="edge18" class="edge">
-<title>imaging_pipeline.ImagingPipelineSession-&gt;imaging_pipeline.FieldOfView</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M620.4122,-441.7094C563.6376,-433.867 334.0566,-402.1545 206.2821,-384.5047"/>
-</g>
-<!-- imaging_pipeline.ScanInfo -->
-<g id="node38" class="node">
-<title>imaging_pipeline.ScanInfo</title>
-<g id="a_node38"><a xlink:title="→ imaging_pipeline.ImagingPipelineSession------------------------------file_name_base       scan_width           scan_height          acq_time             n_depths             scan_depths          frame_rate           inter_fov_lag_sec    frame_ts_sec         power_percent        channels             cfg_filename         usr_filename         fast_z_lag           fast_z_flyback_time  line_period          scan_frame_period    scan_volume_rate     flyback_time_per_frame flyto_time_per_scan_field fov_corner_points    nfovs                nframes              nframes_good         last_good_file       motion_correction_enabled=0 motion_correction_mode=&quot;N/A&quot; stacks_enabled=0     stack_actuator=&quot;N/A&quot; stack_definition=&quot;N/A&quot; ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="563.375" cy="-372.5" rx="108.2501" ry="17.5"/>
-<text text-anchor="middle" x="563.375" y="-369.4" font-family="arial" font-size="12.00" fill="#00007f">imaging_pipeline.ScanInfo</text>
-</a>
-</g>
-</g>
-<!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;imaging_pipeline.ScanInfo -->
-<g id="edge19" class="edge">
-<title>imaging_pipeline.ImagingPipelineSession-&gt;imaging_pipeline.ScanInfo</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M624.2237,-434.218C613.1801,-423.0166 594.3788,-403.9467 580.5914,-389.9623"/>
-</g>
-<!-- ephys_element.PreClusterParamSet -->
-<g id="node21" class="node">
-<title>ephys_element.PreClusterParamSet</title>
-<g id="a_node21"><a xlink:title="paramset_idx         ------------------------------→ ephys_element.PreClusterMethodparamset_desc        param_set_hash       params               UNIQUE INDEX (param_set_hash)">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="1870.875,-390 1679.875,-390 1679.875,-355 1870.875,-355 1870.875,-390"/>
-<text text-anchor="start" x="1687.875" y="-371" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">ephys_element.PreClusterParamSet</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.PreClusterParamSet&#45;&gt;ephys_element.PreClusterParamList.ParamOrder -->
-<g id="edge20" class="edge">
-<title>ephys_element.PreClusterParamSet-&gt;ephys_element.PreClusterParamList.ParamOrder</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1710.3637,-354.9494C1658.9496,-341.0696 1589.1334,-322.2219 1547.6183,-311.0144"/>
-</g>
-<!-- imaging_pipeline.FieldOfView.File -->
-<g id="node33" class="node">
-<title>imaging_pipeline.FieldOfView.File</title>
-<g id="a_node33"><a xlink:title="→ imaging_pipeline.FieldOfViewfile_number          ------------------------------fov_filename         file_frame_range     ">
-<polygon fill="transparent" stroke="transparent" points="209.375,-311 29.375,-311 29.375,-292 209.375,-292 209.375,-311"/>
-<text text-anchor="start" x="37.375" y="-300" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">imaging_pipeline.FieldOfView.File</text>
-</a>
-</g>
-</g>
-<!-- imaging_pipeline.FieldOfView&#45;&gt;imaging_pipeline.FieldOfView.File -->
-<g id="edge21" class="edge">
-<title>imaging_pipeline.FieldOfView-&gt;imaging_pipeline.FieldOfView.File</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M119.375,-354.9494C119.375,-341.1517 119.375,-322.4447 119.375,-311.2141"/>
-</g>
-<!-- subject.Subject -->
-<g id="node23" class="node">
-<title>subject.Subject</title>
-<g id="a_node23"><a xlink:title="subject_fullname     ------------------------------subject_nickname     → lab.Usergenomics_id=null     sex=&quot;Unknown&quot;        dob=null             head_plate_mark=null → lab.Location→ [nullable] lab.Protocol→ [nullable] subject.Linesubject_description=&quot;&quot; initial_weight=null  ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1631.875,-674 1524.875,-674 1524.875,-639 1631.875,-639 1631.875,-674"/>
-<text text-anchor="start" x="1532.875" y="-654.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">subject.Subject</text>
-</a>
-</g>
-</g>
-<!-- subject.Subject&#45;&gt;acquisition.SessionStarted -->
-<g id="edge22" class="edge">
-<title>subject.Subject-&gt;acquisition.SessionStarted</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1564.2851,-638.9494C1555.5817,-628.1083 1544.4452,-614.2366 1535.6987,-603.3418"/>
-</g>
-<!-- recording.Recording.RecordingSession -->
-<g id="node32" class="node">
-<title>recording.Recording.RecordingSession</title>
-<g id="a_node32"><a xlink:title="→ recording.Recording→ subject.Subjectrecording_datetime   ">
-<polygon fill="transparent" stroke="transparent" points="1737.375,-453 1535.375,-453 1535.375,-434 1737.375,-434 1737.375,-453"/>
-<text text-anchor="start" x="1543.375" y="-442" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">recording.Recording.RecordingSession</text>
-</a>
-</g>
-</g>
-<!-- subject.Subject&#45;&gt;recording.Recording.RecordingSession -->
-<g id="edge23" class="edge">
-<title>subject.Subject-&gt;recording.Recording.RecordingSession</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1594.1785,-638.997C1602.1755,-629.1285 1611.2511,-616.165 1616.375,-603 1637.2268,-549.4247 1637.4707,-478.7924 1636.7705,-453.2454"/>
-</g>
-<!-- ephys_element.PreClusterTask -->
-<g id="node24" class="node">
-<title>ephys_element.PreClusterTask</title>
-<g id="a_node24"><a xlink:title="→ ephys_element.EphysRecording→ ephys_element.PreClusterParamList------------------------------precluster_output_dir task_mode=&quot;none&quot;     ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1630.875,-248 1431.875,-248 1431.875,-213 1630.875,-213 1630.875,-248"/>
-<text text-anchor="middle" x="1531.375" y="-227.4" font-family="arial" font-size="12.00" fill="#006400">ephys_element.PreClusterTask</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.PreCluster -->
-<g id="node36" class="node">
-<title>ephys_element.PreCluster</title>
-<g id="a_node36"><a xlink:title="→ ephys_element.PreClusterTask------------------------------precluster_time      package_version=&quot;&quot;   ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="1531.375" cy="-159.5" rx="108.2501" ry="17.5"/>
-<text text-anchor="middle" x="1531.375" y="-156.4" font-family="arial" font-size="12.00" fill="#00007f">ephys_element.PreCluster</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.PreClusterTask&#45;&gt;ephys_element.PreCluster -->
-<g id="edge24" class="edge">
-<title>ephys_element.PreClusterTask-&gt;ephys_element.PreCluster</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1531.375,-212.9494C1531.375,-202.1083 1531.375,-188.2366 1531.375,-177.3418"/>
-</g>
-<!-- recording.Status -->
-<g id="node25" class="node">
-<title>recording.Status</title>
-<g id="a_node25"><a xlink:title="status_recording_id  ------------------------------status_recording_definition ">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="520.375,-603 424.375,-603 424.375,-568 520.375,-568 520.375,-603"/>
-<text text-anchor="start" x="432.375" y="-584" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">recording.Status</text>
-</a>
-</g>
-</g>
-<!-- recording.Status&#45;&gt;1903 -->
-<g id="edge25" class="edge">
-<title>recording.Status-&gt;1903</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M472.375,-567.9494C472.375,-550.2095 472.375,-524.3543 472.375,-516.7077"/>
-</g>
-<!-- recording.Status&#45;&gt;1904 -->
-<g id="edge26" class="edge">
-<title>recording.Status-&gt;1904</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M462.9817,-567.9494C453.3113,-549.881 439.1351,-523.3939 435.3393,-516.3017"/>
-</g>
-<!-- recording.Status&#45;&gt;recording.Recording -->
-<g id="edge27" class="edge">
-<title>recording.Status-&gt;recording.Recording</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M520.4403,-581.6827C669.3211,-569.8589 1123.2492,-533.8086 1297.3736,-519.98"/>
-</g>
-<!-- ephys_element.EphysRecording -->
-<g id="node34" class="node">
-<title>ephys_element.EphysRecording</title>
-<g id="a_node34"><a xlink:title="→ ephys_element.ProbeInsertion------------------------------→ probe_element.ElectrodeConfig→ ephys_element.AcquisitionSoftwaresampling_rate        recording_datetime   recording_duration   ">
-<ellipse fill="#00007f" fill-opacity="0.250980" stroke="#00007f" stroke-opacity="0.250980" cx="1906.375" cy="-301.5" rx="128.5005" ry="17.5"/>
-<text text-anchor="middle" x="1906.375" y="-298.4" font-family="arial" font-size="12.00" fill="#00007f">ephys_element.EphysRecording</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.ProbeInsertion&#45;&gt;ephys_element.EphysRecording -->
-<g id="edge28" class="edge">
-<title>ephys_element.ProbeInsertion-&gt;ephys_element.EphysRecording</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1968.1053,-354.9494C1955.3949,-343.9441 1939.0774,-329.8155 1926.4115,-318.8487"/>
-</g>
-<!-- imaging_element.ProcessingTask&#45;&gt;imaging_element.Processing -->
-<g id="edge29" class="edge">
-<title>imaging_element.ProcessingTask-&gt;imaging_element.Processing</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M547.375,-283.9494C547.375,-271.4658 547.375,-254.9634 547.375,-243.6156"/>
-</g>
-<!-- recording.Recording&#45;&gt;recording_process.Processing -->
-<g id="edge30" class="edge">
-<title>recording.Recording-&gt;recording_process.Processing</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1297.0716,-512.5182C1215.5256,-508.5546 1087.3954,-496.6648 1057.375,-461 1040.203,-440.5994 1056.6537,-409.4441 1070.3429,-390.0595"/>
-</g>
-<!-- recording.Recording&#45;&gt;recording.Log -->
-<g id="edge31" class="edge">
-<title>recording.Recording-&gt;recording.Log</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1297.1029,-512.287C1118.8256,-506.266 647.3946,-488.1963 493.375,-461 490.429,-460.4798 487.4217,-459.8641 484.4016,-459.1799"/>
-</g>
-<!-- recording.Recording&#45;&gt;recording.Recording.BehaviorSession -->
-<g id="edge32" class="edge">
-<title>recording.Recording-&gt;recording.Recording.BehaviorSession</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1379.2289,-496.9494C1389.3343,-483.1517 1403.0352,-464.4447 1411.2604,-453.2141"/>
-</g>
-<!-- recording.Recording&#45;&gt;ephys_pipeline.EphysPipelineSession -->
-<g id="edge33" class="edge">
-<title>recording.Recording-&gt;ephys_pipeline.EphysPipelineSession</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1321.3862,-496.9494C1280.1226,-480.8521 1221.7304,-458.0727 1196.6258,-448.2792"/>
-</g>
-<!-- recording.Recording&#45;&gt;imaging_pipeline.ImagingPipelineSession -->
-<g id="edge34" class="edge">
-<title>recording.Recording-&gt;imaging_pipeline.ImagingPipelineSession</title>
-<path fill="none" stroke="#000000" stroke-width="2" stroke-opacity="0.250980" d="M1297.086,-507.7885C1132.2096,-491.8182 724.474,-452.3241 646.4105,-444.7626"/>
-</g>
-<!-- recording.Recording&#45;&gt;recording.Recording.RecordingSession -->
-<g id="edge35" class="edge">
-<title>recording.Recording-&gt;recording.Recording.RecordingSession</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1433.1166,-496.9494C1485.8992,-483.0696 1557.5736,-464.2219 1600.1937,-453.0144"/>
-</g>
-<!-- recording_process.Status -->
-<g id="node29" class="node">
-<title>recording_process.Status</title>
-<g id="a_node29"><a xlink:title="status_processing_id ------------------------------status_processing_definition ">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="1009.875,-461 870.875,-461 870.875,-426 1009.875,-426 1009.875,-461"/>
-<text text-anchor="start" x="878.875" y="-442" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">recording_process.Status</text>
-</a>
-</g>
-</g>
-<!-- recording_process.Status&#45;&gt;1906 -->
-<g id="edge37" class="edge">
-<title>recording_process.Status-&gt;1906</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M935.6784,-425.9494C930.9311,-408.2095 924.0121,-382.3543 921.9658,-374.7077"/>
-</g>
-<!-- recording_process.Status&#45;&gt;1905 -->
-<g id="edge36" class="edge">
-<title>recording_process.Status-&gt;1905</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M945.0716,-425.9494C949.8189,-408.2095 956.7379,-382.3543 958.7842,-374.7077"/>
-</g>
-<!-- recording_process.Status&#45;&gt;recording_process.Processing -->
-<g id="edge38" class="edge">
-<title>recording_process.Status-&gt;recording_process.Processing</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M975.9705,-425.9494C998.1246,-415.0262 1026.519,-401.0262 1048.6899,-390.0947"/>
-</g>
-<!-- ephys_element.PreClusterParamList -->
-<g id="node31" class="node">
-<title>ephys_element.PreClusterParamList</title>
-<g id="a_node31"><a xlink:title="precluster_param_list_id ">
-<polygon fill="#00ff00" fill-opacity="0.188235" stroke="#00ff00" stroke-opacity="0.188235" points="1452.875,-390 1219.875,-390 1219.875,-355 1452.875,-355 1452.875,-390"/>
-<text text-anchor="start" x="1227.875" y="-370.4" font-family="arial" text-decoration="underline" font-size="12.00" fill="#006400">ephys_element.PreClusterParamList</text>
-</a>
-</g>
-</g>
-<!-- ephys_element.PreClusterParamList&#45;&gt;ephys_element.PreClusterParamList.ParamOrder -->
-<g id="edge39" class="edge">
-<title>ephys_element.PreClusterParamList-&gt;ephys_element.PreClusterParamList.ParamOrder</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1379.8806,-354.9494C1414.2871,-341.0696 1461.0081,-322.2219 1488.7901,-311.0144"/>
-</g>
-<!-- ephys_element.PreClusterParamList&#45;&gt;ephys_element.PreClusterTask -->
-<g id="edge40" class="edge">
-<title>ephys_element.PreClusterParamList-&gt;ephys_element.PreClusterTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1339.9729,-354.7272C1344.8859,-334.8533 1355.5685,-302.9726 1376.375,-284 1394.4654,-267.5041 1417.8936,-256.0537 1441.0318,-248.1205"/>
-</g>
-<!-- ephys_element.PreClusterParamList&#45;&gt;recording_process.Processing.EphysParams -->
-<g id="edge41" class="edge">
-<title>ephys_element.PreClusterParamList-&gt;recording_process.Processing.EphysParams</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M1306.2177,-354.9494C1282.3678,-341.0696 1249.9816,-322.2219 1230.7236,-311.0144"/>
-</g>
-<!-- ephys_element.EphysRecording&#45;&gt;ephys_element.PreClusterTask -->
-<g id="edge42" class="edge">
-<title>ephys_element.EphysRecording-&gt;ephys_element.PreClusterTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1830.9393,-287.2175C1771.267,-275.9195 1687.6756,-260.0929 1623.9523,-248.028"/>
-</g>
-<!-- ephys_element.PreCluster&#45;&gt;ephys_element.ClusteringTask -->
-<g id="edge43" class="edge">
-<title>ephys_element.PreCluster-&gt;ephys_element.ClusteringTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M1548.184,-141.9494C1558.567,-131.1083 1571.8526,-117.2366 1582.2871,-106.3418"/>
-</g>
-<!-- imaging_element.ProcessingParamSet -->
-<g id="node37" class="node">
-<title>imaging_element.ProcessingParamSet</title>
-<g id="a_node37"><a xlink:title="paramset_idx         ------------------------------→ imaging_element.ProcessingMethodparamset_desc        param_set_hash       params               UNIQUE INDEX (param_set_hash)">
-<polygon fill="#000000" fill-opacity="0.125490" stroke="transparent" points="893.375,-390 689.375,-390 689.375,-355 893.375,-355 893.375,-390"/>
-<text text-anchor="start" x="697.375" y="-371" font-family="arial" text-decoration="underline" font-size="10.00" fill="#000000">imaging_element.ProcessingParamSet</text>
-</a>
-</g>
-</g>
-<!-- imaging_element.ProcessingParamSet&#45;&gt;recording_process.Processing.ImagingParams -->
-<g id="edge44" class="edge">
-<title>imaging_element.ProcessingParamSet-&gt;recording_process.Processing.ImagingParams</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-dasharray="5,2" stroke-opacity="0.250980" d="M791.375,-354.9494C791.375,-341.1517 791.375,-322.4447 791.375,-311.2141"/>
-</g>
-<!-- imaging_element.ProcessingParamSet&#45;&gt;imaging_element.ProcessingTask -->
-<g id="edge45" class="edge">
-<title>imaging_element.ProcessingParamSet-&gt;imaging_element.ProcessingTask</title>
-<path fill="none" stroke="#000000" stroke-width=".75" stroke-opacity="0.250980" d="M731.0604,-354.9494C693.5214,-344.0262 645.4088,-330.0262 607.8414,-319.0947"/>
-</g>
-</g>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="2096pt"
+   height="682pt"
+   viewBox="0.00 0.00 2095.88 682.00"
+   version="1.1"
+   id="svg1431"
+   sodipodi:docname="recording_imaging_ephys.svg"
+   inkscape:version="1.0.1 (c497b03c, 2020-09-10)">
+  <metadata
+     id="metadata1437">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs1435" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1720"
+     inkscape:window-height="1323"
+     id="namedview1433"
+     showgrid="false"
+     inkscape:zoom="0.76369917"
+     inkscape:cx="1116.1391"
+     inkscape:cy="345.7856"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1431" />
+  <g
+     id="graph0"
+     class="graph"
+     transform="scale(1 1) rotate(0) translate(4 678)">
+    <title
+       id="title833">%3</title>
+    <polygon
+       fill="#ffffff"
+       stroke="transparent"
+       points="-4,4 -4,-678 2091.875,-678 2091.875,4 -4,4"
+       id="polygon835" />
+    <!-- 1903 -->
+    <g
+       id="node1"
+       class="node">
+      <title
+         id="title837">1903</title>
+      <ellipse
+         fill="#ff8800"
+         fill-opacity="0.501961"
+         stroke="#ff8800"
+         stroke-opacity="0.501961"
+         cx="472.375"
+         cy="-514.5"
+         rx="2"
+         ry="2"
+         id="ellipse839" />
+      <text
+         text-anchor="middle"
+         x="472.375"
+         y="-514.2"
+         font-family="arial"
+         font-size="1.00"
+         fill="#ff8800"
+         id="text841">1903</text>
+    </g>
+    <!-- recording.Log -->
+    <g
+       id="node12"
+       class="node">
+      <title
+         id="title844">recording.Log</title>
+      <g
+         id="a_node12">
+        <a
+           xlink:title="recording_log_id      ------------------------------ → recording.Recording → recording.Status.proj(status_recording_id_old=&quot;status_recording_id&quot;) → recording.Status.proj(status_recording_id_new=&quot;status_recording_id&quot;) recording_status_timestamp  recording_error_message=null  recording_error_exception=null  "
+           id="a850">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="484.375,-461 384.375,-461 384.375,-426 484.375,-426 484.375,-461"
+             id="polygon846" />
+          <text
+             text-anchor="start"
+             x="392.375"
+             y="-441.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text848">recording.Log</text>
+        </a>
+      </g>
+    </g>
+    <!-- 1903&#45;&gt;recording.Log -->
+    <g
+       id="edge1"
+       class="edge">
+      <title
+         id="title854">1903-&gt;recording.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M471.2787,-512.4517C467.3116,-505.0395 453.4352,-479.1125 443.8767,-461.2532"
+         id="path856" />
+    </g>
+    <!-- 1906 -->
+    <g
+       id="node2"
+       class="node">
+      <title
+         id="title859">1906</title>
+      <ellipse
+         fill="#ff8800"
+         fill-opacity="0.501961"
+         stroke="#ff8800"
+         stroke-opacity="0.501961"
+         cx="921.375"
+         cy="-372.5"
+         rx="2"
+         ry="2"
+         id="ellipse861" />
+      <text
+         text-anchor="middle"
+         x="921.375"
+         y="-372.2"
+         font-family="arial"
+         font-size="1.00"
+         fill="#ff8800"
+         id="text863">1906</text>
+    </g>
+    <!-- recording_process.Log -->
+    <g
+       id="node14"
+       class="node">
+      <title
+         id="title866">recording_process.Log</title>
+      <g
+         id="a_node14">
+        <a
+           xlink:title="log_id                ------------------------------ → recording_process.Processing → recording_process.Status.proj(status_processing_id_old=&quot;status_processing_id&quot;) → recording_process.Status.proj(status_processing_id_new=&quot;status_processing_id&quot;) status_timestamp      error_message=null    error_exception=null  "
+           id="a872">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1081.375,-319 929.375,-319 929.375,-284 1081.375,-284 1081.375,-319"
+             id="polygon868" />
+          <text
+             text-anchor="start"
+             x="937.375"
+             y="-299.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text870">recording_process.Log</text>
+        </a>
+      </g>
+    </g>
+    <!-- 1906&#45;&gt;recording_process.Log -->
+    <g
+       id="edge2"
+       class="edge">
+      <title
+         id="title876">1906-&gt;recording_process.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M923.1263,-370.8259C926.4409,-367.6712 933.8818,-360.6548 940.375,-355 954.483,-342.7137 970.733,-329.3387 983.456,-319.0353"
+         id="path878" />
+    </g>
+    <!-- 1905 -->
+    <g
+       id="node3"
+       class="node">
+      <title
+         id="title881">1905</title>
+      <ellipse
+         fill="#ff8800"
+         fill-opacity="0.501961"
+         stroke="#ff8800"
+         stroke-opacity="0.501961"
+         cx="959.375"
+         cy="-372.5"
+         rx="2"
+         ry="2"
+         id="ellipse883" />
+      <text
+         text-anchor="middle"
+         x="959.375"
+         y="-372.2"
+         font-family="arial"
+         font-size="1.00"
+         fill="#ff8800"
+         id="text885">1905</text>
+    </g>
+    <!-- 1905&#45;&gt;recording_process.Log -->
+    <g
+       id="edge3"
+       class="edge">
+      <title
+         id="title888">1905-&gt;recording_process.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M960.5121,-370.7449C965.05,-363.7407 982.1855,-337.2925 993.9155,-319.1875"
+         id="path890" />
+    </g>
+    <!-- 1904 -->
+    <g
+       id="node4"
+       class="node">
+      <title
+         id="title893">1904</title>
+      <ellipse
+         fill="#ff8800"
+         fill-opacity="0.501961"
+         stroke="#ff8800"
+         stroke-opacity="0.501961"
+         cx="434.375"
+         cy="-514.5"
+         rx="2"
+         ry="2"
+         id="ellipse895" />
+      <text
+         text-anchor="middle"
+         x="434.375"
+         y="-514.2"
+         font-family="arial"
+         font-size="1.00"
+         fill="#ff8800"
+         id="text897">1904</text>
+    </g>
+    <!-- 1904&#45;&gt;recording.Log -->
+    <g
+       id="edge4"
+       class="edge">
+      <title
+         id="title900">1904-&gt;recording.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M434.375,-512.4517C434.375,-505.0395 434.375,-479.1125 434.375,-461.2532"
+         id="path902" />
+    </g>
+    <!-- acquisition.SessionStarted -->
+    <g
+       id="node5"
+       class="node">
+      <title
+         id="title905">acquisition.SessionStarted</title>
+      <g
+         id="a_node5">
+        <a
+           xlink:title="→ subject.Subject session_date          session_number        ------------------------------ session_start_time    → lab.Location.proj(session_location=&quot;location&quot;) → task.Task local_path_behavior_file  remote_path_behavior_file  is_finished=0         invalid_session=0     "
+           id="a911">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1607.875,-603 1434.875,-603 1434.875,-568 1607.875,-568 1607.875,-603"
+             id="polygon907" />
+          <text
+             text-anchor="middle"
+             x="1521.375"
+             y="-582.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#006400"
+             id="text909">acquisition.SessionStarted</text>
+        </a>
+      </g>
+    </g>
+    <!-- acquisition.Session -->
+    <g
+       id="node13"
+       class="node">
+      <title
+         id="title915">acquisition.Session</title>
+      <g
+         id="a_node13">
+        <a
+           xlink:title="→ acquisition.SessionStarted ------------------------------ session_start_time    session_end_time=null  → lab.Location.proj(session_location=&quot;location&quot;) → task.TaskLevelParameterSet stimulus_bank=&quot;&quot;      stimulus_commit=&quot;&quot;    session_performance   num_trials=null       num_trials_try=null   session_narrative=&quot;&quot;  session_protocol=null  session_code_version=null  is_bad_session=null   session_comments=null  "
+           id="a921">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1583.875,-532 1454.875,-532 1454.875,-497 1583.875,-497 1583.875,-532"
+             id="polygon917" />
+          <text
+             text-anchor="middle"
+             x="1519.375"
+             y="-511.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#006400"
+             id="text919">acquisition.Session</text>
+        </a>
+      </g>
+    </g>
+    <!-- acquisition.SessionStarted&#45;&gt;acquisition.Session -->
+    <g
+       id="edge5"
+       class="edge">
+      <title
+         id="title925">acquisition.SessionStarted-&gt;acquisition.Session</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1520.8806,-567.9494C1520.5752,-557.1083 1520.1845,-543.2366 1519.8776,-532.3418"
+         id="path927" />
+    </g>
+    <!-- recording.Modality -->
+    <g
+       id="node6"
+       class="node">
+      <title
+         id="title930">recording.Modality</title>
+      <g
+         id="a_node6">
+        <a
+           xlink:title="recording_modality    ------------------------------ modality_description  root_directory        recording_file_extensions  recording_file_pattern  process_unit_file_pattern  process_unit_dir_fieldname  process_unit_fieldname  process_repository    "
+           id="a936">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="1416.875,-603 1309.875,-603 1309.875,-568 1416.875,-568 1416.875,-603"
+             id="polygon932" />
+          <text
+             text-anchor="start"
+             x="1317.875"
+             y="-584"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text934">recording.Modality</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording.Recording -->
+    <g
+       id="node28"
+       class="node">
+      <title
+         id="title940">recording.Recording</title>
+      <g
+         id="a_node28">
+        <a
+           xlink:title="recording_id          ------------------------------ → recording.Modality → lab.Location → recording.Status task_copy_id_pni=null : int                          # globus transfer task raw file local→cup inherit_params_recording=1  recording_directory   local_directory       "
+           id="a946">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1435.375,-532 1297.375,-532 1297.375,-497 1435.375,-497 1435.375,-532"
+             id="polygon942" />
+          <text
+             text-anchor="start"
+             x="1305.375"
+             y="-512.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text944">recording.Recording</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording.Modality&#45;&gt;recording.Recording -->
+    <g
+       id="edge6"
+       class="edge">
+      <title
+         id="title950">recording.Modality-&gt;recording.Recording</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1364.1166,-567.9494C1364.5746,-557.1083 1365.1608,-543.2366 1365.6211,-532.3418"
+         id="path952" />
+    </g>
+    <!-- scan_element.Scan -->
+    <g
+       id="node7"
+       class="node">
+      <title
+         id="title955">scan_element.Scan</title>
+      <g
+         id="a_node7">
+        <a
+           xlink:title="→ imaging_pipeline.ImagingPipelineSession scan_id               ------------------------------ → imaging_pipeline.Equipment → scan_element.AcquisitionSoftware scan_notes=&quot;&quot;         "
+           id="a961">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="436.875,-390 303.875,-390 303.875,-355 436.875,-355 436.875,-390"
+             id="polygon957" />
+          <text
+             text-anchor="start"
+             x="311.875"
+             y="-370.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text959">scan_element.Scan</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_element.ProcessingTask -->
+    <g
+       id="node27"
+       class="node">
+      <title
+         id="title965">imaging_element.ProcessingTask</title>
+      <g
+         id="a_node27">
+        <a
+           xlink:title="→ scan_element.Scan → imaging_element.ProcessingParamSet ------------------------------ processing_output_dir  task_mode=&quot;load&quot;      "
+           id="a971">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="654.375,-319 440.375,-319 440.375,-284 654.375,-284 654.375,-319"
+             id="polygon967" />
+          <text
+             text-anchor="middle"
+             x="547.375"
+             y="-298.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#006400"
+             id="text969">imaging_element.ProcessingTask</text>
+        </a>
+      </g>
+    </g>
+    <!-- scan_element.Scan&#45;&gt;imaging_element.ProcessingTask -->
+    <g
+       id="edge7"
+       class="edge">
+      <title
+         id="title975">scan_element.Scan-&gt;imaging_element.ProcessingTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M414.1278,-354.9494C441.3589,-344.0262 476.2603,-330.0262 503.5121,-319.0947"
+         id="path977" />
+    </g>
+    <!-- scan_element.ScanInfo -->
+    <g
+       id="node35"
+       class="node">
+      <title
+         id="title980">scan_element.ScanInfo</title>
+      <g
+         id="a_node35">
+        <a
+           xlink:title="→ scan_element.Scan ------------------------------ nfields               nchannels             ndepths               nframes               nrois                 x=null                y=null                z=null                fps                   bidirectional         usecs_per_line=null   fill_fraction=null    "
+           id="a986">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="325.375"
+             cy="-301.5"
+             rx="97.5"
+             ry="17.5"
+             id="ellipse982" />
+          <text
+             text-anchor="middle"
+             x="325.375"
+             y="-298.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#00007f"
+             id="text984">scan_element.ScanInfo</text>
+        </a>
+      </g>
+    </g>
+    <!-- scan_element.Scan&#45;&gt;scan_element.ScanInfo -->
+    <g
+       id="edge8"
+       class="edge">
+      <title
+         id="title990">scan_element.Scan-&gt;scan_element.ScanInfo</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M359.2514,-354.9494C352.3803,-344.1083 343.5883,-330.2366 336.6832,-319.3418"
+         id="path992" />
+    </g>
+    <!-- recording_process.Processing -->
+    <g
+       id="node8"
+       class="node">
+      <title
+         id="title995">recording_process.Processing</title>
+      <g
+         id="a_node8">
+        <a
+           xlink:title="job_id                ------------------------------ → recording.Recording → recording_process.Status fragment_number       recording_process_pre_path=null  recording_process_post_path=null  task_copy_id_pre=null  task_copy_id_post=null  slurm_id=null         "
+           id="a1001">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1181.875,-390 986.875,-390 986.875,-355 1181.875,-355 1181.875,-390"
+             id="polygon997" />
+          <text
+             text-anchor="start"
+             x="994.875"
+             y="-370.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text999">recording_process.Processing</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording_process.Processing.ImagingParams -->
+    <g
+       id="node9"
+       class="node">
+      <title
+         id="title1005">recording_process.Processing.ImagingParams</title>
+      <g
+         id="a_node9">
+        <a
+           xlink:title="→ recording_process.Processing ------------------------------ → imaging_element.ProcessingParamSet "
+           id="a1011">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="910.875,-311 671.875,-311 671.875,-292 910.875,-292 910.875,-311"
+             id="polygon1007" />
+          <text
+             text-anchor="middle"
+             x="791.375"
+             y="-299"
+             font-family="arial"
+             font-size="10.00"
+             fill="#000000"
+             id="text1009">recording_process.Processing.ImagingParams</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording_process.Processing&#45;&gt;recording_process.Processing.ImagingParams -->
+    <g
+       id="edge9"
+       class="edge">
+      <title
+         id="title1015">recording_process.Processing-&gt;recording_process.Processing.ImagingParams</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1011.948,-354.9494C954.6691,-341.0696 876.8892,-322.2219 830.6384,-311.0144"
+         id="path1017" />
+    </g>
+    <!-- recording_process.Processing&#45;&gt;recording_process.Log -->
+    <g
+       id="edge10"
+       class="edge">
+      <title
+         id="title1020">recording_process.Processing-&gt;recording_process.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1064.8469,-354.9494C1052.6929,-344.0262 1037.1154,-330.0262 1024.9522,-319.0947"
+         id="path1022" />
+    </g>
+    <!-- recording_process.Processing.EphysParams -->
+    <g
+       id="node30"
+       class="node">
+      <title
+         id="title1025">recording_process.Processing.EphysParams</title>
+      <g
+         id="a_node30">
+        <a
+           xlink:title="→ recording_process.Processing ------------------------------ → ephys_element.PreClusterParamList → ephys_element.ClusteringParamSet "
+           id="a1031">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="1328.875,-311 1099.875,-311 1099.875,-292 1328.875,-292 1328.875,-311"
+             id="polygon1027" />
+          <text
+             text-anchor="middle"
+             x="1214.375"
+             y="-299"
+             font-family="arial"
+             font-size="10.00"
+             fill="#000000"
+             id="text1029">recording_process.Processing.EphysParams</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording_process.Processing&#45;&gt;recording_process.Processing.EphysParams -->
+    <g
+       id="edge11"
+       class="edge">
+      <title
+         id="title1035">recording_process.Processing-&gt;recording_process.Processing.EphysParams</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1116.5098,-354.9494C1141.9237,-341.0696 1176.4336,-322.2219 1196.9544,-311.0144"
+         id="path1037" />
+    </g>
+    <!-- imaging_element.Processing -->
+    <g
+       id="node10"
+       class="node">
+      <title
+         id="title1040">imaging_element.Processing</title>
+      <g
+         id="a_node10">
+        <a
+           xlink:title="→ imaging_element.ProcessingTask ------------------------------ processing_time       package_version=&quot;&quot;    "
+           id="a1046">
+          <ellipse
+             fill="#ff0000"
+             fill-opacity="0.125490"
+             stroke="#ff0000"
+             stroke-opacity="0.125490"
+             cx="547.375"
+             cy="-230.5"
+             rx="13"
+             ry="13"
+             id="ellipse1042" />
+          <text
+             text-anchor="middle"
+             x="547.375"
+             y="-227.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#7f0000"
+             id="text1044">imaging_element.Processing</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.ClusteringTask -->
+    <g
+       id="node11"
+       class="node">
+      <title
+         id="title1050">ephys_element.ClusteringTask</title>
+      <g
+         id="a_node11">
+        <a
+           xlink:title="→ ephys_element.PreCluster → ephys_element.ClusteringParamSet ------------------------------ clustering_output_dir  task_mode=&quot;load&quot;      "
+           id="a1056">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1697.875,-106 1500.875,-106 1500.875,-71 1697.875,-71 1697.875,-106"
+             id="polygon1052" />
+          <text
+             text-anchor="middle"
+             x="1599.375"
+             y="-85.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#006400"
+             id="text1054">ephys_element.ClusteringTask</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.Clustering -->
+    <g
+       id="node16"
+       class="node">
+      <title
+         id="title1060">ephys_element.Clustering</title>
+      <g
+         id="a_node16">
+        <a
+           xlink:title="→ ephys_element.ClusteringTask ------------------------------ clustering_time       package_version=&quot;&quot;    "
+           id="a1066">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="1599.375"
+             cy="-17.5"
+             rx="106.7501"
+             ry="17.5"
+             id="ellipse1062" />
+          <text
+             text-anchor="middle"
+             x="1599.375"
+             y="-14.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#00007f"
+             id="text1064">ephys_element.Clustering</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.ClusteringTask&#45;&gt;ephys_element.Clustering -->
+    <g
+       id="edge12"
+       class="edge">
+      <title
+         id="title1070">ephys_element.ClusteringTask-&gt;ephys_element.Clustering</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1599.375,-70.9494C1599.375,-60.1083 1599.375,-46.2366 1599.375,-35.3418"
+         id="path1072" />
+    </g>
+    <!-- recording.Recording.BehaviorSession -->
+    <g
+       id="node15"
+       class="node">
+      <title
+         id="title1075">recording.Recording.BehaviorSession</title>
+      <g
+         id="a_node15">
+        <a
+           xlink:title="→ recording.Recording → acquisition.Session "
+           id="a1081">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="1516.875,-453 1319.875,-453 1319.875,-434 1516.875,-434 1516.875,-453"
+             id="polygon1077" />
+          <text
+             text-anchor="middle"
+             x="1418.375"
+             y="-441"
+             font-family="arial"
+             font-size="10.00"
+             fill="#000000"
+             id="text1079">recording.Recording.BehaviorSession</text>
+        </a>
+      </g>
+    </g>
+    <!-- acquisition.Session&#45;&gt;recording.Recording.BehaviorSession -->
+    <g
+       id="edge13"
+       class="edge">
+      <title
+         id="title1085">acquisition.Session-&gt;recording.Recording.BehaviorSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1494.4087,-496.9494C1474.6641,-483.0696 1447.8526,-464.2219 1431.9095,-453.0144"
+         id="path1087" />
+    </g>
+    <!-- ephys_element.ClusteringParamSet -->
+    <g
+       id="node17"
+       class="node">
+      <title
+         id="title1090">ephys_element.ClusteringParamSet</title>
+      <g
+         id="a_node17">
+        <a
+           xlink:title="paramset_idx          ------------------------------ → ephys_element.ClusteringMethod paramset_desc         param_set_hash        params                UNIQUE INDEX (param_set_hash) "
+           id="a1096">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="1661.875,-390 1470.875,-390 1470.875,-355 1661.875,-355 1661.875,-390"
+             id="polygon1092" />
+          <text
+             text-anchor="start"
+             x="1478.875"
+             y="-371"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1094">ephys_element.ClusteringParamSet</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.ClusteringParamSet&#45;&gt;ephys_element.ClusteringTask -->
+    <g
+       id="edge14"
+       class="edge">
+      <title
+         id="title1100">ephys_element.ClusteringParamSet-&gt;ephys_element.ClusteringTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1609.4354,-354.9985C1624.5534,-346.5145 1639.8753,-334.6942 1648.375,-319 1685.8379,-249.8265 1676.878,-215.3214 1648.375,-142 1642.9444,-128.0302 1631.9746,-115.4876 1621.7889,-106.0641"
+         id="path1102" />
+    </g>
+    <!-- ephys_element.ClusteringParamSet&#45;&gt;recording_process.Processing.EphysParams -->
+    <g
+       id="edge15"
+       class="edge">
+      <title
+         id="title1105">ephys_element.ClusteringParamSet-&gt;recording_process.Processing.EphysParams</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1479.3637,-354.9494C1410.5509,-341.0696 1317.1087,-322.2219 1261.5447,-311.0144"
+         id="path1107" />
+    </g>
+    <!-- ephys_element.PreClusterParamList.ParamOrder -->
+    <g
+       id="node18"
+       class="node">
+      <title
+         id="title1110">ephys_element.PreClusterParamList.ParamOrder</title>
+      <g
+         id="a_node18">
+        <a
+           xlink:title="→ ephys_element.PreClusterParamList order_id              ------------------------------ → [nullable] ephys_element.PreClusterParamSet "
+           id="a1116">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="1639.375,-311 1385.375,-311 1385.375,-292 1639.375,-292 1639.375,-311"
+             id="polygon1112" />
+          <text
+             text-anchor="start"
+             x="1393.375"
+             y="-300"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1114">ephys_element.PreClusterParamList.ParamOrder</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_pipeline.EphysPipelineSession -->
+    <g
+       id="node19"
+       class="node">
+      <title
+         id="title1120">ephys_pipeline.EphysPipelineSession</title>
+      <g
+         id="a_node19">
+        <a
+           xlink:title="→ recording.Recording "
+           id="a1126">
+          <ellipse
+             fill="#ff0000"
+             fill-opacity="0.125490"
+             stroke="#ff0000"
+             stroke-opacity="0.125490"
+             cx="1184.375"
+             cy="-443.5"
+             rx="13"
+             ry="13"
+             id="ellipse1122" />
+          <text
+             text-anchor="middle"
+             x="1184.375"
+             y="-440.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#7f0000"
+             id="text1124">ephys_pipeline.EphysPipelineSession</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.ProbeInsertion -->
+    <g
+       id="node26"
+       class="node">
+      <title
+         id="title1130">ephys_element.ProbeInsertion</title>
+      <g
+         id="a_node26">
+        <a
+           xlink:title="→ ephys_pipeline.EphysPipelineSession insertion_number      ------------------------------ → probe_element.Probe "
+           id="a1136">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="2087.875,-390 1888.875,-390 1888.875,-355 2087.875,-355 2087.875,-390"
+             id="polygon1132" />
+          <text
+             text-anchor="start"
+             x="1896.875"
+             y="-370.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text1134">ephys_element.ProbeInsertion</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_pipeline.EphysPipelineSession&#45;&gt;ephys_element.ProbeInsertion -->
+    <g
+       id="edge16"
+       class="edge">
+      <title
+         id="title1140">ephys_pipeline.EphysPipelineSession-&gt;ephys_element.ProbeInsertion</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1197.2152,-441.3923C1219.9593,-437.7315 1268.8452,-430.1895 1310.375,-426 1562.9312,-400.5221 1628.1233,-418.3345 1880.375,-390 1883.112,-389.6926 1885.8854,-389.3638 1888.6824,-389.0171"
+         id="path1142" />
+    </g>
+    <!-- imaging_pipeline.ImagingPipelineSession -->
+    <g
+       id="node20"
+       class="node">
+      <title
+         id="title1145">imaging_pipeline.ImagingPipelineSession</title>
+      <g
+         id="a_node20">
+        <a
+           xlink:title="→ recording.Recording "
+           id="a1151">
+          <ellipse
+             fill="#ff0000"
+             fill-opacity="0.125490"
+             stroke="#ff0000"
+             stroke-opacity="0.125490"
+             cx="633.375"
+             cy="-443.5"
+             rx="13"
+             ry="13"
+             id="ellipse1147" />
+          <text
+             text-anchor="middle"
+             x="633.375"
+             y="-440.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#7f0000"
+             id="text1149">imaging_pipeline.ImagingPipelineSession</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;scan_element.Scan -->
+    <g
+       id="edge17"
+       class="edge">
+      <title
+         id="title1155">imaging_pipeline.ImagingPipelineSession-&gt;scan_element.Scan</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M620.69,-440.0755C587.8041,-431.1976 498.0047,-406.9552 435.4311,-390.0627"
+         id="path1157" />
+    </g>
+    <!-- imaging_pipeline.FieldOfView -->
+    <g
+       id="node22"
+       class="node">
+      <title
+         id="title1160">imaging_pipeline.FieldOfView</title>
+      <g
+         id="a_node22">
+        <a
+           xlink:title="→ imaging_pipeline.ImagingPipelineSession fov                   ------------------------------ fov_directory         fov_name=null         fov_depth             fov_center_xy         fov_size_xy           fov_rotation_degrees  fov_pixel_resolution_xy  fov_discrete_plane_mode  power_percent         "
+           id="a1166">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="119.375"
+             cy="-372.5"
+             rx="119.2501"
+             ry="17.5"
+             id="ellipse1162" />
+          <text
+             text-anchor="start"
+             x="31.875"
+             y="-370.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#00007f"
+             id="text1164">imaging_pipeline.FieldOfView</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;imaging_pipeline.FieldOfView -->
+    <g
+       id="edge18"
+       class="edge">
+      <title
+         id="title1170">imaging_pipeline.ImagingPipelineSession-&gt;imaging_pipeline.FieldOfView</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M620.4122,-441.7094C563.6376,-433.867 334.0566,-402.1545 206.2821,-384.5047"
+         id="path1172" />
+    </g>
+    <!-- imaging_pipeline.ScanInfo -->
+    <g
+       id="node38"
+       class="node">
+      <title
+         id="title1175">imaging_pipeline.ScanInfo</title>
+      <g
+         id="a_node38">
+        <a
+           xlink:title="→ imaging_pipeline.ImagingPipelineSession ------------------------------ file_name_base        scan_width            scan_height           acq_time              n_depths              scan_depths           frame_rate            inter_fov_lag_sec     frame_ts_sec          power_percent         channels              cfg_filename          usr_filename          fast_z_lag            fast_z_flyback_time   line_period           scan_frame_period     scan_volume_rate      flyback_time_per_frame  flyto_time_per_scan_field  fov_corner_points     nfovs                 nframes               nframes_good          last_good_file        motion_correction_enabled=0  motion_correction_mode=&quot;N/A&quot;  stacks_enabled=0      stack_actuator=&quot;N/A&quot;  stack_definition=&quot;N/A&quot;  "
+           id="a1181">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="563.375"
+             cy="-372.5"
+             rx="108.2501"
+             ry="17.5"
+             id="ellipse1177" />
+          <text
+             text-anchor="middle"
+             x="563.375"
+             y="-369.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#00007f"
+             id="text1179">imaging_pipeline.ScanInfo</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_pipeline.ImagingPipelineSession&#45;&gt;imaging_pipeline.ScanInfo -->
+    <g
+       id="edge19"
+       class="edge">
+      <title
+         id="title1185">imaging_pipeline.ImagingPipelineSession-&gt;imaging_pipeline.ScanInfo</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M624.2237,-434.218C613.1801,-423.0166 594.3788,-403.9467 580.5914,-389.9623"
+         id="path1187" />
+    </g>
+    <!-- ephys_element.PreClusterParamSet -->
+    <g
+       id="node21"
+       class="node">
+      <title
+         id="title1190">ephys_element.PreClusterParamSet</title>
+      <g
+         id="a_node21">
+        <a
+           xlink:title="paramset_idx          ------------------------------ → ephys_element.PreClusterMethod paramset_desc         param_set_hash        params                UNIQUE INDEX (param_set_hash) "
+           id="a1196">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="1870.875,-390 1679.875,-390 1679.875,-355 1870.875,-355 1870.875,-390"
+             id="polygon1192" />
+          <text
+             text-anchor="start"
+             x="1687.875"
+             y="-371"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1194">ephys_element.PreClusterParamSet</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.PreClusterParamSet&#45;&gt;ephys_element.PreClusterParamList.ParamOrder -->
+    <g
+       id="edge20"
+       class="edge">
+      <title
+         id="title1200">ephys_element.PreClusterParamSet-&gt;ephys_element.PreClusterParamList.ParamOrder</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1710.3637,-354.9494C1658.9496,-341.0696 1589.1334,-322.2219 1547.6183,-311.0144"
+         id="path1202" />
+    </g>
+    <!-- imaging_pipeline.FieldOfView.File -->
+    <g
+       id="node33"
+       class="node">
+      <title
+         id="title1205">imaging_pipeline.FieldOfView.File</title>
+      <g
+         id="a_node33">
+        <a
+           xlink:title="→ imaging_pipeline.FieldOfView file_number           ------------------------------ fov_filename          file_frame_range      "
+           id="a1211">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="209.375,-311 29.375,-311 29.375,-292 209.375,-292 209.375,-311"
+             id="polygon1207" />
+          <text
+             text-anchor="start"
+             x="37.375"
+             y="-300"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1209">imaging_pipeline.FieldOfView.File</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_pipeline.FieldOfView&#45;&gt;imaging_pipeline.FieldOfView.File -->
+    <g
+       id="edge21"
+       class="edge">
+      <title
+         id="title1215">imaging_pipeline.FieldOfView-&gt;imaging_pipeline.FieldOfView.File</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M119.375,-354.9494C119.375,-341.1517 119.375,-322.4447 119.375,-311.2141"
+         id="path1217" />
+    </g>
+    <!-- subject.Subject -->
+    <g
+       id="node23"
+       class="node">
+      <title
+         id="title1220">subject.Subject</title>
+      <g
+         id="a_node23">
+        <a
+           xlink:title="subject_fullname      ------------------------------ subject_nickname      → lab.User genomics_id=null      sex=&quot;Unknown&quot;         dob=null              head_plate_mark=null  → lab.Location → [nullable] lab.Protocol → [nullable] subject.Line subject_description=&quot;&quot;  initial_weight=null   "
+           id="a1226">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1631.875,-674 1524.875,-674 1524.875,-639 1631.875,-639 1631.875,-674"
+             id="polygon1222" />
+          <text
+             text-anchor="start"
+             x="1532.875"
+             y="-654.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text1224">subject.Subject</text>
+        </a>
+      </g>
+    </g>
+    <!-- subject.Subject&#45;&gt;acquisition.SessionStarted -->
+    <g
+       id="edge22"
+       class="edge">
+      <title
+         id="title1230">subject.Subject-&gt;acquisition.SessionStarted</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1564.2851,-638.9494C1555.5817,-628.1083 1544.4452,-614.2366 1535.6987,-603.3418"
+         id="path1232" />
+    </g>
+    <!-- recording.Recording.RecordingSession -->
+    <g
+       id="node32"
+       class="node">
+      <title
+         id="title1235">recording.Recording.RecordingSession</title>
+      <g
+         id="a_node32">
+        <a
+           xlink:title="→ recording.Recording → subject.Subject recording_datetime    "
+           id="a1241">
+          <polygon
+             fill="transparent"
+             stroke="transparent"
+             points="1737.375,-453 1535.375,-453 1535.375,-434 1737.375,-434 1737.375,-453"
+             id="polygon1237" />
+          <text
+             text-anchor="start"
+             x="1543.375"
+             y="-442"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1239">recording.Recording.RecordingSession</text>
+        </a>
+      </g>
+    </g>
+    <!-- subject.Subject&#45;&gt;recording.Recording.RecordingSession -->
+    <g
+       id="edge23"
+       class="edge">
+      <title
+         id="title1245">subject.Subject-&gt;recording.Recording.RecordingSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1594.1785,-638.997C1602.1755,-629.1285 1611.2511,-616.165 1616.375,-603 1637.2268,-549.4247 1637.4707,-478.7924 1636.7705,-453.2454"
+         id="path1247" />
+    </g>
+    <!-- ephys_element.PreClusterTask -->
+    <g
+       id="node24"
+       class="node">
+      <title
+         id="title1250">ephys_element.PreClusterTask</title>
+      <g
+         id="a_node24">
+        <a
+           xlink:title="→ ephys_element.EphysRecording → ephys_element.PreClusterParamList ------------------------------ precluster_output_dir  task_mode=&quot;none&quot;      "
+           id="a1256">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1630.875,-248 1431.875,-248 1431.875,-213 1630.875,-213 1630.875,-248"
+             id="polygon1252" />
+          <text
+             text-anchor="middle"
+             x="1531.375"
+             y="-227.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#006400"
+             id="text1254">ephys_element.PreClusterTask</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.PreCluster -->
+    <g
+       id="node36"
+       class="node">
+      <title
+         id="title1260">ephys_element.PreCluster</title>
+      <g
+         id="a_node36">
+        <a
+           xlink:title="→ ephys_element.PreClusterTask ------------------------------ precluster_time       package_version=&quot;&quot;    "
+           id="a1266">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="1531.375"
+             cy="-159.5"
+             rx="108.2501"
+             ry="17.5"
+             id="ellipse1262" />
+          <text
+             text-anchor="middle"
+             x="1531.375"
+             y="-156.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#00007f"
+             id="text1264">ephys_element.PreCluster</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.PreClusterTask&#45;&gt;ephys_element.PreCluster -->
+    <g
+       id="edge24"
+       class="edge">
+      <title
+         id="title1270">ephys_element.PreClusterTask-&gt;ephys_element.PreCluster</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1531.375,-212.9494C1531.375,-202.1083 1531.375,-188.2366 1531.375,-177.3418"
+         id="path1272" />
+    </g>
+    <!-- recording.Status -->
+    <g
+       id="node25"
+       class="node">
+      <title
+         id="title1275">recording.Status</title>
+      <g
+         id="a_node25">
+        <a
+           xlink:title="status_recording_id   ------------------------------ status_recording_definition  "
+           id="a1281">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="520.375,-603 424.375,-603 424.375,-568 520.375,-568 520.375,-603"
+             id="polygon1277" />
+          <text
+             text-anchor="start"
+             x="432.375"
+             y="-584"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1279">recording.Status</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording.Status&#45;&gt;1903 -->
+    <g
+       id="edge25"
+       class="edge">
+      <title
+         id="title1285">recording.Status-&gt;1903</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M472.375,-567.9494C472.375,-550.2095 472.375,-524.3543 472.375,-516.7077"
+         id="path1287" />
+    </g>
+    <!-- recording.Status&#45;&gt;1904 -->
+    <g
+       id="edge26"
+       class="edge">
+      <title
+         id="title1290">recording.Status-&gt;1904</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M462.9817,-567.9494C453.3113,-549.881 439.1351,-523.3939 435.3393,-516.3017"
+         id="path1292" />
+    </g>
+    <!-- recording.Status&#45;&gt;recording.Recording -->
+    <g
+       id="edge27"
+       class="edge">
+      <title
+         id="title1295">recording.Status-&gt;recording.Recording</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M520.4403,-581.6827C669.3211,-569.8589 1123.2492,-533.8086 1297.3736,-519.98"
+         id="path1297" />
+    </g>
+    <!-- ephys_element.EphysRecording -->
+    <g
+       id="node34"
+       class="node">
+      <title
+         id="title1300">ephys_element.EphysRecording</title>
+      <g
+         id="a_node34">
+        <a
+           xlink:title="→ ephys_element.ProbeInsertion ------------------------------ → probe_element.ElectrodeConfig → ephys_element.AcquisitionSoftware sampling_rate         recording_datetime    recording_duration    "
+           id="a1306">
+          <ellipse
+             fill="#00007f"
+             fill-opacity="0.250980"
+             stroke="#00007f"
+             stroke-opacity="0.250980"
+             cx="1906.375"
+             cy="-301.5"
+             rx="128.5005"
+             ry="17.5"
+             id="ellipse1302" />
+          <text
+             text-anchor="middle"
+             x="1906.375"
+             y="-298.4"
+             font-family="arial"
+             font-size="12.00"
+             fill="#00007f"
+             id="text1304">ephys_element.EphysRecording</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.ProbeInsertion&#45;&gt;ephys_element.EphysRecording -->
+    <g
+       id="edge28"
+       class="edge">
+      <title
+         id="title1310">ephys_element.ProbeInsertion-&gt;ephys_element.EphysRecording</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1968.1053,-354.9494C1955.3949,-343.9441 1939.0774,-329.8155 1926.4115,-318.8487"
+         id="path1312" />
+    </g>
+    <!-- imaging_element.ProcessingTask&#45;&gt;imaging_element.Processing -->
+    <g
+       id="edge29"
+       class="edge">
+      <title
+         id="title1315">imaging_element.ProcessingTask-&gt;imaging_element.Processing</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M547.375,-283.9494C547.375,-271.4658 547.375,-254.9634 547.375,-243.6156"
+         id="path1317" />
+    </g>
+    <!-- recording.Recording&#45;&gt;recording_process.Processing -->
+    <g
+       id="edge30"
+       class="edge">
+      <title
+         id="title1320">recording.Recording-&gt;recording_process.Processing</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1297.0716,-512.5182C1215.5256,-508.5546 1087.3954,-496.6648 1057.375,-461 1040.203,-440.5994 1056.6537,-409.4441 1070.3429,-390.0595"
+         id="path1322" />
+    </g>
+    <!-- recording.Recording&#45;&gt;recording.Log -->
+    <g
+       id="edge31"
+       class="edge">
+      <title
+         id="title1325">recording.Recording-&gt;recording.Log</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1297.1029,-512.287C1118.8256,-506.266 647.3946,-488.1963 493.375,-461 490.429,-460.4798 487.4217,-459.8641 484.4016,-459.1799"
+         id="path1327" />
+    </g>
+    <!-- recording.Recording&#45;&gt;recording.Recording.BehaviorSession -->
+    <g
+       id="edge32"
+       class="edge">
+      <title
+         id="title1330">recording.Recording-&gt;recording.Recording.BehaviorSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1379.2289,-496.9494C1389.3343,-483.1517 1403.0352,-464.4447 1411.2604,-453.2141"
+         id="path1332" />
+    </g>
+    <!-- recording.Recording&#45;&gt;ephys_pipeline.EphysPipelineSession -->
+    <g
+       id="edge33"
+       class="edge">
+      <title
+         id="title1335">recording.Recording-&gt;ephys_pipeline.EphysPipelineSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1321.3862,-496.9494C1280.1226,-480.8521 1221.7304,-458.0727 1196.6258,-448.2792"
+         id="path1337" />
+    </g>
+    <!-- recording.Recording&#45;&gt;imaging_pipeline.ImagingPipelineSession -->
+    <g
+       id="edge34"
+       class="edge">
+      <title
+         id="title1340">recording.Recording-&gt;imaging_pipeline.ImagingPipelineSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width="2"
+         stroke-opacity="0.250980"
+         d="M1297.086,-507.7885C1132.2096,-491.8182 724.474,-452.3241 646.4105,-444.7626"
+         id="path1342" />
+    </g>
+    <!-- recording.Recording&#45;&gt;recording.Recording.RecordingSession -->
+    <g
+       id="edge35"
+       class="edge">
+      <title
+         id="title1345">recording.Recording-&gt;recording.Recording.RecordingSession</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1433.1166,-496.9494C1485.8992,-483.0696 1557.5736,-464.2219 1600.1937,-453.0144"
+         id="path1347" />
+    </g>
+    <!-- recording_process.Status -->
+    <g
+       id="node29"
+       class="node">
+      <title
+         id="title1350">recording_process.Status</title>
+      <g
+         id="a_node29">
+        <a
+           xlink:title="status_processing_id  ------------------------------ status_processing_definition  "
+           id="a1356">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="1009.875,-461 870.875,-461 870.875,-426 1009.875,-426 1009.875,-461"
+             id="polygon1352" />
+          <text
+             text-anchor="start"
+             x="878.875"
+             y="-442"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1354">recording_process.Status</text>
+        </a>
+      </g>
+    </g>
+    <!-- recording_process.Status&#45;&gt;1906 -->
+    <g
+       id="edge37"
+       class="edge">
+      <title
+         id="title1360">recording_process.Status-&gt;1906</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M935.6784,-425.9494C930.9311,-408.2095 924.0121,-382.3543 921.9658,-374.7077"
+         id="path1362" />
+    </g>
+    <!-- recording_process.Status&#45;&gt;1905 -->
+    <g
+       id="edge36"
+       class="edge">
+      <title
+         id="title1365">recording_process.Status-&gt;1905</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M945.0716,-425.9494C949.8189,-408.2095 956.7379,-382.3543 958.7842,-374.7077"
+         id="path1367" />
+    </g>
+    <!-- recording_process.Status&#45;&gt;recording_process.Processing -->
+    <g
+       id="edge38"
+       class="edge">
+      <title
+         id="title1370">recording_process.Status-&gt;recording_process.Processing</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M975.9705,-425.9494C998.1246,-415.0262 1026.519,-401.0262 1048.6899,-390.0947"
+         id="path1372" />
+    </g>
+    <!-- ephys_element.PreClusterParamList -->
+    <g
+       id="node31"
+       class="node">
+      <title
+         id="title1375">ephys_element.PreClusterParamList</title>
+      <g
+         id="a_node31">
+        <a
+           xlink:title="precluster_param_list_id  "
+           id="a1381">
+          <polygon
+             fill="#00ff00"
+             fill-opacity="0.188235"
+             stroke="#00ff00"
+             stroke-opacity="0.188235"
+             points="1452.875,-390 1219.875,-390 1219.875,-355 1452.875,-355 1452.875,-390"
+             id="polygon1377" />
+          <text
+             text-anchor="start"
+             x="1227.875"
+             y="-370.4"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="12.00"
+             fill="#006400"
+             id="text1379">ephys_element.PreClusterParamList</text>
+        </a>
+      </g>
+    </g>
+    <!-- ephys_element.PreClusterParamList&#45;&gt;ephys_element.PreClusterParamList.ParamOrder -->
+    <g
+       id="edge39"
+       class="edge">
+      <title
+         id="title1385">ephys_element.PreClusterParamList-&gt;ephys_element.PreClusterParamList.ParamOrder</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1379.8806,-354.9494C1414.2871,-341.0696 1461.0081,-322.2219 1488.7901,-311.0144"
+         id="path1387" />
+    </g>
+    <!-- ephys_element.PreClusterParamList&#45;&gt;ephys_element.PreClusterTask -->
+    <g
+       id="edge40"
+       class="edge">
+      <title
+         id="title1390">ephys_element.PreClusterParamList-&gt;ephys_element.PreClusterTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1339.9729,-354.7272C1344.8859,-334.8533 1355.5685,-302.9726 1376.375,-284 1394.4654,-267.5041 1417.8936,-256.0537 1441.0318,-248.1205"
+         id="path1392" />
+    </g>
+    <!-- ephys_element.PreClusterParamList&#45;&gt;recording_process.Processing.EphysParams -->
+    <g
+       id="edge41"
+       class="edge">
+      <title
+         id="title1395">ephys_element.PreClusterParamList-&gt;recording_process.Processing.EphysParams</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M1306.2177,-354.9494C1282.3678,-341.0696 1249.9816,-322.2219 1230.7236,-311.0144"
+         id="path1397" />
+    </g>
+    <!-- ephys_element.EphysRecording&#45;&gt;ephys_element.PreClusterTask -->
+    <g
+       id="edge42"
+       class="edge">
+      <title
+         id="title1400">ephys_element.EphysRecording-&gt;ephys_element.PreClusterTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1830.9393,-287.2175C1771.267,-275.9195 1687.6756,-260.0929 1623.9523,-248.028"
+         id="path1402" />
+    </g>
+    <!-- ephys_element.PreCluster&#45;&gt;ephys_element.ClusteringTask -->
+    <g
+       id="edge43"
+       class="edge">
+      <title
+         id="title1405">ephys_element.PreCluster-&gt;ephys_element.ClusteringTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M1548.184,-141.9494C1558.567,-131.1083 1571.8526,-117.2366 1582.2871,-106.3418"
+         id="path1407" />
+    </g>
+    <!-- imaging_element.ProcessingParamSet -->
+    <g
+       id="node37"
+       class="node">
+      <title
+         id="title1410">imaging_element.ProcessingParamSet</title>
+      <g
+         id="a_node37">
+        <a
+           xlink:title="paramset_idx          ------------------------------ → imaging_element.ProcessingMethod paramset_desc         param_set_hash        params                UNIQUE INDEX (param_set_hash) "
+           id="a1416">
+          <polygon
+             fill="#000000"
+             fill-opacity="0.125490"
+             stroke="transparent"
+             points="893.375,-390 689.375,-390 689.375,-355 893.375,-355 893.375,-390"
+             id="polygon1412" />
+          <text
+             text-anchor="start"
+             x="697.375"
+             y="-371"
+             font-family="arial"
+             text-decoration="underline"
+             font-size="10.00"
+             fill="#000000"
+             id="text1414">imaging_element.ProcessingParamSet</text>
+        </a>
+      </g>
+    </g>
+    <!-- imaging_element.ProcessingParamSet&#45;&gt;recording_process.Processing.ImagingParams -->
+    <g
+       id="edge44"
+       class="edge">
+      <title
+         id="title1420">imaging_element.ProcessingParamSet-&gt;recording_process.Processing.ImagingParams</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-dasharray="5,2"
+         stroke-opacity="0.250980"
+         d="M791.375,-354.9494C791.375,-341.1517 791.375,-322.4447 791.375,-311.2141"
+         id="path1422" />
+    </g>
+    <!-- imaging_element.ProcessingParamSet&#45;&gt;imaging_element.ProcessingTask -->
+    <g
+       id="edge45"
+       class="edge">
+      <title
+         id="title1425">imaging_element.ProcessingParamSet-&gt;imaging_element.ProcessingTask</title>
+      <path
+         fill="none"
+         stroke="#000000"
+         stroke-width=".75"
+         stroke-opacity="0.250980"
+         d="M731.0604,-354.9494C693.5214,-344.0262 645.4088,-330.0262 607.8414,-319.0947"
+         id="path1427" />
+    </g>
+  </g>
+  <path
+     style="fill:none;stroke:#000000;stroke-width:2.83464573;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+     d="M 0.92200813,260.24646 500.79162,256.31821 530.25349,210.16129 H 764.96633 L 897.375,288 950.57607,576.47046"
+     id="path1443" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:30px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.75"
+     x="249.38373"
+     y="520.49292"
+     id="text1447"><tspan
+       sodipodi:role="line"
+       id="tspan1445"
+       x="249.38373"
+       y="520.49292"
+       style="stroke-width:0.75">Calcium Imaging</tspan></text>
+  <path
+     style="fill:none;stroke:#000000;stroke-width:2.83464573;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+     d="m 2083.8758,263.19265 -778.7753,-0.98207 -19.6412,-54.99547"
+     id="path1449" />
+  <path
+     style="fill:none;stroke:#000000;stroke-width:2.83464573;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+     d="m 1285.4593,207.21511 -223.9102,0.98206"
+     id="path1451" />
+  <path
+     style="fill:none;stroke:#000000;stroke-width:2.83464573;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+     d="m 1061.5491,208.19717 26.5157,61.86991 88.3856,0.98206 v 58.92373 l -83.4753,35.35424 -8.8386,210.16129"
+     id="path1453" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:30px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.75"
+     x="1768.6338"
+     y="520.49292"
+     id="text1457"><tspan
+       sodipodi:role="line"
+       id="tspan1455"
+       x="1768.6338"
+       y="520.49292"
+       style="stroke-width:0.75">Electrophysiology</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:30px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.75"
+     x="1045.8362"
+     y="54.99548"
+     id="text1461"><tspan
+       sodipodi:role="line"
+       id="tspan1459"
+       x="1045.8362"
+       y="54.99548"
+       style="stroke-width:0.75">Recording</tspan></text>
 </svg>
