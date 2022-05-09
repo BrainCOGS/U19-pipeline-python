@@ -134,3 +134,4 @@ data/*
 *.svg
 
 u19_pipeline/automatic_job/ParameterFiles/*
+u19_pipeline/automatic_job/OutputLog/*

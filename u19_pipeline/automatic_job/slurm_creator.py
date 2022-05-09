@@ -165,13 +165,10 @@ def generate_slurm_dlc(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
     echo "MODEL_PATH: ${model_path}"
 
-    module load anaconda3/5.3.1
-    module load matlab/R2020a
-
+    module load anacondapy/2021.11
     conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
 
-    cd ${repository_dir}
-    python ${process_script_path} ${raw_data_directory}, ${model_path} ${processed_data_directory}
+    python ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
     return slurm_text 

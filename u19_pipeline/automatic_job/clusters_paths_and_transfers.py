@@ -68,7 +68,7 @@ cluster_vars = {
         "params_files_dir":              spock_home_dir + "/ParameterFiles",
         "electrophysiology_process_dir": spock_home_dir + "/electorphysiology_processing", 
         "imaging_process_dir":           spock_home_dir + "/imaging_processing",  
-        "log_files_dir":                 spock_home_dir + "/OutputLog", 
+        "log_files_dir":                 spock_home_dir + "/u19_pipeline/automatic_job/OutputLog", 
         "user":                          default_user,
         "slurm_default":                 slurm_dict_spock_default, 
         "hostname":                      "spock.princeton.edu",
