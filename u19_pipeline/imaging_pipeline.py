@@ -12,7 +12,7 @@ from element_calcium_imaging import imaging as imaging_element
 from element_interface.utils import find_full_path
 
 
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'imaging_pipeline_test')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
 
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
