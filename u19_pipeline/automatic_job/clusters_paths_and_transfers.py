@@ -106,15 +106,24 @@ def request_globus_transfer(source, destination):
     return transfer_request
 
 
-def request_globus_transfer_status(id_task):
+def request_globus_transfer_status(job_id):
 
-    globus_command = ["globus", "task", "show", id_task, '--format', 'json']
-    #print(globus_command)
-    #s = subprocess.run(globus_command, capture_output=True)
-    #transfer_request = json.loads(s.stdout.decode('UTF-8'))
-    transfer_request = dict()
-    transfer_request['status'] = 'SUCCEEDED'
-    return transfer_request
+    globus_job_command = ["globus-timer","job","status",job_id,"--verbose"]
+    s = subprocess.run(globus_job_command, capture_output=True)
+    job_output = json.loads(s.stdout.decode('UTF-8'))
+
+    task_id = job_output['results']['data'][0]['data']['details']['task_id']
+
+    globus_task_command = ["globus","task","show",task_id,"--format","json"]
+    s = subprocess.run(globus_task_command, capture_output=True)
+    transfer_request = json.loads(s.stdout.decode('UTF-8'))
+
+    if transfer_request['status'] == 'SUCCEEDED':
+        return 1
+    elif transfer_request['status'] in ['PENDING','RETRYING']:
+        return 0
+    else:
+        return -1
 
 
 def globus_transfer_to_tiger(raw_rel_path):
