@@ -42,17 +42,29 @@ class RecProcessHandler():
             #Filter current process job
             rec_process_series = df_all_process_job.loc[i, :].copy()
 
-            #TODO get params
-            preprocess_paramset = None
-            process_paramset = None
-            #preprocess_paramset = recording_process.PreprocessParamSet().get_preprocess_params({'preprocess_paramset_idx':rec_process_series['preprocess_paramset_idx']})
-            #process_paramset    = recording_process.ProcessParamSet().get_process_params({'process_paramset_idx': rec_process_series['process_paramset_idx']})
+            if rec_process_series['recording_modality'] == 'ephys':
+                
+                precluster_param_list_id, paramset_idx = (recording_process.Processing.EphysParams & rec_process_series).fetch1('precluster_param_list_id', 'paramset_idx')
+                
+                precluster_param_list = (ephys_element.PreClusterParamList.ParamOrder & f'precluster_param_list_id={precluster_param_list_id}').fetch()
+
+                rec_process_series['preprocess_paramset'] = []
+                for precluster_param in precluster_param_list:
+                    params = (ephys_element.PreClusterParamSet & f'paramset_idx={precluster_param["paramset_idx"]}').fetch1('params')
+                    
+                    rec_process_series['preprocess_paramset'].append(dict(
+                        order_id=precluster_param['order_id'],
+                        params=params))
+
+                rec_process_series['process_paramset'] = (ephys_element.ClusteringParamSet & f'paramset_idx={paramset_idx}').fetch1('params')
+            
+            elif rec_process_series['recording_modality'] == 'imaging':
+                
+                paramset_idx = (recording_process.Processing.ImagingParams & rec_process_series).fetch1('paramset_idx')
+
+                rec_process_series['process_paramset'] = (imaging_element.ProcessingParamSet & f'paramset_idx={paramset_idx}').fetch1('params')
 
             #ALS, correct preprocess params if OLD or outdated
-
-            #Get params inside the recording process series
-            rec_process_series['preprocess_paramset'] = preprocess_paramset
-            rec_process_series['process_paramset'] = process_paramset
 
             #Filter current status info
             current_status = rec_process_series['status_pipeline_idx']
