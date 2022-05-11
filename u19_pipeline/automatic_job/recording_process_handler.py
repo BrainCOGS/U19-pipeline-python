@@ -7,8 +7,9 @@ import re
 import traceback
 import pandas as pd
 import datajoint as dj
-import u19_pipeline.recording as recording
-import u19_pipeline.recording as recording_process
+from u19_pipeline import recording, recording_process
+from u19_pipeline.imaging_pipeline import imaging_element
+from u19_pipeline.ephys_pipeline import ephys_element
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
