@@ -136,8 +136,8 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-scan_schema_name = dj.config['custom']['database.test.prefix'] + 'scan_element_test'
-imaging_schema_name = dj.config['custom']['database.test.prefix'] + 'imaging_element_test'
+scan_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_scan_element'
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_imaging_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location

@@ -1,4 +1,5 @@
 globus-cli
+globus-timer-cli==0.2.9
 scipy
 python-dotenv
 element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git

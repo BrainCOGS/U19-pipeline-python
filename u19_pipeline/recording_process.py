@@ -4,7 +4,7 @@ from u19_pipeline.ephys_pipeline import *
 from u19_pipeline.imaging_pipeline import *
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording_process_test')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
 
 # Declare recording processing tables --------------------------------------------------
 @schema
@@ -77,8 +77,7 @@ class Processing(dj.Manual):
           this_recprocess_key[idx]['recording_id'] = fragment_key['recording_id']
           this_recprocess_key[idx]['fragment_number'] = fragment_key[fragment_fieldname]
           this_recprocess_key[idx]['status_processing_id'] = 0
-
-        print('this_recprocess_key', this_recprocess_key)
+          this_recprocess_key[idx]['recording_process_pre_path'] = fragment_key['recording_process_pre_path']
 
         self.insert(this_recprocess_key)  
 

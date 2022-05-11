@@ -98,8 +98,8 @@ status_update_idx = {
 default_update_value_dict ={
     'value_update': None,
     'error_info': {
-        'recording_error_message': None,
-        'recording_error_exception': None,
+        'error_message': None,
+        'error_exception': None,
     },
 }
 
@@ -201,13 +201,20 @@ all_preprocess_params = {
 ]
 }
 
-
 recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
 recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 RECORDING_PROCESS_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
 system_process = {
-    'SUCCESS': 0
+    'SUCCESS': 0,
+    'ERROR': -1
+}
+
+
+program_selection_params = {
+    'process_cluster': 'tiger',
+    'process_repository': 'BrainCogsEphysSorters',
+    'process_script': 'main_script.py'
 }
 
 
