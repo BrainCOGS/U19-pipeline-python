@@ -1,6 +1,7 @@
 globus-cli
 scipy
 python-dotenv
+datajoint>=0.13.4
 element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
 element-array-ephys @ git+https://github.com/kabilar/element-array-ephys.git
 element-interface @ git+https://github.com/datajoint/element-interface.git
