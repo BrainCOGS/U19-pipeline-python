@@ -110,13 +110,13 @@ def request_globus_transfer_status(job_id):
 
     globus_job_command = ["globus-timer","job","status",job_id,"--verbose"]
     s = subprocess.run(globus_job_command, capture_output=True)
-    job_output = json.loads(s.stdout.decode('UTF-8'))
+    job_output = json.load(s.stdout.decode('UTF-8'))
 
     task_id = job_output['results']['data'][0]['data']['details']['task_id']
 
     globus_task_command = ["globus","task","show",task_id,"--format","json"]
     s = subprocess.run(globus_task_command, capture_output=True)
-    transfer_request = json.loads(s.stdout.decode('UTF-8'))
+    transfer_request = json.load(s.stdout.decode('UTF-8'))
 
     if transfer_request['status'] == 'SUCCEEDED':
         return 1
