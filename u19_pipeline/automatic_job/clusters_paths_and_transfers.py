@@ -116,11 +116,11 @@ def request_globus_transfer_status(job_id):
 
     globus_task_command = ["globus","task","show",task_id,"--format","json"]
     s = subprocess.run(globus_task_command, capture_output=True)
-    transfer_request = json.load(s.stdout.decode('UTF-8'))
+    task_output = json.load(s.stdout.decode('UTF-8'))
 
-    if transfer_request['status'] == 'SUCCEEDED':
+    if task_output['status'] == 'SUCCEEDED':
         return 1
-    elif transfer_request['status'] in ['PENDING','RETRYING']:
+    elif task_output['status'] in ['PENDING','RETRYING']:
         return 0
     else:
         return -1
