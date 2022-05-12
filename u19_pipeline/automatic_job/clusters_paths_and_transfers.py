@@ -32,7 +32,8 @@ slurm_dict_tiger_default = {
     'gres': 'gpu:2',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['END'],
-    'output': 'OutputLog/recording_process_${recording_process_id}".log'
+    'output': 'OutputLog/recording_process_${recording_process_id}".log',
+    'error': 'ErrorLog/recording_process_${recording_process_id}".log'
 }
 slurm_dict_spock_default = {
     'job-name': 'dj_ingestion',
@@ -40,9 +41,8 @@ slurm_dict_spock_default = {
     'cpus-per-task': 1,
     'time': '5:00:00',
     'mem': '24G',
-    'mail-user': 'alvaros@princeton.edu',
-    'mail-type': ['END'],
-    'output': 'OutputLog/recording_process_${recording_process_id}".log'
+    'output': 'OutputLog/recording_process_${recording_process_id}".log',
+    'error': 'ErrorLog/recording_process_${recording_process_id}".log'
 }
 
 
