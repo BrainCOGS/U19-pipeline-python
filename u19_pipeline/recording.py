@@ -2,7 +2,7 @@ import datajoint as dj
 from u19_pipeline import lab, subject, acquisition
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.test.prefix'] + 'recording_test')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
 
 # Declare recording tables -------------------------------------------------------------
 @schema
@@ -40,7 +40,7 @@ class Status(dj.Lookup):
 class Recording(dj.Manual):
      definition = """
      recording_id:  INT(11) AUTO_INCREMENT    # Unique number assigned to recording   
-     -----
+     ---
      -> Modality
      -> lab.Location
      -> Status                                # current status for recording
@@ -71,7 +71,7 @@ class Log(dj.Manual):
      definition = """
      recording_log_id: INT(11) AUTO_INCREMENT # Unique number assigned to each change 
                                               # of status for all recordings
-     -----
+     ---
      -> Recording
      -> Status.proj(status_recording_id_old='status_recording_id') # Previous status
      -> Status.proj(status_recording_id_new='status_recording_id') # Current status
