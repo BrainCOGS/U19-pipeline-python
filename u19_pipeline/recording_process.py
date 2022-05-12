@@ -77,8 +77,7 @@ class Processing(dj.Manual):
           this_recprocess_key[idx]['recording_id'] = fragment_key['recording_id']
           this_recprocess_key[idx]['fragment_number'] = fragment_key[fragment_fieldname]
           this_recprocess_key[idx]['status_processing_id'] = 0
-
-        print('this_recprocess_key', this_recprocess_key)
+          this_recprocess_key[idx]['recording_process_pre_path'] = fragment_key['recording_process_pre_path']
 
         self.insert(this_recprocess_key)  
 

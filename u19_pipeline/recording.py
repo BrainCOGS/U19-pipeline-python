@@ -1,4 +1,6 @@
 import datajoint as dj
+import copy
+
 from u19_pipeline import lab, subject, acquisition
 import u19_pipeline.automatic_job.params_config as config
 
@@ -79,3 +81,58 @@ class Log(dj.Manual):
      recording_error_message=null: VARCHAR(256)     # Error message if status now is failed
      recording_error_exception=null: VARCHAR(4096)  # Error exception if status now is failed
      """
+
+
+@schema
+class DefaultParams(dj.Manual):
+     definition = """
+     -> Recording
+     fragment_number:                   TINYINT(1)  # probe/field_of_view # if not always the same 
+     -----
+     default_same_preparams_all=1:      TINYINT(1)  # by default all probes/fields of view have same preparameters
+     pre_param_list_id:                 INT(11)     # preparams index for recording (could be imaging/ephys)
+     default_same_params_all=1:         TINYINT(1)  # by default all probes/fields of view have same parameters
+     paramset_idx:                      INT(11)     # params index for recording (could be imaging/ephys)
+     """
+
+     @staticmethod
+     def get_default_params_rec_process(recording_processes, default_params_record_df):
+          'Get associated params from DefaultParams record and recording processes (jobs) of recording'
+
+          params_rec_process = list()
+          for i in recording_processes:
+
+               this_params_rec_process = dict()
+               this_params_rec_process['job_id'] = i['job_id']
+               this_fragment = i['fragment_number']
+
+               this_params_rec_process['precluster_param_list_id'] = \
+                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_preparams_all', 'pre_param_list_id')
+
+               this_params_rec_process['paramset_idx'] = \
+                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_params_all', 'paramset_idx')
+
+               params_rec_process.append(this_params_rec_process)
+
+          return params_rec_process
+
+
+     @staticmethod
+     def get_corresponding_param(default_params_record_df, this_fragment, default_label, param_label):
+          'Get corresponding param (pre_param_list_id or paramset_idx) for this fragment'
+
+          'default_label = default_same_preparams_all / default_same_params_all '
+          'param_label   = precluster_param_list_id   / paramset_idx '
+
+          if default_params_record_df.loc[0, default_label] == 1:
+               this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+          else:
+               this_fragment_pre_param_list_id = \
+                    default_params_record_df.loc[default_params_record_df['fragment_number'] == this_fragment, param_label]
+               #If there is no list id for this specific fragment, get default one
+               if this_fragment_pre_param_list_id.shape[0] == 0:
+                    this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+               else:
+                    this_fragment_pre_param_list_id = this_fragment_pre_param_list_id.values[0]
+
+          return this_fragment_pre_param_list_id

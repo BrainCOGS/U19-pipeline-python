@@ -26,31 +26,23 @@ default_process_filename = 'process_paramset_%s.json'
 default_process_script_path = "scripts/automate_imaging_element.py"
 
 
-def generate_parameter_file(record_process_series):
+def generate_parameter_file(recording_process_id, params, type_params, program_selection_params):
     '''
     Generate and send parameter files for processing
     '''
-
-    preprocess_params = record_process_series['preprocess_paramset']
-    recording_process_id = record_process_series['recording_process_id']
-
-    cluster_vars = ft.get_cluster_vars(preprocess_params['process_cluster'])
+    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
     params_file_cluster_path = cluster_vars['params_files_dir']
     user_host = cluster_vars['user']+'@'+cluster_vars['hostname']
 
     #Write preprocessing parameter file
-    write_parameter_file(preprocess_params, recording_process_id, default_preprocess_filename)
-
-    status = transfer_parameter_file(recording_process_id, default_preprocess_filename, params_file_cluster_path, user_host)
-
-    if status == config.system_process['SUCCESS']:
-        #Write processing parameter file
-        write_parameter_file(record_process_series['process_paramset'], recording_process_id, default_process_filename)
-
+    if type_params == 'preparams':
+        write_parameter_file(params, recording_process_id, default_preprocess_filename)
+        status = transfer_parameter_file(recording_process_id, default_preprocess_filename, params_file_cluster_path, user_host)
+    else:
+        write_parameter_file(params, recording_process_id, default_process_filename)
         status = transfer_parameter_file(recording_process_id, default_process_filename, params_file_cluster_path, user_host)
 
     return status
-
 
 
 def write_parameter_file(params, recording_process_id, default_param_filename):

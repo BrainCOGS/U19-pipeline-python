@@ -35,11 +35,10 @@ def exception_handler(func):
              argout = func(*args, **kwargs)
              return argout
         except Exception as e:
-            print('Soy exception ................')
+            print('Exception HERE ................')
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
-            update_value_dict['error_info']['recording_error_message'] = str(e)
-            update_value_dict['error_info']['recording_error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
-            print(config.RECORDING_STATUS_ERROR_ID)
+            update_value_dict['error_info']['error_message'] = str(e)
+            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
@@ -72,12 +71,12 @@ class RecordingHandler():
 
             #Trigger process, if success update recording process record
             try:
-                success_process, update_dict = function_status_process(recording_series, next_status_series) 
+                status, update_dict = function_status_process(recording_series, next_status_series) 
 
                 #Get dictionary of record process
                 key = recording_series['query_key']
 
-                if success_process == 1:
+                if status == config.status_update_idx['NEXT_STATUS']:
                     #Get values to update
                     next_status = next_status_series['Value']
                     value_update = update_dict['value_update']
@@ -86,12 +85,12 @@ class RecordingHandler():
                     RecordingHandler.update_status_pipeline(key, next_status, field_update, value_update)
                 
                 #An error occurred in process
-                if success_process == -1:
+                if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecordingHandler.update_status_pipeline(key,next_status, None, None)
 
                 #if success or error update status timestamps table
-                if success_process != 0:
+                if status != config.status_update_idx['NO_CHANGE']:
                     RecordingHandler.update_recording_log(recording_series['recording_id'], current_status, next_status, update_dict['error_info'])
 
 
@@ -163,7 +162,7 @@ class RecordingHandler():
                 status_update = config.status_update_idx['NEXT_STATUS']
             else:
                 status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['recording_error_message'] = 'Return code scp not = 0'
+                update_value_dict['error_info']['error_message'] = 'Return code scp not = 0'
 
         print('is_finished', is_finished, 'status_update', status_update)
 
@@ -198,18 +197,40 @@ class RecordingHandler():
         process_unit_dir_fieldname = process_unit_fieldnames['ProcessUnitDirectoryField']
         process_unit_fieldname     = process_unit_fieldnames['ProcessUnitField']
 
-
-
         if rec_series['recording_modality'] == 'electrophysiology':
 
+            #Insert first ephysSession and firs tables of ephys elements
             ephys_pipeline.EphysPipelineSession.populate(rec_series['query_key'])
             ephys_element_ingest.process_session(rec_series['query_key'])
             ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
 
-            probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch("KEY")
-            recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
+            ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series['query_key']).fetch("KEY", as_dict=True)
 
-            #recording_process.Processing.insert
+            if len(ingested_recording) == 0:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Recording was not ingested (probably recording not in location)'
+                return (status_update, update_value_dict)
+
+            #Insert recording processes records
+            old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
+            if len(old_recording_process) == 0:
+
+                connection = recording.Recording.connection 
+                with connection.transaction:
+                            
+                    probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch(as_dict=True)
+
+                    probe_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parents[0].as_posix()) for item in probe_files]
+
+                    recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
+
+                    #Get parameters for recording processes
+                    recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', as_dict=True)
+                    default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
+                    params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
+                    recording_process.Processing.EphysParams.insert(params_rec_process)
+            
+            status_update = config.status_update_idx['NEXT_STATUS']
             
         '''
         elif rec_series['recording_modality'] == 'imaging':
@@ -338,8 +359,8 @@ class RecordingHandler():
         key['status_recording_id_old'] = current_status
         key['status_recording_id_new'] = next_status
         key['recording_status_timestamp'] = date_time
-        key['recording_error_message'] = error_info_dict['recording_error_message']
-        key['recording_error_exception'] = error_info_dict['recording_error_exception']
+        key['recording_error_message'] = error_info_dict['error_message']
+        key['recording_error_exception'] = error_info_dict['error_exception']
 
         recording.Log.insert1(key)
 

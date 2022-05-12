@@ -40,8 +40,8 @@ For more detail, check the docstring of the ephys element:
 """
 
 # 1. Schema names
-probe_schema_name = dj.config['custom']['database.prefix'] + 'probe_element'
-ephys_schema_name = dj.config['custom']['database.prefix'] + 'ephys_element'
+probe_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_probe_element'
+ephys_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_ephys_element'
 
 # 2. Upstream tables
 reference_schema = dj.schema(dj.config['custom']['database.prefix'] + 'reference')

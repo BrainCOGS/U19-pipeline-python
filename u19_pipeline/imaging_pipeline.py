@@ -12,8 +12,7 @@ from element_calcium_imaging import imaging as imaging_element
 from element_interface.utils import find_full_path
 
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + \
-                                    'imaging_pipeline')
+schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
 
 # Declare upstream imaging tables ------------------------------------------------------
 @schema
@@ -137,8 +136,8 @@ For more detail, check the docstring of the element:
 """
 
 # 1. Schema names ----------------------------------------------------------------------
-scan_schema_name = dj.config['custom']['database.test.prefix'] + 'scan_element_test'
-imaging_schema_name = dj.config['custom']['database.test.prefix'] + 'imaging_element_test'
+scan_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_scan_element'
+imaging_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_imaging_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
 from u19_pipeline.reference import BrainArea as Location
@@ -159,30 +158,36 @@ def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
     return data_dir if data_dir else None
 
-def get_scan_image_files(scan_key):
+def get_scan_image_files(rec_process_key):
 
-    # Folder structure: root / subject / session / .tif (raw)
-    sess_dir = (ImagingPipelineSession & scan_key).fetch1('session_dir')
+    data_dir = get_imaging_root_data_dir()
 
-    if not find_full_path(get_imaging_root_data_dir(), sess_dir).exists():
-        raise FileNotFoundError(f'Session directory ({sess_dir}) not found.')
+    rec_process = (ImagingPipelineSession & rec_process_key).fetch1()
+    scan_key = rec_process.copy()
+    # scan_key.pop('recording_process_id')
 
-    scan_filepaths = (FieldOfView.File * FieldOfView & 
-                        scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    print('get_scan_image_files  .........')
+    print('rec_process_key', rec_process_key, 'scan_key', scan_key)
 
-    scan_filepaths['fov_filename'] = [x[1:] if x[0] == '/' else x 
-                                      for x in scan_filepaths['fov_filename']]
+    #fov_key = scan_key.copy()
+    #Replace scan_id with fov, we are going to search files by fov
+    #if 'scan_id' in fov_key:
+    #    fov_key['fov'] = fov_key.pop('scan_id')
+    scan_filepaths_ori = (FieldOfView.File * FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
 
-    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(),
-                                     pathlib.Path(scan_filepaths['fov_directory']) / 
-                                     scan_filepaths['fov_filename']).as_posix() 
-                      for fp in scan_filepaths]
+    scan_filepaths_conc = list()
+    for i in range(len(scan_filepaths_ori)):
+        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['fov_directory']) / scan_filepaths_ori[i]['fov_filename']).as_posix())
 
+    # if rel paths start with / remove it for Pathlib library
+    # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
+
+    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), x).as_posix() for x in scan_filepaths_conc]
+ 
     if tiff_filepaths:
         return tiff_filepaths
     else:
-        raise FileNotFoundError(f'No tiff file found in {sess_dir}')
-
+        raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
 
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
