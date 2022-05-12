@@ -99,26 +99,68 @@ def scp_file_transfer(source, dest):
     return transfer_status
 
 
-def request_globus_transfer2(source, destination):
+def request_globus_transfer_status(job_id):
 
-    globus_command = ["globus", "transfer", source, destination, '--recursive', '--format', 'json']
-    #print(globus_command)
-    #s = subprocess.run(globus_command, capture_output=True)
-    #transfer_request = json.loads(s.stdout.decode('UTF-8'))
     transfer_request = dict()
-    transfer_request['code'] = 'Accepted'
-    transfer_request['task_id'] = dict_to_uuid({'test':1})
+
+    globus_job_command = ["globus-timer","job","status",job_id,"--verbose"]
+    s = subprocess.run(globus_job_command, capture_output=True)
+
+    if len(s.stderr) == 0:
+        print(s.stdout)
+    else:
+        print(s.stderr)
+
+    job_output = json.loads(s.stdout.decode('UTF-8'))
+
+    task_id = job_output['results']['data'][0]['data']['details']['task_id']
+
+    globus_task_command = ["globus","task","show",task_id,"--format","json"]
+    s = subprocess.run(globus_task_command, capture_output=True)
+    task_output = json.loads(s.stdout.decode('UTF-8'))
+
+    print(task_output)
+
+    if task_output['status'] == 'SUCCEEDED':
+        transfer_request['status'] = config.system_process['COMPLETED']
+    elif task_output['status'] in ['PENDING','RETRYING', 'ACTIVE']:
+        transfer_request['status'] = config.system_process['SUCCESS']
+    else:
+        transfer_request['status'] = config.system_process['ERROR']
+
     return transfer_request
 
 
-def request_globus_transfer_status(id_task):
+def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath):
 
-    globus_command = ["globus", "task", "show", id_task, '--format', 'json']
-    #print(globus_command)
-    #s = subprocess.run(globus_command, capture_output=True)
-    #transfer_request = json.loads(s.stdout.decode('UTF-8'))
     transfer_request = dict()
-    transfer_request['status'] = 'SUCCEEDED'
+
+    now = datetime.now()
+    date_time = now.strftime("%Y-%m-%dT23:59:59")
+
+    globus_command = ["globus-timer", "job", "transfer", 
+    "--name",   job_id_str,
+    "--label",  job_id_str,
+    "--interval", "72h",
+    "--stop-after-date", date_time,
+    "--source-endpoint", source_ep,
+    "--dest-endpoint", dest_ep,
+    "--item",  source_filepath, dest_filepath, "true",
+    "--verbose"]
+        
+    p = subprocess.run(globus_command, capture_output=True)
+
+    if len(p.stderr) == 0:
+        dict_output = json.loads(p.stdout.decode('UTF-8'))
+        #dict_output = translate_globus_output(p.stdout)
+        print(dict_output)
+        transfer_request['status'] = config.system_process['SUCCESS']
+        transfer_request['task_id'] = dict_output['job_id']
+    else:
+        print(p.stderr)
+        transfer_request['status'] = config.system_process['ERROR']
+        transfer_request['error_info'] = p.stderr.decode('UTF-8')
+        
     return transfer_request
 
 
@@ -146,41 +188,6 @@ def globus_transfer_to_pni(job_id, processed_rel_path, modality):
 
     transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
     
-    return transfer_request
-
-
-def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath):
-
-    transfer_request = dict()
-
-    now = datetime.now()
-    date_time = now.strftime("%Y-%m-%dT23:59:59")
-
-    globus_command = ["globus-timer", "job", "transfer", 
-    "--name",   job_id_str,
-    "--label",  job_id_str,
-    "--interval", "72h",
-    "--stop-after-date", date_time,
-    "--source-endpoint", source_ep,
-    "--dest-endpoint", dest_ep,
-    "--item",  source_filepath, dest_filepath, "true",
-    "--verbose"]
-    
-    print(globus_command)
-    
-    p = subprocess.run(globus_command, capture_output=True)
-
-    if len(p.stderr) == 0:
-        print("p.stdout", p.stdout)
-        dict_output = translate_globus_output(p.stdout)
-        print(dict_output)
-        transfer_request['code'] = config.system_process['SUCCESS']
-        transfer_request['task_id'] = dict_output['Job ID']
-
-    else:
-         transfer_request['code'] = config.system_process['ERROR']
-        
-
     return transfer_request
 
 def translate_globus_output(stdout_process):
