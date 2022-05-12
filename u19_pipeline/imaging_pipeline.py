@@ -149,7 +149,10 @@ lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
 @lab_schema
 class Equipment(dj.Manual):
     definition = """
-    scanner: varchar(32)
+    equipment             : varchar(32)
+    ---
+    modality              : varchar(64)
+    description=null      : varchar(256)
     """
 
 # 3. Utility functions -----------------------------------------------------------------
