@@ -41,6 +41,7 @@ slurm_dict_spock_default = {
     'cpus-per-task': 1,
     'time': '5:00:00',
     'mem': '24G',
+    'mail-type': ['END', 'FAIL'],
     'output': 'OutputLog/recording_process_${recording_process_id}".log',
     'error': 'ErrorLog/recording_process_${recording_process_id}".log'
 }
