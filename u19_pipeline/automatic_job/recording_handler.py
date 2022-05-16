@@ -1,31 +1,18 @@
 
-import os
 import pathlib
-import subprocess
-import json
 import time
 import traceback
-import re
 import pandas as pd
 import datajoint as dj
 import copy
 
 from datetime import datetime
 from u19_pipeline import recording, ephys_pipeline, imaging_pipeline, recording, recording_process, lab
-import u19_pipeline
 
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.utils.scp_transfers as scp_tr
-import u19_pipeline.utils.path_utils as pu
 
-import u19_pipeline.ingest as element_ingest
-
-from u19_pipeline.ingest import ephys_element_ingest
-
-
-
-import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
-import u19_pipeline.automatic_job.slurm_creator as slurmlib
+from u19_pipeline.automatic_job import ephys_element_ingest
 import u19_pipeline.automatic_job.params_config as config
 
 
@@ -71,7 +58,7 @@ class RecordingHandler():
 
             #Trigger process, if success update recording process record
             try:
-                status, update_dict = function_status_process(recording_series, next_status_series) 
+                status, update_dict = function_status_process(recording_series) 
 
                 #Get dictionary of record process
                 key = recording_series['query_key']
@@ -103,7 +90,7 @@ class RecordingHandler():
     
     @staticmethod
     @exception_handler
-    def local_transfer_request(rec_series, status_series):
+    def local_transfer_request(rec_series):
         """
         Request a transfer from PNI to Tiger Cluster
         Input:
@@ -135,7 +122,7 @@ class RecordingHandler():
 
     @staticmethod
     @exception_handler
-    def local_transfer_check(rec_series, status_series):
+    def local_transfer_check(rec_series):
         """
         Check status of transfer from local to PNI
         Input:
@@ -310,10 +297,14 @@ class RecordingHandler():
                 recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
 
                 #Get parameters for recording processes
-                recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', as_dict=True)
+                recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', 'recording_process_pre_path', as_dict=True)
                 default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
                 params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
                 recording_process.Processing.EphysParams.insert(params_rec_process)
+
+                #Update recording_process_post_path
+                recording_process.Processing().set_recording_process_post_path(recording_processes)
+
         
         status_update = config.status_update_idx['NEXT_STATUS']
 

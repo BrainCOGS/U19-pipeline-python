@@ -1,7 +1,7 @@
+
+import pathlib
+
 import datajoint as dj
-from u19_pipeline import recording
-from u19_pipeline.ephys_pipeline import ephys_element
-from u19_pipeline.imaging_pipeline import imaging_element
 import u19_pipeline.automatic_job.params_config as config
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
@@ -79,7 +79,21 @@ class Processing(dj.Manual):
           this_recprocess_key[idx]['status_processing_id'] = 0
           this_recprocess_key[idx]['recording_process_pre_path'] = fragment_key['recording_process_pre_path']
 
-        self.insert(this_recprocess_key)  
+        self.insert(this_recprocess_key)
+
+     def set_recording_process_post_path(self, recprocess_keys):
+          '''
+          # Update recording_process_post_path from recording_process keys
+          Input:
+          recprocess_keys          (dict) = Dictionary with job_ids & recording_process_pre_path
+          '''
+
+          for rec_process in recprocess_keys:
+               this_key_dict = dict()
+               this_key_dict['job_id'] = rec_process['job_id']
+               this_key_dict['recording_process_post_path'] = \
+                    pathlib.Path(rec_process['recording_process_pre_path'], 'job_id_' +  str(rec_process['job_id'])).as_posix()
+               self.update1(this_key_dict)
 
 
 @schema
