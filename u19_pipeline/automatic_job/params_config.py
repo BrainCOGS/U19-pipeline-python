@@ -206,8 +206,9 @@ recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 RECORDING_PROCESS_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
 system_process = {
-    'SUCCESS': 0,
-    'ERROR': -1
+    'COMPLETED': 1,
+    'SUCCESS':   0,
+    'ERROR':    -1
 }
 
 

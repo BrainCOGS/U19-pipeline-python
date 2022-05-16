@@ -170,12 +170,11 @@ class RecordingHandler():
 
     @staticmethod
     @exception_handler
-    def modality_preingestion(in_rec_series, status_series):
+    def modality_preingestion(in_rec_series):
         """
         Ingest "first" tables of modality specific recordings
         Input:
         rec_series     (pd.Series)  = Series with information about the recording
-        status_series  (pd.Series)  = Series with information about the next status of the recording (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
                                       = 0  if recording status not to be changed 
@@ -185,111 +184,15 @@ class RecordingHandler():
                                         'error_info':    error info to be inserted if error occured }
         """
         
-        status_update = config.status_update_idx['NO_CHANGE']
-        update_value_dict = copy.deepcopy(config.default_update_value_dict)
-
         rec_series = in_rec_series.copy()
 
-        # Get fieldname directory for processing unit for current recording modality
-        process_unit_fieldnames = \
-        config.recording_modality_df.loc[config.recording_modality_df['RecordingModality'] == rec_series['recording_modality'], 
-        ['ProcessUnitDirectoryField', 'ProcessUnitField']].squeeze()
-        process_unit_dir_fieldname = process_unit_fieldnames['ProcessUnitDirectoryField']
-        process_unit_fieldname     = process_unit_fieldnames['ProcessUnitField']
-
         if rec_series['recording_modality'] == 'electrophysiology':
+            status_update, update_value_dict = RecordingHandler.electrophysiology_preingestion(rec_series)
 
-            #Insert first ephysSession and firs tables of ephys elements
-            ephys_pipeline.EphysPipelineSession.populate(rec_series['query_key'])
-            ephys_element_ingest.process_session(rec_series['query_key'])
-            ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
-
-            ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series['query_key']).fetch("KEY", as_dict=True)
-
-            if len(ingested_recording) == 0:
-                status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'Recording was not ingested (probably recording not in location)'
-                return (status_update, update_value_dict)
-
-            #Insert recording processes records
-            old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
-            if len(old_recording_process) == 0:
-
-                connection = recording.Recording.connection 
-                with connection.transaction:
-                            
-                    probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch(as_dict=True)
-
-                    probe_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parents[0].as_posix()) for item in probe_files]
-
-                    recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
-
-                    #Get parameters for recording processes
-                    recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', as_dict=True)
-                    default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
-                    params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
-                    recording_process.Processing.EphysParams.insert(params_rec_process)
+        if rec_series['recording_modality'] == 'imaging':
+            status_update, update_value_dict = RecordingHandler.imaging_preingestion(rec_series)
             
-            status_update = config.status_update_idx['NEXT_STATUS']
-            
-        '''
-        elif rec_series['recording_modality'] == 'imaging':
-            
-            this_modality_recording_table = imaging_pipeline.ImagingPipelineSession
-            element_recording_table       = imaging_pipeline.scan_element.Scan
-
-            #print('imaging scan insert', rec_series)
-            #this_modality_recording_table.populate(rec_series['query_key'])
-
-            # Insert this modality recording and recording "unit"
-            #imaging_rec.ScanInfo.populate(rec_series['query_key'])
-            
-        
-        # Insert this modality recording and recording "unit"
-        print('............... before ')
-        print(rec_series['query_key'])
-        this_modality_recording_table.populate(rec_series['query_key'])
-       
-        # Get all recording probes ("units") from this recording 
-        recording_units = (this_modality_recording_unit_table  & rec_series['query_key']).fetch(as_dict=True)
-
-        print('recording_units', recording_units)
-
-        if len(recording_units) > 0:
-            # Select only primary keys for recording unit (EphysRecordingProbes, FieldOfView, etc)
-            rec_units_primary_key_fields = dj_short.get_primary_key_fields(this_modality_recording_unit_table)
-            
-            rec_process_table = recording.RecordingProcess()
-
-            # rename default process params (from recording) to process params
-            rec_series['preprocess_paramset_idx'] = rec_series.pop('def_preprocess_paramset_idx')
-            rec_series['process_paramset_idx'] = rec_series.pop('def_process_paramset_idx')
-
-            #Insert recording Process for all ("units") (one by one to get matching recording process id)
-            connection = recording_process.Processing.connection 
-            with connection.transaction:
-                for rec_unit in recording_units:
-
-                    #Insert recording process and associated ephysProcessing records for this probe                    
-                    rec_process_table.insert_recording_process(rec_series, rec_unit, process_unit_dir_fieldname, process_unit_fieldname)
-                    recording_process = recording_process.Processing.fetch('recording_process_id', order_by='recording_process_id DESC', limit=1)
-
-                    print('recording_process', recording_process)
-
-                    # Get recording unit key fields
-                    recording_unit_key = {k: v for k, v in rec_unit.items() if k in rec_units_primary_key_fields}
-                   
-                    #Insert modality processing unit
-                    this_mod_processing = recording_unit_key.copy()
-                    this_mod_processing['recording_process_id'] = recording_process[0] 
-
-                    print('this_mod_processing', this_mod_processing)
-
-                    this_modality_processing_unit_table.insert1(this_mod_processing)
-            status_update = config.status_update_idx['NEXT_STATUS']
-
-        '''
-        
+              
         return (status_update, update_value_dict)
 
 
@@ -363,4 +266,79 @@ class RecordingHandler():
         key['recording_error_exception'] = error_info_dict['error_exception']
 
         recording.Log.insert1(key)
+
+
+    @staticmethod
+    def electrophysiology_preingestion(rec_series):
+        """
+        Ingest "first" tables of ephys_pipelne, ephys_ement tables and recording_process.Processing
+        Input:
+        rec_series     (pd.Series)  = Series with information about the recording
+        Returns:
+        status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
+                                      = 0  if recording status not to be changed 
+                                      = -1 if recording status has to be updated to ERROR in recording.Recording
+        update_value_dict   (dict)    = Dictionary with next keys:
+                                        {'value_update': value to be updated in this stage (if applicable)
+                                        'error_info':    error info to be inserted if error occured }
+        """
+
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
+
+        #Insert first ephysSession and firs tables of ephys elements
+        ephys_pipeline.EphysPipelineSession.populate(rec_series['query_key'])
+        ephys_element_ingest.process_session(rec_series['query_key'])
+        ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
+
+        ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series['query_key']).fetch("KEY", as_dict=True)
+
+        if len(ingested_recording) == 0:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'Ephys Recording was not ingested (probably recording not in location)'
+            return (status_update, update_value_dict)
+
+        #Insert recording processes records
+        old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
+        if len(old_recording_process) == 0:
+
+            connection = recording.Recording.connection 
+            with connection.transaction:
+                        
+                probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch(as_dict=True)
+                probe_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parents[0].as_posix()) for item in probe_files]
+
+                recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
+
+                #Get parameters for recording processes
+                recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', as_dict=True)
+                default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
+                params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
+                recording_process.Processing.EphysParams.insert(params_rec_process)
+        
+        status_update = config.status_update_idx['NEXT_STATUS']
+
+        return (status_update, update_value_dict)
+
+
+    @staticmethod
+    def imaging_preingestion(rec_series):
+        """
+        Ingest "first" tables of imaging_pipeline, imaging_ement tables and recording_process.Processing
+        Input:
+        rec_series     (pd.Series)  = Series with information about the recording
+        Returns:
+        status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
+                                      = 0  if recording status not to be changed 
+                                      = -1 if recording status has to be updated to ERROR in recording.Recording
+        update_value_dict   (dict)    = Dictionary with next keys:
+                                        {'value_update': value to be updated in this stage (if applicable)
+                                        'error_info':    error info to be inserted if error occured }
+        """
+
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
+
+        status_update = config.status_update_idx['ERROR_STATUS']
+        update_value_dict['error_info']['error_message'] = 'Imaging preingestion not implemented'
+
+        return (status_update, update_value_dict)
 
