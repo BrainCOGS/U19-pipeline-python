@@ -1,7 +1,7 @@
 import datajoint as dj
 from u19_pipeline import recording
-from u19_pipeline.ephys_pipeline import *
-from u19_pipeline.imaging_pipeline import *
+from u19_pipeline.ephys_pipeline import ephys_element
+from u19_pipeline.imaging_pipeline import imaging_element
 import u19_pipeline.automatic_job.params_config as config
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
@@ -87,7 +87,7 @@ class Log(dj.Manual):
      definition = """
      log_id: INT(11) AUTO_INCREMENT           # Unique number assigned to each change 
                                               # of status for all processing jobs
-     -----
+     ---
      -> Processing
      -> Status.proj(status_processing_id_old='status_processing_id') # Previous status
      -> Status.proj(status_processing_id_new='status_processing_id') # Current status

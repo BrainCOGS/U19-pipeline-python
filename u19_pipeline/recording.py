@@ -42,7 +42,7 @@ class Status(dj.Lookup):
 class Recording(dj.Manual):
      definition = """
      recording_id:  INT(11) AUTO_INCREMENT    # Unique number assigned to recording   
-     -----
+     ---
      -> Modality
      -> lab.Location
      -> Status                                # current status for recording
@@ -73,7 +73,7 @@ class Log(dj.Manual):
      definition = """
      recording_log_id: INT(11) AUTO_INCREMENT # Unique number assigned to each change 
                                               # of status for all recordings
-     -----
+     ---
      -> Recording
      -> Status.proj(status_recording_id_old='status_recording_id') # Previous status
      -> Status.proj(status_recording_id_new='status_recording_id') # Current status
