@@ -124,15 +124,21 @@ class DefaultParams(dj.Manual):
           'default_label = default_same_preparams_all / default_same_params_all '
           'param_label   = precluster_param_list_id   / paramset_idx '
 
-          if default_params_record_df.loc[0, default_label] == 1:
-               this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+          #If there is no default params for this recording, get default ones (0 id)
+          if default_params_record_df.shape[0] == 0:
+               this_fragment_pre_param_list_id = 0
+               return this_fragment_pre_param_list_id
+
           else:
-               this_fragment_pre_param_list_id = \
-                    default_params_record_df.loc[default_params_record_df['fragment_number'] == this_fragment, param_label]
-               #If there is no list id for this specific fragment, get default one
-               if this_fragment_pre_param_list_id.shape[0] == 0:
+               if default_params_record_df.loc[0, default_label] == 1:
                     this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
                else:
-                    this_fragment_pre_param_list_id = this_fragment_pre_param_list_id.values[0]
+                    this_fragment_pre_param_list_id = \
+                         default_params_record_df.loc[default_params_record_df['fragment_number'] == this_fragment, param_label]
+                    #If there is no list id for this specific fragment, get default one
+                    if this_fragment_pre_param_list_id.shape[0] == 0:
+                         this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+                    else:
+                         this_fragment_pre_param_list_id = this_fragment_pre_param_list_id.values[0]
 
-          return this_fragment_pre_param_list_id
+               return this_fragment_pre_param_list_id

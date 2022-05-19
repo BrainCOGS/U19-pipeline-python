@@ -34,8 +34,6 @@ def process_session(sess_key):
     sess_dir = pathlib.Path(get_session_directory(sess_key))
     ephys_meta_filepaths = [fp for fp in sess_dir.rglob('*.ap.meta')]
 
-    print('sess_dir', 'sess_dir', sess_dir)
-
     if not len(ephys_meta_filepaths):
         print(f'No SpikeGLX data found for session:{sess_key} - at {sess_dir}')
         return

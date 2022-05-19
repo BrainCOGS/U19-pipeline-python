@@ -403,6 +403,15 @@ class RecProcessHandler():
         key['status_processing_id_new'] = next_status
         key['status_timestamp'] = date_time
         key['error_message'] = error_info_dict['error_message']
+
+
+        
+        print("......... error_info_dict['error_message']", len(error_info_dict['error_message']))
+        print("......... error_info_dict['error_exception']", len(error_info_dict['error_exception']))
+        if len(error_info_dict['error_exception']) >= 4096:
+            error_info_dict['error_exception'] =error_info_dict['error_exception'][:4095]
+        print('.........', len(error_info_dict['error_exception']))
+
         key['error_exception'] = error_info_dict['error_exception']
 
         recording_process.Log.insert1(key)
