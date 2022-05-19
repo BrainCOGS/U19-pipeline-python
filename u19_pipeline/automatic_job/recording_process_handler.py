@@ -321,6 +321,40 @@ class RecProcessHandler():
         return params_df
 
     @staticmethod
+    def get_imaging_params_jobs(rec_process_keys):
+        '''
+        get all parameters (precluster & cluster) for each of the recording process
+        Join precluster param list into a list
+        Args:
+            rec_process_keys (dict): key to find recording_process records
+        Return:
+            params_df (pd.DataFrame): recording_process & params df
+        '''
+
+        # Get process param sets
+        params_df = pd.DataFrame((imaging_pipeline.imaging_element.ProcessingParamSet.proj('params') * \
+        recording_process.Processing.ImagingParams.proj('paramset_idx') \
+        & rec_process_keys).fetch(as_dict=True))
+        params_df = params_df.drop('paramset_idx', axis=1)
+
+        # Get preprocess param sets
+        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreClusterParamList * \
+        utility.smart_dj_join(imaging_pipeline.imaging_element.PreProcessParamList.ParamOrder, imaging_pipeline.imaging_element.PreClusterParamSet.proj('preprocess_method', 'params')) *
+        recording_process.Processing.ImagingParams.proj('precluster_param_list_id') \
+        & rec_process_keys).fetch(as_dict=True))
+        
+        # Join precluster params for the same recording_process
+        preparams_df['preparams'] = preparams_df.apply(lambda x : {x['precluster_method']: x['params']}, axis=1)
+        preparams_df = preparams_df.sort_values(by=['job_id', 'order_id'])
+        preparams_df = preparams_df[['job_id', 'preparams']].groupby("job_id").agg(lambda x: list(x))
+        preparams_df = preparams_df.reset_index()
+
+        params_df = params_df.merge(preparams_df)
+
+        return params_df
+
+
+    @staticmethod
     def update_status_pipeline(recording_process_key_dict, status, update_field=None, update_value=None):
         """
         Update recording.RecordingProcess table status and optional task field
