@@ -111,26 +111,26 @@ class RecProcessHandler():
         proc_rel_path = rec_series['recording_process_post_path']
         modality = rec_series['recording_modality']
 
-        print('directory_path', directory_path)
-
-        print('process_cluter:', rec_series['program_selection_params']['process_cluster'])
-
         # If tiger, we trigger globus transfer 
         if rec_series['program_selection_params']['process_cluster'] == "tiger":
-            print('si fue tiger')
+
             if status_series['Key'] is 'RAW_FILE_TRANSFER_REQUEST':
                 transfer_request = ft.globus_transfer_to_tiger(job_id, raw_rel_path, modality)
             elif status_series['Key'] is 'PROC_FILE_TRANSFER_REQUEST':
                 #ALS, which recording directory for processed file
                 transfer_request = ft.globus_transfer_to_pni(job_id, proc_rel_path, modality)
 
-            if transfer_request['code'] == config.system_process['SUCCESS']:
-                status_update = True
+            if transfer_request['status'] == config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['NEXT_STATUS']
                 update_value_dict['value_update'] = transfer_request['task_id']
+            
+            else:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = transfer_request['error_info']
+                
         # If not tiger let's go to next status
         else:
-            print('si fue spock')
-            status_update = True
+            status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
 
@@ -153,11 +153,15 @@ class RecProcessHandler():
 
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        id_task = status_series['FunctionField']
+        id_task = rec_series[status_series['FunctionField']]
 
         transfer_request = ft.request_globus_transfer_status(str(id_task))
-        if transfer_request['status'] == 'SUCCEEDED':
-            status_update = True
+
+        if transfer_request['status'] == config.system_process['COMPLETED']:
+            status_update = config.status_update_idx['NEXT_STATUS']
+        elif transfer_request['status'] == config.system_process['ERROR']:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'An error occured during globus transfer'
 
         return (status_update, update_value_dict)
     
@@ -272,18 +276,24 @@ class RecProcessHandler():
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)
             df_process_jobs['query_key'] = df_process_jobs.loc[:, key_list].to_dict(orient='records')
 
-        # Get parameters for all modalities
-        all_modalities = df_process_jobs['recording_modality'].unique()
-        for this_modality in all_modalities:
+            # Get parameters for all modalities
+            all_modalities = df_process_jobs['recording_modality'].unique()
+            for this_modality in all_modalities:
 
-            this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
-            these_process_keys = this_mod_df['query_key'].to_list()
+                this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
+                these_process_keys = this_mod_df['query_key'].to_list()
 
-            if this_modality == 'electrophysiology':
-                params_df = RecProcessHandler.get_ephys_params_jobs(these_process_keys)
-                df_process_jobs = df_process_jobs.merge(params_df, how='left')
+                if this_modality == 'electrophysiology':
+                    params_df = RecProcessHandler.get_ephys_params_jobs(these_process_keys)
+                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
-        df_process_jobs['program_selection_params'] = [config.program_selection_params for _ in range(df_process_jobs.shape[0])]
+                if this_modality == 'imaging':
+                    pass
+                    #params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
+                    #df_process_jobs = df_process_jobs.merge(params_df, how='left')
+
+
+            df_process_jobs['program_selection_params'] = [config.program_selection_params for _ in range(df_process_jobs.shape[0])]
 
         return df_process_jobs
 
@@ -323,8 +333,7 @@ class RecProcessHandler():
     @staticmethod
     def get_imaging_params_jobs(rec_process_keys):
         '''
-        get all parameters (precluster & cluster) for each of the recording process
-        Join precluster param list into a list
+        get all imaging parameters for each of the recording process
         Args:
             rec_process_keys (dict): key to find recording_process records
         Return:
