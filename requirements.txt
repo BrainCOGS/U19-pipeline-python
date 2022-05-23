@@ -1,10 +1,19 @@
+globus-cli
+globus-timer-cli==0.2.9
 scipy
 python-dotenv
-element-calcium-imaging
-element-array-ephys
+element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
+element-array-ephys @ git+https://github.com/kabilar/element-array-ephys.git
+element-interface @ git+https://github.com/datajoint/element-interface.git
 scanreader @ git+https://github.com/atlab/scanreader.git
 pandas
 numpy
 astropy
 jupyterlab
 bitstring
+suite2p @ git+https://github.com/MouseLand/suite2p.git
+cellpose
+scp
+paramiko
+psutil
+deeplabcut

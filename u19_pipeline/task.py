@@ -22,24 +22,6 @@ class Task(dj.Lookup):
 
 
 @schema
-class ParameterCategory(dj.Lookup):
-    definition = """
-    parameter_category   : varchar(16)
-    """
-    contents = zip(['maze', 'criterion', 'visible'])
-
-
-@schema
-class Parameter(dj.Lookup):
-    definition = """
-    parameter            : varchar(32)
-    ---
-    -> ParameterCategory
-    parameter_description="" : varchar(255)                 # info such as the unit
-    """
-
-
-@schema
 class TaskLevelParameterSet(dj.Lookup):
     definition = """
     -> Task
@@ -47,12 +29,3 @@ class TaskLevelParameterSet(dj.Lookup):
     set_id=1             : int                          # parameter set id
     """
 
-
-@schema
-class TaskParameter(dj.Lookup):
-    definition = """
-    -> TaskLevelParameterSet
-    -> Parameter
-    ---
-    parameter_value      : blob
-    """
