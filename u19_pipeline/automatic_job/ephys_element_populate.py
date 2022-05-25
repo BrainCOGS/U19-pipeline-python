@@ -7,8 +7,6 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                          'reserve_jobs': reserve_jobs, 
                          'suppress_errors': suppress_errors}
 
-    ephys_element.EphysRecording.populate(**populate_settings)
-
     for key in (recording_process.Processing * recording.Recording & 
                             dict(recording_modality='electrophysiology', 
                                  status_processing_id=7)).fetch('KEY'):
