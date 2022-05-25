@@ -50,7 +50,7 @@ class Processing(dj.Manual):
           -> master
           ---
           -> ephys_element.PreClusterParamList
-          -> ephys_element.ClusteringParamSet
+          -> ephys_element.ClusteringParamSet.proj(cluster_paramset_idx='paramset_idx')
           """
 
      class ImagingParams(dj.Part):
