@@ -9,8 +9,8 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     ephys_element.EphysRecording.populate(**populate_settings)
 
-    for key in (recording_process.Processing * recording.Recording & \
-                            dict(recording_modality='electrophysiology', \
+    for key in (recording_process.Processing * recording.Recording & 
+                            dict(recording_modality='electrophysiology', 
                                  status_processing_id=7)).fetch('KEY'):
 
         recording_id, fragment_number, recording_process_pre_path = \
@@ -19,7 +19,7 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                                                 'fragment_number',
                                                 'recording_process_pre_path')
     
-        precluster_param_list_id = (recording_process.Processing.EphysParams & \
+        precluster_param_list_id = (recording_process.Processing.EphysParams & 
                                                 key).fetch1('precluster_param_list_id')
         
         ephys_element.PreClusterTask.insert1(
@@ -33,8 +33,8 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     ephys_element.LFP.populate(**populate_settings)
 
-    for key in (recording_process.Processing * recording.Recording & \
-                            dict(recording_modality='electrophysiology', \
+    for key in (recording_process.Processing * recording.Recording & 
+                            dict(recording_modality='electrophysiology', 
                                  status_processing_id=7)).fetch('KEY'):
 
         recording_id, fragment_number, recording_process_post_path = \
