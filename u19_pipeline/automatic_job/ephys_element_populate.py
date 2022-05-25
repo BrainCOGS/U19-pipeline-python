@@ -16,7 +16,8 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
         recording_id, fragment_number, recording_process_pre_path = \
                                 (recording_process.Processing & key).fetch1(
                                                 'recording_id', 
-                                                'fragment_number', 'recording_process_pre_path')
+                                                'fragment_number',
+                                                'recording_process_pre_path')
     
         precluster_param_list_id = (recording_process.Processing.EphysParams & \
                                                 key).fetch1('precluster_param_list_id')
@@ -39,11 +40,13 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
         recording_id, fragment_number, recording_process_post_path = \
                                 (recording_process.Processing & key).fetch1(
                                                 'recording_id', 
-                                                'fragment_number', 'recording_process_post_path')
+                                                'fragment_number', 
+                                                'recording_process_post_path')
 
         precluster_param_list_id, cluster_paramset_idx = \
                             (recording_process.Processing.EphysParams & key).fetch1(
-                                                        'precluster_param_list_id', 'cluster_paramset_idx')
+                                                        'precluster_param_list_id', 
+                                                        'cluster_paramset_idx')
 
         ephys_element.ClusteringTask.insert1(
             dict(recording_id=recording_id, 
