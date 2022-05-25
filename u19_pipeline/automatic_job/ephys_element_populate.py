@@ -56,12 +56,17 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                                                         'precluster_param_list_id', 
                                                         'cluster_paramset_idx')
 
+        clustering_method = (ephys_element.ClusteringParamSet & 
+                                dict(paramset_idx=cluster_paramset_idx)).fetch1(
+                                                                'clustering_method')
+
         ephys_element.ClusteringTask.insert1(
             dict(recording_id=recording_id, 
                  insertion_number=fragment_number, 
                  precluster_param_list_id=precluster_param_list_id,
                  paramset_idx=cluster_paramset_idx,
-                 clustering_output_dir=recording_process_post_path+'/kilosort_output',
+                 clustering_output_dir=recording_process_post_path + '/' + \
+                                       clustering_method + '_output',
                  task_mode='load'))
 
     ephys_element.Clustering.populate(**populate_settings)
