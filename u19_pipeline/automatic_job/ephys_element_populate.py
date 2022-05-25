@@ -22,12 +22,22 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
         precluster_param_list_id = (recording_process.Processing.EphysParams & 
                                                 key).fetch1('precluster_param_list_id')
         
+        precluster_paramsets = (ephys_element.PreClusterParamList.ParamOrder() & 
+                                dict(precluster_param_list_id=precluster_param_list_id)
+                               ).fetch('paramset_idx')
+
+        if len(precluster_paramsets)==0 or \
+           (len(precluster_paramsets)==1 and precluster_paramsets[0]==None):
+            task_mode = 'none'
+        else:
+            task_mode = 'load'
+
         ephys_element.PreClusterTask.insert1(
                                 dict(recording_id=recording_id,
                                      insertion_number=fragment_number,
                                      precluster_param_list_id=precluster_param_list_id,
                                      precluster_output_dir=recording_process_pre_path,
-                                     task_mode='load'))
+                                     task_mode=task_mode))
 
     ephys_element.PreCluster.populate(**populate_settings)
 
