@@ -3,8 +3,7 @@ import pathlib
 import numpy as np
 
 from u19_pipeline import behavior
-from u19_pipeline.ephys_pipeline import *
-from u19_pipeline.ephys_pipeline import get_session_directory
+from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
