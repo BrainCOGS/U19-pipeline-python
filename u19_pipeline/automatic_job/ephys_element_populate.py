@@ -26,7 +26,8 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                                 dict(precluster_param_list_id=precluster_param_list_id)
                                ).fetch('paramset_idx')
 
-        if len(precluster_paramsets)==1 and precluster_paramsets[0]==None:
+        if len(precluster_paramsets)==0 or \
+           (len(precluster_paramsets)==1 and precluster_paramsets[0]==None):
             task_mode = 'none'
         else:
             task_mode = 'load'
