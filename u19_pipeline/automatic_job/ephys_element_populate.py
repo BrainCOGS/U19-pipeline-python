@@ -17,11 +17,11 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                                                 'fragment_number',
                                                 'recording_process_pre_path')
     
-        precluster_param_step_id = (recording_process.Processing.EphysParams & 
-                                                key).fetch1('precluster_param_step_id')
+        precluster_param_steps_id = (recording_process.Processing.EphysParams & 
+                                                key).fetch1('precluster_param_steps_id')
         
         precluster_paramsets = (ephys_element.PreClusterParamSteps.Step() & 
-                                dict(precluster_param_step_id=precluster_param_step_id)
+                                dict(precluster_param_steps_id=precluster_param_steps_id)
                                ).fetch('paramset_idx')
 
         if len(precluster_paramsets)==0:
@@ -32,7 +32,7 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
         ephys_element.PreClusterTask.insert1(
                                 dict(recording_id=recording_id,
                                      insertion_number=fragment_number,
-                                     precluster_param_step_id=precluster_param_step_id,
+                                     precluster_param_steps_id=precluster_param_steps_id,
                                      precluster_output_dir=recording_process_pre_path,
                                      task_mode=task_mode))
 
@@ -50,9 +50,9 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
                                                 'fragment_number', 
                                                 'recording_process_post_path')
 
-        precluster_param_step_id, cluster_paramset_idx = \
+        precluster_param_steps_id, cluster_paramset_idx = \
                             (recording_process.Processing.EphysParams & key).fetch1(
-                                                        'precluster_param_step_id', 
+                                                        'precluster_param_steps_id', 
                                                         'cluster_paramset_idx')
 
         clustering_method = (ephys_element.ClusteringParamSet & 
@@ -62,7 +62,7 @@ def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
         ephys_element.ClusteringTask.insert1(
             dict(recording_id=recording_id, 
                  insertion_number=fragment_number, 
-                 precluster_param_step_id=precluster_param_step_id,
+                 precluster_param_steps_id=precluster_param_steps_id,
                  paramset_idx=cluster_paramset_idx,
                  clustering_output_dir=recording_process_post_path + '/' + \
                                        clustering_method + '_output',
