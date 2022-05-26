@@ -5,6 +5,8 @@ python-dotenv
 element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
 element-array-ephys @ git+https://github.com/kabilar/element-array-ephys.git
 element-interface @ git+https://github.com/datajoint/element-interface.git
+ecephys_spike_sorting @ git+https://github.com/AllenInstitute/ecephys_spike_sorting.git
+
 scanreader @ git+https://github.com/atlab/scanreader.git
 pandas
 numpy
@@ -17,3 +19,5 @@ scp
 paramiko
 psutil
 deeplabcut
+matlab
+matlabengineforpython

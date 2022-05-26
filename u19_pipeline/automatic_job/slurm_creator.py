@@ -1,5 +1,6 @@
 
 
+import copy
 import os
 import subprocess
 import pathlib
@@ -11,10 +12,6 @@ import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utils.file_utils import write_file
 
 # Functions to create slurm jobs
-
-slurm_states = {
-    'SUCCESS': 'COMPLETED'
-}
 
 slurms_filepath = 'u19_pipeline/automatic_job/SlurmFiles'
 default_slurm_filename = 'slurm_real.slurm'
@@ -33,11 +30,14 @@ def generate_slurm_file(job_id, program_selection_params):
     cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
 
     # Start with default values
-    slurm_dict = cluster_vars['slurm_default'].copy()
+    slurm_dict = copy.deepcopy(cluster_vars['slurm_default'])
     label_rec_process = 'job_id_'+str(job_id)
     slurm_dict['job-name'] = label_rec_process
 
     slurm_dict['output'] = str(pathlib.Path(cluster_vars['log_files_dir'],label_rec_process+ '.log'))
+    slurm_dict['error'] = str(pathlib.Path(cluster_vars['error_files_dir'],label_rec_process+ '.log'))
+
+    print('slurm_dict', slurm_dict)
 
     if program_selection_params['process_cluster'] == 'spock':
         slurm_text = generate_slurm_spock(slurm_dict)
@@ -87,36 +87,36 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
     #p = os.popen(command_new).read()
     p.wait()
     stdout, stderr = p.communicate()
-    print('stdout', stdout.decode('UTF-8'))
-    print('stderr', stderr.decode('UTF-8'))
-    print('p.returncode', p.returncode)
 
     if p.returncode == config.system_process['SUCCESS']:
+        error_message = ''
         batch_job_sentence = stdout.decode('UTF-8')
         print('batch_job_sentence', batch_job_sentence)
         id_slurm_job   = batch_job_sentence.replace("Submitted batch job ","")
         id_slurm_job   = re.sub(r"[\n\t\s]*", "", id_slurm_job)
+    else:
+        error_message = stderr.decode('UTF-8')
 
-    return p.returncode, id_slurm_job
+    return p.returncode, id_slurm_job, error_message
 
 
-def check_slurm_job(ssh_user, jobid, local_user=False):
+def check_slurm_job(ssh_user, host, jobid, local_user=False):
     
-    state_job = 'FAIL'
     if local_user:
         command = ['sacct', '--job', jobid, '--format=state']
     else:
-        command = ['ssh', ssh_user, 'sacct', '--job', jobid, '--format=state']
+        command = ['ssh', ssh_user+'@'+host, 'sacct', '--job', jobid, '--format=state']
 
-    print(command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
     stdout, stderr = p.communicate()
-    if p.returncode == config.system_process['SUCCESS']:
-        stdout = stdout.decode('UTF-8')
-        state_job = stdout.split("\n")[2].strip()
-        print(stdout)
+    stdout = stdout.decode('UTF-8')
 
+    if p.returncode == config.system_process['SUCCESS']:
+        state_job = stdout.split("\n")[2].strip()
+    else:
+        state_job = config.slurm_states['ERROR']
+        
     return state_job
 
 

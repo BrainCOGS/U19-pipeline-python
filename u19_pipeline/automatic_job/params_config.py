@@ -211,6 +211,12 @@ system_process = {
     'ERROR':    -1
 }
 
+slurm_states = {
+    'COMPLETED': 'COMPLETED',
+    'SUCCESS':   ['PENDING', 'RUNNING'],
+    'ERROR':    'FAILED'
+}
+
 
 program_selection_params = {
     'process_cluster': 'tiger',

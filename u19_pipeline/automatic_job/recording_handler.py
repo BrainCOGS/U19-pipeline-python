@@ -249,6 +249,13 @@ class RecordingHandler():
         key['status_recording_id_old'] = current_status
         key['status_recording_id_new'] = next_status
         key['recording_status_timestamp'] = date_time
+
+        if error_info_dict['error_message'] is not None and len(error_info_dict['error_message']) >= 256:
+            error_info_dict['error_message'] =error_info_dict['error_message'][:255]
+
+        if error_info_dict['error_exception'] is not None and len(error_info_dict['error_exception']) >= 4096:
+            error_info_dict['error_exception'] =error_info_dict['error_exception'][:4095]
+
         key['recording_error_message'] = error_info_dict['error_message']
         key['recording_error_exception'] = error_info_dict['error_exception']
 

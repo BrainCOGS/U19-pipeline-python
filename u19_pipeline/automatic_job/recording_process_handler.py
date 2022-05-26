@@ -4,6 +4,7 @@ import traceback
 import pandas as pd
 import datajoint as dj
 import copy
+import pathlib
 
 from u19_pipeline.automatic_job import recording_handler
 
@@ -105,7 +106,6 @@ class RecProcessHandler():
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        directory_path = status_series['FunctionField']
         job_id = rec_series['job_id']
         raw_rel_path = rec_series['recording_process_pre_path']
         proc_rel_path = rec_series['recording_process_post_path']
@@ -192,23 +192,48 @@ class RecProcessHandler():
         #Create and transfer preparameter file
         if status == config.system_process['SUCCESS']:
             status = paramfilelib.generate_parameter_file(rec_series['job_id'], rec_series['preparams'], 'preparams', rec_series['program_selection_params'])
+        else:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'Error while generating/transfering parameter file'
+
+        #If electrophysiology, transfer chanmap
+        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophysiology':
+            recording_key = (recording_process.Processing.proj('recording_id', insertion_number='fragment_number') & rec_series['query_key']).fetch1()
+            del recording_key["job_id"]
+            
+            chanmap_files_filepath = 'u19_pipeline/automatic_job/ChanMapFiles'
+            default_chanmap_filename = 'chanmap_%s.mat'
+            chanmap_filename = default_chanmap_filename % (rec_series['job_id'])
+            chanmap_file_local_path =  str(pathlib.Path(chanmap_files_filepath,chanmap_filename))
+            raw_directory_for_chanmap = rec_series['recording_process_pre_path']
+
+            ephys_pipeline.generate_chanmap_file(recording_key, raw_directory_for_chanmap, chanmap_file_local_path)
+            status = paramfilelib.generate_chanmap_file(rec_series['job_id'], rec_series['program_selection_params'])
 
         #Create and transfer slurm file
         if status == config.system_process['SUCCESS']:
-            status, slurm_filepath = slurmlib.generate_slurm_file(rec_series)
+            status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])
+        else:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pereparameterfile file'
         
         #Queue slurm file
         if status == config.system_process['SUCCESS']:
 
-            status, slurm_jobid = slurmlib.queue_slurm_file(rec_series['job_id'], rec_series['program_selection_params'],
+            status, slurm_jobid, error_message = slurmlib.queue_slurm_file(rec_series['job_id'], rec_series['program_selection_params'],
             rec_series['recording_process_pre_path'], rec_series['recording_process_post_path'],
             rec_series['recording_modality'], slurm_filepath
             )
-            
+        else:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
+                    
         if status == config.system_process['SUCCESS']:
             status_update = True
             update_value_dict['value_update'] = slurm_jobid
-            #update_status_pipeline(key, status_dict['JOB_QUEUE']['Task_Field'], slurm_jobid, status_dict['JOB_QUEUE']['Value'])
+        else:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = error_message
 
         return (status_update, update_value_dict)
 
@@ -238,22 +263,27 @@ class RecProcessHandler():
             local_user = True
 
         ssh_user = ft.cluster_vars[program_selection_params['process_cluster']]['user']
+        ssh_host = ft.cluster_vars[program_selection_params['process_cluster']]['hostname']
+        slurm_jobid = str(rec_series['slurm_id'])
 
-        slurm_jobid_field = status_series['FunctionField']
-        slurm_jobid = rec_series[slurm_jobid_field]
+        job_status = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
 
-        job_status = slurmlib.check_slurm_job(ssh_user, slurm_jobid, local_user=local_user)
+        #If job finished copy over output and/or error log
+        if job_status == config.slurm_states['ERROR'] or job_status == config.slurm_states['COMPLETED']:
 
-        print('job status', job_status)
-        print(slurmlib.slurm_states['SUCCESS'])
+            status_update = config.status_update_idx['NEXT_STATUS']
 
-        print('job status encode uft8 ', job_status.encode('UTF-8'))
-        print(slurmlib.slurm_states['SUCCESS'].encode('UTF-8'))
+            ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='ERROR')
+            ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
+            error_log = ft.get_error_log_str(rec_series['job_id'])
 
-        if job_status == slurmlib.slurm_states['SUCCESS']:
-            status_update = True
-            print('si fue successss')
+            if error_log:
+                job_status = config.slurm_states['ERROR']
 
+            if job_status == config.slurm_states['ERROR']:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'An error occured in processing'
+                update_value_dict['error_info']['error_exception'] = error_log
 
         return (status_update, update_value_dict)
 
@@ -309,10 +339,13 @@ class RecProcessHandler():
         '''
 
         # Get cluster param sets
-        params_df = pd.DataFrame((ephys_pipeline.ephys_element.ClusteringParamSet.proj('params') * \
+        params_df = pd.DataFrame((ephys_pipeline.ephys_element.ClusteringParamSet.proj('params', 'clustering_method') * \
         recording_process.Processing.EphysParams.proj('paramset_idx') \
         & rec_process_keys).fetch(as_dict=True))
         params_df = params_df.drop('paramset_idx', axis=1)
+
+        #Insert clustering method in params itself (for BrainCogsEphysSorters)
+        params_df['params'] = params_df.apply(lambda x: {**x['params'], **{'clustering_method':x['clustering_method']}},axis=1)
 
         # Get precluster param sets
         preparams_df = pd.DataFrame((ephys_pipeline.ephys_element.PreClusterParamList * \
@@ -381,17 +414,15 @@ class RecProcessHandler():
         key['status_processing_id_old'] = current_status
         key['status_processing_id_new'] = next_status
         key['status_timestamp'] = date_time
-        key['error_message'] = error_info_dict['error_message']
-
-
         
-        print("......... error_info_dict['error_message']", len(error_info_dict['error_message']))
-        print("......... error_info_dict['error_exception']", len(error_info_dict['error_exception']))
-        if len(error_info_dict['error_exception']) >= 4096:
+        if error_info_dict['error_message'] is not None and len(error_info_dict['error_message']) >= 256:
+            error_info_dict['error_message'] =error_info_dict['error_message'][:255]
+
+        if error_info_dict['error_exception'] is not None and len(error_info_dict['error_exception']) >= 4096:
             error_info_dict['error_exception'] =error_info_dict['error_exception'][:4095]
-        print('.........', len(error_info_dict['error_exception']))
 
         key['error_exception'] = error_info_dict['error_exception']
+        key['error_message'] = error_info_dict['error_message']
 
         recording_process.Log.insert1(key)
 
