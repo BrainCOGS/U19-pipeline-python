@@ -30,7 +30,7 @@ class ImagingPipelineSession(dj.Computed):
 
 
 @schema
-class TiffSplitScanInfo(dj.Imported):
+class AcquiredTiff(dj.Imported):
     definition = """
     # metainfo about imaging session
     # `make` function is declared in the `U19-pipeline-matlab`
