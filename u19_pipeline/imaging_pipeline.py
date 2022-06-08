@@ -74,7 +74,7 @@ class TiffSplit(dj.Imported):
     definition = """
     # meta-info about specific FOV within mesoscope imaging session
     # `make` function is declared in the `U19-pipeline-matlab` repository
-    -> ImagingPipelineSession
+    -> AcquiredTiff
     tiff_split           : tinyint                      # number of the tiff split in this scan
     ---
     tiff_split_directory : varchar(255)                 # the absolute directory created for this tiff_split
