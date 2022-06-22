@@ -21,7 +21,8 @@ pni_root_data_dir   = dj.config['custom']['root_data_dir']
 #For tiger endpoint
 default_user     = 'alvaros'                         # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'tigergpu.princeton.edu'
-tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
+#tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
+tiger_ep_dir = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'
 
 #Slurm default values for queue job
 slurm_dict_tiger_default = {
@@ -48,7 +49,8 @@ slurm_dict_spock_default = {
 }
 
 
-tiger_home_dir_globus = '/tiger/scratch/gpfs/BRAINCOGS'    
+#tiger_home_dir_globus = '/tiger/scratch/gpfs/BRAINCOGS'  
+tiger_home_dir_globus = ''    
 tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
 spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python'
 pni_data_dir   = '/mnt/cup/braininit/Data'
@@ -158,6 +160,8 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
     "--dest-endpoint", dest_ep,
     "--item",  source_filepath, dest_filepath, "true",
     "--verbose"]
+
+    print(globus_command)
         
     p = subprocess.run(globus_command, capture_output=True)
 

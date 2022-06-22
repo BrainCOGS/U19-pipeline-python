@@ -97,7 +97,7 @@ class Processing(dj.Manual):
 
 
 @schema
-class Log(dj.Manual):
+class LogStatus(dj.Manual):
      definition = """
      log_id: INT(11) AUTO_INCREMENT           # Unique number assigned to each change 
                                               # of status for all processing jobs

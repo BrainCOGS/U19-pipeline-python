@@ -2,6 +2,7 @@ globus-cli
 globus-timer-cli==0.2.9
 scipy
 python-dotenv
+datajoint
 element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
 element-array-ephys @ git+https://github.com/kabilar/element-array-ephys.git
 element-interface @ git+https://github.com/datajoint/element-interface.git

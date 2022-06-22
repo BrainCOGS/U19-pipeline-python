@@ -259,7 +259,7 @@ class RecordingHandler():
         key['recording_error_message'] = error_info_dict['error_message']
         key['recording_error_exception'] = error_info_dict['error_exception']
 
-        recording.Log.insert1(key)
+        recording.LogStatus.insert1(key)
 
 
     @staticmethod
@@ -307,6 +307,11 @@ class RecordingHandler():
                 recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', 'recording_process_pre_path', as_dict=True)
                 default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
                 params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
+
+                # Rename preprocess_param_steps_id with the electrophysiology one
+                for i in params_rec_process:
+                    i['precluster_param_steps_id'] = i.pop('preprocess_param_steps_id')
+
                 recording_process.Processing.EphysParams.insert(params_rec_process)
 
                 #Update recording_process_post_path

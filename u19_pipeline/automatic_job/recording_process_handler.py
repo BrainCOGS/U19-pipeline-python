@@ -186,8 +186,13 @@ class RecProcessHandler():
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
+        print(rec_series['program_selection_params'])
+
+
         #Create and transfer parameter file
         status = paramfilelib.generate_parameter_file(rec_series['job_id'], rec_series['params'], 'params', rec_series['program_selection_params'])
+
+        print(status)
 
         #Create and transfer preparameter file
         if status == config.system_process['SUCCESS']:
@@ -195,9 +200,10 @@ class RecProcessHandler():
         else:
             status_update = config.status_update_idx['ERROR_STATUS']
             update_value_dict['error_info']['error_message'] = 'Error while generating/transfering parameter file'
+            return (status_update, update_value_dict)
 
         #If electrophysiology, transfer chanmap
-        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophysiology':
+        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophasasysiology':
             recording_key = (recording_process.Processing.proj('recording_id', insertion_number='fragment_number') & rec_series['query_key']).fetch1()
             del recording_key["job_id"]
             
@@ -216,6 +222,7 @@ class RecProcessHandler():
         else:
             status_update = config.status_update_idx['ERROR_STATUS']
             update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pereparameterfile file'
+            return (status_update, update_value_dict)
         
         #Queue slurm file
         if status == config.system_process['SUCCESS']:
@@ -227,13 +234,15 @@ class RecProcessHandler():
         else:
             status_update = config.status_update_idx['ERROR_STATUS']
             update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
+            return (status_update, update_value_dict)
                     
         if status == config.system_process['SUCCESS']:
             status_update = True
             update_value_dict['value_update'] = slurm_jobid
         else:
             status_update = config.status_update_idx['ERROR_STATUS']
-            update_value_dict['error_info']['error_message'] = error_message
+            update_value_dict['error_info']['error_message'] = 'Error while queuing job in SLURM'
+            return (status_update, update_value_dict)
 
         return (status_update, update_value_dict)
 
@@ -296,11 +305,15 @@ class RecProcessHandler():
         '''
 
         status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
-        status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
+        status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max() -1)
 
         jobs_active = (recording.Recording.proj('recording_modality') * \
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
+
+        print(status_query)
+        print(df_process_jobs)
+        print(str(config.recording_process_status_df['Value'].min()))
 
         if df_process_jobs.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)
@@ -348,14 +361,14 @@ class RecProcessHandler():
         params_df['params'] = params_df.apply(lambda x: {**x['params'], **{'clustering_method':x['clustering_method']}},axis=1)
 
         # Get precluster param sets
-        preparams_df = pd.DataFrame((ephys_pipeline.ephys_element.PreClusterParamList * \
-        utility.smart_dj_join(ephys_pipeline.ephys_element.PreClusterParamList.ParamOrder, ephys_pipeline.ephys_element.PreClusterParamSet.proj('precluster_method', 'params')) *
-        recording_process.Processing.EphysParams.proj('precluster_param_list_id') \
+        preparams_df = pd.DataFrame((ephys_pipeline.ephys_element.PreClusterParamSteps * \
+        utility.smart_dj_join(ephys_pipeline.ephys_element.PreClusterParamSteps.Step, ephys_pipeline.ephys_element.PreClusterParamSet.proj('precluster_method', 'params')) *
+        recording_process.Processing.EphysParams.proj('precluster_param_steps_id') \
         & rec_process_keys).fetch(as_dict=True))
         
         # Join precluster params for the same recording_process
         preparams_df['preparams'] = preparams_df.apply(lambda x : {x['precluster_method']: x['params']}, axis=1)
-        preparams_df = preparams_df.sort_values(by=['job_id', 'order_id'])
+        preparams_df = preparams_df.sort_values(by=['job_id', 'step_number'])
         preparams_df = preparams_df[['job_id', 'preparams']].groupby("job_id").agg(lambda x: list(x))
         preparams_df = preparams_df.reset_index()
 
@@ -424,7 +437,7 @@ class RecProcessHandler():
         key['error_exception'] = error_info_dict['error_exception']
         key['error_message'] = error_info_dict['error_message']
 
-        recording_process.Log.insert1(key)
+        recording_process.LogStatus.insert1(key)
 
 
     '''
