@@ -1,6 +1,8 @@
-from optparse import Values
+
 import pandas as pd
 import numpy as np
+import os
+import pathlib
 
 recording_modality_dict = [
     {
@@ -170,21 +172,12 @@ recording_process_status_dict = [
     },
     {
         'Value': 7,
-        'Key': 'JOB_QUEUE_ELEMENT_WORKFLOW',
-        'Label': 'Job Queue Element Workflow ingestion',
+        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
+        'Label': 'Element ingested, finished',
         'UpdateField': None,
-        'ProcessFunction': None,
-        #'ProcessFunction': RecProcessHandler.slurm_job_element,
+        'ProcessFunction': 'populate_element',
         'FunctionField': None,
     },
-    {
-        'Value': 8,
-        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
-        'Label': 'Process finished',
-        'UpdateField': None,
-        'ProcessFunction': 'slurm_job_check',
-        'FunctionField': None,
-    }
 ]
 
 all_preprocess_params = {
@@ -227,3 +220,14 @@ program_selection_params = {
 
 startup_pipeline_matlab_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline-matlab/scripts'
 ingest_scaninfo_script = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/ingest_scaninfo_shell.sh'
+
+# For parameter & channmap storing
+this_dir = os.path.dirname(__file__)
+
+parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
+default_preprocess_filename = 'preprocess_paramset_%s.json'
+default_process_filename = 'process_paramset_%s.json'
+
+
+chanmap_files_filepath = pathlib.Path(this_dir, 'ChanMapFiles').as_posix()
+default_chanmap_filename = 'chanmap_%s.mat'

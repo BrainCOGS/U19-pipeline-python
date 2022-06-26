@@ -88,23 +88,35 @@ class RemoteClient:
 
 def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
     rc = RemoteClient(host, username, public_key_location, remote_path)
+    print(host)
+    print(username)
+    print(public_key_location)
+    print(remote_path)
+    print(local_path)
     rc._get_ssh_key()
     rc.scp
     rc.download_folder(remote_path=remote_path, local_path=local_path)
     rc.disconnect()
 
+def call_scp_background(ip_address=None, system_user=None, recording_system_directory=None, data_directory=None):
 
-def call_scp_background(rec_series, full_remote_path):
-
-    print(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
+    print(ip_address, system_user, data_directory, recording_system_directory)
     #transfer_scp(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
 
     this_file = os.path.realpath(__file__)
 
-    p = subprocess.Popen(["nohup", "python", this_file,
-    rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path,  "&"])
+
+    p = subprocess.Popen(["nohup", "python", this_file, ip_address, system_user, recording_system_directory, data_directory, "&"])
+
+    # To test without nohup
+    #p = subprocess.run(["python", this_file, ip_address, system_user, recording_system_directory, data_directory], capture_output=True)
+    #print('stderr', p.stderr.decode('UTF-8'))
+    #print('stdout', p.stdout.decode('UTF-8'))
+    #print('p.returncode', p.returncode)
 
     return True,p.pid
+
+
 
 
 def check_scp_transfer(pid):
@@ -114,7 +126,9 @@ def check_scp_transfer(pid):
 
     if psutil.pid_exists(pid):
         pr = psutil.Process(pid=pid)
+        print(pr)
         gone, _ = psutil.wait_procs([pr], timeout=3)
+        print(gone)
 
         if len(gone) > 0:
             finished = True
@@ -134,6 +148,9 @@ def check_directory_copied_correctly():
 if __name__ == "__main__":
     args = sys.argv[1:]
     print(args)
+
+
+    
     transfer_scp(host=args[0], username=args[1], remote_path=args[2], local_path=args[3])
 
 

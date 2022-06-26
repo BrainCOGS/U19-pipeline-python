@@ -13,10 +13,13 @@ import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
 import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.automatic_job.ephys_element_populate as ep
 
 from datetime import datetime
 from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
+
+from ecephys_spike_sorting.common.SGLXMetaToCoords import MetaToCoords
 
 class RecProcessHandler():
 
@@ -202,18 +205,19 @@ class RecProcessHandler():
             update_value_dict['error_info']['error_message'] = 'Error while generating/transfering parameter file'
             return (status_update, update_value_dict)
 
-        #If electrophysiology, transfer chanmap
-        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophasasysiology':
+        #If electrophysiology, transfer chanmap as well
+        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophysiology':
             recording_key = (recording_process.Processing.proj('recording_id', insertion_number='fragment_number') & rec_series['query_key']).fetch1()
             del recording_key["job_id"]
             
-            chanmap_files_filepath = 'u19_pipeline/automatic_job/ChanMapFiles'
-            default_chanmap_filename = 'chanmap_%s.mat'
-            chanmap_filename = default_chanmap_filename % (rec_series['job_id'])
-            chanmap_file_local_path =  str(pathlib.Path(chanmap_files_filepath,chanmap_filename))
+
+            chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
+            chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
             raw_directory_for_chanmap = rec_series['recording_process_pre_path']
 
-            ephys_pipeline.generate_chanmap_file(recording_key, raw_directory_for_chanmap, chanmap_file_local_path)
+            spikeglx_meta_filepath = ephys_pipeline.get_spikeglx_meta_filepath(recording_key)
+            # Chanmap mat file generation
+            MetaToCoords(spikeglx_meta_filepath, 1, destFullPath =chanmap_file_local_path)
             status = paramfilelib.generate_chanmap_file(rec_series['job_id'], rec_series['program_selection_params'])
 
         #Create and transfer slurm file
@@ -297,6 +301,30 @@ class RecProcessHandler():
         return (status_update, update_value_dict)
 
     @staticmethod
+    @recording_handler.exception_handler
+    def populate_element(rec_series, status_series):
+        """
+        Check slurm job in cluster machine
+        Input:
+        rec_series     (pd.Series) = Series with information about the recording process
+        status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
+        Returns:
+        status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
+                                        = 0  if recording process status not to be changed 
+                                        = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
+        update_value_dict   (dict)    = Dictionary with next keys:
+                                        {'value_update': value to be updated in this stage (if applicable)
+                                        'error_info':    error info to be inserted if error occured }
+        """
+
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
+
+        ep.populate_element_data(rec_series['job_id'])
+        status_update = config.status_update_idx['NEXT_STATUS']
+
+        return (status_update, update_value_dict)
+
+    @staticmethod
     def get_active_process_jobs():
         '''
         get all process jobs that have to go through some action in the pipeline
@@ -305,15 +333,13 @@ class RecProcessHandler():
         '''
 
         status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
-        status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max() -1)
+        status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
 
         jobs_active = (recording.Recording.proj('recording_modality') * \
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
-        print(status_query)
         print(df_process_jobs)
-        print(str(config.recording_process_status_df['Value'].min()))
 
         if df_process_jobs.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)

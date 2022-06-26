@@ -108,15 +108,21 @@ class RecordingHandler():
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        full_remote_path = pathlib.Path(dj.config['custom']['root_data_dir'], rec_series['recording_modality'], rec_series['recording_directory']).as_posix()
-        pathlib.Path(full_remote_path).mkdir(parents=True, exist_ok=True)
+        data_directory = pathlib.Path(dj.config['custom']['root_data_dir'], rec_series['recording_modality'], rec_series['recording_directory']).as_posix()
+        data_directory = pathlib.Path(data_directory).parent
+        
+        pathlib.Path(data_directory).mkdir(parents=True, exist_ok=True)
 
-        status, task_id = scp_tr.call_scp_background(rec_series, full_remote_path)
+        
+
+        #Encode Windows like directory for scp to work
+
+        status, task_id = scp_tr.call_scp_background(ip_address=rec_series['ip_address'], system_user=rec_series['system_user'],
+        recording_system_directory=rec_series['local_directory'], data_directory=data_directory.as_posix())
 
         if status:
             status_update = config.status_update_idx['NEXT_STATUS']
             update_value_dict['value_update'] = task_id
-
 
         return (status_update, update_value_dict)
 

@@ -12,17 +12,17 @@ import u19_pipeline.automatic_job.params_config as config
 #Functions to transfer files (globus, scp, smbclient)
 
 #FOR PNI endpoint
-pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
+#pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
+pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to /braininit/Data/
+pni_data_dir   = ''         
 #pni_ephys_sorted_data_dir = '/mnt/cup/labs/brody/RATTER/PhysData/Test_ephys_pipeline_NP_sorted/'
-
-#PNI directories
-pni_root_data_dir   = dj.config['custom']['root_data_dir']
 
 #For tiger endpoint
 default_user     = 'alvaros'                         # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'tigergpu.princeton.edu'
-#tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
-tiger_ep_dir = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'
+#tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
+tiger_ep_dir = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'   # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
+tiger_home_dir_globus = '/Data'   
 
 #Slurm default values for queue job
 slurm_dict_tiger_default = {
@@ -49,17 +49,18 @@ slurm_dict_spock_default = {
 }
 
 
-#tiger_home_dir_globus = '/tiger/scratch/gpfs/BRAINCOGS'  
-tiger_home_dir_globus = ''    
+#PNI directories
+pni_root_data_dir   = dj.config['custom']['root_data_dir']
+
 tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
 spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python'
-pni_data_dir   = '/mnt/cup/braininit/Data'
+
 #Cluster directories
 cluster_vars = {
     "tiger": {
         "home_dir":                      tiger_home_dir, 
-        "root_data_dir":                 tiger_home_dir_globus + "/Data/Raw", 
-        "processed_data_dir":            tiger_home_dir_globus + "/Data/Processed", 
+        "root_data_dir":                 tiger_home_dir_globus + "/Raw", 
+        "processed_data_dir":            tiger_home_dir_globus + "/Processed", 
         "slurm_files_dir":               tiger_home_dir + "/SlurmFiles", 
         "params_files_dir":              tiger_home_dir + "/ParameterFiles", 
         "chanmap_files_dir":             tiger_home_dir + "/ChanMapFiles", 
@@ -104,7 +105,6 @@ def scp_file_transfer(source, dest):
     print("scp", source, dest)
     p = subprocess.Popen(["scp", "-i", "~/.ssh/id_rsa_alvaros_tiger.pub", source, dest])
     transfer_status = p.wait()
-    print(transfer_status)
     return transfer_status
 
 
@@ -113,10 +113,47 @@ def cp_file_transfer(source, dest):
     print("cp", source, dest)
     p = subprocess.Popen(["cp", source, dest])
     transfer_status = p.wait()
-    print(transfer_status)
     return transfer_status
 
+def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath):
 
+    source_fullpath = source_ep+ ":" + source_filepath
+    dest_fullpath   = dest_ep  + ":" + dest_filepath
+
+    globus_command = ["globus", "transfer", source_fullpath, dest_fullpath, '--label', job_id_str, '--recursive', '--format', 'json']
+    p = subprocess.run(globus_command, capture_output=True)
+
+    transfer_request = dict()
+
+    if len(p.stderr) == 0:
+        dict_output = json.loads(p.stdout.decode('UTF-8'))
+        #dict_output = translate_globus_output(p.stdout)
+        transfer_request['status'] = config.system_process['SUCCESS']
+        transfer_request['task_id'] = dict_output['task_id']
+    else:
+        transfer_request['status'] = config.system_process['ERROR']
+        transfer_request['error_info'] = p.stderr.decode('UTF-8')
+        
+    return transfer_request
+
+
+def request_globus_transfer_status(job_id):
+
+    globus_command = ["globus", "task", "show", job_id, '--format', 'json']
+    s = subprocess.run(globus_command, capture_output=True)
+    task_output = json.loads(s.stdout.decode('UTF-8'))
+
+    transfer_request = dict()
+    if task_output['status'] == 'SUCCEEDED':
+        transfer_request['status'] = config.system_process['COMPLETED']
+    elif task_output['status'] in ['PENDING','RETRYING', 'ACTIVE']:
+        transfer_request['status'] = config.system_process['SUCCESS']
+    else:
+        transfer_request['status'] = config.system_process['ERROR']
+
+    return transfer_request
+
+'''
 def request_globus_transfer_status(job_id):
 
     transfer_request = dict()
@@ -175,7 +212,7 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
         transfer_request['error_info'] = p.stderr.decode('UTF-8')
         
     return transfer_request
-
+'''
 
 def globus_transfer_to_tiger(job_id, raw_rel_path, modality):
 
