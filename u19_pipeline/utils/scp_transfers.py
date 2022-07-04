@@ -8,6 +8,7 @@ from paramiko.auth_handler import AuthenticationException, SSHException
 from scp import SCPClient, SCPException
 
 #Steps on windows machine
+#   https://thesysadminchannel.com/solved-add-windowscapability-failed-error-code-0x800f0954-rsat-fix/
 #   PowerShell
 #     Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 #     Start-Service sshd

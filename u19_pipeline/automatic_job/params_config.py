@@ -205,9 +205,27 @@ system_process = {
 }
 
 slurm_states = {
-    'COMPLETED': 'COMPLETED',
-    'SUCCESS':   ['PENDING', 'RUNNING'],
-    'ERROR':    'FAILED'
+    'COMPLETED': {
+        'pipeline_status': status_update_idx['NEXT_STATUS'],
+        'message':         ''
+    },
+    'PENDING':   {
+        'pipeline_status': status_update_idx['NO_CHANGE'],
+        'message':         ''
+    },
+    'RUNNING':   {
+        'pipeline_status': status_update_idx['NO_CHANGE'],
+        'message':         ''
+    },
+    'FAILED':    {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         ''
+    },
+    'TIMEOUT':
+    {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Timeout for job has expired'
+    }
 }
 
 

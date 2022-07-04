@@ -113,11 +113,21 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
     stdout = stdout.decode('UTF-8')
 
     if p.returncode == config.system_process['SUCCESS']:
-        state_job = stdout.split("\n")[2].strip()
+        print('job state ....')
+        print(stdout)
+        state_slurm_job = stdout.split("\n")[2].strip()
+
+        state_pipeline = config.slurm_states[state_slurm_job]['pipeline_status']
+        error_message  = config.slurm_states[state_slurm_job]['message']
+
+        print('state_pipeline ....', state_pipeline)
+        print('error_message', error_message)
+
     else:
-        state_job = config.slurm_states['ERROR']
+        state_pipeline = config.status_update_idx['ERROR_STATUS']
+        error_message  = 'Failed to retrieve slurm job status'
         
-    return state_job
+    return state_pipeline, error_message
 
 
 def transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars):

@@ -78,10 +78,10 @@ def get_ephys_root_data_dir():
 
 def get_session_directory(session_key):
 
-    root_dir = get_ephys_root_data_dir()
-
-    session_dir = (recording.Recording & session_key).fetch1('recording_directory')
-    session_dir = pathlib.Path(root_dir, session_dir).as_posix()
+    #root_dir = get_ephys_root_data_dir()
+    
+    session_dir = pathlib.Path((recording.Recording & session_key).fetch1('recording_directory')).as_posix()
+    #session_dir = pathlib.Path(root_dir, session_dir).as_posix()
 
     return session_dir
 

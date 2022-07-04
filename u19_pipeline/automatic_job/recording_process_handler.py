@@ -279,25 +279,24 @@ class RecProcessHandler():
         ssh_host = ft.cluster_vars[program_selection_params['process_cluster']]['hostname']
         slurm_jobid = str(rec_series['slurm_id'])
 
-        job_status = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
+        status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
+
+        # Get message from slurm status check
+        update_value_dict['error_info']['error_message'] = message
 
         #If job finished copy over output and/or error log
-        if job_status == config.slurm_states['ERROR'] or job_status == config.slurm_states['COMPLETED']:
-
-            status_update = config.status_update_idx['NEXT_STATUS']
+        if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
 
             ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='ERROR')
             ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
             error_log = ft.get_error_log_str(rec_series['job_id'])
 
+            # If error log is not empty, get info about it
             if error_log:
-                job_status = config.slurm_states['ERROR']
-
-            if job_status == config.slurm_states['ERROR']:
                 status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'An error occured in processing'
+                update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
                 update_value_dict['error_info']['error_exception'] = error_log
-
+                
         return (status_update, update_value_dict)
 
     @staticmethod
