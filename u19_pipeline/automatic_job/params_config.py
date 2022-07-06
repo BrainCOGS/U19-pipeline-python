@@ -225,7 +225,17 @@ slurm_states = {
     {
         'pipeline_status': status_update_idx['ERROR_STATUS'],
         'message':         'Timeout for job has expired'
-    }
+    },
+    'CANCELLED+':
+        {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Job was cancelled'
+        },
+    'CANCELLED':
+        {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Job was cancelled'
+        }
 }
 
 

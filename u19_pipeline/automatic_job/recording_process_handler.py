@@ -117,9 +117,9 @@ class RecProcessHandler():
         # If tiger, we trigger globus transfer 
         if rec_series['program_selection_params']['process_cluster'] == "tiger":
 
-            if status_series['Key'] is 'RAW_FILE_TRANSFER_REQUEST':
+            if status_series['Key'] == 'RAW_FILE_TRANSFER_REQUEST':
                 transfer_request = ft.globus_transfer_to_tiger(job_id, raw_rel_path, modality)
-            elif status_series['Key'] is 'PROC_FILE_TRANSFER_REQUEST':
+            elif status_series['Key'] == 'PROC_FILE_TRANSFER_REQUEST':
                 #ALS, which recording directory for processed file
                 transfer_request = ft.globus_transfer_to_pni(job_id, proc_rel_path, modality)
 
