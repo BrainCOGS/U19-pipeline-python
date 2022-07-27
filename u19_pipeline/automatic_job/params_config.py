@@ -4,6 +4,9 @@ import numpy as np
 import os
 import pathlib
 
+from scripts.conf_file_finding import get_root_directory
+
+
 recording_modality_dict = [
     {
         'RecordingModality': 'electrophysiology',
@@ -173,7 +176,7 @@ recording_process_status_dict = [
     {
         'Value': 7,
         'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
-        'Label': 'Element ingested, finished',
+        'Label': 'Data in element, Finished !!',
         'UpdateField': None,
         'ProcessFunction': 'populate_element',
         'FunctionField': None,
@@ -246,12 +249,20 @@ program_selection_params = {
 }
 
 
-startup_pipeline_matlab_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline-matlab/scripts'
-ingest_scaninfo_script = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/ingest_scaninfo_shell.sh'
+
+
+# Look for u19_matlab_dir (Should be present on same directory as U19-Pipeline_Python)
+_, u19_pipeline_python_dir = get_root_directory()
+datajoint_proj_dir = u19_pipeline_python_dir.parent
+u19_matlab_dir = pathlib.Path(datajoint_proj_dir, 'U19-pipeline-matlab')
+startup_pipeline_matlab_dir = pathlib.Path(u19_matlab_dir, 'scripts').as_posix()
+
+
+this_dir = os.path.dirname(__file__)
+ingest_scaninfo_script = pathlib.Path(this_dir, 'ingest_scaninfo_shell.sh').as_posix()
+
 
 # For parameter & channmap storing
-this_dir = os.path.dirname(__file__)
-
 parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
 default_preprocess_filename = 'preprocess_paramset_%s.json'
 default_process_filename = 'process_paramset_%s.json'

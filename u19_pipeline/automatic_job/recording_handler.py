@@ -200,7 +200,12 @@ class RecordingHandler():
         status_query = 'status_recording_id > ' + str(config.recording_status_df['Value'].min())
         status_query += ' and status_recording_id < ' + str(config.recording_status_df['Value'].max())
 
-        recordings_active = recording.Recording * lab.Location.proj('ip_address', 'system_user') & status_query
+        print(status_query)
+
+        recordings_active = recording.Recording * lab.Location.proj('ip_address', 'system_user', 'acquisition_type') & status_query
+
+        print(recordings_active)
+
         df_recordings = pd.DataFrame(recordings_active.fetch(as_dict=True))
 
         if df_recordings.shape[0] > 0:
@@ -283,6 +288,7 @@ class RecordingHandler():
                                         'error_info':    error info to be inserted if error occured }
         """
 
+        status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         #Insert first ephysSession and firs tables of ephys elements
@@ -344,10 +350,66 @@ class RecordingHandler():
                                         'error_info':    error info to be inserted if error occured }
         """
 
+        status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        status_update = config.status_update_idx['ERROR_STATUS']
-        update_value_dict['error_info']['error_message'] = 'Imaging preingestion not implemented'
+        print("rec_series['query_key']")
+        print(rec_series['query_key'])
+
+        #Populate ImagingPipelineSession and call matlab script that handles TiffSplits
+        imaging_pipeline.ImagingPipelineSession.populate(rec_series['query_key'])
+        imaging_pipeline.AcquiredTiff.populate(rec_series['query_key'])
+
+        #Retrieve all fovs records ingested in matlab Script
+        fovs_ingested = (imaging_pipeline.TiffSplit & rec_series['query_key']).fetch("KEY", as_dict=True)
+
+        if len(fovs_ingested) == 0:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'Imaging TiffSplit process failed'
+            return (status_update, update_value_dict)
+
+        #Ingest Scan for each fov from the TiffSplit process
+        for this_fov in fovs_ingested:
+
+            # Scan_id always zero because TIFF splitted (FOVs) already on imaging_pipeline schema
+            scan_id = 0
+            # Acquisition type will have Mesoscope or 2Photon
+            scanner = rec_series['acquisition_type']
+            # Hardcoded acquisition software
+            acq_software = 'ScanImage'
+
+
+             #Insert Scan and ScanInfo 
+            imaging_pipeline.scan_element.Scan.insert1(
+            {**this_fov, 'scan_id': 0, 'scanner': scanner, 'acq_software': acq_software}, skip_duplicates=True)
+            
+        #Populate ScanInfo for all fovs
+        imaging_pipeline.scan_element.ScanInfo.populate(rec_series['query_key'], display_progress=True)
+
+        #ingested_recording = (imaging_pipeline.scan_element.Scan & rec_series['query_key']).fetch("KEY", as_dict=True)
+
+        # Get fov directories for each recording process:
+        fov_files_df = pd.DataFrame((imaging_pipeline.scan_element.ScanInfo.ScanFile & rec_series['query_key']).fetch(as_dict=True))
+
+        fov_files = fov_files_df.groupby('tiff_split').first().reset_index()
+
+
+        #Insert recording processes records
+        old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
+        if len(old_recording_process) == 0:
+
+            connection = recording.Recording.connection 
+            with connection.transaction:
+                        
+                # Get fov directories for each recording process:
+                fov_files_df = pd.DataFrame((imaging_pipeline.scan_element.ScanInfo.ScanFile & rec_series['query_key']).fetch(as_dict=True))
+                fov_files = fov_files_df.groupby('tiff_split').first().reset_index().to_dict('records')
+
+                fov_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parent.as_posix()) for item in fov_files]
+
+                recording_process.Processing().insert_recording_process(fov_files, 'tiff_split')
+
+        status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
 
