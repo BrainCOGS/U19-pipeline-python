@@ -378,7 +378,6 @@ class RecordingHandler():
             # Hardcoded acquisition software
             acq_software = 'ScanImage'
 
-
              #Insert Scan and ScanInfo 
             imaging_pipeline.scan_element.Scan.insert1(
             {**this_fov, 'scan_id': 0, 'scanner': scanner, 'acq_software': acq_software}, skip_duplicates=True)
@@ -408,6 +407,16 @@ class RecordingHandler():
                 fov_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parent.as_posix()) for item in fov_files]
 
                 recording_process.Processing().insert_recording_process(fov_files, 'tiff_split')
+
+                #Get parameters for recording processes
+                recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', 'recording_process_pre_path', as_dict=True)
+                default_params_record_df = pd.DataFrame((recording.DefaultParams & rec_series['query_key']).fetch(as_dict=True))
+                params_rec_process = recording.DefaultParams.get_default_params_rec_process(recording_processes, default_params_record_df)
+
+                recording_process.Processing.ImagingParams.insert(params_rec_process, skip_duplicates=True)
+
+                #Update recording_process_post_path
+                recording_process.Processing().set_recording_process_post_path(recording_processes)
 
         status_update = config.status_update_idx['NEXT_STATUS']
 
