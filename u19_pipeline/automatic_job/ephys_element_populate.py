@@ -21,7 +21,7 @@ def run(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False
     precluster_param_steps_id, cluster_paramset_idx = \
                         (recording_process.Processing.EphysParams & process_key
                         ).fetch1('precluster_param_steps_id', 
-                                    'cluster_paramset_idx')
+                                    'paramset_idx')
 
     precluster_paramsets = (ephys_element.PreClusterParamSteps.Step() & 
                             dict(
