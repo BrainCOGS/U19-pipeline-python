@@ -1,4 +1,4 @@
-from u19_pipeline.imaging_element import scan_element, imaging_element
+from u19_pipeline.imaging_pipeline import scan_element, imaging_element
 
 
 def run(display_progress=True):
