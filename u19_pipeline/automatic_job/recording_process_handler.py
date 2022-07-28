@@ -356,9 +356,8 @@ class RecProcessHandler():
                     df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
                 if this_modality == 'imaging':
-                    pass
-                    #params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
-                    #df_process_jobs = df_process_jobs.merge(params_df, how='left')
+                    params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
+                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
 
             df_process_jobs['program_selection_params'] = [config.program_selection_params for _ in range(df_process_jobs.shape[0])]
@@ -410,49 +409,35 @@ class RecProcessHandler():
             params_df (pd.DataFrame): recording_process & params df
         '''
 
-        # Get cluster param sets
         params_df = pd.DataFrame((imaging_pipeline.imaging_element.ProcessingParamSet.proj('params', 'processing_method') * \
         recording_process.Processing.ImagingParams.proj('paramset_idx') & rec_process_keys).fetch(as_dict=True))
         params_df = params_df.drop('paramset_idx', axis=1)
 
-        print(params_df)
-
         #Insert processing_method in params itself (for BrainCogsImagingSorters)
         params_df['params'] = params_df.apply(lambda x: {**x['params'], **{'processing_method':x['processing_method']}},axis=1)
 
-        print(params_df)
-
         # Get preprocess param sets
-        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSet * \
+        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
         utility.smart_dj_join(imaging_pipeline.imaging_element.PreProcessParamSteps.Step, imaging_pipeline.imaging_element.PreProcessParamSet.proj('preprocess_method', 'params')) *
         recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
-        
-        print(preparams_df)
 
-        # Join precluster params for the same recording_process
-        preparams_df['preparams'] = preparams_df.apply(lambda x : {x['preprocess_method']: x['params']}, axis=1)
-        preparams_df = preparams_df.sort_values(by=['job_id', 'step_number'])
-        preparams_df = preparams_df[['job_id', 'preparams']].groupby("job_id").agg(lambda x: list(x))
-        preparams_df = preparams_df.reset_index()
+        #If there is no preprocess steps for this jobs fill with empty values
+        if preparams_df.shape[0] > 0:
 
-        print(preparams_df)
+            # Join precluster params for the same recording_process
+            preparams_df['preparams'] = preparams_df.apply(lambda x : {x['preprocess_method']: x['params']}, axis=1)
+            preparams_df = preparams_df.sort_values(by=['job_id', 'step_number'])
+            preparams_df = preparams_df[['job_id', 'preparams']].groupby("job_id").agg(lambda x: list(x))
+            preparams_df = preparams_df.reset_index()
+
+        else:
+            preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
+                    recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
+            preparams_df['preparams'] = None
 
         params_df = params_df.merge(preparams_df)
 
-        print(params_df)
-
         return params_df
-
-    @staticmethod
-    def get_imaging_params_jobs(rec_process_keys):
-        '''
-        get all imaging parameters for each of the recording process
-        Args:
-            rec_process_keys (dict): key to find recording_process records
-        Return:
-            params_df (pd.DataFrame): recording_process & params df
-        '''
-        pass
 
 
     @staticmethod

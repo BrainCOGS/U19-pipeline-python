@@ -103,7 +103,25 @@ def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx)
     return iter_samples
 
 
-def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate, num_behavior_trials, mode='counter_bit0'):
+def get_trial_signal_mode(iteration_pulse_signal_trial, trial_iterations):
+
+    print('in get_trial_signal_mode')
+    print('iteration_pulse_signal_trial', iteration_pulse_signal_trial.shape)
+    print('trial_iterations', trial_iterations.shape)
+
+    # If iterations in trial are less than the ones in behavior, the mode was the counterbit
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
+    if iter_samples.shape[0] < (trial_iterations.shape[0]*3/4):
+        mode = 'counter_bit0'
+    else:
+        mode = 'pulse_signal'
+
+    print('mode')
+
+    return mode
+
+
+def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate, num_behavior_trials, mode=None):
 
     #Output as a dictionary
     iteration_vector_output = dict()
@@ -131,6 +149,9 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
             idx_end = trial_start_idx[i+1] -samples_before_pulse
         else:
             idx_end = trial_pulse_signal.shape[0] - samples_before_pulse
+
+        if mode is None:
+            mode = get_trial_signal_mode(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
 
         #Get idx of iteration start of current trial
         if mode == 'counter_bit0':
