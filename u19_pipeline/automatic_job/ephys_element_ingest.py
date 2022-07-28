@@ -6,6 +6,8 @@ from u19_pipeline.ephys_pipeline import (probe_element, ephys_element,
                                         get_ephys_root_data_dir, get_session_directory)
 from element_array_ephys.readers import spikeglx
 
+from element_interface.utils import find_full_path
+
 """
 The ingestion routine for imaging element includes:
 
@@ -31,7 +33,8 @@ def process_session(sess_key):
 
     :param scan_key: a `KEY` of `acquisition.Session`
     """
-    sess_dir = pathlib.Path(get_session_directory(sess_key))
+    sess_dir = pathlib.Path(find_full_path(get_ephys_root_data_dir(),
+                                                get_session_directory(sess_key)))
     ephys_meta_filepaths = [fp for fp in sess_dir.rglob('*.ap.meta')]
 
     if not len(ephys_meta_filepaths):
