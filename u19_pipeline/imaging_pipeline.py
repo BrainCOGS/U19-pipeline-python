@@ -159,32 +159,25 @@ def get_imaging_root_data_dir():
     data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
     return data_dir if data_dir else None
 
-def get_scan_image_files(rec_process_key):
+def get_scan_image_files(scan_key):
 
-    data_dir = get_imaging_root_data_dir()
+    # Folder structure: root / subject / session / .tif (raw)
+    sess_dir = (ImagingPipelineSession & scan_key).fetch1('session_dir')
 
-    rec_process = (ImagingPipelineSession & rec_process_key).fetch1()
-    scan_key = rec_process.copy()
-    # scan_key.pop('recording_process_id')
+    if not find_full_path(get_imaging_root_data_dir(), sess_dir).exists():
+        raise FileNotFoundError(f'Session directory ({sess_dir}) not found.')
 
-    print('get_scan_image_files  .........')
-    print('rec_process_key', rec_process_key, 'scan_key', scan_key)
+    scan_filepaths = (FieldOfView.File * FieldOfView & 
+                        scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
 
-    #fov_key = scan_key.copy()
-    #Replace scan_id with fov, we are going to search files by fov
-    #if 'scan_id' in fov_key:
-    #    fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = (FieldOfView.File * FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    scan_filepaths['fov_filename'] = [x[1:] if x[0] == '/' else x 
+                                      for x in scan_filepaths['fov_filename']]
 
-    scan_filepaths_conc = list()
-    for i in range(len(scan_filepaths_ori)):
-        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['fov_directory']) / scan_filepaths_ori[i]['fov_filename']).as_posix())
+    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(),
+                                     pathlib.Path(scan_filepaths['fov_directory']) / 
+                                     scan_filepaths['fov_filename']).as_posix() 
+                      for fp in scan_filepaths]
 
-    # if rel paths start with / remove it for Pathlib library
-    # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
-
-    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), x).as_posix() for x in scan_filepaths_conc]
- 
     if tiff_filepaths:
         return tiff_filepaths
     else:
