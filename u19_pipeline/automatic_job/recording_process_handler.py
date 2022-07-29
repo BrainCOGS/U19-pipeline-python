@@ -158,13 +158,19 @@ class RecProcessHandler():
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         id_task = rec_series[status_series['FunctionField']]
 
-        transfer_request = ft.request_globus_transfer_status(str(id_task))
+        # If tiger, we trigger globus transfer 
+        if rec_series['program_selection_params']['process_cluster'] == "tiger":
 
-        if transfer_request['status'] == config.system_process['COMPLETED']:
+            transfer_request = ft.request_globus_transfer_status(str(id_task))
+
+            if transfer_request['status'] == config.system_process['COMPLETED']:
+                status_update = config.status_update_idx['NEXT_STATUS']
+            elif transfer_request['status'] == config.system_process['ERROR']:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'An error occured during globus transfer'
+
+        else:
             status_update = config.status_update_idx['NEXT_STATUS']
-        elif transfer_request['status'] == config.system_process['ERROR']:
-            status_update = config.status_update_idx['ERROR_STATUS']
-            update_value_dict['error_info']['error_message'] = 'An error occured during globus transfer'
 
         return (status_update, update_value_dict)
     
@@ -324,6 +330,19 @@ class RecProcessHandler():
         return (status_update, update_value_dict)
 
     @staticmethod
+    def get_program_selection_params(modality):
+        '''
+        get default processing variables (cluster, repository to process, etc) for a given modality
+        Return:
+            program_selection_params (pd.DataFrame): processing variables default dictionary
+        '''
+
+        this_modality_program_selection_params =\
+             config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == modality, :]
+
+        return this_modality_program_selection_params
+
+    @staticmethod
     def get_active_process_jobs():
         '''
         get all process jobs that have to go through some action in the pipeline
@@ -351,16 +370,16 @@ class RecProcessHandler():
                 this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
                 these_process_keys = this_mod_df['query_key'].to_list()
 
+                this_mod_program_selection_params = RecProcessHandler.get_program_selection_params(this_modality)
+
                 if this_modality == 'electrophysiology':
                     params_df = RecProcessHandler.get_ephys_params_jobs(these_process_keys)
-                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
                 if this_modality == 'imaging':
                     params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
-                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
-
-
-            df_process_jobs['program_selection_params'] = [config.program_selection_params for _ in range(df_process_jobs.shape[0])]
+                
+                df_process_jobs = df_process_jobs.merge(params_df, how='left')
+                df_process_jobs = df_process_jobs.merge(this_mod_program_selection_params, how='left')
 
         return df_process_jobs
 

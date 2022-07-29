@@ -15,7 +15,7 @@ from u19_pipeline.utils import path_utils as pu
 from element_array_ephys.readers import spikeglx
 from element_interface.utils import find_full_path
 
-
+from u19_pipeline import ephys_pipeline
 import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta

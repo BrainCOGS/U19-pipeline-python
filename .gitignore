@@ -136,3 +136,5 @@ data/*
 u19_pipeline/automatic_job/ParameterFiles/*
 u19_pipeline/automatic_job/OutputLog/*
 u19_pipeline/automatic_job/ChanMapFiles/*
+
+u19_pipeline/automatic_job/machine_variables.py
