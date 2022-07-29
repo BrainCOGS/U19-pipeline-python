@@ -67,7 +67,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
 
     ephys_element.CuratedClustering.populate(cluster_key, **populate_settings)
 
-    ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
+    #ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
 
 
 if __name__ == '__main__':
