@@ -337,8 +337,22 @@ class RecProcessHandler():
             program_selection_params (pd.DataFrame): processing variables default dictionary
         '''
 
+        # Get df from config file
         this_modality_program_selection_params =\
-             config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == modality, :]
+                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == 'electrophysiology', :]
+
+        # Pack all features in a dictionary
+        this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
+        this_modality_program_selection_params_dict
+
+        # Get two columns, (recording_modality & "packed" program_selection_params)
+        this_modality_program_selection_params = this_modality_program_selection_params.loc[:, 'recording_modality'].to_frame().copy()
+        this_modality_program_selection_params['program_selection_params'] = this_modality_program_selection_params_dict
+
+        this_modality_program_selection_params
+
+        print('get_program_selection_params .......................')
+        print(this_modality_program_selection_params)
 
         return this_modality_program_selection_params
 
@@ -380,6 +394,10 @@ class RecProcessHandler():
                 
                 df_process_jobs = df_process_jobs.merge(params_df, how='left')
                 df_process_jobs = df_process_jobs.merge(this_mod_program_selection_params, how='left')
+
+        
+        print('df_process_jobs*************************************')
+        print(df_process_jobs)
 
         return df_process_jobs
 
