@@ -22,5 +22,5 @@ scp
 paramiko
 psutil
 deeplabcut
-matlab
-matlabengineforpython
+# matlab
+# matlabengineforpython
