@@ -1,6 +1,8 @@
 from u19_pipeline.ephys_pipeline import probe_element, ephys_element
 from u19_pipeline import recording, recording_process
 
+import u19_pipeline.automatic_job.params_config as config
+
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {'display_progress': display_progress, 
@@ -67,6 +69,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
 
     ephys_element.CuratedClustering.populate(cluster_key, **populate_settings)
 
+    return config.status_update_idx['NEXT_STATUS']
     #ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
 
 
