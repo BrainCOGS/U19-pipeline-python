@@ -323,10 +323,10 @@ class RecProcessHandler():
         """
 
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-
-        ep.populate_element_data(rec_series['job_id'])
         status_update = config.status_update_idx['NEXT_STATUS']
 
+        ep.populate_element_data(rec_series['job_id'])
+        
         return (status_update, update_value_dict)
 
     @staticmethod
