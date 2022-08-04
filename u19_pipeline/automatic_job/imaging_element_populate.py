@@ -33,9 +33,9 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                                                             'processing_method')
 
     if len(preprocess_paramsets)==0:
-        task_mode = 'none'
+        preprocess_task_mode = 'none'
     else:
-        task_mode = 'load'
+        preprocess_task_mode = 'load'
 
     preprocess_key = dict(recording_id=process_key['recording_id'],
                             tiff_split=fragment_number,
@@ -45,7 +45,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     imaging_element.PreprocessTask.insert1(
                                 dict(**preprocess_key,
                                     preprocess_output_dir=recording_process_pre_path,
-                                    task_mode=task_mode),
+                                    task_mode=preprocess_task_mode),
                                     skip_duplicates=True)
 
     imaging_element.Preprocess.populate(preprocess_key, **populate_settings)
