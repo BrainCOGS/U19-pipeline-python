@@ -5,7 +5,7 @@ python-dotenv
 datajoint
 #element-calcium-imaging @ git+https://github.com/datajoint/element-calcium-imaging.git
 element-calcium-imaging  @ git+https://github.com/kabilar/element-calcium-imaging.git
-element-array-ephys==0.1.4
+element-array-ephys==0.1.3
 element-interface @ git+https://github.com/datajoint/element-interface.git
 #ecephys_spike_sorting @ git+https://github.com/AllenInstitute/ecephys_spike_sorting.git
 ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git
@@ -22,5 +22,5 @@ scp
 paramiko
 psutil
 deeplabcut
-# matlab
-# matlabengineforpython
+matlab
+matlabengineforpython

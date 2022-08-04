@@ -1,5 +1,0 @@
-
-
-# VERY IMPORTANT, ssh key location for transfers
-public_key_location = '/Users/alvaros/.ssh/id_rsa_copyfiles'
-public_key_location2 = '~/.ssh/id_rsa_alvaros_tiger.pub'

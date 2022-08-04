@@ -1,5 +1,4 @@
 from importlib.resources import path
-from logging import exception
 import datajoint as dj
 import pathlib
 import numpy as np
@@ -16,7 +15,7 @@ from u19_pipeline.utils import path_utils as pu
 from element_array_ephys.readers import spikeglx
 from element_interface.utils import find_full_path
 
-from u19_pipeline import ephys_pipeline
+
 import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
@@ -160,67 +159,42 @@ class BehaviorSync(dj.Imported):
 
     def make(self, key):
         # Pull the Nidaq file/record
+        session_dir = pathlib.Path(get_session_directory(key))
+        nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
+        # And get the datajoint record
+        behavior = dj.create_virtual_module('behavior', 'u19_behavior')
+        thissession = behavior.TowersBlock().Trial() & key
+        behavior_time, iterstart = thissession.fetch('trial_time', 'vi_start')
 
-        try:
-            session_dir = find_full_path(get_ephys_root_data_dir(),
-                                        get_session_directory(key))
-            print(session_dir)
-            nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
-            # And get the datajoint record
-            behavior = dj.create_virtual_module('behavior', 'u19_behavior')
+        # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
+        nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
+        nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
+        digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
 
-            print(key)
+        # Synchronize between pulses and get iteration # vector for each sample
+        mode=None
+        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], mode)
+        # Check # of trials and iterations match
+        status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
 
-            behavior_key = (recording.Recording.BehaviorSession & key).fetch1()
-            behavior_key.pop('recording_id')
-
-            if 'testuser' in behavior_key['subject_fullname']:
-                return
-
-            print(behavior_key)
-
-            thissession = behavior.TowersBlock().Trial() & behavior_key
-            behavior_time, iterstart = thissession.fetch('trial_time', 'vi_start')
-
-            print('len iterstart', len(iterstart))
-
-            print('after reading behavior data')
-
-            # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
-            nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
-            nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
-            digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
-
-            print('after reading spikeglx data')
-
-            # Synchronize between pulses and get iteration # vector for each sample
-            mode=None
-            iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
-            # Check # of trials and iterations match
-            status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
-
-            if not status:
-                return
-
-            #They didn't match, try counter method (if available)
-            if (not status) and (digital_array.shape[0] > 3):
-                [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5)
-                iteration_dict['framenumber_vector_samples'] = framenumber_in_trial
-                iteration_dict['trialnumber_vector_samples'] = trialnumber
+        #They didn't match, try counter method (if available)
+        if (not status) and (digital_array.shape[0] > 3):
+            [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5)
+            iteration_dict['framenumber_vector_samples'] = framenumber_in_trial
+            iteration_dict['trialnumber_vector_samples'] = trialnumber
 
 
-            final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
-                iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
-                trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
+        final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
+               iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
+               trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
 
-            print(final_key)
+        print(final_key)
 
-            BehaviorSync.insert1(final_key,allow_direct_insert=True)
+        BehaviorSync.insert1(final_key,allow_direct_insert=True)
 
-            self.insert_imec_sampling_rate(key, session_dir)
+        self.insert_imec_sampling_rate(key, session_dir)
 
-        except Exception as e:
-            print(e)
+        
 
     def insert_imec_sampling_rate(self, key, session_dir):
 

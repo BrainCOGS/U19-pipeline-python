@@ -133,8 +133,6 @@ data/*
 # svg file
 *.svg
 
-u19_pipeline/automatic_job/ParameterFiles/*.json
-u19_pipeline/automatic_job/OutputLog/*.json
-u19_pipeline/automatic_job/ChanMapFiles/*.mat
-
-u19_pipeline/automatic_job/machine_variables.py
+u19_pipeline/automatic_job/ParameterFiles/*
+u19_pipeline/automatic_job/OutputLog/*
+u19_pipeline/automatic_job/ChanMapFiles/*

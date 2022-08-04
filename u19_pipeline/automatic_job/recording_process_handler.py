@@ -158,19 +158,13 @@ class RecProcessHandler():
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         id_task = rec_series[status_series['FunctionField']]
 
-        # If tiger, we trigger globus transfer 
-        if rec_series['program_selection_params']['process_cluster'] == "tiger":
+        transfer_request = ft.request_globus_transfer_status(str(id_task))
 
-            transfer_request = ft.request_globus_transfer_status(str(id_task))
-
-            if transfer_request['status'] == config.system_process['COMPLETED']:
-                status_update = config.status_update_idx['NEXT_STATUS']
-            elif transfer_request['status'] == config.system_process['ERROR']:
-                status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'An error occured during globus transfer'
-
-        else:
+        if transfer_request['status'] == config.system_process['COMPLETED']:
             status_update = config.status_update_idx['NEXT_STATUS']
+        elif transfer_request['status'] == config.system_process['ERROR']:
+            status_update = config.status_update_idx['ERROR_STATUS']
+            update_value_dict['error_info']['error_message'] = 'An error occured during globus transfer'
 
         return (status_update, update_value_dict)
     
@@ -323,36 +317,11 @@ class RecProcessHandler():
         """
 
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        status_update = ep.populate_element_data(rec_series['job_id'])
+
+        ep.populate_element_data(rec_series['job_id'])
+        status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
-
-    @staticmethod
-    def get_program_selection_params(modality):
-        '''
-        get default processing variables (cluster, repository to process, etc) for a given modality
-        Return:
-            program_selection_params (pd.DataFrame): processing variables default dictionary
-        '''
-
-        # Get df from config file
-        this_modality_program_selection_params =\
-                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == 'electrophysiology', :]
-
-        # Pack all features in a dictionary
-        this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
-        this_modality_program_selection_params_dict
-
-        # Get two columns, (recording_modality & "packed" program_selection_params)
-        this_modality_program_selection_params = this_modality_program_selection_params.loc[:, 'recording_modality'].to_frame().copy()
-        this_modality_program_selection_params['program_selection_params'] = this_modality_program_selection_params_dict
-
-        this_modality_program_selection_params
-
-        print('get_program_selection_params .......................')
-        print(this_modality_program_selection_params)
-
-        return this_modality_program_selection_params
 
     @staticmethod
     def get_active_process_jobs():
@@ -382,20 +351,16 @@ class RecProcessHandler():
                 this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
                 these_process_keys = this_mod_df['query_key'].to_list()
 
-                this_mod_program_selection_params = RecProcessHandler.get_program_selection_params(this_modality)
-
                 if this_modality == 'electrophysiology':
                     params_df = RecProcessHandler.get_ephys_params_jobs(these_process_keys)
+                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
                 if this_modality == 'imaging':
                     params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
-                
-                df_process_jobs = df_process_jobs.merge(params_df, how='left')
-                df_process_jobs = df_process_jobs.merge(this_mod_program_selection_params, how='left')
+                    df_process_jobs = df_process_jobs.merge(params_df, how='left')
 
-        
-        print('df_process_jobs*************************************')
-        print(df_process_jobs)
+
+            df_process_jobs['program_selection_params'] = [config.program_selection_params for _ in range(df_process_jobs.shape[0])]
 
         return df_process_jobs
 
