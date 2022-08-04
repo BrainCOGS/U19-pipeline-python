@@ -296,6 +296,8 @@ class RecordingHandler():
         ephys_element_ingest.process_session(rec_series['query_key'])
         ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
 
+        ephys_pipeline.BehaviorSync.populate(rec_series['query_key'])
+
         ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series['query_key']).fetch("KEY", as_dict=True)
 
         if len(ingested_recording) == 0:

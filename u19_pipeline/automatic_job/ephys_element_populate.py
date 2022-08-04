@@ -1,6 +1,8 @@
 from u19_pipeline.ephys_pipeline import probe_element, ephys_element
 from u19_pipeline import recording, recording_process
 
+import u19_pipeline.automatic_job.params_config as config
+
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {'display_progress': display_progress, 
@@ -48,9 +50,9 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
 
     ephys_element.PreCluster.populate(precluster_key, **populate_settings)
 
-    if '1.0' in (ephys_element.ProbeInsertion * probe_element.Probe & 
-                    precluster_key).fetch1('probe_type'):
-        ephys_element.LFP.populate(precluster_key, **populate_settings)
+    #if '1.0' in (ephys_element.ProbeInsertion * probe_element.Probe & 
+    #                precluster_key).fetch1('probe_type'):
+    #    ephys_element.LFP.populate(precluster_key, **populate_settings)
 
     cluster_key = dict(**precluster_key,
                         paramset_idx=paramset_idx)
@@ -67,7 +69,8 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
 
     ephys_element.CuratedClustering.populate(cluster_key, **populate_settings)
 
-    ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
+    return config.status_update_idx['NEXT_STATUS']
+    #ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
 
 
 if __name__ == '__main__':
