@@ -103,7 +103,30 @@ def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx)
     return iter_samples
 
 
-def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate, num_behavior_trials, mode='counter_bit0'):
+def get_trial_signal_mode(iteration_pulse_signal_trial, behavior_time_vector_trial):
+
+    print('in get_trial_signal_mode')
+    print('iteration_pulse_signal_trial', iteration_pulse_signal_trial.shape)
+    print('trial_iterations', behavior_time_vector_trial.shape)
+    print('trial_iterations type', type(behavior_time_vector_trial))
+
+    # If iterations in trial are less than the ones in behavior, the mode was the counterbit
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
+
+    print('iter_samples', iter_samples[0].shape[0])
+    print('behavior_time_vector_trial', behavior_time_vector_trial.shape[0])
+
+    if iter_samples[0].shape[0] < (behavior_time_vector_trial.shape[0]*3/4):
+        mode = 'counter_bit0'
+    else:
+        mode = 'pulse_signal'
+
+    print('mode deduction: ', mode)
+
+    return mode
+
+
+def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, iteration_pulse_signal, nidq_sampling_rate, num_behavior_trials, behavior_time_vector, mode=None):
 
     #Output as a dictionary
     iteration_vector_output = dict()
@@ -131,6 +154,9 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
             idx_end = trial_start_idx[i+1] -samples_before_pulse
         else:
             idx_end = trial_pulse_signal.shape[0] - samples_before_pulse
+
+        if mode is None:
+            mode = get_trial_signal_mode(iteration_pulse_signal[idx_start:idx_end], behavior_time_vector[i])
 
         #Get idx of iteration start of current trial
         if mode == 'counter_bit0':
@@ -183,7 +209,7 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
         #For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
             status = False
-            return status
+            #return status
 
     return status
 
