@@ -53,7 +53,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     process_key = dict(**preprocess_key,
                         paramset_idx=paramset_idx)
 
-    pathlib.Path('/mnt/cup/braininit/Data/Processed/imaging/{recording_process_post_path}/{processing_method}_output').mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f'/mnt/cup/braininit/Data/Processed/imaging/{recording_process_post_path}/{processing_method}_output').mkdir(parents=True, exist_ok=True)
 
     imaging_element.ProcessingTask.insert1(
         dict(**process_key,
