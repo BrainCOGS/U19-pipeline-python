@@ -183,15 +183,11 @@ def get_scan_image_files(rec_process_key):
     print('get_scan_image_files  .........')
     print('rec_process_key', rec_process_key, 'scan_key', scan_key)
 
-    #fov_key = scan_key.copy()
-    #Replace scan_id with fov, we are going to search files by fov
-    #if 'scan_id' in fov_key:
-    #    fov_key['fov'] = fov_key.pop('scan_id')
-    scan_filepaths_ori = (FieldOfView.File * FieldOfView & scan_key).fetch('fov_directory', 'fov_filename', as_dict=True)
+    scan_filepaths_ori = (TiffSplit.File * TiffSplit & scan_key).fetch('tiff_split_directory', 'tiff_split_filename', as_dict=True)
 
     scan_filepaths_conc = list()
     for i in range(len(scan_filepaths_ori)):
-        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['fov_directory']) / scan_filepaths_ori[i]['fov_filename']).as_posix())
+        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['tiff_split_directory']) / scan_filepaths_ori[i]['tiff_split_filename']).as_posix())
 
     # if rel paths start with / remove it for Pathlib library
     # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
@@ -201,7 +197,7 @@ def get_scan_image_files(rec_process_key):
     if tiff_filepaths:
         return tiff_filepaths
     else:
-        raise FileNotFoundError(f'No tiff file found in {sess_dir}')
+        raise FileNotFoundError(f'No tiff file found in {data_dir}')
 
 
 def get_processed_dir(processing_task_key, process_method):
