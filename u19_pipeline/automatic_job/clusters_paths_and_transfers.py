@@ -9,19 +9,19 @@ from datetime import datetime
 from element_interface.utils import dict_to_uuid
 
 import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.automatic_job.machine_variables as mv
 #Functions to transfer files (globus, scp, smbclient)
 
 #FOR PNI endpoint
 #pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
 pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to /braininit/Data/
 pni_data_dir   = ''         
-#pni_ephys_sorted_data_dir = '/mnt/cup/labs/brody/RATTER/PhysData/Test_ephys_pipeline_NP_sorted/'
 
 #For tiger endpoint
-default_user     = 'alvaros'                         # This will change to our automatic client for globus transfers
+default_user   = 'alvaros'                               # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'tigergpu.princeton.edu'
-#tiger_ep_dir = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
-tiger_ep_dir = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'   # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
+#tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
+tiger_ep_dir   = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'  # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
 tiger_home_dir_globus = '/Data'   
 
 #Slurm default values for queue job
@@ -30,7 +30,7 @@ slurm_dict_tiger_default = {
     'nodes': 1,
     'ntasks': 1,
     'time': '10:00:00',
-    'mem': '200G',
+    'mem': '50G',
     'gres': 'gpu:1',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['END'],
@@ -42,7 +42,7 @@ slurm_dict_spock_default = {
     'nodes': 1,
     'cpus-per-task': 1,
     'time': '10:00:00',
-    'mem': '24G',
+    'mem': '50G',
     'mail-type': ['END', 'FAIL'],
     'output': 'OutputLog/job_id_${job_id}".log',
     'error': 'ErrorLog/job_id_${job_id}".log'
@@ -103,7 +103,7 @@ def get_cluster_vars(cluster):
 def scp_file_transfer(source, dest):
 
     print("scp", source, dest)
-    p = subprocess.Popen(["scp", "-i", "~/.ssh/id_rsa_alvaros_tiger.pub", source, dest])
+    p = subprocess.Popen(["scp", "-i", mv.public_key_location2, source, dest])
     transfer_status = p.wait()
     return transfer_status
 

@@ -9,7 +9,7 @@ from scripts.conf_file_finding import get_root_directory
 
 recording_modality_dict = [
     {
-        'RecordingModality': 'electrophysiology',
+        'recording_modality': 'electrophysiology',
         'Description': '',
         'RootDirectorty': '/braininit/Data/electrophysiology',
         'FileExtensions': np.asarray(['ap.bin', 'ap.meta']),
@@ -17,10 +17,12 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['/*imec[0-9]/']),
         'ProcessUnitDirectoryField': 'probe_directory',
         'ProcessUnitField': 'probe',
-        'ProcessingRepository': 'BrainCogsEphysSorters',
+        'process_repository': 'BrainCogsEphysSorters',
+        'process_cluster': 'tiger',
+        'process_script': 'main_script.py'
     },
     {
-        'RecordingModality': 'imaging',
+        'recording_modality': 'imaging',
         'Description': '',
         'RootDirectorty': '/braininit/Data/imaging',
         'FileExtensions': np.asarray(['.avi', '.tiff','.tif']),
@@ -28,10 +30,12 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'fov_directory',
         'ProcessUnitField': 'fov',
-        'ProcessingRepository': 'BrainCogsImagingSegmentation',
+        'process_repository': 'element-calcium-imaging',
+        'process_cluster': 'spock',
+        'process_script': 'none'
     },
     {
-        'RecordingModality': 'video_acquisition',
+        'recording_modality': 'video_acquisition',
         'Description': '',
         'RootDirectorty': '/braininit/Data/imaging',
         'FileExtensions': np.asarray(['.avi', '.mp4']),
@@ -39,7 +43,9 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'video_directory',
         'ProcessUnitField': '',
-        'ProcessingRepository': 'None',
+        'process_repository': 'None',
+        'process_cluster': 'spock',
+        'process_script': 'none'
     },
 ]
 
@@ -242,13 +248,11 @@ slurm_states = {
 }
 
 
-program_selection_params = {
-    'process_cluster': 'tiger',
-    'process_repository': 'BrainCogsEphysSorters',
-    'process_script': 'main_script.py'
-}
-
-
+program_selection_params_keys = [
+    'process_cluster',
+    'process_repository',
+    'process_script'
+]
 
 
 # Look for u19_matlab_dir (Should be present on same directory as U19-Pipeline_Python)
