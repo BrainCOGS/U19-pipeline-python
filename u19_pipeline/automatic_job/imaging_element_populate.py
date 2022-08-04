@@ -1,7 +1,6 @@
-from u19_pipeline.imaging_pipeline import scan_element, imaging_element
 from u19_pipeline import recording, recording_process
+from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
-import datajoint as dj
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
