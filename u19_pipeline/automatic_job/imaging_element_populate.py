@@ -23,7 +23,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                         ).fetch1('preprocess_param_steps_id', 
                                     'paramset_idx')
 
-    preprocess_paramsets = (imaging_element.PreProcessParamSteps.Step() & 
+    preprocess_paramsets = (imaging_element.PreprocessParamSteps.Step() & 
                             dict(
                                 preprocess_param_steps_id=preprocess_param_steps_id)
                             ).fetch('paramset_idx')
@@ -42,13 +42,13 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                             scan_id=0,
                             preprocess_param_steps_id=preprocess_param_steps_id)
 
-    imaging_element.PreProcessTask.insert1(
+    imaging_element.PreprocessTask.insert1(
                                 dict(**preprocess_key,
                                     preprocess_output_dir=recording_process_pre_path,
                                     task_mode=task_mode),
                                     skip_duplicates=True)
 
-    imaging_element.PreProcess.populate(preprocess_key, **populate_settings)
+    imaging_element.Preprocess.populate(preprocess_key, **populate_settings)
 
     process_key = dict(**preprocess_key,
                         paramset_idx=paramset_idx)
