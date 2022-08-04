@@ -50,9 +50,9 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
 
     ephys_element.PreCluster.populate(precluster_key, **populate_settings)
 
-    if '1.0' in (ephys_element.ProbeInsertion * probe_element.Probe & 
-                    precluster_key).fetch1('probe_type'):
-        ephys_element.LFP.populate(precluster_key, **populate_settings)
+    #if '1.0' in (ephys_element.ProbeInsertion * probe_element.Probe & 
+    #                precluster_key).fetch1('probe_type'):
+    #    ephys_element.LFP.populate(precluster_key, **populate_settings)
 
     cluster_key = dict(**precluster_key,
                         paramset_idx=paramset_idx)
