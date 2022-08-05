@@ -14,6 +14,7 @@ import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.automatic_job.ephys_element_populate as ep
+import u19_pipeline.automatic_job.imaging_element_process as ip
 
 from datetime import datetime
 from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
@@ -339,7 +340,7 @@ class RecProcessHandler():
         if rec_series['recording_modality'] == 'electrophysiology':
             status_update = ep.populate_element_data(rec_series['job_id'])
         elif rec_series['recording_modality'] == 'imaging':
-            
+            status_update = ip.populate_element_data(rec_series['job_id'])
 
         return (status_update, update_value_dict)
 
