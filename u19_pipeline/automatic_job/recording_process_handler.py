@@ -226,33 +226,42 @@ class RecProcessHandler():
             MetaToCoords(spikeglx_meta_filepath, 1, destFullPath =chanmap_file_local_path)
             status = paramfilelib.generate_chanmap_file(rec_series['job_id'], rec_series['program_selection_params'])
 
-        #Create and transfer slurm file
-        if status == config.system_process['SUCCESS']:
-            status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])
-        else:
-            status_update = config.status_update_idx['ERROR_STATUS']
-            update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pereparameterfile file'
-            return (status_update, update_value_dict)
-        
-        #Queue slurm file
-        if status == config.system_process['SUCCESS']:
 
-            status, slurm_jobid, error_message = slurmlib.queue_slurm_file(rec_series['job_id'], rec_series['program_selection_params'],
-            rec_series['recording_process_pre_path'], rec_series['recording_process_post_path'],
-            rec_series['recording_modality'], slurm_filepath
-            )
+        # Only queue if processing in tiger
+        if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
+
+            #Create and transfer slurm file
+            if status == config.system_process['SUCCESS']:
+                status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])
+            else:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pereparameterfile file'
+                return (status_update, update_value_dict)
+            
+            #Queue slurm file
+            if status == config.system_process['SUCCESS']:
+
+                status, slurm_jobid, error_message = slurmlib.queue_slurm_file(rec_series['job_id'], rec_series['program_selection_params'],
+                rec_series['recording_process_pre_path'], rec_series['recording_process_post_path'],
+                rec_series['recording_modality'], slurm_filepath
+                )
+            else:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
+                return (status_update, update_value_dict)
+                        
+            if status == config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['NEXT_STATUS']
+                update_value_dict['value_update'] = slurm_jobid
+            else:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while queuing job in SLURM'
+                return (status_update, update_value_dict)
+
         else:
-            status_update = config.status_update_idx['ERROR_STATUS']
-            update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
-            return (status_update, update_value_dict)
-                    
-        if status == config.system_process['SUCCESS']:
-            status_update = True
-            update_value_dict['value_update'] = slurm_jobid
-        else:
-            status_update = config.status_update_idx['ERROR_STATUS']
-            update_value_dict['error_info']['error_message'] = 'Error while queuing job in SLURM'
-            return (status_update, update_value_dict)
+            #Just check we succeded with parameter files
+            if status == config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
 
@@ -273,35 +282,39 @@ class RecProcessHandler():
                                         'error_info':    error info to be inserted if error occured }
         """
 
-        status_update = config.status_update_idx['NO_CHANGE']
-        update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        
-        local_user = False
-        program_selection_params = rec_series['program_selection_params']
-        if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
-            local_user = True
+        # Only queue if processing in tiger
+        if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
+            status_update = config.status_update_idx['NO_CHANGE']
+            update_value_dict = copy.deepcopy(config.default_update_value_dict)
+            
+            local_user = False
+            program_selection_params = rec_series['program_selection_params']
+            if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
+                local_user = True
 
-        ssh_user = ft.cluster_vars[program_selection_params['process_cluster']]['user']
-        ssh_host = ft.cluster_vars[program_selection_params['process_cluster']]['hostname']
-        slurm_jobid = str(rec_series['slurm_id'])
+            ssh_user = ft.cluster_vars[program_selection_params['process_cluster']]['user']
+            ssh_host = ft.cluster_vars[program_selection_params['process_cluster']]['hostname']
+            slurm_jobid = str(rec_series['slurm_id'])
 
-        status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
+            status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
 
-        # Get message from slurm status check
-        update_value_dict['error_info']['error_message'] = message
+            # Get message from slurm status check
+            update_value_dict['error_info']['error_message'] = message
 
-        #If job finished copy over output and/or error log
-        if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
+            #If job finished copy over output and/or error log
+            if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
 
-            ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='ERROR')
-            ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
-            error_log = ft.get_error_log_str(rec_series['job_id'])
+                ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='ERROR')
+                ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
+                error_log = ft.get_error_log_str(rec_series['job_id'])
 
-            # If error log is not empty, get info about it
-            if error_log:
-                status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
-                update_value_dict['error_info']['error_exception'] = error_log
+                # If error log is not empty, get info about it
+                if error_log:
+                    status_update = config.status_update_idx['ERROR_STATUS']
+                    update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
+                    update_value_dict['error_info']['error_exception'] = error_log
+        else:
+            status_update = config.status_update_idx['NEXT_STATUS']
                 
         return (status_update, update_value_dict)
 
@@ -323,7 +336,10 @@ class RecProcessHandler():
         """
 
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
-        status_update = ep.populate_element_data(rec_series['job_id'])
+        if rec_series['recording_modality'] == 'electrophysiology':
+            status_update = ep.populate_element_data(rec_series['job_id'])
+        elif rec_series['recording_modality'] == 'imaging':
+            
 
         return (status_update, update_value_dict)
 

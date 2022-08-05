@@ -17,6 +17,7 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['/*imec[0-9]/']),
         'ProcessUnitDirectoryField': 'probe_directory',
         'ProcessUnitField': 'probe',
+        'local_or_cluster': 'cluster',
         'process_repository': 'BrainCogsEphysSorters',
         'process_cluster': 'tiger',
         'process_script': 'main_script.py'
@@ -30,6 +31,7 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'fov_directory',
         'ProcessUnitField': 'fov',
+        'local_or_cluster': 'local',
         'process_repository': 'element-calcium-imaging',
         'process_cluster': 'spock',
         'process_script': 'none'
@@ -43,6 +45,7 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'video_directory',
         'ProcessUnitField': '',
+        'local_or_cluster': 'local',
         'process_repository': 'None',
         'process_cluster': 'spock',
         'process_script': 'none'
