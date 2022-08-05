@@ -351,10 +351,9 @@ class RecProcessHandler():
         Return:
             program_selection_params (pd.DataFrame): processing variables default dictionary
         '''
-
         # Get df from config file
         this_modality_program_selection_params =\
-                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == 'electrophysiology', :]
+                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == modality, :]
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
@@ -365,9 +364,6 @@ class RecProcessHandler():
         this_modality_program_selection_params['program_selection_params'] = this_modality_program_selection_params_dict
 
         this_modality_program_selection_params
-
-        print('get_program_selection_params .......................')
-        print(this_modality_program_selection_params)
 
         return this_modality_program_selection_params
 
@@ -386,17 +382,18 @@ class RecProcessHandler():
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
-        print(df_process_jobs)
-
         if df_process_jobs.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)
             df_process_jobs['query_key'] = df_process_jobs.loc[:, key_list].to_dict(orient='records')
 
             # Get parameters for all modalities
             all_modalities = df_process_jobs['recording_modality'].unique()
+
+            all_mods_df = list()
+            # Get process df for each modality
             for this_modality in all_modalities:
 
-                this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
+                this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:].copy()
                 these_process_keys = this_mod_df['query_key'].to_list()
 
                 this_mod_program_selection_params = RecProcessHandler.get_program_selection_params(this_modality)
@@ -407,11 +404,17 @@ class RecProcessHandler():
                 if this_modality == 'imaging':
                     params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
                 
-                df_process_jobs = df_process_jobs.merge(params_df, how='left')
-                df_process_jobs = df_process_jobs.merge(this_mod_program_selection_params, how='left')
+                this_mod_df = this_mod_df.merge(params_df, on='job_id', how='left')
+                this_mod_df = this_mod_df.merge(this_mod_program_selection_params, on='recording_modality', how='left')
 
+                all_mods_df.append(this_mod_df)
+
+            #Concatenate all process_jobs for each modality
+            df_process_jobs = all_mods_df[0].copy()
+
+            for this_mod_df in all_mods_df[1:]:
+                df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
         
-        print('df_process_jobs*************************************')
         print(df_process_jobs)
 
         return df_process_jobs
@@ -487,6 +490,7 @@ class RecProcessHandler():
                     recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
             preparams_df['preparams'] = None
 
+        preparams_df = preparams_df[['job_id', 'preparams']]
         params_df = params_df.merge(preparams_df)
 
         return params_df
