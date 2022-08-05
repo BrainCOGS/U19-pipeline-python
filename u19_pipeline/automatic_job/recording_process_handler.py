@@ -397,6 +397,8 @@ class RecProcessHandler():
 
             for this_mod_df in all_mods_df[1:]:
                 df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
+
+            df_process_jobs = df_process_jobs.loc[df_process_jobs['recording_modality'] == 'electrophysiology', : ].copy()
         
         print(df_process_jobs)
 
