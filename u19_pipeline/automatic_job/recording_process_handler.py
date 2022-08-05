@@ -335,9 +335,11 @@ class RecProcessHandler():
             program_selection_params (pd.DataFrame): processing variables default dictionary
         '''
 
+        print('get_program_selection_params get_program_selection_params ........... modality ----', modality)
+
         # Get df from config file
         this_modality_program_selection_params =\
-                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == 'electrophysiology', :]
+                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == modality, :]
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
@@ -369,18 +371,20 @@ class RecProcessHandler():
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
-        print(df_process_jobs)
-
         if df_process_jobs.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)
             df_process_jobs['query_key'] = df_process_jobs.loc[:, key_list].to_dict(orient='records')
 
             # Get parameters for all modalities
             all_modalities = df_process_jobs['recording_modality'].unique()
+
+            print('all modalitites xxxxxxxxxxxx')
+
             for this_modality in all_modalities:
 
                 this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
                 these_process_keys = this_mod_df['query_key'].to_list()
+                print('this modality ........... xxxxxxxxxxxx', this_modality)
 
                 this_mod_program_selection_params = RecProcessHandler.get_program_selection_params(this_modality)
 
