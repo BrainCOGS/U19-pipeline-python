@@ -1,25 +1,81 @@
-from u19_pipeline.imaging_element import scan_element, imaging_element
+from u19_pipeline import recording, recording_process
+from u19_pipeline.imaging_pipeline import imaging_element
+import pathlib
+import datajoint as dj
+
+def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
+
+    populate_settings = {'display_progress': display_progress, 
+                         'reserve_jobs': reserve_jobs, 
+                         'suppress_errors': suppress_errors}
+
+    process_key = (recording_process.Processing * recording.Recording & 
+                            dict(recording_modality='imaging',
+                                 job_id=job_id)).fetch1('KEY')
+
+    fragment_number, recording_process_pre_path, recording_process_post_path = \
+                            (recording_process.Processing & process_key).fetch1(
+                                            'fragment_number',
+                                            'recording_process_pre_path',
+                                            'recording_process_post_path')
+
+    preprocess_param_steps_id, paramset_idx = \
+                        (recording_process.Processing.ImagingParams & process_key
+                        ).fetch1('preprocess_param_steps_id', 
+                                    'paramset_idx')
+
+    preprocess_paramsets = (imaging_element.PreprocessParamSteps.Step() & 
+                            dict(
+                                preprocess_param_steps_id=preprocess_param_steps_id)
+                            ).fetch('paramset_idx')
+
+    processing_method = (imaging_element.ProcessingParamSet & 
+                            dict(paramset_idx=paramset_idx)).fetch1(
+                                                            'processing_method')
+
+    if len(preprocess_paramsets)==0:
+        preprocess_task_mode = 'none'
+    else:
+        preprocess_task_mode = 'load'
+
+    preprocess_key = dict(recording_id=process_key['recording_id'],
+                            tiff_split=fragment_number,
+                            scan_id=0,
+                            preprocess_param_steps_id=preprocess_param_steps_id)
+
+    imaging_element.PreprocessTask.insert1(
+                                dict(**preprocess_key,
+                                    preprocess_output_dir=recording_process_pre_path,
+                                    task_mode=preprocess_task_mode),
+                                    skip_duplicates=True)
+
+    imaging_element.Preprocess.populate(preprocess_key, **populate_settings)
+
+    process_key = dict(**preprocess_key,
+                        paramset_idx=paramset_idx)
 
 
-def run(display_progress=True):
+    pathlib.Path(dj.config['custom']['imaging_processing_data_dir'],recording_process_post_path,processing_method+'_output').mkdir(parents=True, exist_ok=True)
+    #pathlib.Path(f'/mnt/cup/braininit/Data/Processed/imaging/{recording_process_post_path}/{processing_method}_output').mkdir(parents=True, exist_ok=True)
 
-    populate_settings = {'display_progress': display_progress, 'reserve_jobs': False, 'suppress_errors': False}
+    imaging_element.ProcessingTask.insert1(
+        dict(**process_key,
+                processing_output_dir=f'{recording_process_post_path}/{processing_method}_output',
+                task_mode='trigger'), skip_duplicates=True)
 
-    print('\n---- Populate imported and computed tables ----')
-    scan_element.ScanInfo.populate(**populate_settings)
+    imaging_element.Processing.populate(process_key, **populate_settings)
 
-    imaging_element.Processing.populate(**populate_settings)
+    if (imaging_element.Processing - imaging_element.Curation) & process_key:
+        imaging_element.Curation().create1_from_processing_task(process_key)
 
-    imaging_element.MotionCorrection.populate(**populate_settings)
+    imaging_element.MotionCorrection.populate(process_key, **populate_settings)
 
-    imaging_element.Segmentation.populate(**populate_settings)
+    imaging_element.Segmentation.populate(process_key, **populate_settings)
 
-    imaging_element.Fluorescence.populate(**populate_settings)
+    imaging_element.Fluorescence.populate(process_key, **populate_settings)
 
-    imaging_element.Activity.populate(**populate_settings)
-
-    print('\n---- Successfully completed workflow_imaging/process.py ----')
+    imaging_element.Activity.populate(process_key, **populate_settings)
 
 
 if __name__ == '__main__':
-    run()
+    populate_element_data()
