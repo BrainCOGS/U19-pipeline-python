@@ -53,7 +53,8 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                                     task_mode=preprocess_task_mode),
                                     skip_duplicates=True)
 
-    imaging_element.Preprocess.populate(preprocess_key, **populate_settings)
+    if not imaging_element.Preprocess & preprocess_key:
+        imaging_element.Preprocess.populate(preprocess_key, **populate_settings)
 
     process_key = dict(**preprocess_key,
                         paramset_idx=paramset_idx)
@@ -65,18 +66,23 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                 processing_output_dir=f'{recording_process_post_path}/{processing_method}_output',
                 task_mode='trigger'), skip_duplicates=True)
 
-    imaging_element.Processing.populate(process_key, **populate_settings)
+    if not imaging_element.Processing & process_key:
+        imaging_element.Processing.populate(process_key, **populate_settings)
 
     if (imaging_element.Processing - imaging_element.Curation) & process_key:
         imaging_element.Curation().create1_from_processing_task(process_key)
 
-    imaging_element.MotionCorrection.populate(process_key, **populate_settings)
+    if not imaging_element.MotionCorrection & process_key:
+        imaging_element.MotionCorrection.populate(process_key, **populate_settings)
 
-    imaging_element.Segmentation.populate(process_key, **populate_settings)
+    if not imaging_element.Segmentation & process_key:
+        imaging_element.Segmentation.populate(process_key, **populate_settings)
 
-    imaging_element.Fluorescence.populate(process_key, **populate_settings)
+    if not imaging_element.Fluorescence & process_key:
+        imaging_element.Fluorescence.populate(process_key, **populate_settings)
 
-    imaging_element.Activity.populate(process_key, **populate_settings)
+    if not imaging_element.Activity & process_key:
+        imaging_element.Activity.populate(process_key, **populate_settings)
 
 
 if __name__ == '__main__':
