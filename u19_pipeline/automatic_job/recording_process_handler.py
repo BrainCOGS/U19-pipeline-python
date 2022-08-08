@@ -414,6 +414,9 @@ class RecProcessHandler():
 
             for this_mod_df in all_mods_df[1:]:
                 df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
+
+            df_process_jobs = df_process_jobs.loc[df_process_jobs['recording_modality'] == 'electrophysiology', : ].copy()
+            df_process_jobs = df_process_jobs.reset_index(drop=True)
         
         print(df_process_jobs)
 
@@ -472,8 +475,8 @@ class RecProcessHandler():
         params_df['params'] = params_df.apply(lambda x: {**x['params'], **{'processing_method':x['processing_method']}},axis=1)
 
         # Get preprocess param sets
-        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
-        utility.smart_dj_join(imaging_pipeline.imaging_element.PreProcessParamSteps.Step, imaging_pipeline.imaging_element.PreProcessParamSet.proj('preprocess_method', 'params')) *
+        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreprocessParamSteps * \
+        utility.smart_dj_join(imaging_pipeline.imaging_element.PreprocessParamSteps.Step, imaging_pipeline.imaging_element.PreprocessParamSet.proj('preprocess_method', 'params')) *
         recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
 
         #If there is no preprocess steps for this jobs fill with empty values
@@ -486,7 +489,7 @@ class RecProcessHandler():
             preparams_df = preparams_df.reset_index()
 
         else:
-            preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
+            preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreprocessParamSteps * \
                     recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
             preparams_df['preparams'] = None
 

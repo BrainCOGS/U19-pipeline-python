@@ -1,6 +1,7 @@
 from u19_pipeline import recording, recording_process
 from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
+import datajoint as dj
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
@@ -53,7 +54,9 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     process_key = dict(**preprocess_key,
                         paramset_idx=paramset_idx)
 
-    pathlib.Path(f'/mnt/cup/braininit/Data/Processed/imaging/{recording_process_post_path}/{processing_method}_output').mkdir(parents=True, exist_ok=True)
+
+    pathlib.Path(dj.config['custom']['imaging_processing_data_dir'],recording_process_post_path,processing_method+'_output').mkdir(parents=True, exist_ok=True)
+    #pathlib.Path(f'/mnt/cup/braininit/Data/Processed/imaging/{recording_process_post_path}/{processing_method}_output').mkdir(parents=True, exist_ok=True)
 
     imaging_element.ProcessingTask.insert1(
         dict(**process_key,
