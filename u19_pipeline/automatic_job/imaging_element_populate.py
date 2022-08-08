@@ -1,6 +1,9 @@
 from u19_pipeline import recording, recording_process
 from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
+import logging
+
+logger=logging.getLogger('datajoint')
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
@@ -11,6 +14,8 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     process_key = (recording_process.Processing * recording.Recording & 
                             dict(job_id=job_id)).fetch1('KEY')
 
+    if process_key['recording_modality'] != 'imaging':
+        logger.Warning(f'Recording modality is not `imaging` for job_id: {job_id}')
 
     fragment_number, recording_process_pre_path, recording_process_post_path = \
                             (recording_process.Processing & process_key).fetch1(
