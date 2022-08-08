@@ -3,7 +3,7 @@ import datajoint as dj
 import pathlib
 import subprocess
 
-from u19_pipeline import acquisition, subject, recording
+from u19_pipeline import lab, acquisition, subject, recording
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
 
@@ -157,9 +157,7 @@ from u19_pipeline.reference import BrainArea as Location
 
 Session = TiffSplit
 
-lab_schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
-
-@lab_schema
+@lab.schema
 class Equipment(dj.Manual):
     definition = """
     equipment             : varchar(32)
@@ -199,7 +197,8 @@ def get_scan_image_files(rec_process_key):
     if tiff_filepaths:
         return tiff_filepaths
     else:
-        raise FileNotFoundError(f'No tiff file found in {data_dir}')#TODO search for TIFF files in directory
+        raise FileNotFoundError(f'No tiff file found in {data_dir}')
+
 
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
@@ -219,7 +218,7 @@ def get_processed_dir(processing_task_key, process_method):
         if len(suite2p_dirs) != 1:
             raise FileNotFoundError(f'Error searching for Suite2p output directory in {bucket_scan_dir} - Found {suite2p_dirs}')
     elif process_method == 'caiman':
-        pass #TODO
+        raise NotImplementedError('CaImAn is not currented implemented.')
 
     return sess_dir
 
