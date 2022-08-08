@@ -9,8 +9,8 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                          'suppress_errors': suppress_errors}
 
     process_key = (recording_process.Processing * recording.Recording & 
-                            dict(recording_modality='imaging',
-                                 job_id=job_id)).fetch1('KEY')
+                            dict(job_id=job_id)).fetch1('KEY')
+
 
     fragment_number, recording_process_pre_path, recording_process_post_path = \
                             (recording_process.Processing & process_key).fetch1(
