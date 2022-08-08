@@ -399,6 +399,7 @@ class RecProcessHandler():
                 df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
 
             df_process_jobs = df_process_jobs.loc[df_process_jobs['recording_modality'] == 'electrophysiology', : ].copy()
+            df_process_jobs = df_process_jobs.reset_index(drop=True)
         
         print(df_process_jobs)
 
