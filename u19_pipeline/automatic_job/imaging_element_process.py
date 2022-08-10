@@ -3,6 +3,8 @@ from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
 import datajoint as dj
 
+import u19_pipeline.automatic_job.params_config as config
+
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {'display_progress': display_progress, 
@@ -75,6 +77,8 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     imaging_element.Fluorescence.populate(process_key, **populate_settings)
 
     imaging_element.Activity.populate(process_key, **populate_settings)
+
+    return config.status_update_idx['NEXT_STATUS']
 
 
 if __name__ == '__main__':

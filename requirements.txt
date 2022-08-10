@@ -16,11 +16,13 @@ numpy
 astropy
 jupyterlab
 bitstring
-suite2p @ git+https://github.com/MouseLand/suite2p.git
+#suite2p @ git+https://github.com/MouseLand/suite2p.git
+suite2p == 0.10.3
 cellpose
 scp
 paramiko
 psutil
 deeplabcut
+tifffile == 2021.11.2
 # matlab
 # matlabengineforpython

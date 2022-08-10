@@ -28,17 +28,24 @@ def generate_parameter_file(recording_process_id, params, type_params, program_s
     '''
     Generate and send parameter files for processing
     '''
-    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
-    params_file_cluster_path = cluster_vars['params_files_dir']
-    user_host = cluster_vars['user']+'@'+cluster_vars['hostname']
+    if program_selection_params['local_or_cluster'] == 'cluster':
+        cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+        params_file_cluster_path = cluster_vars['params_files_dir']
+        user_host = cluster_vars['user']+'@'+cluster_vars['hostname']
 
     #Write preprocessing parameter file
     if type_params == 'preparams':
         write_parameter_file(params, recording_process_id, config.default_preprocess_filename)
-        status = transfer_parameter_file(recording_process_id, config.default_preprocess_filename, params_file_cluster_path, user_host)
+        if program_selection_params['local_or_cluster'] == 'cluster':
+            status = transfer_parameter_file(recording_process_id, config.default_preprocess_filename, params_file_cluster_path, user_host)
+        else:
+            status = config.system_process['SUCCESS']
     else:
         write_parameter_file(params, recording_process_id, config.default_process_filename)
-        status = transfer_parameter_file(recording_process_id, config.default_process_filename, params_file_cluster_path, user_host)
+        if program_selection_params['local_or_cluster'] == 'cluster':
+            status = transfer_parameter_file(recording_process_id, config.default_process_filename, params_file_cluster_path, user_host)
+        else:
+            status = config.system_process['SUCCESS']
 
     return status
 
