@@ -56,6 +56,9 @@ class RecProcessHandler():
                 #Get dictionary of record process
                 key = rec_process_series['query_key']
 
+                print('rec_process_series')
+                print(rec_process_series)
+
                 if status == config.status_update_idx['NEXT_STATUS']:
                     
                     
@@ -68,6 +71,7 @@ class RecProcessHandler():
                     print('old status', current_status, 'new status', next_status)
                     print('value_update', value_update, 'field_update', field_update)
                     print('function executed:', next_status_series['ProcessFunction'])
+
 
                     RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
 
@@ -368,7 +372,7 @@ class RecProcessHandler():
         status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
         status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
 
-        jobs_active = (recording.Recording.proj('recording_modality') * \
+        jobs_active = (recording.Recording.proj('recording_modality', 'location', 'recording_directory') * \
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 

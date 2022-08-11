@@ -36,10 +36,10 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
     m2['type'] = 'section'
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
-    m2_1["text"] = '*' +base_message +'*\n' +\
-        '*data_path*: ' + session_info['recording_directory'] +'\n'+\
-        '*session_location*: ' + session_info['location'] + '\n'+\
-        '*modality*: ' + session_info['recording_modality']
+    m2_1["text"] = '*' + base_message +'* \n' +\
+        ' *data_path* : ' + session_info['recording_directory'] +'\n'+\
+        ' *session_location* : ' + session_info['location'] + '\n'+\
+        ' *modality* : ' + session_info['recording_modality']
     m2['text'] = m2_1
 
     message = dict()
@@ -72,10 +72,10 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     m2['type'] = 'section'
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
-    m2_1["text"] = '*Automation pipeline failed for:\n' +\
-        '*data_path*: ' + session_info['recording_directory'] +'\n'+\
-        '*session_location*: ' + session_info['location'] + '\n'+\
-        '*modality*: ' + session_info['recording_modality']
+    m2_1["text"] = '*Automation pipeline failed for:* \n' +\
+        ' *data_path* : ' + session_info['recording_directory'] +'\n'+\
+        ' *session_location* : ' + session_info['location'] + '\n'+\
+        ' *modality* : ' + session_info['recording_modality']
     m2['text'] = m2_1
 
     #Error#
@@ -83,9 +83,9 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     m3['type'] = 'section'
     m3_1 = dict()
     m3_1["type"] = "mrkdwn"
-    m3_1["text"] = '**Error info*\n' +\
-        '*error message*: ' + error_info['error_message'] +'\n'+\
-        '*session_location*: ' + error_info['error_exception']
+    m3_1["text"] = '*Error info* \n' +\
+        ' *error message* : ' + error_info['error_message'] +'\n'+\
+        ' *error_stack* : ' + error_info['error_exception']
     m3['text'] = m3_1
 
     message = dict()

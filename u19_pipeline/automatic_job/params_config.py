@@ -79,7 +79,7 @@ recording_status_dict = [
         'UpdateField': 'task_copy_id_pni',
         'ProcessFunction': 'local_transfer_request',
         'FunctionField': 'recording_process_pre_path',
-        'SlackMessage': None 
+        'SlackMessage': None
     },
     {
         'Value': 2,

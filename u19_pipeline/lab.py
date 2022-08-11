@@ -5,6 +5,8 @@ import datajoint as dj
 import numpy as np
 import pandas as pd
 import pathlib
+import sys
+import os
 from u19_pipeline.utility import is_this_spock
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
@@ -199,12 +201,12 @@ class Path(dj.Lookup):
     """
 
     contents = [
-        ['/Bezos-center', 'windows', 'Y:', r'\\bucket.pni.princeton.edu\Bezos-center', ''],
-        ['/Bezos-center', 'mac', '/Volumes/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', ''],
-        ['/Bezos-center', 'linux', '/mnt/Bezos-center', '//bucket.pni.princeton.edu/Bezos-center', ''],
-        ['/braininit', 'windows', 'Z:', r'\\bucket.pni.princeton.edu\braininit', ''],
-        ['/braininit', 'mac', '/Volumes/braininit', '//bucket.pni.princeton.edu/Bezos-center', ''],
-        ['/braininit', 'linux', '/mnt/braininit', '//bucket.pni.princeton.edu/Bezos-center', '']
+        ['/Bezos-center', 'windows', 'Y:', r'\\cup.pni.princeton.edu\Bezos-center', ''],
+        ['/Bezos-center', 'mac', '/Volumes/Bezos-center', '//cup.pni.princeton.edu/Bezos-center', ''],
+        ['/Bezos-center', 'linux', '/mnt/Bezos-center', '//cup.pni.princeton.edu/Bezos-center', ''],
+        ['/braininit', 'windows', 'Z:', r'\\cup.pni.princeton.edu\braininit', ''],
+        ['/braininit', 'mac', '/Volumes/braininit', '//cup.pni.princeton.edu/Bezos-center', ''],
+        ['/braininit', 'linux', '/mnt/braininit', '//cup.pni.princeton.edu/Bezos-center', '']
     ]
 
     def get_local_path(self, path, local_os=None):
