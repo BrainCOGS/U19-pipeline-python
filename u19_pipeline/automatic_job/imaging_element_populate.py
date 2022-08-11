@@ -1,6 +1,7 @@
 from u19_pipeline import recording, recording_process
 from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
+import warnings
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
@@ -8,10 +9,12 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                          'reserve_jobs': reserve_jobs, 
                          'suppress_errors': suppress_errors}
 
-    process_key = (recording_process.Processing * recording.Recording 
-                   & dict(job_id=job_id)).fetch1('KEY')
+    process_key = (recording_process.Processing * recording.Recording & 
+                   dict(job_id=job_id)).fetch1('KEY')
 
-    assert (recording.Recording & process_key).fetch1('recording_modality') == 'imaging', f'Recording modality is not `imaging` for job_id: {job_id}'
+    if (recording.Recording & process_key).fetch1('recording_modality') != 'imaging':
+        warnings.warn(f'Recording modality is not `imaging` for job_id: {job_id}')
+        return
 
     fragment_number, recording_process_pre_path, recording_process_post_path = \
                             (recording_process.Processing & process_key).fetch1(
