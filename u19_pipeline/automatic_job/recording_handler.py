@@ -10,6 +10,7 @@ from datetime import datetime
 from u19_pipeline import recording, ephys_pipeline, imaging_pipeline, recording, recording_process, lab
 
 import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.slack_utils as slack_utils
 import u19_pipeline.utils.scp_transfers as scp_tr
 
 from u19_pipeline.automatic_job import ephys_element_ingest
@@ -70,11 +71,15 @@ class RecordingHandler():
                     field_update = next_status_series['UpdateField']
 
                     RecordingHandler.update_status_pipeline(key, next_status, field_update, value_update)
+
+                    if next_status_series['SlackMessage']:
+                        slack_utils.send_slack_update_notification(config.slack_update_channel, next_status_series['SlackMessage'], recording_series)
                 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecordingHandler.update_status_pipeline(key,next_status, None, None)
+                    slack_utils.send_slack_error_notification(config.slack_error_channel, update_dict['error_info'] ,recording_series)
 
                 #if success or error update status timestamps table
                 if status != config.status_update_idx['NO_CHANGE']:
