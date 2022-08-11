@@ -73,13 +73,15 @@ class RecordingHandler():
                     RecordingHandler.update_status_pipeline(key, next_status, field_update, value_update)
 
                     if next_status_series['SlackMessage']:
-                        slack_utils.send_slack_update_notification(config.slack_update_channel, next_status_series['SlackMessage'], recording_series)
+                        slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
+                             next_status_series['SlackMessage'], recording_series)
                 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecordingHandler.update_status_pipeline(key,next_status, None, None)
-                    slack_utils.send_slack_error_notification(config.slack_error_channel, update_dict['error_info'] ,recording_series)
+                    slack_utils.send_slack_error_notification(cconfig.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_dict['error_info'] ,recording_series)
 
                 #if success or error update status timestamps table
                 if status != config.status_update_idx['NO_CHANGE']:

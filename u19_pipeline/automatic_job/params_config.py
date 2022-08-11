@@ -5,6 +5,7 @@ import os
 import pathlib
 
 from scripts.conf_file_finding import get_root_directory
+import u19_pipeline.lab as lab
 
 
 recording_modality_dict = [
@@ -291,5 +292,8 @@ default_chanmap_filename = 'chanmap_%s.mat'
 
 
 #Slack notification channels
-slack_error_channel = 'https://hooks.slack.com/services/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'
-slack_update_channel = 'https://hooks.slack.com/services/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'
+slack_webhooks = lab.SlackWebhooks.fetch()
+
+slack_webhooks_dict = dict()
+for i in range(slack_webhooks.shape[0]):
+    slack_webhooks_dict[slack_webhooks[i][0]] = slack_webhooks[i][1]

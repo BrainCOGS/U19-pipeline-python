@@ -340,3 +340,11 @@ class VideoType(dj.Lookup):
     contents = [['pupillometry', ''],
                 ['behavior',  '']
                 ]
+
+@schema
+class SlackWebhooks(dj.Lookup):
+    definition = """
+    webhook_name            : varchar(64)
+    ---
+    webhook_url             : varchar(255)
+    """
