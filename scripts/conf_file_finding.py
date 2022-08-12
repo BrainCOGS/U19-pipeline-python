@@ -29,7 +29,7 @@ def get_root_directory():
     current_dir = pathlib.Path(os.getcwd())
     while 1:
         
-        u19_dir = pathlib.Path(current_dir,'u19-pipeline_python')
+        u19_dir = pathlib.Path(current_dir,'U19-pipeline_python')
         if os.path.isdir(u19_dir):
             root_dir_found = 1
             break

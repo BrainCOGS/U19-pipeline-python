@@ -14,11 +14,12 @@ numpy
 astropy
 jupyterlab
 bitstring
-suite2p>=0.10.3
+suite2p == 0.10.3
 cellpose
 scp
 paramiko
 psutil
 deeplabcut
+tifffile == 2021.11.2
 # matlab
 # matlabengineforpython
