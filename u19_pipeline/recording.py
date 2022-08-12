@@ -15,6 +15,8 @@ class Modality(dj.Lookup):
      ---
      modality_description:       varchar(255) # description for the modality
      root_directory:             varchar(255) # root directory where modality is stored
+     default_preprocess_param_steps_id: int(11)     # defualt preprocess id for this modality (majority of users)
+     default_paramset_idx:                 int(11)  # defualt paramset id for this modality (majority of users)
      recording_file_extensions:  blob         # file extensions for this modality
      recording_file_pattern:     blob         # directory pattern to find recordings in path
      process_unit_file_pattern:  blob         # process "unit" pattern to find in path
@@ -47,7 +49,6 @@ class Recording(dj.Manual):
      -> lab.Location
      -> Status                                # current status for recording
      task_copy_id_pni=null:      int(11)      # globus transfer task raw file local->cup
-     inherit_params_recording=1: boolean      # all RecordingProcess from a recording will have same paramSets
      recording_directory:        varchar(255) # relative directory on cup
      local_directory:            varchar(255) # local directory where the recording is stored on system
      """    
@@ -69,7 +70,7 @@ class Recording(dj.Manual):
 
 
 @schema
-class Log(dj.Manual):
+class LogStatus(dj.Manual):
      definition = """
      recording_log_id: INT(11) AUTO_INCREMENT # Unique number assigned to each change 
                                               # of status for all recordings
@@ -90,7 +91,7 @@ class DefaultParams(dj.Manual):
      fragment_number:                   TINYINT(1)  # probe/field_of_view # if not always the same 
      -----
      default_same_preparams_all=1:      TINYINT(1)  # by default all probes/fields of view have same preparameters
-     pre_param_list_id:                 INT(11)     # preparams index for recording (could be imaging/ephys)
+     preprocess_param_steps_id:         INT(11)     # preparams index for recording (could be imaging/ephys)
      default_same_params_all=1:         TINYINT(1)  # by default all probes/fields of view have same parameters
      paramset_idx:                      INT(11)     # params index for recording (could be imaging/ephys)
      """
@@ -106,8 +107,8 @@ class DefaultParams(dj.Manual):
                this_params_rec_process['job_id'] = i['job_id']
                this_fragment = i['fragment_number']
 
-               this_params_rec_process['precluster_param_list_id'] = \
-                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_preparams_all', 'pre_param_list_id')
+               this_params_rec_process['preprocess_param_steps_id'] = \
+                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_preparams_all', 'preprocess_param_steps_id')
 
                this_params_rec_process['paramset_idx'] = \
                     DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_params_all', 'paramset_idx')
@@ -119,26 +120,26 @@ class DefaultParams(dj.Manual):
 
      @staticmethod
      def get_corresponding_param(default_params_record_df, this_fragment, default_label, param_label):
-          'Get corresponding param (pre_param_list_id or paramset_idx) for this fragment'
+          'Get corresponding param (preprocess_param_steps_id or paramset_idx) for this fragment'
 
           'default_label = default_same_preparams_all / default_same_params_all '
-          'param_label   = precluster_param_list_id   / paramset_idx '
+          'param_label   = preprocess_param_steps_id  / paramset_idx '
 
           #If there is no default params for this recording, get default ones (0 id)
           if default_params_record_df.shape[0] == 0:
-               this_fragment_pre_param_list_id = 0
-               return this_fragment_pre_param_list_id
+               this_fragment_preprocess_param_steps_id = 0
+               return this_fragment_preprocess_param_steps_id
 
           else:
                if default_params_record_df.loc[0, default_label] == 1:
-                    this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+                    this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
                else:
-                    this_fragment_pre_param_list_id = \
+                    this_fragment_preprocess_param_steps_id = \
                          default_params_record_df.loc[default_params_record_df['fragment_number'] == this_fragment, param_label]
                     #If there is no list id for this specific fragment, get default one
-                    if this_fragment_pre_param_list_id.shape[0] == 0:
-                         this_fragment_pre_param_list_id = default_params_record_df.loc[0, param_label]
+                    if this_fragment_preprocess_param_steps_id.shape[0] == 0:
+                         this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
                     else:
-                         this_fragment_pre_param_list_id = this_fragment_pre_param_list_id.values[0]
+                         this_fragment_preprocess_param_steps_id = this_fragment_preprocess_param_steps_id.values[0]
 
-               return this_fragment_pre_param_list_id
+               return this_fragment_preprocess_param_steps_id

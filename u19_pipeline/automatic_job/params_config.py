@@ -1,10 +1,15 @@
-from optparse import Values
+
 import pandas as pd
 import numpy as np
+import os
+import pathlib
+
+from scripts.conf_file_finding import get_root_directory
+
 
 recording_modality_dict = [
     {
-        'RecordingModality': 'electrophysiology',
+        'recording_modality': 'electrophysiology',
         'Description': '',
         'RootDirectorty': '/braininit/Data/electrophysiology',
         'FileExtensions': np.asarray(['ap.bin', 'ap.meta']),
@@ -12,10 +17,12 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['/*imec[0-9]/']),
         'ProcessUnitDirectoryField': 'probe_directory',
         'ProcessUnitField': 'probe',
-        'ProcessingRepository': 'BrainCogsEphysSorters',
+        'process_repository': 'BrainCogsEphysSorters',
+        'process_cluster': 'tiger',
+        'process_script': 'main_script.py'
     },
     {
-        'RecordingModality': 'imaging',
+        'recording_modality': 'imaging',
         'Description': '',
         'RootDirectorty': '/braininit/Data/imaging',
         'FileExtensions': np.asarray(['.avi', '.tiff','.tif']),
@@ -23,10 +30,12 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'fov_directory',
         'ProcessUnitField': 'fov',
-        'ProcessingRepository': 'BrainCogsImagingSegmentation',
+        'process_repository': 'element-calcium-imaging',
+        'process_cluster': 'spock',
+        'process_script': 'none'
     },
     {
-        'RecordingModality': 'video_acquisition',
+        'recording_modality': 'video_acquisition',
         'Description': '',
         'RootDirectorty': '/braininit/Data/imaging',
         'FileExtensions': np.asarray(['.avi', '.mp4']),
@@ -34,7 +43,9 @@ recording_modality_dict = [
         'ProcessUnitFilePattern': np.asarray(['']),
         'ProcessUnitDirectoryField': 'video_directory',
         'ProcessUnitField': '',
-        'ProcessingRepository': 'None',
+        'process_repository': 'None',
+        'process_cluster': 'spock',
+        'process_script': 'none'
     },
 ]
 
@@ -170,21 +181,12 @@ recording_process_status_dict = [
     },
     {
         'Value': 7,
-        'Key': 'JOB_QUEUE_ELEMENT_WORKFLOW',
-        'Label': 'Job Queue Element Workflow ingestion',
+        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
+        'Label': 'Data in element, Finished !!',
         'UpdateField': None,
-        'ProcessFunction': None,
-        #'ProcessFunction': RecProcessHandler.slurm_job_element,
+        'ProcessFunction': 'populate_element',
         'FunctionField': None,
     },
-    {
-        'Value': 8,
-        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
-        'Label': 'Process finished',
-        'UpdateField': None,
-        'ProcessFunction': 'slurm_job_check',
-        'FunctionField': None,
-    }
 ]
 
 all_preprocess_params = {
@@ -211,13 +213,64 @@ system_process = {
     'ERROR':    -1
 }
 
-
-program_selection_params = {
-    'process_cluster': 'tiger',
-    'process_repository': 'BrainCogsEphysSorters',
-    'process_script': 'main_script.py'
+slurm_states = {
+    'COMPLETED': {
+        'pipeline_status': status_update_idx['NEXT_STATUS'],
+        'message':         ''
+    },
+    'PENDING':   {
+        'pipeline_status': status_update_idx['NO_CHANGE'],
+        'message':         ''
+    },
+    'RUNNING':   {
+        'pipeline_status': status_update_idx['NO_CHANGE'],
+        'message':         ''
+    },
+    'FAILED':    {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         ''
+    },
+    'TIMEOUT':
+    {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Timeout for job has expired'
+    },
+    'CANCELLED+':
+        {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Job was cancelled'
+        },
+    'CANCELLED':
+        {
+        'pipeline_status': status_update_idx['ERROR_STATUS'],
+        'message':         'Job was cancelled'
+        }
 }
 
 
-startup_pipeline_matlab_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline-matlab/scripts'
-ingest_scaninfo_script = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/ingest_scaninfo_shell.sh'
+program_selection_params_keys = [
+    'process_cluster',
+    'process_repository',
+    'process_script'
+]
+
+
+# Look for u19_matlab_dir (Should be present on same directory as U19-Pipeline_Python)
+_, u19_pipeline_python_dir = get_root_directory()
+datajoint_proj_dir = u19_pipeline_python_dir.parent
+u19_matlab_dir = pathlib.Path(datajoint_proj_dir, 'U19-pipeline-matlab')
+startup_pipeline_matlab_dir = pathlib.Path(u19_matlab_dir, 'scripts').as_posix()
+
+
+this_dir = os.path.dirname(__file__)
+ingest_scaninfo_script = pathlib.Path(this_dir, 'ingest_scaninfo_shell.sh').as_posix()
+
+
+# For parameter & channmap storing
+parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
+default_preprocess_filename = 'preprocess_paramset_%s.json'
+default_process_filename = 'process_paramset_%s.json'
+
+
+chanmap_files_filepath = pathlib.Path(this_dir, 'ChanMapFiles').as_posix()
+default_chanmap_filename = 'chanmap_%s.mat'

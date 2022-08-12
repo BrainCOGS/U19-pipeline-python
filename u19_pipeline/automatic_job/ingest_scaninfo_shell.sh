@@ -5,7 +5,7 @@ cd $1
 
 # 2nd Argument is string_key for given recording
 key=$2
-matlab_command="populate_ScanInfo_spock('"
+matlab_command="populate_Imaging_AcquiredTiff('"
 matlab_command+=$2
 matlab_command+="');exit;"
 

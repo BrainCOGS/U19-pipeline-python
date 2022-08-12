@@ -23,6 +23,23 @@ def chdir_to_root():
 
     return root_dir_found, conf_file_found
 
+def get_root_directory():
+
+    root_dir_found = 0
+    current_dir = pathlib.Path(os.getcwd())
+    while 1:
+        
+        u19_dir = pathlib.Path(current_dir,'u19-pipeline_python')
+        if os.path.isdir(u19_dir):
+            root_dir_found = 1
+            break
+        new_current_dir = current_dir.parent
+        if new_current_dir == current_dir:
+            break
+        current_dir = new_current_dir
+
+    return root_dir_found, u19_dir
+
 
 def try_find_conf_file():
 

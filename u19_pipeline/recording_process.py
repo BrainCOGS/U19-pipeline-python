@@ -7,6 +7,8 @@ from u19_pipeline.imaging_pipeline import imaging_element
 from u19_pipeline.ephys_pipeline import ephys_element
 import u19_pipeline.automatic_job.params_config as config
 
+from u19_pipeline.imaging_pipeline import  imaging_element, scan_element
+
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording_process')
 
 # Declare recording processing tables --------------------------------------------------
@@ -49,7 +51,7 @@ class Processing(dj.Manual):
           definition="""
           -> master
           ---
-          -> ephys_element.PreClusterParamList
+          -> ephys_element.PreClusterParamSteps
           -> ephys_element.ClusteringParamSet.proj(cluster_paramset_idx='paramset_idx')
           """
 
@@ -57,6 +59,7 @@ class Processing(dj.Manual):
         definition="""
         -> master
         ---
+        -> imaging_element.PreProcessParamSteps
         -> imaging_element.ProcessingParamSet
         """  
 
@@ -100,7 +103,7 @@ class Processing(dj.Manual):
 
 
 @schema
-class Log(dj.Manual):
+class LogStatus(dj.Manual):
      definition = """
      log_id: INT(11) AUTO_INCREMENT           # Unique number assigned to each change 
                                               # of status for all processing jobs

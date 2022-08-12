@@ -1,83 +1,77 @@
-from u19_pipeline.ephys_pipeline import ephys_element
+from u19_pipeline.ephys_pipeline import probe_element, ephys_element
 from u19_pipeline import recording, recording_process
 
-def run(display_progress=True, reserve_jobs=False, suppress_errors=False):
+import u19_pipeline.automatic_job.params_config as config
+
+def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {'display_progress': display_progress, 
                          'reserve_jobs': reserve_jobs, 
                          'suppress_errors': suppress_errors}
 
-    for key in (recording_process.Processing * recording.Recording & 
-                            dict(recording_modality='electrophysiology', 
-                                 status_processing_id=7)).fetch('KEY'):
+    process_key = (recording_process.Processing * recording.Recording & 
+                            dict(recording_modality='electrophysiology',
+                                 job_id=job_id)).fetch1('KEY')
 
-        recording_id, fragment_number, recording_process_pre_path = \
-                                (recording_process.Processing & key).fetch1(
-                                                'recording_id', 
-                                                'fragment_number',
-                                                'recording_process_pre_path')
-    
-        precluster_param_list_id = (recording_process.Processing.EphysParams & 
-                                                key).fetch1('precluster_param_list_id')
-        
-        precluster_paramsets = (ephys_element.PreClusterParamList.ParamOrder() & 
-                                dict(precluster_param_list_id=precluster_param_list_id)
-                               ).fetch('paramset_idx')
+    fragment_number, recording_process_pre_path, recording_process_post_path = \
+                            (recording_process.Processing & process_key).fetch1(
+                                            'fragment_number',
+                                            'recording_process_pre_path',
+                                            'recording_process_post_path')
 
-        if len(precluster_paramsets)==0 or \
-           (len(precluster_paramsets)==1 and precluster_paramsets[0]==None):
-            task_mode = 'none'
-        else:
-            task_mode = 'load'
+    precluster_param_steps_id, paramset_idx = \
+                        (recording_process.Processing.EphysParams & process_key
+                        ).fetch1('precluster_param_steps_id', 
+                                    'paramset_idx')
 
-        ephys_element.PreClusterTask.insert1(
-                                dict(recording_id=recording_id,
-                                     insertion_number=fragment_number,
-                                     precluster_param_list_id=precluster_param_list_id,
-                                     precluster_output_dir=recording_process_pre_path,
-                                     task_mode=task_mode))
+    precluster_paramsets = (ephys_element.PreClusterParamSteps.Step() & 
+                            dict(
+                                precluster_param_steps_id=precluster_param_steps_id)
+                            ).fetch('paramset_idx')
 
-    ephys_element.PreCluster.populate(**populate_settings)
+    clustering_method = (ephys_element.ClusteringParamSet & 
+                            dict(paramset_idx=paramset_idx)).fetch1(
+                                                            'clustering_method')
 
-    ephys_element.LFP.populate(**populate_settings)
+    if len(precluster_paramsets)==0:
+        task_mode = 'none'
+    else:
+        task_mode = 'load'
 
-    for key in (recording_process.Processing * recording.Recording & 
-                            dict(recording_modality='electrophysiology', 
-                                 status_processing_id=7)).fetch('KEY'):
+    precluster_key = dict(recording_id=process_key['recording_id'],
+                            insertion_number=fragment_number,
+                            precluster_param_steps_id=precluster_param_steps_id)
 
-        recording_id, fragment_number, recording_process_post_path = \
-                                (recording_process.Processing & key).fetch1(
-                                                'recording_id', 
-                                                'fragment_number', 
-                                                'recording_process_post_path')
+    ephys_element.PreClusterTask.insert1(
+                                dict(**precluster_key,
+                                    precluster_output_dir=recording_process_pre_path,
+                                    task_mode=task_mode),
+                                    skip_duplicates=True)
 
-        precluster_param_list_id, cluster_paramset_idx = \
-                            (recording_process.Processing.EphysParams & key).fetch1(
-                                                        'precluster_param_list_id', 
-                                                        'cluster_paramset_idx')
+    ephys_element.PreCluster.populate(precluster_key, **populate_settings)
 
-        clustering_method = (ephys_element.ClusteringParamSet & 
-                                dict(paramset_idx=cluster_paramset_idx)).fetch1(
-                                                                'clustering_method')
+    #if '1.0' in (ephys_element.ProbeInsertion * probe_element.Probe & 
+    #                precluster_key).fetch1('probe_type'):
+    #    ephys_element.LFP.populate(precluster_key, **populate_settings)
 
-        ephys_element.ClusteringTask.insert1(
-            dict(recording_id=recording_id, 
-                 insertion_number=fragment_number, 
-                 precluster_param_list_id=precluster_param_list_id,
-                 paramset_idx=cluster_paramset_idx,
-                 clustering_output_dir=recording_process_post_path + '/' + \
-                                       clustering_method + '_output',
-                 task_mode='load'))
+    cluster_key = dict(**precluster_key,
+                        paramset_idx=paramset_idx)
 
-    ephys_element.Clustering.populate(**populate_settings)
+    ephys_element.ClusteringTask.insert1(
+        dict(**cluster_key,
+                clustering_output_dir=f'{recording_process_post_path}/{clustering_method}_output',
+                task_mode='load'), skip_duplicates=True)
 
-    for key in (ephys_element.Clustering - ephys_element.Curation).fetch('KEY'):
-        ephys_element.Curation().create1_from_clustering_task(key)
+    ephys_element.Clustering.populate(cluster_key, **populate_settings)
 
-    ephys_element.CuratedClustering.populate(**populate_settings)
+    if (ephys_element.Clustering - ephys_element.Curation) & cluster_key:
+        ephys_element.Curation().create1_from_clustering_task(cluster_key)
 
-    ephys_element.WaveformSet.populate(**populate_settings)
+    ephys_element.CuratedClustering.populate(cluster_key, **populate_settings)
+
+    return config.status_update_idx['NEXT_STATUS']
+    #ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
 
 
 if __name__ == '__main__':
-    run()
+    populate_element_data()
