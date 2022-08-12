@@ -3,7 +3,7 @@ import datajoint as dj
 import pathlib
 import subprocess
 
-from u19_pipeline import lab, acquisition, subject, recording
+from u19_pipeline import lab, acquisition, subject, recording, recording_process
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
 
@@ -169,36 +169,20 @@ class Equipment(dj.Manual):
 # 3. Utility functions -----------------------------------------------------------------
 
 def get_imaging_root_data_dir():
-    data_dir = dj.config.get('custom', {}).get('imaging_root_data_dir', None)
-    return data_dir if data_dir else None
+    return dj.config.get('custom', {}).get('imaging_root_data_dir', None)
 
-def get_scan_image_files(rec_process_key):
+def get_scan_image_files(job_id):
 
-    data_dir = get_imaging_root_data_dir()
+    scan_key = (TiffSplit * recording_process.Processing.proj('recording_id', tiff_split='fragment_number') & job_id).fetch1('KEY')
 
-    rec_process = (ImagingPipelineSession & rec_process_key).fetch1()
-    scan_key = rec_process.copy()
-    # scan_key.pop('recording_process_id')
+    filepaths = (TiffSplit.File * TiffSplit & scan_key).fetch('tiff_split_directory', 'tiff_split_filename', as_dict=True)
 
-    print('get_scan_image_files  .........')
-    print('rec_process_key', rec_process_key, 'scan_key', scan_key)
+    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), 
+                      pathlib.Path(file['tiff_split_directory']) / 
+                                   file['tiff_split_filename']).as_posix()
+                      for file in filepaths]
 
-    scan_filepaths_ori = (TiffSplit.File * TiffSplit & scan_key).fetch('tiff_split_directory', 'tiff_split_filename', as_dict=True)
-
-    scan_filepaths_conc = list()
-    for i in range(len(scan_filepaths_ori)):
-        scan_filepaths_conc.append((pathlib.Path(scan_filepaths_ori[i]['tiff_split_directory']) / scan_filepaths_ori[i]['tiff_split_filename']).as_posix())
-
-    # if rel paths start with / remove it for Pathlib library
-    # scan_filepaths_conc = [x[1:] if x[0] == '/' else x for x in scan_filepaths_conc]
-
-    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), x).as_posix() for x in scan_filepaths_conc]
- 
-    if tiff_filepaths:
-        return tiff_filepaths
-    else:
-        raise FileNotFoundError(f'No tiff file found in {data_dir}')
-
+    return tiff_filepaths
 
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
