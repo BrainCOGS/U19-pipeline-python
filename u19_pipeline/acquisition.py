@@ -15,9 +15,10 @@ class SessionStarted(dj.Manual):
     session_start_time   : datetime                     # start time
     -> lab.Location.proj(session_location="location")
     -> task.Task
-    local_path_behavior_file : varchar(255)                 # Path were session file is stored in local computer
-    remote_path_behavior_file : varchar(255)                 # Path were session file will be stored in bucket
+    local_path_behavior_file : varchar(255)             # Path where session file is stored in local computer
+    remote_path_behavior_file : varchar(255)            # Path where session file will be stored in bucket
     is_finished=0        : tinyint                      # Flag that indicates if this session was finished successfully
+    invalid_session=0           : tinyint                       # Flag that indicates if behavioral file couldn't be saved for the session
     """
 
 

@@ -9,6 +9,7 @@ import pathlib
 from u19_pipeline.automatic_job import recording_handler
 
 import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.slack_utils as slack_utils
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
@@ -56,6 +57,9 @@ class RecProcessHandler():
                 #Get dictionary of record process
                 key = rec_process_series['query_key']
 
+                print('rec_process_series')
+                print(rec_process_series)
+
                 if status == config.status_update_idx['NEXT_STATUS']:
                     
                     
@@ -69,13 +73,20 @@ class RecProcessHandler():
                     print('value_update', value_update, 'field_update', field_update)
                     print('function executed:', next_status_series['ProcessFunction'])
 
+
                     RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
+
+                    if next_status_series['SlackMessage']:
+                        slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
+                             next_status_series['SlackMessage'], rec_process_series)
 
                 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
+                    slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                         update_dict['error_info'] ,rec_process_series)
 
                 #if success or error update status timestamps table
                 if status != config.status_update_idx['NO_CHANGE']:
@@ -378,7 +389,7 @@ class RecProcessHandler():
         status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
         status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
 
-        jobs_active = (recording.Recording.proj('recording_modality') * \
+        jobs_active = (recording.Recording.proj('recording_modality', 'location', 'recording_directory') * \
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
 
@@ -502,7 +513,7 @@ class RecProcessHandler():
     @staticmethod
     def update_status_pipeline(recording_process_key_dict, status, update_field=None, update_value=None):
         """
-        Update recording.RecordingProcess table status and optional task field
+        Update recording_process.Processing table status and optional task field
         Args:
             recording_process_key_dict (dict): key to find recording_process record
             status                     (int):  value of the status to be updated
@@ -523,7 +534,7 @@ class RecProcessHandler():
     @staticmethod
     def update_job_id_log(job_id, current_status, next_status, error_info_dict):
         """
-        Update recording.RecordingLog table status and optional task field
+        Update recording_process.LogStatus table status and optional task field
         Args:
 
         """
