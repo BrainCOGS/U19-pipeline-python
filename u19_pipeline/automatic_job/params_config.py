@@ -5,6 +5,7 @@ import os
 import pathlib
 
 from scripts.conf_file_finding import get_root_directory
+import u19_pipeline.lab as lab
 
 
 recording_modality_dict = [
@@ -60,6 +61,7 @@ recording_status_dict = [
         'UpdateField': None,
         'ProcessFunction': None,
         'FunctionField': None,
+        'SlackMessage': None 
     },
     {
         'Value': 0,
@@ -68,6 +70,7 @@ recording_status_dict = [
         'UpdateField': None,
         'ProcessFunction': None,
         'FunctionField': None,
+        'SlackMessage': None
     },
     {
         'Value': 1,
@@ -76,6 +79,7 @@ recording_status_dict = [
         'UpdateField': 'task_copy_id_pni',
         'ProcessFunction': 'local_transfer_request',
         'FunctionField': 'recording_process_pre_path',
+        'SlackMessage': None
     },
     {
         'Value': 2,
@@ -84,6 +88,7 @@ recording_status_dict = [
         'UpdateField': None,
         'ProcessFunction': 'local_transfer_check',
         'FunctionField': 'task_copy_id_pni',
+        'SlackMessage': 'Recording was transferred to braininit (cup) drive' 
     },
     {
         'Value': 3,
@@ -92,6 +97,7 @@ recording_status_dict = [
         'UpdateField': None,
         'ProcessFunction': 'modality_preingestion',
         'FunctionField': None,
+        'SlackMessage': None 
     },
   
 ]
@@ -99,6 +105,90 @@ recording_status_dict = [
 recording_status_list = [[i['Value'], i['Label']] for i in recording_status_dict]
 recording_status_df = pd.DataFrame(recording_status_dict)
 RECORDING_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
+
+recording_process_status_dict = [
+    {
+        'Value': -1,
+        'Key': 'ERROR',
+        'Label': 'Error in recording process',
+        'UpdateField': None,
+        'ProcessFunction': None,
+        'FunctionField': None,
+        'SlackMessage': None
+    },
+    {
+        'Value': 0,
+        'Key': 'NEW_RECORDING_PROCESS',
+        'Label': 'New recording process',
+        'UpdateField': None,
+        'ProcessFunction': None,
+        'FunctionField': None,
+        'SlackMessage': None
+    },
+    {
+        'Value': 1,
+        'Key': 'RAW_FILE_TRANSFER_REQUEST',
+        'Label': 'Raw file transfer requested',
+        'UpdateField': 'task_copy_id_pre',
+        'ProcessFunction': 'transfer_request',
+        'FunctionField': 'recording_process_pre_path',
+        'SlackMessage': None
+    },
+    {
+        'Value': 2,
+        'Key': 'RAW_FILE_TRANSFER_END',
+        'Label': 'Raw file transferred to cluster',
+        'UpdateField': None,
+        'ProcessFunction': 'transfer_check',
+        'FunctionField': 'task_copy_id_pre',
+        'SlackMessage': None
+    },
+    {
+        'Value': 3,
+        'Key': 'JOB_QUEUE',
+        'Label': 'Processing job in queue',
+        'UpdateField': 'slurm_id',
+        'ProcessFunction': 'slurm_job_queue',
+        'FunctionField': None,
+        'SlackMessage': 'Job was queued to be processed in cluster' 
+    },
+    {
+        'Value': 4,
+        'Key': 'JOB_FINISHED',
+        'Label': 'Processing job finished',
+        'UpdateField': None,
+        'ProcessFunction': 'slurm_job_check',
+        'FunctionField': 'slurm_id',
+        'SlackMessage': None
+    },
+    {
+        'Value': 5,
+        'Key': 'PROC_FILE_TRANSFER_REQUEST',
+        'Label': 'Processed file transfer requested',
+        'UpdateField': 'task_copy_id_post',
+        'ProcessFunction': 'transfer_request',
+        'FunctionField': 'recording_process_post_path',
+        'SlackMessage': None
+    },
+    {
+        'Value': 6,
+        'Key': 'PROC_FILE_TRANSFER_END',
+        'Label': 'Processed file transferred to PNI',
+        'UpdateField': None,
+        'ProcessFunction': 'transfer_check',
+        'FunctionField': 'task_copy_id_post',
+        'SlackMessage': None
+    },
+    {
+        'Value': 7,
+        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
+        'Label': 'Data in element, Finished !!',
+        'UpdateField': None,
+        'ProcessFunction': 'populate_element',
+        'FunctionField': None,
+        'SlackMessage': 'Job was successfully processed. Data in element DB' 
+    },
+]
 
 status_update_idx = {
     'NEXT_STATUS': 1,
@@ -113,81 +203,6 @@ default_update_value_dict ={
         'error_exception': None,
     },
 }
-
-recording_process_status_dict = [
-    {
-        'Value': -1,
-        'Key': 'ERROR',
-        'Label': 'Error in recording process',
-        'UpdateField': None,
-        'ProcessFunction': None,
-        'FunctionField': None,
-    },
-    {
-        'Value': 0,
-        'Key': 'NEW_RECORDING_PROCESS',
-        'Label': 'New recording process',
-        'UpdateField': None,
-        'ProcessFunction': None,
-        'FunctionField': None,
-    },
-    {
-        'Value': 1,
-        'Key': 'RAW_FILE_TRANSFER_REQUEST',
-        'Label': 'Raw file transfer requested',
-        'UpdateField': 'task_copy_id_pre',
-        'ProcessFunction': 'transfer_request',
-        'FunctionField': 'recording_process_pre_path',
-    },
-    {
-        'Value': 2,
-        'Key': 'RAW_FILE_TRANSFER_END',
-        'Label': 'Raw file transferred to cluster',
-        'UpdateField': None,
-        'ProcessFunction': 'transfer_check',
-        'FunctionField': 'task_copy_id_pre', 
-    },
-    {
-        'Value': 3,
-        'Key': 'JOB_QUEUE',
-        'Label': 'Processing job in queue',
-        'UpdateField': 'slurm_id',
-        'ProcessFunction': 'slurm_job_queue',
-        'FunctionField': None,
-    },
-    {
-        'Value': 4,
-        'Key': 'JOB_FINISHED',
-        'Label': 'Processing job finished',
-        'UpdateField': None,
-        'ProcessFunction': 'slurm_job_check',
-        'FunctionField': 'slurm_id',
-    },
-    {
-        'Value': 5,
-        'Key': 'PROC_FILE_TRANSFER_REQUEST',
-        'Label': 'Processed file transfer requested',
-        'UpdateField': 'task_copy_id_post',
-        'ProcessFunction': 'transfer_request',
-        'FunctionField': 'recording_process_post_path',
-    },
-    {
-        'Value': 6,
-        'Key': 'PROC_FILE_TRANSFER_END',
-        'Label': 'Processed file transferred to PNI',
-        'UpdateField': None,
-        'ProcessFunction': 'transfer_check',
-        'FunctionField': 'task_copy_id_post',
-    },
-    {
-        'Value': 7,
-        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
-        'Label': 'Data in element, Finished !!',
-        'UpdateField': None,
-        'ProcessFunction': 'populate_element',
-        'FunctionField': None,
-    },
-]
 
 all_preprocess_params = {
 "process_cluster": [
@@ -274,3 +289,11 @@ default_process_filename = 'process_paramset_%s.json'
 
 chanmap_files_filepath = pathlib.Path(this_dir, 'ChanMapFiles').as_posix()
 default_chanmap_filename = 'chanmap_%s.mat'
+
+
+#Slack notification channels
+slack_webhooks = lab.SlackWebhooks.fetch()
+
+slack_webhooks_dict = dict()
+for i in range(slack_webhooks.shape[0]):
+    slack_webhooks_dict[slack_webhooks[i][0]] = slack_webhooks[i][1]

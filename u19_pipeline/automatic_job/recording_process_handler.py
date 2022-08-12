@@ -9,6 +9,7 @@ import pathlib
 from u19_pipeline.automatic_job import recording_handler
 
 import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.slack_utils as slack_utils
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
@@ -55,6 +56,9 @@ class RecProcessHandler():
                 #Get dictionary of record process
                 key = rec_process_series['query_key']
 
+                print('rec_process_series')
+                print(rec_process_series)
+
                 if status == config.status_update_idx['NEXT_STATUS']:
                     
                     
@@ -68,13 +72,20 @@ class RecProcessHandler():
                     print('value_update', value_update, 'field_update', field_update)
                     print('function executed:', next_status_series['ProcessFunction'])
 
+
                     RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
+
+                    if next_status_series['SlackMessage']:
+                        slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
+                             next_status_series['SlackMessage'], rec_process_series)
 
                 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
+                    slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                         update_dict['error_info'] ,rec_process_series)
 
                 #if success or error update status timestamps table
                 if status != config.status_update_idx['NO_CHANGE']:
@@ -334,10 +345,9 @@ class RecProcessHandler():
         Return:
             program_selection_params (pd.DataFrame): processing variables default dictionary
         '''
-
         # Get df from config file
         this_modality_program_selection_params =\
-                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == 'electrophysiology', :]
+                    config.recording_modality_df.loc[config.recording_modality_df['recording_modality'] == modality, :]
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
@@ -348,9 +358,6 @@ class RecProcessHandler():
         this_modality_program_selection_params['program_selection_params'] = this_modality_program_selection_params_dict
 
         this_modality_program_selection_params
-
-        print('get_program_selection_params .......................')
-        print(this_modality_program_selection_params)
 
         return this_modality_program_selection_params
 
@@ -365,11 +372,9 @@ class RecProcessHandler():
         status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
         status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
 
-        jobs_active = (recording.Recording.proj('recording_modality') * \
+        jobs_active = (recording.Recording.proj('recording_modality', 'location', 'recording_directory') * \
             recording_process.Processing & status_query)
         df_process_jobs = pd.DataFrame(jobs_active.fetch(as_dict=True))
-
-        print(df_process_jobs)
 
         if df_process_jobs.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording_process.Processing)
@@ -377,9 +382,12 @@ class RecProcessHandler():
 
             # Get parameters for all modalities
             all_modalities = df_process_jobs['recording_modality'].unique()
+
+            all_mods_df = list()
+            # Get process df for each modality
             for this_modality in all_modalities:
 
-                this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:]
+                this_mod_df = df_process_jobs.loc[df_process_jobs['recording_modality'] == this_modality,:].copy()
                 these_process_keys = this_mod_df['query_key'].to_list()
 
                 this_mod_program_selection_params = RecProcessHandler.get_program_selection_params(this_modality)
@@ -390,11 +398,20 @@ class RecProcessHandler():
                 if this_modality == 'imaging':
                     params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
                 
-                df_process_jobs = df_process_jobs.merge(params_df, how='left')
-                df_process_jobs = df_process_jobs.merge(this_mod_program_selection_params, how='left')
+                this_mod_df = this_mod_df.merge(params_df, on='job_id', how='left')
+                this_mod_df = this_mod_df.merge(this_mod_program_selection_params, on='recording_modality', how='left')
 
+                all_mods_df.append(this_mod_df)
+
+            #Concatenate all process_jobs for each modality
+            df_process_jobs = all_mods_df[0].copy()
+
+            for this_mod_df in all_mods_df[1:]:
+                df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
+
+            df_process_jobs = df_process_jobs.loc[df_process_jobs['recording_modality'] == 'electrophysiology', : ].copy()
+            df_process_jobs = df_process_jobs.reset_index(drop=True)
         
-        print('df_process_jobs*************************************')
         print(df_process_jobs)
 
         return df_process_jobs
@@ -452,8 +469,8 @@ class RecProcessHandler():
         params_df['params'] = params_df.apply(lambda x: {**x['params'], **{'processing_method':x['processing_method']}},axis=1)
 
         # Get preprocess param sets
-        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
-        utility.smart_dj_join(imaging_pipeline.imaging_element.PreProcessParamSteps.Step, imaging_pipeline.imaging_element.PreProcessParamSet.proj('preprocess_method', 'params')) *
+        preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreprocessParamSteps * \
+        utility.smart_dj_join(imaging_pipeline.imaging_element.PreprocessParamSteps.Step, imaging_pipeline.imaging_element.PreprocessParamSet.proj('preprocess_method', 'params')) *
         recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
 
         #If there is no preprocess steps for this jobs fill with empty values
@@ -466,10 +483,11 @@ class RecProcessHandler():
             preparams_df = preparams_df.reset_index()
 
         else:
-            preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreProcessParamSteps * \
+            preparams_df = pd.DataFrame((imaging_pipeline.imaging_element.PreprocessParamSteps * \
                     recording_process.Processing.ImagingParams.proj('preprocess_param_steps_id') & rec_process_keys).fetch(as_dict=True))
             preparams_df['preparams'] = None
 
+        preparams_df = preparams_df[['job_id', 'preparams']]
         params_df = params_df.merge(preparams_df)
 
         return params_df
