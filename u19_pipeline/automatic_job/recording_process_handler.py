@@ -496,7 +496,7 @@ class RecProcessHandler():
     @staticmethod
     def update_status_pipeline(recording_process_key_dict, status, update_field=None, update_value=None):
         """
-        Update recording.RecordingProcess table status and optional task field
+        Update recording_process.Processing table status and optional task field
         Args:
             recording_process_key_dict (dict): key to find recording_process record
             status                     (int):  value of the status to be updated
@@ -517,7 +517,7 @@ class RecProcessHandler():
     @staticmethod
     def update_job_id_log(job_id, current_status, next_status, error_info_dict):
         """
-        Update recording.RecordingLog table status and optional task field
+        Update recording_process.LogStatus table status and optional task field
         Args:
 
         """
