@@ -499,7 +499,7 @@ class RecProcessHandler():
     @staticmethod
     def update_job_id_log(job_id, current_status, next_status, error_info_dict):
         """
-        Update recording_process.Log table status and optional task field
+        Update recording_process.LogStatus table status and optional task field
         Args:
 
         """
