@@ -15,7 +15,7 @@ import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.automatic_job.ephys_element_populate as ep
-import u19_pipeline.automatic_job.imaging_element_process as ip
+import u19_pipeline.automatic_job.imaging_element_populate as ip
 
 from datetime import datetime
 from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
@@ -379,15 +379,19 @@ class RecProcessHandler():
         return this_modality_program_selection_params
 
     @staticmethod
-    def get_active_process_jobs():
+    def get_active_process_jobs(active=True):
         '''
         get all process jobs that have to go through some action in the pipeline
         Return:
             df_process_jobs (pd.DataFrame): all jobs that are going to be processed in the pipeline
         '''
 
-        status_query = 'status_processing_id > ' + str(config.recording_process_status_df['Value'].min())
-        status_query += ' and status_processing_id < ' + str(config.recording_process_status_df['Value'].max())
+        if active:
+            status_query = 'status_processing_id > ' + str(config.JOB_STATUS_ERROR_ID)
+            status_query += ' and status_processing_id < ' + str(config.JOB_STATUS_PROCESSED)
+        else:
+            status_query = 'status_processing_id = ' + str(config.JOB_STATUS_ERROR_ID)
+            status_query += ' or status_processing_id = ' + str(config.JOB_STATUS_PROCESSED)
 
         jobs_active = (recording.Recording.proj('recording_modality', 'location', 'recording_directory') * \
             recording_process.Processing & status_query)
@@ -538,6 +542,39 @@ class RecProcessHandler():
         Args:
 
         """
+
+        now = datetime.now()
+        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        print('error_info_dict', error_info_dict)
+
+        key = dict()
+        key['job_id'] = job_id
+        key['status_processing_id_old'] = current_status
+        key['status_processing_id_new'] = next_status
+        key['status_timestamp'] = date_time
+        
+        if error_info_dict['error_message'] is not None and len(error_info_dict['error_message']) >= 256:
+            error_info_dict['error_message'] =error_info_dict['error_message'][:255]
+
+        if error_info_dict['error_exception'] is not None and len(error_info_dict['error_exception']) >= 4096:
+            error_info_dict['error_exception'] =error_info_dict['error_exception'][:4095]
+
+        key['error_exception'] = error_info_dict['error_exception']
+        key['error_message'] = error_info_dict['error_message']
+
+        recording_process.LogStatus.insert1(key)
+
+
+    @staticmethod
+    def check_job_process_deletion(job_id, current_status, next_status, error_info_dict):
+        """
+        Update recording_process.LogStatus table status and optional task field
+        Args:
+
+        """
+        #Get info from all the possible status for a processjob 
+        df_all_process_job = RecProcessHandler.get_active_process_jobs()
 
         now = datetime.now()
         date_time = now.strftime("%Y-%m-%d %H:%M:%S")

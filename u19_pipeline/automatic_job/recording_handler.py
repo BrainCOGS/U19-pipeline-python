@@ -80,7 +80,7 @@ class RecordingHandler():
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecordingHandler.update_status_pipeline(key,next_status, None, None)
-                    slack_utils.send_slack_error_notification(cconfig.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                    slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                         update_dict['error_info'] ,recording_series)
 
                 #if success or error update status timestamps table

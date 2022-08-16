@@ -184,14 +184,30 @@ recording_process_status_dict = [
     },
     {
         'Value': 7,
-        'Key': 'JOB_FINSISHED_ELEMENT_WORKFLOW',
+        'Key': 'JOB_FINISHED_ELEMENT_WORKFLOW',
         'Label': 'Data in element, Finished !!',
         'UpdateField': None,
         'ProcessFunction': 'populate_element',
         'FunctionField': None,
         'SlackMessage': 'Job was successfully processed. Data in element DB' 
     },
+    {
+        'Value': 8,
+        'Key': 'JOB_DATA_DELETED_CLUSTER',
+        'Label': 'Data in element, Finished !!',
+        'UpdateField': None,
+        'ProcessFunction': 'populate_element',
+        'FunctionField': None,
+        'SlackMessage': None
+    },
 ]
+
+recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
+recording_process_status_df = pd.DataFrame(recording_process_status_dict)
+
+JOB_STATUS_ERROR_ID = recording_process_status_df.loc[recording_process_status_df['Key'] == 'ERROR', 'Value'].values[0]
+JOB_STATUS_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_FINISHED_ELEMENT_WORKFLOW', 'Value'].values[0]
+JOB_STATUS_POST_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_DATA_DELETED_CLUSTER', 'Value'].values[0]
 
 status_update_idx = {
     'NEXT_STATUS': 1,
@@ -221,9 +237,6 @@ all_preprocess_params = {
 ]
 }
 
-recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
-recording_process_status_df = pd.DataFrame(recording_process_status_dict)
-RECORDING_PROCESS_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
 system_process = {
     'COMPLETED': 1,
