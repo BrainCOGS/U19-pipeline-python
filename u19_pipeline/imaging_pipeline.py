@@ -173,7 +173,9 @@ def get_imaging_root_data_dir():
     return dj.config.get('custom', {}).get('imaging_root_data_dir', None)
 
 def get_scan_image_files(job_id):
-    scan_key = (TiffSplit * recording_process.Processing.proj('recording_id', tiff_split='fragment_number') & job_id).fetch1('KEY')
+    #scan_key = (TiffSplit * recording_process.Processing.proj('recording_id', tiff_split='fragment_number') & job_id).fetch1('KEY')
+
+    scan_key = (TiffSplit & job_id).fetch1('KEY')
 
     filepaths = (TiffSplit.File * TiffSplit & scan_key).fetch('tiff_split_directory', 'tiff_split_filename', as_dict=True)
 

@@ -293,11 +293,11 @@ class RecProcessHandler():
                                         {'value_update': value to be updated in this stage (if applicable)
                                         'error_info':    error info to be inserted if error occured }
         """
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         # Only queue if processing in tiger
         if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
             status_update = config.status_update_idx['NO_CHANGE']
-            update_value_dict = copy.deepcopy(config.default_update_value_dict)
             
             local_user = False
             program_selection_params = rec_series['program_selection_params']
