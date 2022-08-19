@@ -14,7 +14,7 @@ slack_configuration_dictionary = {
     'slack_users_channel': ['alvaros']
 }
 
-zscore_alert = 1
+zscore_alert = 3
 def main():
     '''
     Main function for subject "num trials & bias" alert
@@ -22,8 +22,7 @@ def main():
 
     print('aqui subject_bias')
     # Get sessions
-    _, subject_session_key_list = asu.get_acquisition_data_alert_system(type='subject_fullname',\
-         data_days=5, min_sessions=1)
+    _, subject_session_key_list = asu.get_acquisition_data_alert_system(type='subject_fullname')
 
     # Get trials
     behavior = dj.create_virtual_module('behavior', 'u19_behavior')
@@ -35,7 +34,7 @@ def main():
 
     # Filter df for todays alert
     today = datetime.date.today() - datetime.timedelta(days=1)
-    bias_df.loc[bias_df['session_date'] == today, :]
+    bias_df = bias_df.loc[bias_df['session_date'] == today, :]
     bias_df['abs_z_score_bias'] = np.abs(bias_df['z_score_bias'])
 
     # Filter if today we got > 3 zscore of trials for a session

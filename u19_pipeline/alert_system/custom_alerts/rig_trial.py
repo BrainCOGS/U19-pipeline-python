@@ -14,7 +14,7 @@ slack_configuration_dictionary = {
     'slack_users_channel': ['alvaros']
 }
 
-zscore_alert = 1
+zscore_alert = 3
 def main():
     '''
     Main function for subject "num trials & bias" alert
@@ -22,15 +22,14 @@ def main():
 
     print('aqui rig_trial')
     # Get sessions
-    subject_rig_df, _ = asu.get_acquisition_data_alert_system(type='session_location',\
-         data_days=5, min_sessions=1)
+    subject_rig_df, _ = asu.get_acquisition_data_alert_system(type='session_location')
 
     # Get zscores for num_trials
     subject_rig_df = bm.BehaviorMetrics.get_zscore_metric_session_df(subject_rig_df, 'num_trials', 'session_location')
 
     # Filter df for todays alert
     today = datetime.date.today() - datetime.timedelta(days=1)
-    subject_rig_df.loc[subject_rig_df['session_date'] == today, :]
+    subject_rig_df = subject_rig_df.loc[subject_rig_df['session_date'] == today, :]
     subject_rig_df['abs_z_score_num_trials'] = np.abs(subject_rig_df['z_score_num_trials'])
 
     # Filter if today we got > 3 zscore of trials for a session

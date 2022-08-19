@@ -3,19 +3,79 @@ import pandas as pd
 import datajoint as dj
 import pkgutil
 import importlib
+import datetime
 
 import u19_pipeline.alert_system.custom_alerts as ca
+import u19_pipeline.lab as lab
+import u19_pipeline.utils.slack_utils as su
+
+# Slack Configuration dictionary
+slack_configuration_dictionary = {
+    'slack_notification_channel': ['custom_alerts'],
+    'slack_users_channel': ['alvaros']
+}
 
 def main_alert_system():
     'Call main function of all alerts defined in "custom_alerts'
 
     all_alert_submodules = pkgutil.iter_modules(ca.__path__)
 
-    for i in all_alert_submodules:
+    for this_alert_submodule in all_alert_submodules:
 
-        my_alert_module = importlib.import_module('u19_pipeline.alert_system.custom_alerts.'+i.name)
-        my_alert_module.main()
+        my_alert_module = importlib.import_module('u19_pipeline.alert_system.custom_alerts.'+this_alert_submodule.name)
+        alert_df = my_alert_module.main()
+        if hasattr(my_alert_module, 'slack_configuration_dictionary'):
+            slack_dict = my_alert_module.slack_configuration_dictionary
+        else:
+            slack_dict = slack_configuration_dictionary
 
-        print(my_alert_module.slack_configuration_dictionary)
+        if alert_df.shape[0] > 0:
+
+            alert_dict = alert_df.to_dict('records')
+            
+            query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
+            webhooks_list = (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
+
+            query_slack_user_channels = [{'user_id' : x} for x in slack_dict['slack_users_channel']]
+            webhooks_list += (lab.User & query_slack_user_channels).fetch('slack_webhook').tolist()
+
+            for this_alert_record in alert_dict:
+                slack_json_message = slack_alert_message_format(this_alert_record, this_alert_submodule.name)
+
+                for this_webhook in webhooks_list:
+                    su.send_slack_notification(this_webhook, slack_json_message)
 
         del my_alert_module
+
+def slack_alert_message_format(alert_dictionaty, alert_module_name):
+
+    now = datetime.datetime.now() 
+    datestr = now.strftime('%d-%b-%Y %H:%M:%S')
+
+    msep = dict()
+    msep['type'] = "divider"
+
+    #Title#
+    m1 = dict()
+    m1['type'] = 'section'
+    m1_1 = dict()
+    m1_1["type"] = "mrkdwn"
+    m1_1["text"] = ':rotating_light: *' +alert_module_name + '* on ' + datestr + '\n\n'
+    m1['text'] = m1_1
+
+    #Info#
+    m2 = dict()
+    m2['type'] = 'section'
+    m2_1 = dict()
+    m2_1["type"] = "mrkdwn"
+    
+    m2_1["text"] = ''
+    for key in alert_dictionaty.keys():
+        m2_1["text"] += '*' + key + '* : ' + str(alert_dictionaty[key]) + '\n'
+    m2['text'] = m2_1
+
+    message = dict()
+    message['blocks'] = [m1,msep,m2]
+    message['text'] = alert_module_name+ ' alert'
+
+    return message
