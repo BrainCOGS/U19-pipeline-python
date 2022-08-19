@@ -84,8 +84,8 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     m3_1 = dict()
     m3_1["type"] = "mrkdwn"
     m3_1["text"] = '*Error info* \n' +\
-        ' *error message* : ' + error_info['error_message'] +'\n'+\
-        ' *error_stack* : ' + error_info['error_exception']
+        ' *error message* : ' + str(error_info['error_message']) +'\n'+\
+        ' *error_stack* : ' + str(error_info['error_exception'])
     m3['text'] = m3_1
 
     message = dict()
