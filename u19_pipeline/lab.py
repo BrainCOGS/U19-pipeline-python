@@ -289,10 +289,10 @@ class Path(dj.Lookup):
         # Remove bucket "base" dir from path
         bucket_base_dir = path_df['bucket_path']
 
-        if bucket_path.find('/mnt/bucket/') != -1:
+        if bucket_path.find('/mnt/cup/') != -1:
             extra_bucket_dir = bucket_path.replace(bucket_base_dir + '/', '');
         else:
-            extra_bucket_dir = bucket_path.replace('/' + path_df['global_path'] + '/', '');
+            extra_bucket_dir = bucket_path.replace(path_df['global_path'] + '/', '');
 
         # If we are in spock already directory is the bucket_path column
         if is_this_spock():
@@ -349,4 +349,22 @@ class SlackWebhooks(dj.Lookup):
     webhook_name            : varchar(64)
     ---
     webhook_url             : varchar(255)
+    """
+
+@schema
+class DjCustomVariables(dj.Lookup):
+    definition = """
+    custom_variable         : varchar(64)
+    index                   : int
+    ---
+    value                   : varchar(255)
+    """
+
+@schema
+class DjStores(dj.Lookup):
+    definition = """
+    store_name              : varchar(64)
+    ---
+    protocol                : varchar(32)
+    location                : varchar(255)
     """

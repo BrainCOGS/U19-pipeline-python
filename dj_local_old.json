@@ -1,0 +1,63 @@
+{
+    "database.host": "datajoint00.pni.princeton.edu",
+    "database.port": 3306,
+    "database.reconnect": true,
+    "connection.init_function": null,
+    "connection.charset": "",
+    "loglevel": "INFO",
+    "safemode": true,
+    "fetch_format": "array",
+    "display.limit": 12,
+    "display.width": 14,
+    "display.show_tuple_count": true,
+    "database.use_tls": null,
+    "enable_python_native_blobs": true,
+    "custom": {
+        "database.prefix": "u19_",
+        "database.test.prefix": "u19_",
+        "imaging_root_data_dirold": "/Volumes/braininit/RigData/mesoscope/imaging/",
+        "ephys_root_data_dir_old": "/Volumes/braininit/",
+        "ephys_root_data_dir": [
+            "/Volumes/braininit/braininit/Data/Raw/electrophysiology",
+            "/Volumes/braininit/braininit/Data/Processed/electrophysiology"
+        ],
+        "ephys_root_data_dir_xx": [
+            "/Volumes/braininit/Data/Raw/electrophysiology"
+        ],
+        "imaging_root_data_dir": [
+            "/Volumes/braininit/braininit/Data/Raw/imaging",
+            "/Volumes/braininit/braininit/Data/Processed/imaging"
+        ],
+        "dlc_root_data_dir": "/Volumes/braininit/Data/Raw/video_acquisition",
+        "error_logs_dir": "/Volumes/braininit/braininit/Data/Processed/LOGS/ErrorLogs",
+        "output_logs_dir": "/Volumes/braininit/braininit/Data/Processed/LOGS/OutputLogs",
+        "dlc_processed_data_dir": "/Volumes/braininit/Data/Processed/video_acquisition",
+        "dlc_root_data_dir2": "/scratch/gpfs/BRAINCOGS/Data/Raw/video_acquisition",
+        "dlc_processed_data_dir2": "/scratch/gpfs/BRAINCOGS/Data/Processed/video_acquisition",
+        "root_data_dir": [
+            "/Volumes/braininit/braininit/Data/Raw",
+            "/Volumes/braininit/braininit/Data/Processed"
+        ],
+        "param_data_dir": "/Volumes/braininit/Data/AllParamFiles",
+        "video_root_data_dir": [
+            "/Volumes/braininit/braininit/Data/Raw/video_acquisition",
+            "/Volumes/braininit/braininit/Data/Processed/video_acquisition"
+        ]
+    },
+    "stores": {
+        "ephys_store": {
+            "protocol": "file",
+            "location": "/Volumes/u19_dj/external_dj_blobs/ephys_precluster"
+        },
+        "extstorage": {
+            "protocol": "file",
+            "location": "/Volumes/u19_dj/external_dj_blobs"
+        },
+        "imaging_store": {
+            "protocol": "file",
+            "location": "/Volumes/u19_dj/external_dj_blobs/imaging_preprocess"
+        }
+    },
+    "cache": "/Users/alvaros/Documents/MATLAB/BrainCogsProjects/Datajoint_proj/dj_cache/u19_pipeline_python_cache"
+
+}

@@ -70,6 +70,3 @@ class BehaviorMetrics():
         session_df[z_score_metric_l] = (session_df[metric] - session_df[avg_metric_l]) / session_df[std_metric_l]
 
         return session_df
-
-
-
