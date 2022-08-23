@@ -25,6 +25,7 @@ def main():
     # Get trials
     behavior = dj.create_virtual_module('behavior', dj.config['custom']['database.prefix']+'behavior')
     acquisition = dj.create_virtual_module('acquisition', dj.config['custom']['database.prefix']+'acquisition')
+    
     rig_trial_df = pd.DataFrame((behavior.TowersBlock.Trial * acquisition.SessionStarted.proj('session_location') \
         & rig_session_key_list).fetch('KEY', 'trial_type', 'choice', 'session_location', as_dict=True))
 

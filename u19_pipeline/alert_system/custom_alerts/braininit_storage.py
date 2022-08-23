@@ -31,7 +31,7 @@ def main():
     print(storage_left_tb)
 
     if storage_left_tb < 16:
-        data = {'alert_message': ['Very little space left in braininit'], 'space(tb)': [storage_left/1000]}
+        data = {'alert_message': ['Very little space left in braininit'], 'space(tb)': [str(storage_left_tb)]}
         alert_df = pd.DataFrame.from_dict(data)
     else:
         alert_df = pd.DataFrame([])

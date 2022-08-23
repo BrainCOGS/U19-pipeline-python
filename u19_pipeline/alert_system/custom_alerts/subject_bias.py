@@ -24,8 +24,10 @@ def main():
     _, subject_session_key_list = asu.get_acquisition_data_alert_system(type='subject_fullname')
 
     # Get trials
-    behavior = dj.create_virtual_module('behavior', 'u19_behavior')
-    subject_trial_df = pd.DataFrame((behavior.TowersBlock.Trial & subject_session_key_list).fetch('KEY', 'trial_type', 'choice', as_dict=True))
+    behavior = dj.create_virtual_module('behavior', dj.config['custom']['database.prefix']+'behavior')
+    acquisition = dj.create_virtual_module('acquisition', dj.config['custom']['database.prefix']+'acquisition')
+
+    subject_trial_df = pd.DataFrame((behavior.TowersBlock.Trial * acquisition.SessionStarted & subject_session_key_list).fetch('KEY', 'trial_type', 'choice', 'session_location', as_dict=True))
 
     # Get zscores for bias
     bias_df = bm.BehaviorMetrics.get_bias_from_trial_df(subject_trial_df)
