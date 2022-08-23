@@ -4,10 +4,13 @@ import datajoint as dj
 import pkgutil
 import importlib
 import datetime
+import traceback
 
 import u19_pipeline.alert_system.custom_alerts as ca
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
+
+import time
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
@@ -22,29 +25,42 @@ def main_alert_system():
 
     for this_alert_submodule in all_alert_submodules:
 
+        print('executing '+ this_alert_submodule.name+ " alert code")
+
         my_alert_module = importlib.import_module('u19_pipeline.alert_system.custom_alerts.'+this_alert_submodule.name)
-        alert_df = my_alert_module.main()
-        if hasattr(my_alert_module, 'slack_configuration_dictionary'):
-            slack_dict = my_alert_module.slack_configuration_dictionary
-        else:
-            slack_dict = slack_configuration_dictionary
+        try:
+            alert_df = my_alert_module.main()
+            if hasattr(my_alert_module, 'slack_configuration_dictionary'):
+                slack_dict = my_alert_module.slack_configuration_dictionary
+            else:
+                slack_dict = slack_configuration_dictionary
 
-        if alert_df.shape[0] > 0:
+            if alert_df.shape[0] > 0:
 
-            alert_dict = alert_df.to_dict('records')
+                alert_dict = alert_df.to_dict('records')
+                
+                query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
+                webhooks_list = (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
+
+                query_slack_user_channels = [{'user_id' : x} for x in slack_dict['slack_users_channel']]
+                webhooks_list += (lab.User & query_slack_user_channels).fetch('slack_webhook').tolist()
+
+                for this_alert_record in alert_dict:
+                    slack_json_message = slack_alert_message_format(this_alert_record, this_alert_submodule.name)
+
+                    for this_webhook in webhooks_list:
+                        su.send_slack_notification(this_webhook, slack_json_message)
+                        time.sleep(1)
+
+        except Exception as e:
+            dict_error = dict()
+            dict_error['message'] = 'error while executing ' + this_alert_submodule.name + " alert code"
+            dict_error['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
+            slack_json_message = slack_alert_message_format(dict_error, this_alert_submodule.name)
+            webhook_custom = (lab.SlackWebhooks & "webhook_name='custom_alerts'").fetch('webhook_url').tolist()
+            if webhook_custom:
+                su.send_slack_notification(webhook_custom[0], slack_json_message)
             
-            query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
-            webhooks_list = (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
-
-            query_slack_user_channels = [{'user_id' : x} for x in slack_dict['slack_users_channel']]
-            webhooks_list += (lab.User & query_slack_user_channels).fetch('slack_webhook').tolist()
-
-            for this_alert_record in alert_dict:
-                slack_json_message = slack_alert_message_format(this_alert_record, this_alert_submodule.name)
-
-                for this_webhook in webhooks_list:
-                    su.send_slack_notification(this_webhook, slack_json_message)
-
         del my_alert_module
 
 def slack_alert_message_format(alert_dictionaty, alert_module_name):
@@ -75,7 +91,7 @@ def slack_alert_message_format(alert_dictionaty, alert_module_name):
     m2['text'] = m2_1
 
     message = dict()
-    message['blocks'] = [m1,msep,m2]
+    message['blocks'] = [m1,msep,m2,msep,msep]
     message['text'] = alert_module_name+ ' alert'
 
     return message

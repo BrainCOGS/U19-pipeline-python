@@ -14,13 +14,12 @@ slack_configuration_dictionary = {
     'slack_users_channel': ['alvaros']
 }
 
-zscore_alert = 3
+zscore_alert = 2
 def main():
     '''
     Main function for subject "num trials & bias" alert
     '''
 
-    print('aqui subject trial')
     # Get sessions
     subject_session_df, _ = asu.get_acquisition_data_alert_system(type='subject_fullname')
 
@@ -35,6 +34,9 @@ def main():
     # Filter if today we got > 3 zscore of trials for a session
     alert_subjtect_trial_df = subject_session_df.loc[subject_session_df['abs_z_score_num_trials'] >= zscore_alert, :]
 
+    columns_alert = ['subject_fullname', 'session_date', 'session_number', 'avg_num_trials', 'num_trials', 'z_score_num_trials']
+    alert_subjtect_trial_df = alert_subjtect_trial_df[columns_alert]
+    alert_subjtect_trial_df['alert_message'] = 'Session had abnormal number of trials'
 
     return alert_subjtect_trial_df
 

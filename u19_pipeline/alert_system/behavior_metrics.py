@@ -11,6 +11,7 @@ class BehaviorMetrics():
         From a trial by trial df of multiple sessions, calculate a per session bias
         '''
 
+        original_columns = trials_df.columns.tolist()
         sort_columns = ['subject_fullname', 'session_date', 'session_number', 'block', 'trial_idx']
         session_columns = ['subject_fullname', 'session_date', 'session_number']
         trials_df = trials_df.sort_values(by=sort_columns, ascending=[True, False, False, True, True])
@@ -39,7 +40,7 @@ class BehaviorMetrics():
 
         # Calculate bias
         trials_df['bias'] = (trials_df['cum_correct_right_trials'] / trials_df['cum_right_trials']) - (trials_df['cum_correct_left_trials'] / trials_df['cum_left_trials'])
-        bias_df = trials_df[session_columns + ['bias']]
+        bias_df = trials_df[original_columns + ['bias']]
 
         return bias_df
 
