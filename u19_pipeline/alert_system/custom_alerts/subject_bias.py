@@ -39,7 +39,7 @@ def main():
     # Filter if today we got > 3 zscore of trials for a session
     alert_bias_df = bias_df.loc[bias_df['abs_z_score_bias'] >= zscore_alert, :]
 
-    columns_alert = ['subject_fullname', 'session_date', 'session_number', 'avg_bias', 'bias', 'z_score_bias']
+    columns_alert = ['subject_fullname', 'session_date', 'session_number', 'session_location', 'avg_bias', 'bias', 'z_score_bias']
     alert_bias_df = alert_bias_df[columns_alert]
     alert_bias_df['alert_message'] = 'Session had abnormal bias'
 
