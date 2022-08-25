@@ -566,37 +566,116 @@ class RecProcessHandler():
 
 
     @staticmethod
-    def check_job_process_deletion(job_id, current_status, next_status, error_info_dict):
+    @recording_handler.exception_handler
+    def check_job_process_deletion():
         """
-        Update recording_process.LogStatus table status and optional task field
-        Args:
-
+        Delete files in cluster and update status correspondingly for each processed or error+7days jobs
         """
-        #Get info from all the possible status for a processjob 
-        df_all_process_job = RecProcessHandler.get_active_process_jobs()
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
+        # Get jobs with error status or finished
+        df_inactive_jobs = RecProcessHandler.get_active_process_jobs(active=False)
+
+        #If no inactive job, the end
+        if df_inactive_jobs.shape[0] == 0:
+            return
+
+        jobs_ids = df_inactive_jobs['job_id'].to_frame().to_dict('records')
+
+        #Get latest time they changed status
         now = datetime.now()
-        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp_jobs = pd.DataFrame((recording_process.Processing & jobs_ids).aggr(recording_process.LogStatus, max_date="max(status_timestamp)").fetch(as_dict=True))
+        df_inactive_jobs = df_inactive_jobs.merge(timestamp_jobs, on='job_id')
 
-        print('error_info_dict', error_info_dict)
-
-        key = dict()
-        key['job_id'] = job_id
-        key['status_processing_id_old'] = current_status
-        key['status_processing_id_new'] = next_status
-        key['status_timestamp'] = date_time
+        # Get jobs that were processed in cluster
+        df_inactive_jobs['local_or_cluster'] = df_inactive_jobs['program_selection_params'].map(lambda x: x['local_or_cluster'])
+        df_inactive_jobs['process_cluster'] = df_inactive_jobs['program_selection_params'].map(lambda x: x['process_cluster'])
         
-        if error_info_dict['error_message'] is not None and len(error_info_dict['error_message']) >= 256:
-            error_info_dict['error_message'] =error_info_dict['error_message'][:255]
+        #Update all local jobs
+        df_not_cluster = df_inactive_jobs.loc[df_inactive_jobs['local_or_cluster'] == 'local'].reset_index(drop=True)
+        if df_not_cluster.shape[0] > 0:
+            # Update local jobs post-processed jobs
+            df_not_cluster_post_processed = df_not_cluster.loc[df_not_cluster['status_processing_id'] == config.JOB_STATUS_PROCESSED, :]
+            df_not_cluster_post_processed = df_not_cluster_post_processed.reset_index(drop=True)
+            for i in range(df_not_cluster_post_processed.shape[0]):
+                RecProcessHandler.update_status_pipeline(df_not_cluster_post_processed.loc[i, 'query_key'], config.JOB_STATUS_POST_PROCESSED)
+                RecProcessHandler.update_job_id_log(df_not_cluster_post_processed.loc[i, 'job_id'], config.JOB_STATUS_PROCESSED, config.JOB_STATUS_POST_PROCESSED, update_value_dict['error_info'])
 
-        if error_info_dict['error_exception'] is not None and len(error_info_dict['error_exception']) >= 4096:
-            error_info_dict['error_exception'] =error_info_dict['error_exception'][:4095]
+            # Update also local jobs post-error jobs
+            df_not_cluster_post_error = df_not_cluster.loc[df_not_cluster['status_processing_id'] == config.JOB_STATUS_ERROR_ID, :]
+            df_not_cluster_post_error = df_not_cluster_post_error.reset_index(drop=True)
+            for i in range(df_not_cluster_post_error.shape[0]):
+                RecProcessHandler.update_status_pipeline(df_not_cluster_post_error.loc[i, 'query_key'], config.JOB_STATUS_ERROR_DELETED)
+                RecProcessHandler.update_job_id_log(df_not_cluster_post_error.loc[i, 'job_id'], config.JOB_STATUS_ERROR_ID, config.JOB_STATUS_ERROR_DELETED, update_value_dict['error_info'])
+        
+        #If no inactive job, after locals the end
+        df_inactive_jobs = df_inactive_jobs.loc[df_inactive_jobs['local_or_cluster'] == 'cluster'].reset_index(drop=True)
+        if df_inactive_jobs.shape[0] == 0:
+            return
 
-        key['error_exception'] = error_info_dict['error_exception']
-        key['error_message'] = error_info_dict['error_message']
+        # Get jobs to delete (finished or with error >= 7 days)
+        df_inactive_jobs['days_from_last_update'] = (now - df_inactive_jobs['max_date']).dt.days
+        df_inactive_jobs['ready_delete'] = 1
+        df_inactive_jobs.loc[(df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_ERROR_ID) & (df_inactive_jobs['days_from_last_update'] < 7), 'ready_delete'] = 0
+        df_inactive_jobs.loc[df_inactive_jobs['ready_delete'] == 1,:]
 
-        recording_process.LogStatus.insert1(key)
+        # Check if raw directories are present in cluster
+        df_inactive_jobs['raw_dir']  = df_inactive_jobs.apply(lambda x: ft.check_directory_exists_cluster(x['recording_process_pre_path'],\
+            x['process_cluster'], x['recording_modality'], type='raw'), axis=1)
+        df_inactive_jobs['raw_dir'] = df_inactive_jobs['raw_dir'].astype(str)
+        df_inactive_jobs['raw_dir_deleted'] = 0
+        df_inactive_jobs.loc[df_inactive_jobs['raw_dir'] == "0", 'raw_dir_deleted'] = 1
 
+        # Check if processed directories are present in cluster
+        df_inactive_jobs['processed_dir'] = df_inactive_jobs.apply(lambda x: ft.check_directory_exists_cluster(x['recording_process_post_path'],\
+            x['process_cluster'], x['recording_modality'], type='processed'), axis=1)
+        df_inactive_jobs['processed_dir'] = df_inactive_jobs['processed_dir'].astype(str)
+        df_inactive_jobs['processed_dir_deleted'] = 0
+        df_inactive_jobs.loc[df_inactive_jobs['processed_dir'] == "0", 'processed_dir_deleted'] = 1
+        df_inactive_jobs = df_inactive_jobs.reset_index(drop=True)
+
+        #Delete raw directories tiger
+        for i in range(df_inactive_jobs.shape[0]):
+            modality = df_inactive_jobs.loc[i, 'recording_modality']
+            dir_delete = df_inactive_jobs.loc[i, 'recording_process_pre_path']
+            to_delete = df_inactive_jobs.loc[i, 'raw_dir']
+            if str(to_delete) != "0":
+                status = ft.delete_directory_tiger_globus(modality, dir_delete)
+                if status == config.system_process['SUCCESS']:
+                    df_inactive_jobs.loc[i, 'raw_dir_deleted'] = 1
+
+        #Delete processed directories tiger
+        for i in range(df_inactive_jobs.shape[0]):
+            cluster = df_inactive_jobs.loc[i, 'process_cluster']
+            dir_delete = df_inactive_jobs.loc[i, 'processed_dir']
+            if str(dir_delete) != "0":
+                print(cluster, dir_delete)
+                status = ft.delete_directory_cluster(dir_delete, cluster)
+                if status == config.system_process['SUCCESS']:
+                    df_inactive_jobs.loc[i, 'processed_dir_deleted'] = 1
+
+        #Delete empty directories in clusters
+        clusters = df_inactive_jobs['process_cluster'].unique().tolist()
+        for this_cluster in clusters:
+            ft.delete_empty_data_directory_cluster(this_cluster, type="raw")
+            ft.delete_empty_data_directory_cluster(this_cluster, type="processed")
+
+
+        # Update status for post-processed jobs
+        df_post_processed = df_inactive_jobs.loc[(df_inactive_jobs['raw_dir_deleted'] == 1) & (df_inactive_jobs['processed_dir_deleted'] == 1) & (df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_PROCESSED)]
+        df_post_processed = df_post_processed.reset_index(drop=True)
+        for i in range(df_post_processed.shape[0]):
+            RecProcessHandler.update_status_pipeline(df_post_processed.loc[i, 'query_key'], config.JOB_STATUS_POST_PROCESSED)
+            RecProcessHandler.update_job_id_log(df_post_processed.loc[i, 'job_id'], config.JOB_STATUS_PROCESSED, config.JOB_STATUS_POST_PROCESSED, update_value_dict['error_info'])
+
+        # Update status for post-error jobs
+        df_post_error = df_inactive_jobs.loc[(df_inactive_jobs['raw_dir_deleted'] == 1) & (df_inactive_jobs['processed_dir_deleted'] == 1) & (df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_ERROR_ID)]
+        df_post_error = df_post_error.reset_index(drop=True)
+        for i in range(df_post_error.shape[0]):
+            RecProcessHandler.update_status_pipeline(df_post_error.loc[i, 'query_key'], config.JOB_STATUS_ERROR_DELETED)
+            RecProcessHandler.update_job_id_log(df_post_error.loc[i, 'job_id'], config.JOB_STATUS_ERROR_ID, config.JOB_STATUS_ERROR_DELETED, update_value_dict['error_info'])
+
+        return
 
     '''
     @staticmethod

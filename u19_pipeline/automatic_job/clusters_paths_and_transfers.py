@@ -4,6 +4,7 @@ import subprocess
 import json
 import re
 import os
+import time
 
 from datetime import datetime
 from element_interface.utils import dict_to_uuid
@@ -59,8 +60,10 @@ spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipe
 cluster_vars = {
     "tiger": {
         "home_dir":                      tiger_home_dir, 
-        "root_data_dir":                 tiger_home_dir_globus + "/Raw", 
-        "processed_data_dir":            tiger_home_dir_globus + "/Processed", 
+        "root_data_dir_globus":          tiger_home_dir_globus + "/Raw", 
+        "processed_data_dir_globus":     tiger_home_dir_globus + "/Processed", 
+        "root_data_dir":                 tiger_home_dir + "/Data/Raw", 
+        "processed_data_dir":            tiger_home_dir + "/Data/Processed", 
         "slurm_files_dir":               tiger_home_dir + "/SlurmFiles", 
         "params_files_dir":              tiger_home_dir + "/ParameterFiles", 
         "chanmap_files_dir":             tiger_home_dir + "/ChanMapFiles", 
@@ -71,12 +74,15 @@ cluster_vars = {
         "user":                          default_user, 
         "slurm_default":                 slurm_dict_tiger_default, 
         "hostname":                      "tigergpu.princeton.edu",
-        "script_path":                   ""
+        "script_path":                   "",
+        "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env' 
     },
     "spock": {
         "home_dir":                      spock_home_dir, 
-        "root_data_dir":                 pni_data_dir   + "/Raw",
-        "processed_data_dir":            pni_data_dir   + "/Processed",
+        "root_data_dir_globus":          pni_data_dir   + "/Raw",
+        "processed_data_dir_globus":     pni_data_dir   + "/Processed",
+        "root_data_dir":                 spock_home_dir + "/Raw",
+        "processed_data_dir":            spock_home_dir + "/Processed",
         "slurm_files_dir":               spock_home_dir + "/SlurmFiles", 
         "params_files_dir":              spock_home_dir + "/ParameterFiles",
         "chanmap_files_dir":             spock_home_dir + "/ChanMapFiles", 
@@ -87,7 +93,8 @@ cluster_vars = {
         "user":                          default_user,
         "slurm_default":                 slurm_dict_spock_default, 
         "hostname":                      "spock.princeton.edu",
-        "script_path":                   ""
+        "script_path":                   "",
+        "conda_env":                     'u19_pipeline_python_env'
     }
 }
 
@@ -153,66 +160,6 @@ def request_globus_transfer_status(job_id):
 
     return transfer_request
 
-'''
-def request_globus_transfer_status(job_id):
-
-    transfer_request = dict()
-    globus_job_command = ["globus-timer","job","status",job_id,"--verbose"]
-    s = subprocess.run(globus_job_command, capture_output=True)
-
-    if s.stderr:
-        print(s.stderr)
-
-    job_output = json.loads(s.stdout.decode('UTF-8'))
-
-    task_id = job_output['results']['data'][0]['data']['details']['task_id']
-
-    globus_task_command = ["globus","task","show",task_id,"--format","json"]
-    s = subprocess.run(globus_task_command, capture_output=True)
-    task_output = json.loads(s.stdout.decode('UTF-8'))
-
-    if task_output['status'] == 'SUCCEEDED':
-        transfer_request['status'] = config.system_process['COMPLETED']
-    elif task_output['status'] in ['PENDING','RETRYING', 'ACTIVE']:
-        transfer_request['status'] = config.system_process['SUCCESS']
-    else:
-        transfer_request['status'] = config.system_process['ERROR']
-
-    return transfer_request
-
-
-def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath):
-
-    transfer_request = dict()
-
-    now = datetime.now()
-    date_time = now.strftime("%Y-%m-%dT23:59:59")
-
-    globus_command = ["globus-timer", "job", "transfer", 
-    "--name",   job_id_str,
-    "--label",  job_id_str,
-    "--interval", "72h",
-    "--stop-after-date", date_time,
-    "--source-endpoint", source_ep,
-    "--dest-endpoint", dest_ep,
-    "--item",  source_filepath, dest_filepath, "true",
-    "--verbose"]
-
-    print(globus_command)
-        
-    p = subprocess.run(globus_command, capture_output=True)
-
-    if len(p.stderr) == 0:
-        dict_output = json.loads(p.stdout.decode('UTF-8'))
-        #dict_output = translate_globus_output(p.stdout)
-        transfer_request['status'] = config.system_process['SUCCESS']
-        transfer_request['task_id'] = dict_output['job_id']
-    else:
-        transfer_request['status'] = config.system_process['ERROR']
-        transfer_request['error_info'] = p.stderr.decode('UTF-8')
-        
-    return transfer_request
-'''
 
 def globus_transfer_to_tiger(job_id, raw_rel_path, modality):
 
@@ -220,8 +167,8 @@ def globus_transfer_to_tiger(job_id, raw_rel_path, modality):
     source_ep = pni_ep_id
     dest_ep   = tiger_ep_dir
 
-    source_filepath = pathlib.Path(cluster_vars['spock']['root_data_dir'], modality, raw_rel_path).as_posix()
-    dest_filepath = pathlib.Path(cluster_vars['tiger']['root_data_dir'], modality, raw_rel_path).as_posix()
+    source_filepath = pathlib.Path(cluster_vars['spock']['root_data_dir_globus'], modality, raw_rel_path).as_posix()
+    dest_filepath = pathlib.Path(cluster_vars['tiger']['root_data_dir_globus'], modality, raw_rel_path).as_posix()
 
     transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
 
@@ -233,8 +180,8 @@ def globus_transfer_to_pni(job_id, processed_rel_path, modality):
     source_ep = tiger_ep_dir
     dest_ep   = pni_ep_id
 
-    dest_filepath = pathlib.Path(cluster_vars['spock']['processed_data_dir'], modality, processed_rel_path).as_posix()
-    source_filepath = pathlib.Path(cluster_vars['tiger']['processed_data_dir'], modality, processed_rel_path).as_posix()
+    dest_filepath = pathlib.Path(cluster_vars['spock']['processed_data_dir_globus'], modality, processed_rel_path).as_posix()
+    source_filepath = pathlib.Path(cluster_vars['tiger']['processed_data_dir_globus'], modality, processed_rel_path).as_posix()
 
     transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
     
@@ -294,3 +241,143 @@ def get_error_log_str(recording_process_id):
             error_log_data = ' '.join(error_log_file.readlines())
     
     return error_log_data
+
+
+def check_directory_exists_cluster(directory, cluster, modality, type='raw'):
+    '''
+    Check if directory exists in cluster, runs check_directory_script (check_directory.sh) in cluster machine
+    Output
+        dir_exists 1 if directory exists / 0 otherwise
+    '''
+
+    this_cluster_vars = get_cluster_vars(cluster)
+
+    if type=='raw':
+        final_directory = pathlib.Path(cluster_vars[cluster]['root_data_dir'], modality, directory).as_posix()
+    else:
+        final_directory = pathlib.Path(cluster_vars[cluster]['processed_data_dir'], modality, directory).as_posix()
+
+    base_command = "ssh " + this_cluster_vars['user']+'@'+this_cluster_vars['hostname'] + " "
+
+    command = "'if [ -d " +  final_directory + " ]; "
+    post_command = """then
+                   echo "1"  
+                   else echo "0"
+                   fi'"""
+
+    command = base_command + command + post_command
+
+    dir_exists = int(subprocess.check_output(command, shell=True).decode().strip())
+
+    if dir_exists:
+        return final_directory
+    else:
+        return 0
+
+
+def delete_directory_cluster(directory, cluster):
+    '''
+    Delete directory in cluster
+    '''
+
+    this_cluster_vars = get_cluster_vars(cluster)
+
+    command = "ssh " + this_cluster_vars['user']+'@'+this_cluster_vars['hostname']\
+        + " 'rm -R " + directory + " '"
+
+    p = subprocess.run(command, shell=True)
+    output = p.returncode
+
+    if output != 0:
+        output = -1
+
+    return output
+
+
+def delete_directory_tiger_globus(modality, raw_rel_path):
+    '''
+    Delete directory in cluster with globus command (for Raw directory globus)
+    '''
+
+    source_ep = tiger_ep_dir
+    source_filepath = pathlib.Path(cluster_vars['tiger']['root_data_dir_globus'], modality, raw_rel_path).as_posix()
+
+    source_fullpath = source_ep+ ":" + source_filepath
+
+    globus_command = ["globus", "delete", source_fullpath, '--recursive']
+    p = subprocess.run(globus_command, capture_output=True)
+    output = p.returncode
+
+    return output
+
+
+def delete_empty_data_directory_cluster(cluster, type='raw'):
+    """
+    Check if directory (or its childs) contains files and if not delete them
+    """
+
+    max_deletion = 10
+    this_cluster_vars = get_cluster_vars(cluster)
+    base_command = "ssh " + this_cluster_vars['user']+'@'+this_cluster_vars['hostname'] + ' '
+
+    # Check base directory to delete
+    if type == 'raw':
+        filepath = this_cluster_vars['root_data_dir']
+    else:
+        filepath = this_cluster_vars['processed_data_dir']
+
+    # Repeat always if we find a directory to delete
+    total_deletion = 0
+    while 1:
+        deleted_dirs = 0
+
+        # List all directories on base (raw/processed) directory
+        command_list_dir = base_command + 'find ' + filepath + ' -type d  -print'
+        p = subprocess.run(command_list_dir, shell=True, capture_output=True)
+
+        list_dir = p.stdout.decode()
+        list_dir = list_dir.split('\n')
+        if '.' in list_dir:
+            list_dir.remove('.')
+        if '' in list_dir:
+            list_dir.remove('')
+
+        for dir in list_dir:
+
+            # Check if directory has no files in it (empty)
+            command = base_command + 'find ' + dir + ' -type f | wc -l'
+            num_files = subprocess.check_output(command, shell=True)
+            num_files = int(num_files.decode().strip())
+
+            #If directory empty, delete it
+            if num_files == 0:
+                if type == 'raw':
+
+                    # For raw directories, delete with globus
+                    # Translate local directory to globus dir
+                    dir_globus = dir.replace(this_cluster_vars['root_data_dir'], '')
+                    dir_globus = dir_globus[1:]
+
+                    index_sep = dir_globus.index("/")
+                    modality = dir_globus[0:index_sep]
+                    dir_globus = dir_globus[index_sep+1:]
+
+                    #Delete with globus
+                    status = delete_directory_tiger_globus(modality, dir_globus)
+                    time.sleep(2)
+                    if status == config.system_process['SUCCESS']:
+                        deleted_dirs = 1
+                        break
+                    total_deletion +=1
+                else:
+                    #Delete processed files with "normal" ssh 
+                    status = delete_directory_cluster(dir, cluster)
+                    if status == config.system_process['SUCCESS']:
+                        deleted_dirs = 1
+                        break
+                    total_deletion +=1
+                
+        # If in this round no directories were deleted we are done
+        if deleted_dirs == 0 or total_deletion >= max_deletion:
+            break
+

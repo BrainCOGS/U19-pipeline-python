@@ -111,6 +111,15 @@ RECORDING_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] =
 
 recording_process_status_dict = [
     {
+        'Value': -2,
+        'Key': 'ERROR_DELETED',
+        'Label': 'Error in recording process / Deleted cluster files',
+        'UpdateField': None,
+        'ProcessFunction': None,
+        'FunctionField': None,
+        'SlackMessage': None
+    },
+    {
         'Value': -1,
         'Key': 'ERROR',
         'Label': 'Error in recording process',
@@ -208,6 +217,7 @@ recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 JOB_STATUS_ERROR_ID = recording_process_status_df.loc[recording_process_status_df['Key'] == 'ERROR', 'Value'].values[0]
 JOB_STATUS_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_FINISHED_ELEMENT_WORKFLOW', 'Value'].values[0]
 JOB_STATUS_POST_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_DATA_DELETED_CLUSTER', 'Value'].values[0]
+JOB_STATUS_ERROR_DELETED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'ERROR_DELETED', 'Value'].values[0]
 
 status_update_idx = {
     'NEXT_STATUS': 1,
