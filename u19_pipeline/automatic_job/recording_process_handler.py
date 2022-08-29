@@ -617,18 +617,22 @@ class RecProcessHandler():
         df_inactive_jobs['days_from_last_update'] = (now - df_inactive_jobs['max_date']).dt.days
         df_inactive_jobs['ready_delete'] = 1
         df_inactive_jobs.loc[(df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_ERROR_ID) & (df_inactive_jobs['days_from_last_update'] < 7), 'ready_delete'] = 0
-        df_inactive_jobs.loc[df_inactive_jobs['ready_delete'] == 1,:]
+        df_inactive_jobs = df_inactive_jobs.loc[df_inactive_jobs['ready_delete'] == 1,:]
+
+        #If no inactive job, after ready delete data return now
+        if df_inactive_jobs.shape[0] == 0:
+            return
 
         # Check if raw directories are present in cluster
         df_inactive_jobs['raw_dir']  = df_inactive_jobs.apply(lambda x: ft.check_directory_exists_cluster(x['recording_process_pre_path'],\
-            x['process_cluster'], x['recording_modality'], type='raw'), axis=1)
+            x['process_cluster'], x['recording_modality'], type_dir='raw'), axis=1)
         df_inactive_jobs['raw_dir'] = df_inactive_jobs['raw_dir'].astype(str)
         df_inactive_jobs['raw_dir_deleted'] = 0
         df_inactive_jobs.loc[df_inactive_jobs['raw_dir'] == "0", 'raw_dir_deleted'] = 1
 
         # Check if processed directories are present in cluster
         df_inactive_jobs['processed_dir'] = df_inactive_jobs.apply(lambda x: ft.check_directory_exists_cluster(x['recording_process_post_path'],\
-            x['process_cluster'], x['recording_modality'], type='processed'), axis=1)
+            x['process_cluster'], x['recording_modality'], type_dir='processed'), axis=1)
         df_inactive_jobs['processed_dir'] = df_inactive_jobs['processed_dir'].astype(str)
         df_inactive_jobs['processed_dir_deleted'] = 0
         df_inactive_jobs.loc[df_inactive_jobs['processed_dir'] == "0", 'processed_dir_deleted'] = 1
@@ -649,7 +653,6 @@ class RecProcessHandler():
             cluster = df_inactive_jobs.loc[i, 'process_cluster']
             dir_delete = df_inactive_jobs.loc[i, 'processed_dir']
             if str(dir_delete) != "0":
-                print(cluster, dir_delete)
                 status = ft.delete_directory_cluster(dir_delete, cluster)
                 if status == config.system_process['SUCCESS']:
                     df_inactive_jobs.loc[i, 'processed_dir_deleted'] = 1
@@ -659,7 +662,7 @@ class RecProcessHandler():
         for this_cluster in clusters:
             ft.delete_empty_data_directory_cluster(this_cluster, type="raw")
             ft.delete_empty_data_directory_cluster(this_cluster, type="processed")
-
+        
 
         # Update status for post-processed jobs
         df_post_processed = df_inactive_jobs.loc[(df_inactive_jobs['raw_dir_deleted'] == 1) & (df_inactive_jobs['processed_dir_deleted'] == 1) & (df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_PROCESSED)]
@@ -674,7 +677,7 @@ class RecProcessHandler():
         for i in range(df_post_error.shape[0]):
             RecProcessHandler.update_status_pipeline(df_post_error.loc[i, 'query_key'], config.JOB_STATUS_ERROR_DELETED)
             RecProcessHandler.update_job_id_log(df_post_error.loc[i, 'job_id'], config.JOB_STATUS_ERROR_ID, config.JOB_STATUS_ERROR_DELETED, update_value_dict['error_info'])
-
+        
         return
 
     '''

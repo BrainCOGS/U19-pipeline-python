@@ -19,7 +19,7 @@ pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to
 pni_data_dir   = ''         
 
 #For tiger endpoint
-default_user   = 'u19prod'                               # This will change to our automatic client for globus transfers
+default_user   = 'alvaros'                               # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'tigergpu.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
 tiger_ep_dir   = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'  # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
@@ -243,7 +243,7 @@ def get_error_log_str(recording_process_id):
     return error_log_data
 
 
-def check_directory_exists_cluster(directory, cluster, modality, type='raw'):
+def check_directory_exists_cluster(directory, cluster, modality, type_dir='raw'):
     '''
     Check if directory exists in cluster, runs check_directory_script (check_directory.sh) in cluster machine
     Output
@@ -252,7 +252,7 @@ def check_directory_exists_cluster(directory, cluster, modality, type='raw'):
 
     this_cluster_vars = get_cluster_vars(cluster)
 
-    if type=='raw':
+    if type_dir=='raw':
         final_directory = pathlib.Path(cluster_vars[cluster]['root_data_dir'], modality, directory).as_posix()
     else:
         final_directory = pathlib.Path(cluster_vars[cluster]['processed_data_dir'], modality, directory).as_posix()
@@ -266,13 +266,12 @@ def check_directory_exists_cluster(directory, cluster, modality, type='raw'):
                    fi'"""
 
     command = base_command + command + post_command
-
     dir_exists = int(subprocess.check_output(command, shell=True).decode().strip())
 
     if dir_exists:
         return final_directory
     else:
-        return 0
+        return "0"
 
 
 def delete_directory_cluster(directory, cluster):
