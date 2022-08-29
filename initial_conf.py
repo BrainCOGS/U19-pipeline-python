@@ -32,7 +32,9 @@ def initial_conf(save_user=True, replace_user=False):
         dj.config['database.user'] = user
         dj.config['database.password'] = password
 
-    
+
+    dj.config['database.host'] = host
+
     if 'custom' not in dj.config:
         dj.config['custom'] = dict()
         dj.config['custom']['database.prefix'] = 'u19_'
