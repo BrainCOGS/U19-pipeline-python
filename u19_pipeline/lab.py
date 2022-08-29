@@ -294,6 +294,9 @@ class Path(dj.Lookup):
         else:
             extra_bucket_dir = bucket_path.replace(path_df['global_path'] + '/', '');
 
+        if extra_bucket_dir[0] == '/':
+            extra_bucket_dir = extra_bucket_dir[1:]
+
         # If we are in spock already directory is the bucket_path column
         if is_this_spock():
             baseDir = path_df['bucket_path']

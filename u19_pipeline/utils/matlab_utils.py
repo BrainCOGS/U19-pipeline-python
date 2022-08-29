@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from shutil import which
+import pandas as pd
 
 import numpy as np
 from datetime import datetime
@@ -290,121 +291,122 @@ def convert_function_handle_to_str(mat_file_path):
 
     return metadata
 
-    def convert_towers_block_trial_2_df(current_block_trial, block_num):
-        """
-        Convert block trial data from matlab file to a Pandas DataFrame
-        Parameters
-        ----------
-        current_block_trial: dict | numpy.ndarray
-        block_num: int
-        Returns
-        -------
-        pandas.DataFrame
-        """
-        
-        valid_block = 0
-        # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-        if isinstance(current_block_trial, np.ndarray) and current_block_trial.shape[0] > 0:
-            current_block_trial = current_block_trial.tolist()
-            valid_block = 1 
-        # One trial blocks are stored as dictionaries
-        if isinstance(current_block_trial, dict):
-            current_block_trial = [current_block_trial]
-            valid_block = 1 
+def convert_towers_block_trial_2_df(current_block_trial, block_num):
+    """
+    Convert block trial data from matlab file to a Pandas DataFrame
+    Parameters
+    ----------
+    current_block_trial: dict | numpy.ndarray
+    block_num: int
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    
+    valid_block = 0
+    # "Normal" blocks are stored as numpy arrays and its length is greater than 0
+    if isinstance(current_block_trial, np.ndarray) and current_block_trial.shape[0] > 0:
+        current_block_trial = current_block_trial.tolist()
+        valid_block = 1 
+    # One trial blocks are stored as dictionaries
+    if isinstance(current_block_trial, dict):
+        current_block_trial = [current_block_trial]
+        valid_block = 1 
 
-        if valid_block:
-            block_trial_df = pd.DataFrame(current_block_trial)
-            block_trial_df.insert(loc=0, column='trial_idx', value=np.arange(len(block_trial_df))+1)
-            block_trial_df.insert(loc=0, column='block', value=block_num)
+    if valid_block:
+        block_trial_df = pd.DataFrame(current_block_trial)
+        block_trial_df.insert(loc=0, column='trial_idx', value=np.arange(len(block_trial_df))+1)
+        block_trial_df.insert(loc=0, column='block', value=block_num)
+    else:
+        block_trial_df = pd.DataFrame()
+
+    return valid_block, block_trial_df
+
+def convert_towers_block_2_df(current_block, num_block):
+    """
+    Convert block data from matlab file to a Pandas DataFrame
+    Parameters
+    ----------
+    current_block_trial: dict | numpy.ndarray
+    block_num: int
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    valid_block = 0
+
+    # "Normal" blocks are stored as numpy arrays and its length is greater than 0
+    if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
+        current_block = current_block.tolist()
+        valid_block = 1 
+    # One trial blocks are stored as dictionaries
+    if isinstance(current_block, dict):
+        current_block = [current_block]
+        valid_block = 1 
+
+    if valid_block:
+        block_df = pd.DataFrame(current_block)
+        block_df.insert(loc=0, column='block', value=num_block)
+        block_df = block_df.drop(['trial'], axis=1)
+    else:
+        block_df = pd.DataFrame()
+
+    return valid_block, block_df
+
+
+def convert_behavior_file(mat_file):
+    """
+    Convert a matlab behavior file to a session dictionary object and a block/trial pandas DataFrame
+    ----------
+    mat_file: str
+    Returns
+    -------
+    dict
+    pandas.DataFrame
+    """
+
+    matin = convert_mat_file_to_dict(mat_file)
+    converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
+
+    session_block_trial_df = pd.DataFrame()
+
+    #Convert all blocks trials to dataframe and append them
+
+    #For a single block sessions
+    if isinstance(matin['log']['block'], dict):
+        length_blocks = 1
+        dict_block = 1
+    #For multiple block sessions
+    else:
+        length_blocks = matin['log']['block'].shape[0]
+        dict_block = 0
+
+    #Convert all blocks of the session
+    num_blocks_conv = 0
+    for i in range(length_blocks):
+
+        if dict_block:
+            block = matin['log']['block']
         else:
-            block_trial_df = pd.DataFrame()
+            block = matin['log']['block'][i]
 
-        return valid_block, block_trial_df
+        #Convert trial df and block df
+        valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)
+        valid_blocks, block_df = convert_towers_block_2_df(block, i+1)
+        #Write string of block level Protocol  (from matlab obscured data)
+        block_df['shapingProtocol'] = converted_metadata['shaping_protocol'][i]
 
-    def convert_towers_block_2_df(current_block, num_block):
-        """
-        Convert block data from matlab file to a Pandas DataFrame
-        Parameters
-        ----------
-        current_block_trial: dict | numpy.ndarray
-        block_num: int
-        Returns
-        -------
-        pandas.DataFrame
-        """
-        valid_block = 0
-
-        # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-        if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
-            current_block = current_block.tolist()
-            valid_block = 1 
-        # One trial blocks are stored as dictionaries
-        if isinstance(current_block, dict):
-            current_block = [current_block]
-            valid_block = 1 
-
-        if valid_block:
-            block_df = pd.DataFrame(current_block)
-            block_df.insert(loc=0, column='block', value=num_block)
-            block_df = block_df.drop(['trial'], axis=1)
-        else:
-            block_df = pd.DataFrame()
-
-        return valid_block, block_df
-
-
-    def convert_behavior_file(mat_file):
-        """
-        Convert a matlab behavior file to a session dictionary object and a block/trial pandas DataFrame
-        ----------
-        mat_file: str
-        Returns
-        -------
-        dict
-        pandas.DataFrame
-        """
-
-        matin = convert_mat_file_to_dict(mat_file)
-        converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
-
-        session_block_trial_df = pd.DataFrame()
-
-        #Convert all blocks trials to dataframe and append them
-
-        #For a single block sessions
-        if isinstance(matin['log']['block'], dict):
-            length_blocks = 1
-            dict_block = 1
-        #For multiple block sessions
-        else:
-            length_blocks = matin['log']['block'].shape[0]
-            dict_block = 0
-
-        #Convert all blocks of the sesison
-        for i in range(matin['log']['block'].shape[0]):
-
-            if dict_block:
-                block = matin['log']['block']
+        if valid_block and valid_blocks:
+            session_current_block_trial_df = block_trial_df.merge(block_df, on='block', suffixes=['_block', '_trial'])
+            if num_blocks_conv == 0:
+                session_block_trial_df = session_current_block_trial_df.copy()
             else:
-                block = matin['log']['block'][i]
-
-            #Convert trial df and block df
-            valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)
-            valid_blocks, block_df = convert_towers_block_2_df(block, i+1)
-            #Write string of block level Protocol  (from matlab obscured data)
-            block_df['shapingProtocol'] = converted_metadata['shaping_protocol'][i]
-
-            if valid_block and valid_blocks:
-                session_current_block_trial_df = block_trial_df.merge(block_df, on='block', suffixes=['_block', '_trial'])
-                if num_blocks_conv == 0:
-                    session_block_trial_df = session_current_block_trial_df.copy()
-                else:
-                    session_block_trial_df = session_block_trial_df.append(session_current_block_trial_df)
-                num_blocks_conv +=1
+                session_block_trial_df = session_block_trial_df.append(session_current_block_trial_df)
+            num_blocks_conv +=1
 
 
-        #Write choice and trial type of each trial (from matlab obscured data)
-        session_block_trial_df['choice'] = converted_metadata['trial_choice']
-        session_block_trial_df['trialType'] = converted_metadata['trial_type']
-        session_block_trial_df = session_block_trial_df.reset_index(drop=True)
-        return session_block_trial_df
+    #Write choice and trial type of each trial (from matlab obscured data)
+    session_block_trial_df['choice'] = converted_metadata['trial_choice']
+    session_block_trial_df['trialType'] = converted_metadata['trial_type']
+    session_block_trial_df = session_block_trial_df.reset_index(drop=True)
+    return session_block_trial_df
