@@ -242,6 +242,8 @@ class RecProcessHandler():
         # Only queue if processing in tiger
         if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
 
+            print('lets transfer slum file ..............xxxxxxxx............')
+
             #Create and transfer slurm file
             if status == config.system_process['SUCCESS']:
                 status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])
