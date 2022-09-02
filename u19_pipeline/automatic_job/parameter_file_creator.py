@@ -72,6 +72,8 @@ def transfer_parameter_file(recording_process_id, default_param_filename, cluste
     params_file_cluster_path = str(pathlib.Path(cluster_param_dir,param_filename))
     param_file_full_path = user_host+':'+params_file_cluster_path
 
+    print('transfer_parameter_file', params_file_local_path, param_file_full_path)
+
     status = ft.scp_file_transfer(params_file_local_path, param_file_full_path)
 
     return status

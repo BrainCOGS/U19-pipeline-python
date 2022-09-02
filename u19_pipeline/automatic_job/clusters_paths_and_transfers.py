@@ -110,6 +110,9 @@ def get_cluster_vars(cluster):
 def scp_file_transfer(source, dest):
 
     print("scp", source, dest)
+
+    print(["scp", "-i", mv.public_key_location2, source, dest])
+
     p = subprocess.Popen(["scp", "-i", mv.public_key_location2, source, dest])
     transfer_status = p.wait()
     return transfer_status
