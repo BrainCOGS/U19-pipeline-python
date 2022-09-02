@@ -21,7 +21,7 @@
     module load anaconda3/5.3.1
     module load matlab/R2020a
 
-    conda activate /home/alvaros/.conda/envs/BrainCogsEphysSorters_env
+    conda activate BrainCogsEphysSorters_env
 
     cd ${repository_dir}
     python ${process_script_path}
