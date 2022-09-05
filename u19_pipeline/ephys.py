@@ -122,16 +122,15 @@ class BehaviorSync(dj.Imported):
         digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
 
         # Synchronize between pulses and get iteration # vector for each sample
-        mode='counter_bit0'
-        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], mode)
+        mode=None
+        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
         # Check # of trials and iterations match
-        status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
+        trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
+        status = ephys_utils.evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small)
 
-        #They didn't match, try counter method (if available)
-        if (not status) and (digital_array.shape[0] > 3):
-            [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5)
-            iteration_dict['framenumber_vector_samples'] = framenumber_in_trial
-            iteration_dict['trialnumber_vector_samples'] = trialnumber
+        if status == 0:
+            iteration_dict = ephys_utils.resync_missing_trials(trials_diff_iteration_small, iteration_dict, behavior_time)
+
 
 
         final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 

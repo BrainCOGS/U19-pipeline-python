@@ -193,14 +193,12 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
 def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_vector):
     #Assert that vector sync pulses match behavior time vector
 
-    status = True
-
-    # Trial start pulses should be +1 of completed trials in behavior file
-    if iteration_sample_idx_output.shape[0] != (behavior_time_vector.shape[0]):
-        status = False
-        return status
+    # Count trial count differences
+    trial_count_diff = iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0])
 
     count = 0
+    trials_diff_iteration_small = list()
+    trials_diff_iteration_big = 0
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
         count += 1
         print(count)
@@ -208,10 +206,54 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
         print(behavior_time_vector[idx_trial].shape[0])
         #For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
-            status = False
-            #return status
+            if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 3:
+                trials_diff_iteration_small.append(idx_trial)
+            else:
+                trials_diff_iteration_big += 1
 
-    return status
+
+    return trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small
+
+
+def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small):
+    #Check if all sync process ran smoothly, we need to redo some trials or it's not worth it
+    # Return status
+    # = 1, synced perfectly
+    # = 0, missed by just a couple pulses, resync
+    # = -1, missed by a lot, error
+
+    if trials_diff_iteration_big > 0:
+        print('Missed by a lot some trials: ', trials_diff_iteration_big)
+        status = -1
+        return status
+
+    # All trials synced perfectly
+    if trial_count_diff ==0 and len(trials_diff_iteration_small) == 0:
+        print('Synced perfectly xxxxxxxxxxxxxx')
+        status = 1
+        return status
+
+    # We miss last trial (surely recording was stop before behavior)
+    if trial_count_diff < 2 and len(trials_diff_iteration_small) == 0:
+        print('Only missed last trial (Pass) xxxxxxxxxxxxxx')
+        status = 1
+        return status
+
+    # Iterations differ in more than two trials
+    if len(trials_diff_iteration_small) > 2:
+        print('Missed iteration count on many trials: ', len(trials_diff_iteration_small))
+        status = -1
+        return status
+
+    if trial_count_diff < 2 and len(trials_diff_iteration_small) <= 2:
+        print('Missed num trials: ', trial_count_diff)
+        print('Missed iteration count in how many trials: ', len(trials_diff_iteration_small))
+        print('Trying to fix trials')
+        status = 0
+        return status
+
+    
+
 
 
 # Deprecated
