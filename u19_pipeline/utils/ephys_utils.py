@@ -1,6 +1,7 @@
 
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import SampRate, makeMemMapRaw, ExtractDigital
 import numpy as np
+from scipy import signal as sp
 from bitstring import BitArray
 from element_array_ephys import ephys as ephys_element
 
@@ -139,7 +140,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     trial_start_idx = get_idx_trial_start(trial_pulse_signal)
 
     # Just to make sure we get corresponding iter pulse (trial and iter pulse at same time !!)
-    ms_before_pulse = 2
+    ms_before_pulse = 3
     samples_before_pulse = int(nidq_sampling_rate*(ms_before_pulse/1000))
 
     # num Trials to sync (if behavior stopped before last trial was saved)
@@ -194,11 +195,11 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     #Assert that vector sync pulses match behavior time vector
 
     # Count trial count differences
-    trial_count_diff = iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0])
+    trial_count_diff = np.abs(iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0]))
 
     count = 0
     trials_diff_iteration_small = list()
-    trials_diff_iteration_big = 0
+    trials_diff_iteration_big = list()
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
         count += 1
         print(count)
@@ -209,22 +210,27 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
             if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 3:
                 trials_diff_iteration_small.append(idx_trial)
             else:
-                trials_diff_iteration_big += 1
+                trials_diff_iteration_big.append(idx_trial)
 
 
     return trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small
 
 
-def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small):
+def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small, total_trials):
     #Check if all sync process ran smoothly, we need to redo some trials or it's not worth it
     # Return status
     # = 1, synced perfectly
     # = 0, missed by just a couple pulses, resync
     # = -1, missed by a lot, error
 
-    if trials_diff_iteration_big > 0:
+    if len(trials_diff_iteration_big) > 1:
         print('Missed by a lot some trials: ', trials_diff_iteration_big)
         status = -1
+        return status
+
+    if len(trials_diff_iteration_big) == 1 and trials_diff_iteration_big[0] == total_trials-1:
+        print('Missed by a lot last trial: (Assume recording stopped earlier) ', trials_diff_iteration_big)
+        status = 1
         return status
 
     # All trials synced perfectly
@@ -252,7 +258,90 @@ def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_di
         status = 0
         return status
 
-    
+    else:
+        status = -1
+        print('Missed by a lot of trials, everything different or missing')
+        return status
+
+
+
+def fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_times, nidq_sampling_rate):
+    # Fix and insrtt missing synced iteration vectors
+
+    print('trials_diff_iteration_small', trials_diff_iteration_small)
+    print(type(trials_diff_iteration_small))
+
+
+    # For each bad synced trial (Should be only a few)
+    for i in range(len(trials_diff_iteration_small)):
+
+        #Insert missing iterations on synced vector
+        idx_trial = trials_diff_iteration_small[i]
+        status, new_iter_start = insert_missing_synced_iteration(iteration_dict['iter_start_idx'][idx_trial],\
+            iteration_dict['iter_times_idx'][idx_trial], behavior_times[idx_trial].flatten())
+
+        if not status:
+            raise ValueError("Coud not find missing iteration in trial")
+        
+        iteration_dict['iter_start_idx'][idx_trial] = new_iter_start
+
+        # Get new synced time vector for trial
+        new_times = new_iter_start/nidq_sampling_rate
+        new_times = new_times - new_times[0]
+        iteration_dict['iter_times_idx'][idx_trial] = new_times
+
+        # Fix framenumber in the sample vector
+        for j in range(new_iter_start.shape[0]-1):
+            iteration_dict['framenumber_vector_samples'][new_iter_start[j]:new_iter_start[j+1]] = j+1
+
+        #Last iteration fixed as well
+        next_trial = idx_trial+1
+        start_iteration_next_trial = iteration_dict['iter_start_idx'][next_trial][0]
+
+        print('next_trial ........', next_trial)
+        print('last iteration of this trial so far', new_iter_start[-1])
+        print('start next trial iteration', start_iteration_next_trial)
+
+        iteration_dict['framenumber_vector_samples'][new_iter_start[-1]:start_iteration_next_trial] = new_iter_start.shape[0]
+
+        return iteration_dict
+
+
+def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector, behavior_time_vector):
+    # Check where is more likely we miss an iteration pulse and insert it to iteration_vector
+
+    status = 1
+    print('synced_iteration_vector', synced_iteration_vector.shape[0])
+    print('synced_time_vector', synced_time_vector.shape[0])
+    print('behavior_time_vector', behavior_time_vector.shape[0])
+
+    # Get in which indexes we get a "peak" of non matching times...
+    if synced_time_vector.shape[0] >= behavior_time_vector.shape[0]:
+        print('More pulses than behavior iterations, check other method')
+        status = -1
+        return status, np.empty(0)
+    else:
+        diff_vector = np.diff(synced_time_vector - behavior_time_vector[:synced_time_vector.shape[0]])
+
+    peaks, _ = sp.find_peaks(diff_vector, height=0.05, distance=20)
+
+    print('peaks here .............', peaks)
+    print(peaks.shape)
+
+
+    # Insert extra iterations as a new "iteration" start to match behavior iterations
+    new_synced_iteration_vector = synced_iteration_vector.copy()
+    for i in range(peaks.shape[0]):
+        value_insert = (synced_iteration_vector[peaks[i]] + synced_iteration_vector[peaks[i]+1] ) /2
+        new_synced_iteration_vector = np.insert(new_synced_iteration_vector, peaks[i], value_insert)
+
+
+    if new_synced_iteration_vector.shape[0] != behavior_time_vector.shape[0]:
+        print('with peak strategy, could not find correct missing iterations')
+        status = -1
+        return status, np.empty(0)
+
+    return status, new_synced_iteration_vector
 
 
 
