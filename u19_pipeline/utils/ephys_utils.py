@@ -438,9 +438,11 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
     return (framenumber_in_trial, trialnumber)
 
 
-def future_counter_get_signal():
-    # Cleaner way to get iteration number from counter, still need debugging, if necessary
 
+def future_counter_get_signal():
+    pass
+'''
+    # Cleaner way to get iteration number from counter, still need debugging, if necessary
 
     framenumber = np.zeros(idx_end-idx_start)
     for idx, ii in enumerate(range(idx_start,idx_end)):
@@ -465,7 +467,7 @@ def future_counter_get_signal():
         framenumber_in_trial[idx] = frame_number + overflow*(max_count+1)
 
     print(np.max(framenumber_in_trial))
-
+'''
 
 def load_open_ephys_digital_file(file_path):
 

@@ -340,8 +340,10 @@ class RecordingHandler():
 
                 #Create lfp trace if needed (neuropixel 2.0 probes)
                 recording_directory = (recording.Recording & rec_series['query_key']).fetch1('recording_directory')
+                recording_directory = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][0], recording_directory).parent.as_posix()
                 for i in recording_processes:
-                    status = ephys_pipeline.create_lfp_trace(config.catgt_script, recording_directory, recording_processes[i]['recording_process_pre_path'])
+                    probe_dir = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][0], i['recording_process_pre_path']).as_posix()
+                    ephys_pipeline.create_lfp_trace(config.catgt_script, recording_directory, probe_dir)
 
         
         status_update = config.status_update_idx['NEXT_STATUS']

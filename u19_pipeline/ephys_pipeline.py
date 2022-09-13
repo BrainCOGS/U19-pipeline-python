@@ -118,13 +118,16 @@ def append_cat_gt_params_from_probedir(probe_dirname):
 
 def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
 
-    status = True
     found_lfp_trace = glob.glob(probe_directory + '/*lf.bin')
     if len(found_lfp_trace) > 0:
-        return status
+        return
+
+    #Get last part of the probe directory (xxx_g[y]_imec[x])
+    probe_name_dir = pathlib.PurePath(probe_directory)
+    probe_name_dir = probe_name_dir.name
 
     #Create catgt command if no lfp trace was found
-    cat_gt_params = append_cat_gt_params_from_probedir(probe_directory)
+    cat_gt_params = append_cat_gt_params_from_probedir(probe_name_dir)
     cat_gt_command = [cat_gt_script, '-dir='+recording_directory, '-run='+cat_gt_params['run'], '-g='+cat_gt_params['g'],
     '-t='+cat_gt_params['t'], '-prb='+cat_gt_params['prb'], '-prb_fld', '-lf', '-lffilter='+lfp_filter_params]
 
@@ -138,7 +141,7 @@ def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
         error = json.loads(stderr.decode('UTF-8'))
         raise Exception(error)
 
-    return status
+    return
 
 
 # Activate `ephys_pipeline` and `probe_pipeline` schemas -------------------------------
