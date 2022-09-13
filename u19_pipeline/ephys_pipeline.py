@@ -247,21 +247,24 @@ class BehaviorSync(dj.Imported):
             mode=None
             iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
             # Check # of trials and iterations match
-            status = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
+            trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
 
-            if not status:
-                return
+            print('metrics to evaluate...')
+            print(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small, behavior_time.shape[0])
 
-            #They didn't match, try counter method (if available)
-            if (not status) and (digital_array.shape[0] > 3):
-                [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5)
-                iteration_dict['framenumber_vector_samples'] = framenumber_in_trial
-                iteration_dict['trialnumber_vector_samples'] = trialnumber
+            status = ephys_utils.evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small, behavior_time.shape[0])
 
+            #Failed sync by a lot, error
+            if status == -1:
+                raise ValueError('Ephys sync failed')
+
+            #Only some minor fixes to be made to sync
+            if status == 0:
+                iteration_dict = ephys_utils.fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_time, nidq_sampling_rate)
 
             final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
-                iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
-                trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
+                    iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
+                    trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
 
             print(final_key)
 

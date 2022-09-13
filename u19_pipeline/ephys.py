@@ -126,12 +126,19 @@ class BehaviorSync(dj.Imported):
         iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
         # Check # of trials and iterations match
         trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
-        status = ephys_utils.evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small)
 
+        print('metrics to evaluate...')
+        print(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small, behavior_time.shape[0])
+
+        status = ephys_utils.evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small, behavior_time.shape[0])
+
+        #Failed sync by a lot, error
+        if status == -1:
+            raise ValueError('Ephys sync failed')
+
+        #Only some minor fixes to be made to sync
         if status == 0:
-            iteration_dict = ephys_utils.resync_missing_trials(trials_diff_iteration_small, iteration_dict, behavior_time)
-
-
+            iteration_dict = ephys_utils.fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_time, nidq_sampling_rate)
 
         final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
                iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
