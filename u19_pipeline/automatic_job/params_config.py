@@ -302,16 +302,17 @@ datajoint_proj_dir = u19_pipeline_python_dir.parent
 u19_matlab_dir = pathlib.Path(datajoint_proj_dir, 'U19-pipeline-matlab')
 startup_pipeline_matlab_dir = pathlib.Path(u19_matlab_dir, 'scripts').as_posix()
 
-
 this_dir = os.path.dirname(__file__)
 ingest_scaninfo_script = pathlib.Path(this_dir, 'ingest_scaninfo_shell.sh').as_posix()
 
+# Look for CATGT directory (Should be present on same directory as U19-Pipeline_Python)
+catgt_dir = pathlib.Path(datajoint_proj_dir, 'CatGT-linux')
+catgt_script = pathlib.Path(catgt_dir, 'runit.sh').as_posix()
 
 # For parameter & channmap storing
 parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
 default_preprocess_filename = 'preprocess_paramset_%s.json'
 default_process_filename = 'process_paramset_%s.json'
-
 
 chanmap_files_filepath = pathlib.Path(this_dir, 'ChanMapFiles').as_posix()
 default_chanmap_filename = 'chanmap_%s.mat'

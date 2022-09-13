@@ -1,22 +1,17 @@
-from importlib.resources import path
-from logging import exception
+
 import datajoint as dj
 import pathlib
-import numpy as np
-import pandas as pd
-import scipy
-
+import glob
+import re
+import subprocess
+import json
 
 from element_array_ephys import probe as probe_element
 from element_array_ephys import ephys_precluster as ephys_element
-
-from u19_pipeline import recording
-from u19_pipeline.utils import path_utils as pu
-
 from element_array_ephys.readers import spikeglx
 from element_interface.utils import find_full_path
 
-from u19_pipeline import ephys_pipeline
+from u19_pipeline import recording
 import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
@@ -27,6 +22,8 @@ except Exception as e:
     print(f'Error in loading "ecephys_spike_sorting" package - {str(e)}')
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_pipeline')
+
+lfp_filter_params = 'biquad,2,0,500'
 
 # Declare upstream table ---------------------------------------------------------------
 @schema
@@ -90,6 +87,59 @@ def get_session_directory(session_key):
     #session_dir = pathlib.Path(root_dir, session_dir).as_posix()
 
     return session_dir
+
+def append_cat_gt_params_from_probedir(probe_dirname):
+
+    extra_cat_gt_params = dict()
+
+    probe_match = re.search("_imec[0-9]$", probe_dirname)
+    if probe_match:
+        probe_text = probe_match.group()
+        extra_cat_gt_params['prb'] = re.search(r'\d+',probe_text).group()
+    else:
+        raise ValueError(probe_dirname +' is not a valid probe directory')
+
+    session_num_match = re.search("_g[0-9]_", probe_dirname)
+    if session_num_match:
+        extra_cat_gt_params['run'] = probe_dirname[:session_num_match.start()]
+        session_text = session_num_match.group()
+        extra_cat_gt_params['g'] = re.search(r'\d+',session_text).group()
+    else:
+        raise ValueError(probe_dirname +' is not a valid probe directory')
+
+    trigger_num_match = re.search("_t[0-9]_", probe_dirname)
+    if trigger_num_match:
+        trigger_text = trigger_num_match.group()
+        extra_cat_gt_params['t'] = re.search(r'\d+',trigger_text).group()
+    else:
+        extra_cat_gt_params['t'] = '0'
+
+    return extra_cat_gt_params
+
+def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
+
+    status = True
+    found_lfp_trace = glob.glob(probe_directory + '/*lf.bin')
+    if len(found_lfp_trace) > 0:
+        return status
+
+    #Create catgt command if no lfp trace was found
+    cat_gt_params = append_cat_gt_params_from_probedir(probe_directory)
+    cat_gt_command = [cat_gt_script, '-dir='+recording_directory, '-run='+cat_gt_params['run'], '-g='+cat_gt_params['g'],
+    '-t='+cat_gt_params['t'], '-prb='+cat_gt_params['prb'], '-prb_fld', '-lf', '-lffilter='+lfp_filter_params]
+
+
+    print(cat_gt_command)
+    p = subprocess.Popen(cat_gt_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.wait()
+    stdout, stderr = p.communicate()
+
+    if stderr:
+        error = json.loads(stderr.decode('UTF-8'))
+        raise Exception(error)
+
+    return status
+
 
 # Activate `ephys_pipeline` and `probe_pipeline` schemas -------------------------------
 ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__name__)
