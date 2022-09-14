@@ -189,7 +189,7 @@ recording_process_status_dict = [
         'UpdateField': None,
         'ProcessFunction': 'transfer_check',
         'FunctionField': 'task_copy_id_post',
-        'SlackMessage': None
+        'SlackMessage': 'Processed data was transferred to cup. Available on the GUI'
     },
     {
         'Value': 7,
