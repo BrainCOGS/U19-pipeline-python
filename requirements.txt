@@ -3,7 +3,7 @@ globus-timer-cli==0.2.9
 scipy
 python-dotenv
 datajoint
-element-calcium-imaging>=0.2.0
+element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git
 element-array-ephys @ git+https://github.com/BrainCOGS/element-array-ephys.git
 element-interface @ git+https://github.com/datajoint/element-interface.git
 #ecephys_spike_sorting @ git+https://github.com/AllenInstitute/ecephys_spike_sorting.git
