@@ -8,34 +8,32 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
   <details>
   <summary>Click to expand details</summary>
+  
+  #### Install an integrated development environment
 
-    #### Install an integrated development environment
-
-    + DataJoint development and use can be done with a plain text editor in the
+  + DataJoint development and use can be done with a plain text editor in the
       terminal. However, an integrated development environment (IDE) can improve your
       experience. Several IDEs are available.
 
-    + In this setup example, we will use Microsoft's Visual Studio Code.
+  + In this setup example, we will use Microsoft's Visual Studio Code.
       [Installation instructions here.](https://code.visualstudio.com/download)
 
-    + Install the Jupyter extension for VS Code.
+  + Install the Jupyter extension for VS Code.
 
-    #### Install a virtual environment
+  #### Install a virtual environment
 
-    + A virtual environment allows you to install the packages required for a 
+  + A virtual environment allows you to install the packages required for a 
     specific project within an isolated environment on your computer.
 
-    + It is highly recommended to create a virtual environment to run the workflow.
+  + It is highly recommended to create a virtual environment to run the workflow.
 
-    + Conda and virtualenv are virtual environment managers and you can use either 
+  + Conda and virtualenv are virtual environment managers and you can use either 
     option.  Below are the commands for Conda.
 
-    + If you are setting up the pipeline on your local machine follow the instructions below for Conda.  If you are using `spock.pni.princeton.edu` or `scotty.pni.princeton.edu`, Conda is preinstalled and you can access it by running `module load anacondapy/2021.11`.
+  + If you are setting up the pipeline on your local machine follow the instructions below for Conda.  If you are using `spock.pni.princeton.edu` or `scotty.pni.princeton.edu`, Conda is preinstalled and you can access it by running `module load anacondapy/2021.11`.
 
-    + We will install Miniconda which is a minimal installer for conda.
-      + Select the [Miniconda installer link](
-          https://conda.io/en/latest/miniconda.html) 
-      for your operating system and follow the instructions.
+  + We will install Miniconda which is a minimal installer for conda.
+  + Select the [Miniconda installer link](https://conda.io/en/latest/miniconda.html) for your operating system and follow the instructions.
 
       + You may need to add the Miniconda directory to the PATH environment 
       variable
