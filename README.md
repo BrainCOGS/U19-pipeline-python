@@ -6,8 +6,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
 ### Recommended prerequisites
 
-+ The following prerequisites are recommended for both installation methods.
-
   <details>
   <summary>Click to expand details</summary>
 
