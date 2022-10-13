@@ -4,10 +4,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
 ## Installation
 
-+ The following instructions will detail two types of installation methods.
-  1. User installation to access and fetch data from the database.
-  2. Developer installation to set up the pipeline for running analysis and fetching data.
-
 ### Recommended prerequisites
 
 + The following prerequisites are recommended for both installation methods.
@@ -75,7 +71,7 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
       + Example command to create a conda environment
         ```bash
-        conda create -n U19-pipeline_python python=3.8.11
+        conda create -n U19-pipeline_python_env python=3.9
         ```
 
     + Activate the conda environment
@@ -91,88 +87,21 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
   </details>
 
-### User installation
-
-+ The following instructions will allow a user to access and fetch data from the database.
-
-  <details>
-  <summary>Click to expand details</summary>
-
-    #### Install DataJoint
-    + Activate the conda environment
-      ```bash
-      conda activate <environment_name>
-      ```
+### Configuration
     
-    + Install DataJoint
-    ```bash
-    pip install datajoint
-    ```
-
-    #### Access the database
-    + In a new Jupyter notebook, run the following commands.
-      ```
-      import getpass
-      import datajoint as dj
+ #### Repository libraries installation and configuration
+    
+ + The following instructions will allow a user to access and fetch data from the database.
+    
+  ```bash
+  conda activate <environment_name>
+  cd U19-pipeline_python
+  pip install -e .
+  python initial_conf.py
+  ```
       
-      dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-      dj.config['database.user'] = '<username>'
-      dj.config['database.password'] = getpass.getpass() # enter the password securily
-
-      scan = dj.create_virtual_module('scan', 'u19_scan_element')
-      imaging = dj.create_virtual_module('imaging', 'u19_imaging_element')
-
-      probe = dj.create_virtual_module('probe', 'u19_probe_element')
-      ephys = dj.create_virtual_module('ephys', 'u19_ephys_element')
-      ```
-
-    + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
-
-  </details>
-
-### Developer installation
-
-+ The following instructions will allow a user to set up the pipeline for running analysis and fetching data.
-
-  <details>
-  <summary>Click to expand details</summary>
-
-    #### Fork and clone the repository
-    + In a broswer, navigate to the [BrainCOGS/U19-pipeline_python](https://github.com/BrainCOGS/U19-pipeline_python) repository and fork this repository.
-
-    + In a terminal window, clone your fork of the repository to your local machine.
-      ```
-      git clone https://github.com/<GitHub username>/U19-pipeline_python.git
-      ```
-    
-    + If you cannot clone repositories with ssh, [set keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
-
-    #### Install the repository
-    + Activate the conda environment
-    ```bash
-    conda activate <environment_name>
-    ```
-
-    + Change directory to this repository
-    ```bash
-    cd U19-pipeline_python
-    ```
-
-    + Install this repository in editable mode
-    ```bash
-    pip install -e .
-    ```
-
-    #### Configure the DataJoint connection to the database
-    + See the following Jupyter notebook to configure DataJoint.
-      `notebooks/00-datajoint-configuration.ipynb`
-
-    + Ephys element and imaging element require root paths for ephys and imaging data. Here are the notebooks showing how to set up the configurations properly.
-
-      + [Ephys element configuration](notebooks/ephys_element/00-Set-up-configuration.ipynb)
-      + [Imaging element configuration](notebooks/imaging_element/00-Set-up-configration.ipynb)
-
-  </details>
+  + The `initial_conf.py`  script will store a local file with credtentials to access DB and configuration variables/filepaths.
+  + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
 
 ## Tutorials
 
