@@ -22,20 +22,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
     + Install the Jupyter extension for VS Code.
 
-    #### Connect to PNI resources
-
-    + The Princeton Neuroscience Institute (PNI) provides computing resources.  You can optionally use these resources or setup the pipeline on your local machine.
-
-    + Spock is the high performance computational cluster
-      ```
-      ssh -XY username@spock.pni.princeton.edu
-      ```
-
-    + Scotty is used for interactive sessions
-      ```
-      ssh -XY username@scotty.pni.princeton.edu
-      ```
-
     #### Install a virtual environment
 
     + A virtual environment allows you to install the packages required for a 
@@ -99,6 +85,7 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   pip install -e .
   python initial_conf.py
   ```
+  (Username and password will be prompted at this moment: Princeton NETiD & NetiD password usually works)
       
   + The `initial_conf.py`  script will store a local file with credtentials to access DB and configuration variables/filepaths.
   + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
