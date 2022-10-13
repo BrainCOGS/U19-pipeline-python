@@ -57,7 +57,7 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
       + Example command to create a conda environment
         ```bash
-        conda create -n U19-pipeline_python_env python=3.9
+        conda create -n <environment_name> python=3.9
         ```
 
     + Activate the conda environment
