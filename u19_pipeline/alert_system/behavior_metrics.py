@@ -6,7 +6,7 @@ import datajoint as dj
 class BehaviorMetrics():
 
     @staticmethod
-    def get_bias_from_trial_df(trials_df):
+    def get_bias_from_trial_df(trials_df, return_all_metrics=False):
         '''
         From a trial by trial df of multiple sessions, calculate a per session bias
         '''
@@ -20,10 +20,12 @@ class BehaviorMetrics():
         # Left & right trials as integers
         trials_df['left_trial'] = (trials_df['trial_type'] == 'L').astype(int)
         trials_df['right_trial'] = (trials_df['trial_type'] == 'R').astype(int)
+        trials_df['trial'] = 1
 
         # Cumulative sum of Left & right trials as integers per session
         trials_df['cum_left_trials'] = trials_df.groupby(session_columns)['left_trial'].cumsum()
         trials_df['cum_right_trials'] = trials_df.groupby(session_columns)['right_trial'].cumsum()
+        trials_df['cum_trials'] = trials_df.groupby(session_columns)['trial'].cumsum()
 
         # Correct trials per side as integers
         trials_df['correct_trial'] = (trials_df['trial_type'] == trials_df['choice']).astype(int)
@@ -33,6 +35,7 @@ class BehaviorMetrics():
         # Cumulative sum of per side correct trials
         trials_df['cum_correct_left_trials'] = trials_df.groupby(session_columns)['correct_left'].cumsum()
         trials_df['cum_correct_right_trials'] = trials_df.groupby(session_columns)['correct_right'].cumsum()
+        trials_df['cum_correct_trials'] = trials_df.groupby(session_columns)['correct_trial'].cumsum()
 
         # Get only last trial count
         trials_df = trials_df.loc[~trials_df.duplicated(subset=session_columns, keep='last'), :]
@@ -40,9 +43,14 @@ class BehaviorMetrics():
 
         # Calculate bias
         trials_df['bias'] = (trials_df['cum_correct_right_trials'] / trials_df['cum_right_trials']) - (trials_df['cum_correct_left_trials'] / trials_df['cum_left_trials'])
-        bias_df = trials_df[original_columns + ['bias']]
+        
+        if return_all_metrics:
+            bias_df = trials_df
+        else:
+            bias_df = trials_df[original_columns + ['bias']]
 
         return bias_df
+        
 
     @staticmethod
     def get_zscore_metric_session_df(session_df, metric, groupby_column):
