@@ -5,6 +5,7 @@ import pandas as pd
 import datajoint as dj
 import copy
 import pathlib
+import numpy as np
 
 from u19_pipeline.automatic_job import recording_handler
 
@@ -20,6 +21,7 @@ import u19_pipeline.automatic_job.imaging_element_populate as ip
 from datetime import datetime
 from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
+from u19_pipeline.utils import ephys_utils
 
 from ecephys_spike_sorting.common.SGLXMetaToCoords import MetaToCoords
 
@@ -336,7 +338,7 @@ class RecProcessHandler():
     @recording_handler.exception_handler
     def populate_element(rec_series, status_series):
         """
-        Check slurm job in cluster machine
+        Populate corresponding element Database
         Input:
         rec_series     (pd.Series) = Series with information about the recording process
         status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
@@ -351,7 +353,13 @@ class RecProcessHandler():
 
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         if rec_series['recording_modality'] == 'electrophysiology':
+            # Add extra function to create xyz picks file 
+            chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
+            chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
+            ephys_utils.xyz_pick_file_creator.main_xyz_pick_file_function(rec_series['recording_id'], rec_series['fragment_number'], chanmap_file_local_path, rec_series['recording_process_post_path'])
+                        
             status_update = ep.populate_element_data(rec_series['job_id'])
+
         elif rec_series['recording_modality'] == 'imaging':
             status_update = ip.populate_element_data(rec_series['job_id'])
 

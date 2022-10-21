@@ -1,9 +1,18 @@
 
-from u19_pipeline.utils.DemoReadSGLXData.readSGLX import SampRate, makeMemMapRaw, ExtractDigital
 import numpy as np
+import datajoint as dj
+import pathlib
+import warnings
+import json
+
 from scipy import signal as sp
+from scipy.io import loadmat
+from scipy.spatial.transform import Rotation as R
+
 from bitstring import BitArray
 from element_array_ephys import ephys as ephys_element
+
+from u19_pipeline.utils.DemoReadSGLXData.readSGLX import SampRate, makeMemMapRaw, ExtractDigital
 
 
 class spice_glx_utility:
@@ -472,3 +481,148 @@ def future_counter_get_signal():
 def load_open_ephys_digital_file(file_path):
 
     pass
+
+
+
+
+
+class xyz_pick_file_creator():
+    '''
+    Class that handles probe coordinates locations given initial isertion coordinates & shank coordinates
+    '''
+
+    @staticmethod
+    def main_xyz_pick_file_function(recording_id, fragment_number, chanmap_file, processed_data_directory):
+        """
+        Stores xyz_pick_files on ibl_postprocess directory for ibl_atlas_gui
+        Input:
+        recording_id             (int) = Reference to current directory
+        fragment_number          (int) = Reference to probe# of current recording 
+        chanmap_file             (str) = Filepath to find current chanmapfile built for the recording 
+        processed_data_directory (str) = Filepath of processed job results
+        """
+
+        # Check existance of ibl output path
+        ibl_output_dir = pathlib.Path(processed_data_directory, 'ibl_data')
+        if ibl_output_dir.is_dir():
+            
+            # Get recording id 
+            probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(recording_id, fragment_number)
+            print(probe_location)
+
+            #Load channelmap and check how many probes there are
+            chanmap = loadmat(chanmap_file)
+            max_shank = int(np.max(chanmap['kcoords']))
+
+            # Calculate probe coordinates and store files
+            all_shanks = list()
+            for i in range(max_shank):
+                probe_track = xyz_pick_file_creator.get_probetrack(chanmap, shank=i+1, **probe_location)
+                xyz_pick_file_creator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
+                all_shanks.append(probe_track)
+
+        else:
+            raise('Ibl processed directory not found')
+
+        return all_shanks
+
+    @staticmethod
+    def get_probe_insertion_coordinates(recording_id, probe_num):
+        """
+        Get probe insertion coordinates based on a recording id and a probe# (frag)
+        Input:
+        recording_id             (int) = Reference to current directory
+        probe_num                (int) = Reference to probe# of current recording 
+        """
+
+        coordinates_columns = ['real_ap_coordinates', 'real_depth_coordinates', 'real_ml_coordinates', 'phi_angle', 'theta_angle', 'rho_angle']
+        probes_not_found = False
+
+        # Create virtual modules of needed DBs
+        action_db = dj.create_virtual_module('action', 'u19_action')
+        recording_db = dj.create_virtual_module('recording', 'u19_recording')
+
+        # Query subject of recording
+        query = {'recording_id': recording_id}
+        subject_recording = (recording_db.Recording.BehaviorSession & query).fetch('subject_fullname')
+
+        if subject_recording.shape[0] != 0:
+            # Query probe insertion table
+            query_surgery = {'subject_fullname': subject_recording[0], 'device_idx': probe_num}
+            probe_location = (action_db.SurgeryLocation & query_surgery).fetch(*coordinates_columns, as_dict=True)
+            if len(probe_location) == 0:
+                probes_not_found = True
+            else:
+                probe_location = probe_location[0]
+                # Convert to float
+                probe_location = {k:float(v)for (k,v) in probe_location.items()}
+        else:
+            probes_not_found = True
+
+        # If insertion decive is not found, create a dummy one but raise a warning
+        if probes_not_found:
+            warnings.warn("Warning probe location was not found on DB for recording_id: " + str(recording_id), " & probe# ", str(probe_num) )
+            probe_location = dict.fromkeys(coordinates_columns, 0)
+
+        return probe_location
+
+    @staticmethod
+    def get_probetrack(chanmap, shank=1, real_ml_coordinates=0, real_ap_coordinates=0, real_depth_coordinates=0,  phi_angle=0, theta_angle=0, rho_angle=0):
+        """
+        Build numpy array with "brain" coordinates from insertion device and probe features
+        Input:
+        chanmap                (dict) = Mat file created from https://github.com/AllenInstitute/ecephys_spike_sorting.git library from SpikeGLX metadata file
+        shank                  (int) =  Shank # (1 index based)  to create file for 
+        real_ml_coordinates    (decimal, mm) =  mediolateral coordinates of probe insertion
+        real_ap_coordinates    (decimal, mm) =  anteroposterior coordinates of probe insertion
+        real_depth_coordinates (decimal, mm) =  depth mm coordinates of probe insertion
+        phi_angle              (decimal, deg) =  - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis   
+        theta_angle            (decimal, deg) =  - elevation - rotation about the ml-axis [0, 180] - w.r.t the z+ axis
+        rho_angle              (decimal, deg) =  angle rotation on device itself
+        """
+
+        # Step 1: Convert degrees to radiants and reformat chanmap
+        phi   = phi_angle*np.pi/180
+        theta = theta_angle*np.pi/180
+        roll  = rho_angle*np.pi/180
+        x = np.array([i[0] for i in chanmap['xcoords']]);
+        y = np.array([i[0] for i in chanmap['ycoords']]);
+        k = np.array([i[0] for i in chanmap['kcoords']]);
+
+        # Step 2: Transform them into 3D, assuming the Probe is perpendicular to x|y plane
+        avx           = np.mean(x[k==shank])                                  # Center "X" on middle of probe
+        probe_x0      = np.array([np.cos(roll)*avx, -np.sin(roll)*avx])       # coordinates of the shank after "roll" around probe axis
+        probe_length  = np.max(y[k==shank]) - np.min(y[k==shank])             # Length off the probe per chanmap
+        probe_unitVec = np.array([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), np.cos(theta)]) # Unit vector point along insertion direction
+
+        probe_length  = np.arange(-real_depth_coordinates*1000, -real_depth_coordinates*1000 + probe_length, 10)          # Resulution of future xyz_pick.json file
+
+        # Step 3: Produce the 3D coordinates along the probe track
+        probe_track = np.zeros((len(probe_length),3))
+        for i in range(len(probe_length)):
+            probe_track[i,:] = probe_length[i]*probe_unitVec + np.array([probe_x0[0], probe_x0[1], 0])
+        
+        # Step 4: Shift probe my ML|AP insertion coordinates
+        probe_track_shifted = np.zeros((probe_track.shape))
+        for i in range(len(probe_track_shifted)):
+            probe_track_shifted[i,:] = probe_track[i,:] + np.array([real_ml_coordinates*1000, real_ap_coordinates*1000, 0])
+
+        return probe_track_shifted.tolist()
+
+    @staticmethod
+    def save_xyz_pick_file(save_directory, probe_coord_data, shank=0):
+        """
+        Store xyz_picks file
+        save_directory         (str) =  filepath to store xyz_picks file
+        probe_coord_data       (np array) = numpy array of electrodes coordinate data
+        shank                  (int) =  Shank # (0 index based) (different filename depending on it)
+        """
+
+        filenames = ['xyz_picks.json', 'xyz_picks_shank1.json', 'xyz_picks_shank2.json', 'xyz_picks_shank3.json']
+        final_filename = pathlib.Path(save_directory, filenames[shank]).as_posix()
+
+        dict_coord = dict()
+        dict_coord["xyz_picks"] = probe_coord_data
+
+        with open(final_filename, 'w') as fp:
+            json.dump(dict_coord, fp)

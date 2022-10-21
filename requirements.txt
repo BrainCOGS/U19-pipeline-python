@@ -1,5 +1,8 @@
+
+globus-sdk
 globus-cli
-globus-timer-cli==0.2.9
+fair-research-login
+six
 scipy
 python-dotenv
 datajoint

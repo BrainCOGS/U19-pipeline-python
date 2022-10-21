@@ -314,6 +314,12 @@ parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
 default_preprocess_filename = 'preprocess_paramset_%s.json'
 default_process_filename = 'process_paramset_%s.json'
 
+# default xyzPicksFiles
+xyz_picks_files_dir = pathlib.Path(this_dir, 'xyzPicksFiles')
+xyz_picks_0 = pathlib.Path(xyz_picks_files_dir, 'xyz_picks.json').as_posix()
+xyz_picks_n = pathlib.Path(xyz_picks_files_dir, 'xyz_picks_shank%d.json').as_posix()
+
+
 chanmap_files_filepath = pathlib.Path(this_dir, 'ChanMapFiles').as_posix()
 default_chanmap_filename = 'chanmap_%s.mat'
 
