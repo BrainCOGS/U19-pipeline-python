@@ -22,6 +22,10 @@ def main(recording_id):
 
 
 if __name__ == "__main__":
+
+
+    from scripts.conf_file_finding import try_find_conf_file
+    try_find_conf_file()
     args = sys.argv[1:]
     print(args)
     main(args[0])
