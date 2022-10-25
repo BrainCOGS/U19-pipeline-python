@@ -84,6 +84,8 @@ class RecProcessHandler():
 
                 #if success or error update status timestamps table
                 if status != config.status_update_idx['NO_CHANGE']:
+                    if status == config.status_update_idx['ERROR_STATUS']:
+                        next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_job_id_log(rec_process_series['job_id'], current_status, next_status, update_dict['error_info'])
 
                 #An error occurred in process
