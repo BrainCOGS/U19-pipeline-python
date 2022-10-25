@@ -85,6 +85,14 @@ class RecProcessHandler():
                 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
+
+                    if len(update_dict['error_info']['error_message']) > 255:
+                        print('Cropping error message')
+                        update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
+
+                    if len(update_dict['error_info']['error_exception']) > 4095:
+                        update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-4095:]
+
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
                     slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
