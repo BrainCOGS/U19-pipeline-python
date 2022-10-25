@@ -82,7 +82,10 @@ class RecProcessHandler():
                         slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
                              next_status_series['SlackMessage'], rec_process_series)
 
-                
+                #if success or error update status timestamps table
+                if status != config.status_update_idx['NO_CHANGE']:
+                    RecProcessHandler.update_job_id_log(rec_process_series['job_id'], current_status, next_status, update_dict['error_info'])
+
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
 
@@ -91,16 +94,13 @@ class RecProcessHandler():
                         update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
 
                     if len(update_dict['error_info']['error_exception']) > 4095:
+                        print('Cropping error error_exception')
                         update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-4095:]
 
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
                     slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                          update_dict['error_info'] ,rec_process_series)
-
-                #if success or error update status timestamps table
-                if status != config.status_update_idx['NO_CHANGE']:
-                    RecProcessHandler.update_job_id_log(rec_process_series['job_id'], current_status, next_status, update_dict['error_info'])
 
 
             except Exception as err:
