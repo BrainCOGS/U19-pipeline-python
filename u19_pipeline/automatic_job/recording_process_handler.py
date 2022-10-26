@@ -86,18 +86,19 @@ class RecProcessHandler():
                 if status != config.status_update_idx['NO_CHANGE']:
                     if status == config.status_update_idx['ERROR_STATUS']:
                         next_status = config.RECORDING_STATUS_ERROR_ID
+
+                        if len(update_dict['error_info']['error_message']) > 255:
+                            print('Cropping error message')
+                            update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
+
+                        if len(update_dict['error_info']['error_exception']) > 4095:
+                            print('Cropping error error_exception')
+                            update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-4095:]
+
                     RecProcessHandler.update_job_id_log(rec_process_series['job_id'], current_status, next_status, update_dict['error_info'])
 
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
-
-                    if len(update_dict['error_info']['error_message']) > 255:
-                        print('Cropping error message')
-                        update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
-
-                    if len(update_dict['error_info']['error_exception']) > 4095:
-                        print('Cropping error error_exception')
-                        update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-4095:]
 
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
