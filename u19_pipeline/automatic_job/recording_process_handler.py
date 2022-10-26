@@ -102,6 +102,11 @@ class RecProcessHandler():
 
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
+
+                    if len(update_dict['error_info']['error_exception']) > 1024:
+                        print('Cropping error error_exception for slack')
+                        update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-1023:]
+
                     slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                          update_dict['error_info'] ,rec_process_series)
 
