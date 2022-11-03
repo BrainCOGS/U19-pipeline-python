@@ -504,6 +504,7 @@ class xyz_pick_file_creator():
 
         # Check existance of ibl output path
         ibl_output_dir = pathlib.Path(processed_data_directory, 'ibl_data')
+        print(ibl_output_dir)
         if ibl_output_dir.is_dir():
             
             # Get recording id 
@@ -522,7 +523,7 @@ class xyz_pick_file_creator():
                 all_shanks.append(probe_track)
 
         else:
-            raise('Ibl processed directory not found')
+            raise Exception('Ibl processed directory not found')
 
         return all_shanks
 
