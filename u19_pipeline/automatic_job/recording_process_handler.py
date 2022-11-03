@@ -87,6 +87,7 @@ class RecProcessHandler():
                     if status == config.status_update_idx['ERROR_STATUS']:
                         next_status = config.RECORDING_STATUS_ERROR_ID
 
+                        #Crop error messages to fit in DB
                         if len(update_dict['error_info']['error_message']) > 255:
                             print('Cropping error message')
                             update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
@@ -103,12 +104,19 @@ class RecProcessHandler():
                     next_status = config.RECORDING_STATUS_ERROR_ID
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
 
+                    #Crop even more error message to fit in slack notification
                     if len(update_dict['error_info']['error_exception']) > 1024:
                         print('Cropping error error_exception for slack')
                         update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-1023:]
 
-                    slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
-                         update_dict['error_info'] ,rec_process_series)
+                    # Send slack notification with original error exception, retry if exception has invalid format
+                    try:
+                        slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                            update_dict['error_info'] ,rec_process_series)
+                    except:
+                        update_dict['error_info']['error_exception'] = 'Error exception not accepted in slack, check log file for error'
+                        slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                            update_dict['error_info'] ,rec_process_series)
 
 
             except Exception as err:

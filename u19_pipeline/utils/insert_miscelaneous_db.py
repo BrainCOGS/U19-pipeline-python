@@ -25,9 +25,13 @@ def add_researcher_user_table(user_id, full_name, email, phone):
 
     # Find conf file (to load it even if we are in different path)
     repository_dir = os.path.abspath(os.path.realpath(__file__)+ "/../../..")
-    conf_file = str(pathlib.Path(repository_dir, 'dj_local_conf.json'))
+    conf_file = pathlib.Path(repository_dir, 'dj_local_conf.json')
+
+    if not pathlib.Path.exists(conf_file):
+        raise Exception("No configuration file found, configure repository first: https://braincogs.github.io/software/db_access.html#db-access-for-python-repository")
+
     config = dj.settings.Config()
-    config.load(conf_file)
+    config.load(str(conf_file))
 
     # Connect and insert record
     dj.conn()
