@@ -503,7 +503,8 @@ class xyz_pick_file_creator():
         """
 
         # Check existance of ibl output path
-        ibl_output_dir = pathlib.Path(processed_data_directory, 'ibl_data')
+        ibl_output_dir = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][1], processed_data_directory, 'ibl_data')
+        # ibl_output_dir = pathlib.Path(processed_data_directory, 'ibl_data')
         print(ibl_output_dir)
         if ibl_output_dir.is_dir():
             
