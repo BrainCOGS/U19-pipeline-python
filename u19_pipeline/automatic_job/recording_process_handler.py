@@ -92,7 +92,7 @@ class RecProcessHandler():
                             print('Cropping error message')
                             update_dict['error_info']['error_message'] = update_dict['error_info']['error_message'][-255:]
 
-                        if len(update_dict['error_info']['error_exception']) > 4095:
+                        if isinstance(update_dict['error_info']['error_exception'], str) and len(update_dict['error_info']['error_exception']) > 4095:
                             print('Cropping error error_exception')
                             update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-4095:]
 
@@ -105,7 +105,7 @@ class RecProcessHandler():
                     RecProcessHandler.update_status_pipeline(key,next_status, None, None)
 
                     #Crop even more error message to fit in slack notification
-                    if len(update_dict['error_info']['error_exception']) > 1024:
+                    if isinstance(update_dict['error_info']['error_exception'], str) and len(update_dict['error_info']['error_exception']) > 1024:
                         print('Cropping error error_exception for slack')
                         update_dict['error_info']['error_exception'] = update_dict['error_info']['error_exception'][-1023:]
 
