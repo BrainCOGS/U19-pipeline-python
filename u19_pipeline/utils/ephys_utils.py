@@ -563,7 +563,7 @@ class xyz_pick_file_creator():
 
         # If insertion decive is not found, create a dummy one but raise a warning
         if probes_not_found:
-            warnings.warn("Warning probe location was not found on DB for recording_id: " + str(recording_id), " & probe# ", str(probe_num) )
+            warnings.warn("Warning probe location was not found on DB for recording_id: " + str(recording_id) + " & probe# " + str(probe_num) )
             probe_location = dict.fromkeys(coordinates_columns, 0)
 
         return probe_location

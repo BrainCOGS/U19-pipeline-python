@@ -37,6 +37,8 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = '*' + base_message +'* \n' +\
+        ' *recording_id* : ' + str(session_info['recording_id']) +'\n'+\
+        ' *job_id* : ' + str(session_info['job_id']) +'\n'+\
         ' *data_path* : ' + session_info['recording_directory'] +'\n'+\
         ' *session_location* : ' + session_info['location'] + '\n'+\
         ' *modality* : ' + session_info['recording_modality']
@@ -73,6 +75,8 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = '*Automation pipeline failed for:* \n' +\
+        ' *recording_id* : ' + str(session_info['recording_id']) +'\n'+\
+        ' *job_id* : ' + str(session_info['job_id']) +'\n'+\
         ' *data_path* : ' + session_info['recording_directory'] +'\n'+\
         ' *session_location* : ' + session_info['location'] + '\n'+\
         ' *modality* : ' + session_info['recording_modality']
