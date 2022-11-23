@@ -20,7 +20,7 @@ pni_data_dir   = ''
 
 #For tiger endpoint
 default_user   = mv.processing_user                           # This will change to our automatic client for globus transfers
-tiger_gpu_host = 'tigergpu.princeton.edu'
+tiger_gpu_host = 'della.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
 tiger_ep_dir   = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'  # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
 tiger_home_dir_globus = '/Data'   
@@ -73,7 +73,7 @@ cluster_vars = {
         "error_files_dir":               tiger_home_dir + "/ErrorLog", 
         "user":                          default_user, 
         "slurm_default":                 slurm_dict_tiger_default, 
-        "hostname":                      "tigergpu.princeton.edu",
+        "hostname":                      "della.princeton.edu",
         "script_path":                   "",
         "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env' 
     },
