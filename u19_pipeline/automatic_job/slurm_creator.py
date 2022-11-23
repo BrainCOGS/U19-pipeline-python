@@ -191,7 +191,7 @@ def generate_slurm_tiger(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anaconda3/5.3.1
+    module load anaconda3/2022.5 
     module load matlab/R2020a
 
     conda activate BrainCogsEphysSorters_env
