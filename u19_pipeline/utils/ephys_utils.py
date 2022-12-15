@@ -524,7 +524,8 @@ class xyz_pick_file_creator():
                 all_shanks.append(probe_track)
 
         else:
-            raise Exception('Ibl processed directory not found')
+            pass
+            # raise Exception('Ibl processed directory not found')
 
         return all_shanks
 
