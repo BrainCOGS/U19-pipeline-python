@@ -58,6 +58,9 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     now = datetime.now() 
     datestr = now.strftime('%d-%b-%Y %H:%M:%S')
 
+    if 'job_id' not in session_info:
+        session_info['job_id'] = 'Not a job'
+
     msep = dict()
     msep['type'] = "divider"
 
