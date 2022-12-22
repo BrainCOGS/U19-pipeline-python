@@ -203,6 +203,10 @@ class BehaviorSync(dj.Imported):
     trial_index_nidq=null : longblob     # Trial index time series. length of this longblob should be the number of samples in the nidaq file.
     """
 
+    @property
+    def key_source(self):
+        return schema.EphysPipelineSession & recording.Recording.BehaviorSession
+
     class ImecSamplingRate(dj.Part):
         definition = """
         -> master
