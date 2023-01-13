@@ -504,28 +504,23 @@ class xyz_pick_file_creator():
 
         # Check existance of ibl output path
         ibl_output_dir = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][1], processed_data_directory, 'ibl_data')
-        # ibl_output_dir = pathlib.Path(processed_data_directory, 'ibl_data')
-        print(ibl_output_dir)
-        if ibl_output_dir.is_dir():
-            
-            # Get recording id 
-            probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(recording_id, fragment_number)
-            print(probe_location)
+        if not ibl_output_dir.is_dir():
+            pathlib.Path.mkdir(ibl_output_dir)
 
-            #Load channelmap and check how many probes there are
-            chanmap = loadmat(chanmap_file)
-            max_shank = int(np.max(chanmap['kcoords']))
+        # Get recording id
+        probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(recording_id, fragment_number)
+        print(probe_location)
 
-            # Calculate probe coordinates and store files
-            all_shanks = list()
-            for i in range(max_shank):
-                probe_track = xyz_pick_file_creator.get_probetrack(chanmap, shank=i+1, **probe_location)
-                xyz_pick_file_creator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
-                all_shanks.append(probe_track)
+        #Load channelmap and check how many probes there are
+        chanmap = loadmat(chanmap_file)
+        max_shank = int(np.max(chanmap['kcoords']))
 
-        else:
-            #pass
-            raise Exception('Ibl processed directory not found')
+        # Calculate probe coordinates and store files
+        all_shanks = list()
+        for i in range(max_shank):
+            probe_track = xyz_pick_file_creator.get_probetrack(chanmap, shank=i+1, **probe_location)
+            xyz_pick_file_creator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
+            all_shanks.append(probe_track)
 
         return all_shanks
 
