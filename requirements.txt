@@ -17,7 +17,7 @@ numpy
 astropy
 jupyterlab
 bitstring
-suite2p == 0.10.3
+suite2p == 0.10.1
 cellpose
 scp
 paramiko
