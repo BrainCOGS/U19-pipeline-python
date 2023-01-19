@@ -205,7 +205,7 @@ class BehaviorSync(dj.Imported):
 
     @property
     def key_source(self):
-        return schema.EphysPipelineSession & recording.Recording.BehaviorSession
+        return EphysPipelineSession & recording.Recording.BehaviorSession
 
     class ImecSamplingRate(dj.Part):
         definition = """
