@@ -378,9 +378,9 @@ class RecProcessHandler():
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         if rec_series['recording_modality'] == 'electrophysiology':
             # Add extra function to create xyz picks file 
-            chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
-            chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
-            ephys_utils.xyz_pick_file_creator.main_xyz_pick_file_function(rec_series['recording_id'], rec_series['fragment_number'], chanmap_file_local_path, rec_series['recording_process_post_path'])
+            #chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
+            #chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
+            #ephys_utils.xyz_pick_file_creator.main_xyz_pick_file_function(rec_series['recording_id'], rec_series['fragment_number'], chanmap_file_local_path, rec_series['recording_process_post_path'])
                         
             status_update = ep.populate_element_data(rec_series['job_id'])
 

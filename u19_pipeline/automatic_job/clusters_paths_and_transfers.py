@@ -31,7 +31,7 @@ slurm_dict_tiger_default = {
     'nodes': 1,
     'ntasks': 1,
     'time': '10:00:00',
-    'mem': '50G',
+    'mem': '100G',
     'gres': 'gpu:1',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['END'],

@@ -70,7 +70,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     if not ephys_element.CuratedClustering & cluster_key:
         ephys_element.CuratedClustering.populate(cluster_key, **populate_settings)
 
-    ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
+    # ephys_element.WaveformSet.populate(cluster_key, **populate_settings)
 
     return config.status_update_idx['NEXT_STATUS']
     
