@@ -303,15 +303,19 @@ class RecordingHandler():
         ephys_element_ingest.process_session(rec_series['query_key'])
         ephys_pipeline.ephys_element.EphysRecording.populate(rec_series['query_key'])
 
-        ephys_pipeline.BehaviorSync.populate(rec_series['query_key'])
-
         ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series['query_key']).fetch("KEY", as_dict=True)
+
+        print('before BehaviorSync')
+        print("rec_series['query_key']", rec_series['query_key'])
+
+        ephys_pipeline.BehaviorSync.populate(rec_series['query_key'])
 
         if len(ingested_recording) == 0:
             status_update = config.status_update_idx['ERROR_STATUS']
             update_value_dict['error_info']['error_message'] = 'Ephys Recording was not ingested (probably recording not in location)'
             return (status_update, update_value_dict)
 
+        '''
         #Insert recording processes records
         old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
         if len(old_recording_process) == 0:
@@ -344,7 +348,7 @@ class RecordingHandler():
                 for i in recording_processes:
                     probe_dir = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][0], i['recording_process_pre_path']).as_posix()
                     ephys_pipeline.create_lfp_trace(config.catgt_script, recording_directory, probe_dir)
-
+        '''
         
         status_update = config.status_update_idx['NEXT_STATUS']
 
