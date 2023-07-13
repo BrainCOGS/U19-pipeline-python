@@ -118,7 +118,7 @@ def scp_file_transfer(source, dest):
     return transfer_status
 
 
-def scp_file_transfer_new(source, dest, source_filepath, dest_filepath):
+def scp_file_transfer_big_files(source, dest, source_filepath, dest_filepath):
 
     print("scp", source, dest)
     # IMPLEMENT HERE
