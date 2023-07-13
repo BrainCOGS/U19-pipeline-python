@@ -11,6 +11,8 @@ def send_slack_notification(webhook_url, slack_json_message):
 
     byte_length = str(sys.getsizeof(slack_json_message))
     headers = {'Content-Type': "application/json", 'Content-Length': byte_length}
+    print(headers)
+    print(slack_json_message)
     response = requests.post(webhook_url, data=json.dumps(slack_json_message), headers=headers)
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
