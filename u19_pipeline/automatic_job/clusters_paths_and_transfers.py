@@ -137,9 +137,14 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
     dest_fullpath   = dest_ep  + ":" + dest_filepath
 
     globus_command = ["globus", "transfer", source_fullpath, dest_fullpath, '--label', job_id_str, '--recursive', '--format', 'json']
+    print('**********************************')
+    print(globus_command)
+    print('**********************************')
     p = subprocess.run(globus_command, capture_output=True)
-
+    print(p)
     transfer_request = dict()
+    print('p.stderr',p.stderr)
+    print('p.stdout', p.stdout)
 
     if len(p.stderr) == 0:
         dict_output = json.loads(p.stdout.decode('UTF-8'))
