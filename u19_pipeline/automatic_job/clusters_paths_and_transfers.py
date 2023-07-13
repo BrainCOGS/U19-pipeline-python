@@ -24,7 +24,7 @@ tiger_gpu_host = 'della.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
 tiger_ep_dir   = '8e1bbdfe-d234-4a7c-93a5-86086a249918'  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
 
-tiger_home_dir_globus = '/BRAINCOGS/Data'   
+tiger_home_dir_globus = '/BRAINCOGS/Data/'   
 
 #Slurm default values for queue job
 slurm_dict_tiger_default = {
