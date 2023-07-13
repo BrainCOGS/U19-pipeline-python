@@ -147,10 +147,15 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
     print('p.stdout', p.stdout)
 
     if len(p.stderr) == 0:
-        dict_output = json.loads(p.stdout.decode('UTF-8'))
+            try:
+                dict_output = json.loads(p.stdout.decode('UTF-8'))
+                transfer_request['status'] = config.system_process['SUCCESS']
+                transfer_request['task_id'] = dict_output['task_id']
+            except Exception as e:
+                print('stdout is not a valid json, probably an error')
+                transfer_request['status'] = config.system_process['ERROR']
+                transfer_request['error_info'] = p.stdout.decode('UTF-8')
         #dict_output = translate_globus_output(p.stdout)
-        transfer_request['status'] = config.system_process['SUCCESS']
-        transfer_request['task_id'] = dict_output['task_id']
     else:
         transfer_request['status'] = config.system_process['ERROR']
         transfer_request['error_info'] = p.stderr.decode('UTF-8')
