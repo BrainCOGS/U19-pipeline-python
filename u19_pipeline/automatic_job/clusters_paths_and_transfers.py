@@ -21,9 +21,10 @@ pni_data_dir   = ''
 #For tiger endpoint
 default_user   = mv.processing_user                           # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'della.princeton.edu'
-#tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tiger ep
-tiger_ep_dir   = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'  # tiger BRAINCOGS ep points to /scratch/gpfs/BRAINCOGS/
-tiger_home_dir_globus = '/Data'   
+#tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
+tiger_ep_dir   = '8e1bbdfe-d234-4a7c-93a5-86086a249918'  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
+
+tiger_home_dir_globus = '/BRAINCOGS/Data'   
 
 #Slurm default values for queue job
 slurm_dict_tiger_default = {
@@ -106,7 +107,6 @@ def get_cluster_vars(cluster):
     else:
         raise('Non existing cluster')
 
-
 def scp_file_transfer(source, dest):
 
     print("scp", source, dest)
@@ -116,6 +116,12 @@ def scp_file_transfer(source, dest):
     p = subprocess.Popen(["scp", "-i", mv.public_key_location2, source, dest])
     transfer_status = p.wait()
     return transfer_status
+
+
+def scp_file_transfer_big_files(source, dest, source_filepath, dest_filepath):
+
+    print("scp", source, dest)
+    # IMPLEMENT HERE
 
 
 def cp_file_transfer(source, dest):
