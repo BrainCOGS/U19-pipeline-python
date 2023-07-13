@@ -74,7 +74,7 @@ cluster_vars = {
         "error_files_dir":               tiger_home_dir + "/ErrorLog", 
         "user":                          default_user, 
         "slurm_default":                 slurm_dict_tiger_default, 
-        "hostname":                      "della.princeton.edu",
+        "hostname":                      "della-gpu.princeton.edu",
         "script_path":                   "",
         "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env' 
     },
