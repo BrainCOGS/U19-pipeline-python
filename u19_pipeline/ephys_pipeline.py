@@ -251,9 +251,16 @@ class BehaviorSync(dj.Imported):
             print('after reading spikeglx data')
 
             # Synchronize between pulses and get iteration # vector for each sample
-            mode=None
-            iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
-            # Check # of trials and iterations match
+            recent_recording = behavior_key['session_date'] > datetime.date(2021,6,1) # Everything past June 1 2021
+            if recent_recording: 
+                # New synchronization method: digital_array[1,2] contain pulses for trial and frame number. 
+                mode=None
+                iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
+            else:
+                # Old synchronization: digital_array[0:7] contain a digital word that counts the virmen frames.
+                iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_word(digital_array, behavior_time, iterstart)
+                
+            # Check # of trials (from database record of behavior in `behavior_time`) and iterations (extracted from NIDAQ in `iter_start_idx`) match
             trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
 
             print('metrics to evaluate...')

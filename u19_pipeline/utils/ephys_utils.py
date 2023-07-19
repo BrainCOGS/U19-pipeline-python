@@ -200,6 +200,79 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     return iteration_vector_output
 
 
+def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, iterstart):
+
+    # First, transform digital lines into a number, save in an array of integers
+    #      ... and also get start and end time
+    framenumber = np.zeros(digital_array.shape[1])
+    for i in range(digital_array.shape[1]):
+        a = BitArray(np.flip(digital_array[1:, i])) # ignore 0-bit, as this is the NPX sync puls, and not virmen.
+        framenumber[i] = a.uint
+    iterations_raw = np.array(framenumber, dtype=np.int32) # Transform frames into integer
+    recording_start = np.min(np.where(iterations_raw>0)) #first chane of testlist
+    recording_end = np.where(np.abs(np.diff(iterations_raw))>0)[0][-1] + 200 # Adding a random 200 measurements, so ~40ms at our usual 5kHz sampling rate.
+
+    # Second, transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
+    framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
+    trialnumber = np.zeros(len(iterations_raw))*np.NaN
+    current_trial = 0
+    overflow = 0
+    iter_start_idx = []
+    for idx, frame_number in enumerate(iterations_raw):
+        if (idx>recording_start) & (idx<recording_end):
+            if (frame_number==0) & (iterations_raw[idx-1]==127): # At the reset, add 128
+                overflow = overflow + 1
+            if (frame_number==0) & (iterations_raw[idx-1]!=127) & (iterations_raw[idx-1]!=0) &  (iterations_raw[idx-2]==127): # Unlucky reset if happened to be sampled at the wrong time
+                overflow = overflow + 1
+                framenumber_in_trial[idx-1] = frame_number + overflow*128 - 1 # In case this happened, the previous sample has to be corrected
+            # Keep track of trial number
+            endflag = framenumber_in_trial[idx-1] == (len(time[current_trial])) #Trial end has been reached.
+            transitionflag = frame_number < 3 # Next trial should start at zero again
+            if endflag & transitionflag:      # Only at the transitions
+                current_trial = current_trial + 1  # Increases trial count
+                overflow = 0                       # Reset the 7 bit counter
+                iter_start_idx.append(idx)         # Make a note when this happened
+            framenumber_in_trial[idx] = frame_number + overflow*128 - 1
+            trialnumber[idx] = current_trial
+    trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype = np.int32)
+
+    # Fourth, find and remove the nidaq glitches 
+    # These are single samples where the iteration number is corrupted
+    # ... likely because sampling happened faster than output of the behavior PC.
+    # This is also where skipped frames are detected.
+
+    # Find the glitches
+    din = np.diff(framenumber_in_trial)
+    trial_transitions = np.where(np.diff(trialnumber))
+    glitches = []
+    for candidate in np.where( np.logical_or(din>1, din<0) )[0]: # skipped frames or counting down
+        if np.sum(candidate == trial_transitions) == 0:
+            glitches = np.append(glitches, candidate)
+    glitches = np.array(glitches, dtype = np.int32)
+
+    # Attempt to remove them
+    skipped_frames = 0
+    for g in glitches:
+        if framenumber_in_trial[g] < framenumber_in_trial[g+2]:
+            if framenumber_in_trial[g+2] -  framenumber_in_trial[g] == 2:  # skipped frame, should be very rare
+                framenumber_in_trial[g+1] = framenumber_in_trial[g]+1
+                skipped_frames = skipped_frames + 1
+            else:                          # If random number, nidaq sample in the middle of update.
+                framenumber_in_trial[g+1] = framenumber_in_trial[g]
+
+    # This point we have framenumber_in_trial and trialnumber. Now just some refactoring to fit into the usual data structure
+    iteration_vector_output = dict()
+    
+    iteration_vector_output['trialnumber_vector_samples'] = trialnumber
+    iteration_vector_output['framenumber_vector_samples'] = framenumber_in_trial
+
+    iter_start_idx = []
+    for t in trial_list:
+        iter_start_idx.append( np.arange(0, framenumber_in_trial[trialnumber==t][-1], 1))
+    iteration_vector_output['iter_start_idx'] = np.asarray(iter_start_idx.copy(), dtype=object)
+
+    return iteration_vector_output
+
 def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_vector):
     #Assert that vector sync pulses match behavior time vector
 
