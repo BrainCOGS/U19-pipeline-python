@@ -317,7 +317,7 @@ class RecordingHandler():
 
         #Insert recording processes records
         old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
-        if len(old_recording_process) > 0:
+        if len(old_recording_process) == 0:
 
             connection = recording.Recording.connection 
             with connection.transaction:
@@ -325,7 +325,7 @@ class RecordingHandler():
                 probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch(as_dict=True)
                 probe_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parents[0].as_posix()) for item in probe_files]
 
-                #recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
+                recording_process.Processing().insert_recording_process(probe_files, 'insertion_number')
 
                 #Get parameters for recording processes
                 recording_processes = (recording_process.Processing() & rec_series['query_key']).fetch('job_id', 'recording_id', 'fragment_number', 'recording_process_pre_path', as_dict=True)
@@ -336,10 +336,10 @@ class RecordingHandler():
                 for i in params_rec_process:
                     i['precluster_param_steps_id'] = i.pop('preprocess_param_steps_id')
 
-                #recording_process.Processing.EphysParams.insert(params_rec_process)
+                recording_process.Processing.EphysParams.insert(params_rec_process)
 
                 #Update recording_process_post_path
-                #recording_process.Processing().set_recording_process_post_path(recording_processes)
+                recording_process.Processing().set_recording_process_post_path(recording_processes)
 
                 #Create lfp trace if needed (neuropixel 2.0 probes)
                 recording_directory = (recording.Recording & rec_series['query_key']).fetch1('recording_directory')
