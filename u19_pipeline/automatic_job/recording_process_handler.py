@@ -126,10 +126,10 @@ class RecProcessHandler():
 
             time.sleep(2)
 
-
+    '''
     @staticmethod
     @recording_handler.exception_handler
-    def transfer_request(rec_series, status_series):
+    def transfer_request_v2(rec_series, status_series):
         """
         Request a transfer from PNI to Tiger Cluster
         Input:
@@ -156,6 +156,10 @@ class RecProcessHandler():
         if rec_series['program_selection_params']['process_cluster'] == "tiger":
 
             if status_series['Key'] == 'RAW_FILE_TRANSFER_REQUEST':
+
+                status, task_id = scp_tr.call_scp_background(ip_address=rec_series['ip_address'], system_user=rec_series['system_user'],
+                recording_system_directory=rec_series['local_directory'], data_directory=data_directory.as_posix())
+
                 transfer_request = ft.globus_transfer_to_tiger(job_id, raw_rel_path, modality)
             elif status_series['Key'] == 'PROC_FILE_TRANSFER_REQUEST':
                 #ALS, which recording directory for processed file
@@ -174,7 +178,8 @@ class RecProcessHandler():
             status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
-
+    '''
+    
     @staticmethod
     @recording_handler.exception_handler
     def transfer_check(rec_series, status_series):
@@ -275,7 +280,7 @@ class RecProcessHandler():
                 status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])
             else:
                 status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pereparameterfile file'
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
                 return (status_update, update_value_dict)
             
             #Queue slurm file

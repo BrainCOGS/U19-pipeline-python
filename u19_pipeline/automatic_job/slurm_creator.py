@@ -47,6 +47,10 @@ def generate_slurm_file(job_id, program_selection_params):
     slurm_file_name = default_slurm_filename
     slurm_file_local_path = str(pathlib.Path(slurms_filepath,slurm_file_name))
 
+    print(slurm_file_local_path)
+    print(cluster_vars['slurm_files_dir'])
+    print(slurm_file_name)
+
     write_file(slurm_file_local_path, slurm_text)
 
     if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
@@ -55,6 +59,10 @@ def generate_slurm_file(job_id, program_selection_params):
     else:
         slurm_destination = pathlib.Path(cluster_vars['slurm_files_dir'], slurm_file_name).as_posix()
         status = transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars)
+
+    print(status)
+    print(slurm_destination)
+    print(cluster_vars)
     
     return status, slurm_destination
 
