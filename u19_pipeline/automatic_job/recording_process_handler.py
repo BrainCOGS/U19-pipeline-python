@@ -268,7 +268,10 @@ class RecProcessHandler():
             # Chanmap mat file generation
             MetaToCoords(spikeglx_meta_filepath, 1, destFullPath =chanmap_file_local_path)
             status = paramfilelib.generate_chanmap_file(rec_series['job_id'], rec_series['program_selection_params'])
-
+            if status != config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering channelmap file'
+                return (status_update, update_value_dict)
 
         # Only queue if processing in tiger
         if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
