@@ -6,8 +6,8 @@
 #SBATCH --mem=50G
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
-#SBATCH --output=/Volumes/braininit/Shared/repos/U19-pipeline_python/u19_pipeline/automatic_job/OutputLogjob_id_efonseca_ef111_act111_20231010_g0.log
-#SBATCH --error=/Volumes/braininit/Shared/repos/U19-pipeline_python/u19_pipeline/automatic_job/ErrorLogjob_id_efonseca_ef111_act111_20231010_g0.log
+#SBATCH --output=/mnt/cup/braininit/Shared/repos/U19-pipeline_python/u19_pipeline/automatic_job/OutputLog/job_id_efonseca_ef111_act111_20231010_g0.log
+#SBATCH --error=/mnt/cup/braininit/Shared/repos/U19-pipeline_python/u19_pipeline/automatic_job/ErrorLog/job_id_efonseca_ef111_act111_20231010_g0.log
 
         echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
         echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
@@ -15,6 +15,7 @@
         echo "MODEL_DIR: ${model_dir}"
         echo "REPOSITORY_DIR: ${repository_dir}"
         echo "OUTPUT_DIR: ${output_dir}"
+        echo "PROCESS_SCRIPT_PATH:  ${process_script_path}"
 
         module load anacondapy/2021.11
 

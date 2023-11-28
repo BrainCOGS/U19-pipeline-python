@@ -6,6 +6,8 @@ import numpy as np
 import glob
 import subprocess
 import re
+import os
+import sys
 import copy
 from skimage.measure import EllipseModel
 from skimage.draw import ellipse_perimeter
@@ -22,12 +24,15 @@ import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 
 class PupillometryProcessingHandler():
 
-    spock_home_dir = '/mnt/cup/braininit/Shared/repos/U19-pipeline_python'
-    spock_log_dir = spock_home_dir + "/u19_pipeline/automatic_job/OutputLog"
-    spock_error_dir = spock_home_dir + "/u19_pipeline/automatic_job/ErrorLog" 
-    spock_slurm_filepath = spock_home_dir + "/u19_pipeline/"
+    spock_home_dir = '/mnt/cup/braininit/Shared/repos/U19-pipeline_python/'
+    spock_log_dir = spock_home_dir + "u19_pipeline/automatic_job/OutputLog/"
+    process_script_path = spock_home_dir + "u19_pipeline/automatic_job/pupillometry_handler.py"
+    spock_error_dir = spock_home_dir + "u19_pipeline/automatic_job/ErrorLog/" 
+    spock_slurm_filepath = spock_home_dir + "u19_pipeline/"
+    
+    pupillometry_slurm_filepath = os.path.abspath(os.path.realpath(__file__)+ "/../")
 
-    pupillometry_slurm_filepath = 'u19_pipeline/'
+    #pupillometry_slurm_filepath = 'u19_pipeline/'
     pupillometry_slurm_filename = 'slurm_pupillometry.slurm'
 
     slurm_dict_pupillometry_spock = {
@@ -51,6 +56,7 @@ class PupillometryProcessingHandler():
         echo "MODEL_DIR: ${model_dir}"
         echo "REPOSITORY_DIR: ${repository_dir}"
         echo "OUTPUT_DIR: ${output_dir}"
+        echo "PROCESS_SCRIPT_PATH:  ${process_script_path}"
 
         module load anacondapy/2021.11
 
@@ -118,16 +124,18 @@ class PupillometryProcessingHandler():
         return status, slurm_destination
 
     @staticmethod
-    def queue_pupillometry_slurm_file(video_dir, model_dir, repository_dir, output_dir):
+    def queue_pupillometry_slurm_file(video_dir, model_dir, repository_dir, output_dir, process_script_path, slurm_location):
 
         id_slurm_job = -1
 
         #Get all associated variables given the selected processing cluster
         command = ['ssh', 'alvaros@spock.princeton.edu', 'sbatch', 
-        "--export=video_dir="+video_dir+
-        ",model_dir='"+model_dir+
-        "',repository_dir='"+repository_dir+
-        "',output_dir='"+output_dir
+        "--export=video_dir='"+str(video_dir)+
+        "',model_dir='"+str(model_dir)+
+        "',repository_dir='"+str(repository_dir)+
+        "',process_script_path='"+str(process_script_path)+
+        "',output_dir='"+str(output_dir)+"'",
+        slurm_location
         ]
 
         print(command)
@@ -135,6 +143,10 @@ class PupillometryProcessingHandler():
         #p = os.popen(command_new).read()
         p.wait()
         stdout, stderr = p.communicate()
+
+        print(p.returncode)
+        print(stderr)
+        print(stdout)
 
         if p.returncode == 0:
             error_message = ''
@@ -153,9 +165,16 @@ class PupillometryProcessingHandler():
         '''
         Create scp command from cluster directories and local slurm file
         '''
-        user_host = 'alvaros@spock.princeton.edu'
-        slurm_destination = user_host+':'+slurm_destination
-        status = ft.scp_file_transfer(slurm_file_local_path, slurm_destination)
+        #user_host = 'alvaros@spock.princeton.edu'
+        #slurm_destination = user_host+':'+slurm_destination
+
+        print("cp", slurm_file_local_path, slurm_destination)
+
+        print(["cp", slurm_file_local_path, slurm_destination])
+
+        p = subprocess.Popen(["cp", slurm_file_local_path, slurm_destination])
+        transfer_status = p.wait()
+        return transfer_status
 
         return status
 
@@ -219,6 +238,8 @@ class PupillometryProcessingHandler():
 
         sessions_missing_process = (acquisition.SessionVideo * 
             pupillometry.PupillometrySessionModelData & 'pupillometry_job_id is NULL').fetch(as_dict=True)
+        
+        print(sessions_missing_process)
 
         for pupillometry_2_process in sessions_missing_process:
             
@@ -244,22 +265,24 @@ class PupillometryProcessingHandler():
             # Create output location
             pupillometry_processed_dir = pupillometry_dir[1]
             output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(pupillometry_2_process['remote_path_video_file']).parent)
-            if not output_dir.exists():
-                output_dir.mkdir(parents=True, exist_ok=True)
+            #if not output_dir.exists():
+            #    output_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate slurm file and transfer it to spock
             status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(videoPath)
+            print(slurm_filepath)
 
             # Error handling (generating slurm file)
-            if status != config.system_process['SUCCESS']:
-                status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
-                pupillometry.PupillometrySessionModelData.update1(key_insert)
-                return (status_update, update_value_dict)
+            #if status != config.system_process['SUCCESS']:
+            #    status_update = config.status_update_idx['ERROR_STATUS']
+            #    update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
+            #    pupillometry.PupillometrySessionModelData.update1(key_insert)
+            #    return (status_update, update_value_dict)
             
             # Queue slurm file in spock
             status, slurm_jobid, error_message = PupillometryProcessingHandler.queue_pupillometry_slurm_file(
-                videoPath, model_path, PupillometryProcessingHandler.spock_home_dir, output_dir)
+                videoPath, model_path, PupillometryProcessingHandler.spock_home_dir, output_dir, 
+                PupillometryProcessingHandler.process_script_path, slurm_filepath)
             
             # Error handling (queuing slurm file)
             if status != config.system_process['SUCCESS']:
@@ -330,4 +353,13 @@ class PupillometryProcessingHandler():
             
 
 if __name__ == '__main__':
-    pass
+    
+    import time
+    from scripts.conf_file_finding import try_find_conf_file
+    try_find_conf_file()
+    time.sleep(1)
+
+    args = sys.argv[1:]
+    print(args)
+
+    PupillometryProcessingHandler.analyze_videos_pupillometry(args[0], args[1], args[2])
