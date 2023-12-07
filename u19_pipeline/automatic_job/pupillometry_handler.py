@@ -253,7 +253,7 @@ class PupillometryProcessingHandler():
             if models_dir is None:
                 raise Exception('root_data_dir in not found in config, , run initial_conf.py again')
             models_dir = models_dir[0]
-            model_path = pathlib.Path(models_dir, model_key['model_path'],'config.yaml')
+            model_path = pathlib.Path(models_dir, model_key['model_path'])
 
             # Get video location
             pupillometry_dir = dj.config.get('custom', {}).get('pupillometry_root_data_dir',None)
@@ -295,36 +295,34 @@ class PupillometryProcessingHandler():
             key_insert['pupillometry_job_id'] = slurm_jobid
             pupillometry.PupillometrySessionModelData.update1(key_insert)
 
-    '''
     @staticmethod
     @recording_handler.exception_handler
     def check_processed_pupillometry_sessions():
 
-        status_update = config.status_update_idx['NO_CHANGE']
-        update_value_dict = copy.deepcopy(config.default_update_value_dict)
+        #status_update = config.status_update_idx['NO_CHANGE']
+        #update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        sessions_to_check = (pupillometry.PupillometrySessionModelData & 'pupillometry_job_id > 0 and pupil_diameter is NULL').fetch(as_dict=True)
+        sessions_to_check = (acquisition.SessionVideo * pupillometry.PupillometrySessionModelData & 'pupillometry_job_id > 0 and pupil_diameter is NULL').fetch(as_dict=True)
 
         for session_check in sessions_to_check:
 
+            key_update = dict((k, session_check[k]) for k in ('subject_fullname', 'session_date', 'session_number', 'model_id'))
+            print('key_update1', key_update)
 
-            status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
+            #status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
 
             # Get message from slurm status check
-            update_value_dict['error_info']['error_message'] = message
+            #update_value_dict['error_info']['error_message'] = message
 
             #If job finished copy over output and/or error log
-            if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
+            #if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
 
-                ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='ERROR')
-                ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
-                error_log = ft.get_error_log_str(rec_series['job_id'])
 
                 # If error log is not empty, get info about it
-                if error_log:
-                    status_update = config.status_update_idx['ERROR_STATUS']
-                    update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
-                    update_value_dict['error_info']['error_exception'] = error_log
+                #if error_log:
+                #    status_update = config.status_update_idx['ERROR_STATUS']
+                #    update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
+                #    update_value_dict['error_info']['error_exception'] = error_log
 
             # Get video location
             pupillometry_dir = dj.config.get('custom', {}).get('pupillometry_root_data_dir',None)
@@ -335,10 +333,6 @@ class PupillometryProcessingHandler():
             pupillometry_processed_dir = pupillometry_dir[1]
             output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(session_check['remote_path_video_file']).parent)
 
-
-
-
-
             #Find h5 files
             h5_files = glob.glob(str(output_dir) + '/*.h5')
             if len(h5_files) != 1:
@@ -347,8 +341,10 @@ class PupillometryProcessingHandler():
                 h5_files = h5_files[0]
 
             pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
-            pupillometry.PupillometrySessionModelData.insert1(key_pupil, allow_direct_insert=True)
-    '''
+            
+            key_update['pupil_diameter'] = pupil_data
+            print('key_update', key_update)
+            pupillometry.PupillometrySessionModelData.update1(key_update)
 
             
 
@@ -361,5 +357,6 @@ if __name__ == '__main__':
 
     args = sys.argv[1:]
     print(args)
+
 
     PupillometryProcessingHandler.analyze_videos_pupillometry(args[0], args[1], args[2])
