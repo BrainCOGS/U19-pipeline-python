@@ -111,6 +111,8 @@ class PupillometryProcessingHandler():
 
         print(slurm_file_local_path)
 
+        print('slurm text', slurm_text)
+
         write_file(slurm_file_local_path, slurm_text)
 
         slurm_destination = pathlib.Path(PupillometryProcessingHandler.spock_slurm_filepath,
