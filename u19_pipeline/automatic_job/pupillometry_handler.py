@@ -129,7 +129,7 @@ class PupillometryProcessingHandler():
         id_slurm_job = -1
 
         #Get all associated variables given the selected processing cluster
-        command = ['ssh', 'alvaros@spock.princeton.edu', 'sbatch', 
+        command = ['ssh', 'u19prod@spock.princeton.edu', 'sbatch', 
         "--export=video_dir='"+str(video_dir)+
         "',model_dir='"+str(model_dir)+
         "',repository_dir='"+str(repository_dir)+
