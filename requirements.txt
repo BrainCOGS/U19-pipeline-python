@@ -23,6 +23,7 @@ scp
 paramiko
 psutil
 deeplabcut
+tensorflow
 tifffile == 2021.11.2
 # matlab
 # matlabengineforpython
