@@ -363,4 +363,5 @@ if __name__ == '__main__':
     print(args)
 
 
-    PupillometryProcessingHandler.analyze_videos_pupillometry(args[0], args[1], args[2])
+    #PupillometryProcessingHandler.analyze_videos_pupillometry(args[0], args[1], args[2])
+    PupillometryProcessingHandler.check_pupillometry_sessions_queue()
