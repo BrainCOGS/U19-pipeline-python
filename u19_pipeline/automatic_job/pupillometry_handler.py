@@ -39,7 +39,7 @@ class PupillometryProcessingHandler():
         'job-name': 'dj_ingestion',
         'nodes': 1,
         'cpus-per-task': 1,
-        'time': '10:00:00',
+        'time': '20:00:00',
         'mem': '50G',
         'mail-type': ['END', 'FAIL'],
     }
@@ -255,12 +255,16 @@ class PupillometryProcessingHandler():
             models_dir = models_dir[0]
             model_path = pathlib.Path(models_dir, model_key['model_path'])
 
+            print('model path', model_path)
+
             # Get video location
             pupillometry_dir = dj.config.get('custom', {}).get('pupillometry_root_data_dir',None)
             if pupillometry_dir is None:
                 raise Exception('pupillometry_root_data_dir not found in config, run initial_conf.py again')
             pupillometry_raw_dir = pupillometry_dir[0]
             videoPath = pathlib.Path(pupillometry_raw_dir, pupillometry_2_process['remote_path_video_file'])
+
+            print('videoPath', videoPath)
 
             # Create output location
             pupillometry_processed_dir = pupillometry_dir[1]
@@ -270,14 +274,14 @@ class PupillometryProcessingHandler():
 
             # Generate slurm file and transfer it to spock
             status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(videoPath)
-            print(slurm_filepath)
+            print('slurm_filepath', slurm_filepath)
 
             # Error handling (generating slurm file)
-            #if status != config.system_process['SUCCESS']:
-            #    status_update = config.status_update_idx['ERROR_STATUS']
-            #    update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
-            #    pupillometry.PupillometrySessionModelData.update1(key_insert)
-            #    return (status_update, update_value_dict)
+            if status != config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
+                pupillometry.PupillometrySessionModelData.update1(key_insert)
+                return (status_update, update_value_dict)
             
             # Queue slurm file in spock
             status, slurm_jobid, error_message = PupillometryProcessingHandler.queue_pupillometry_slurm_file(
