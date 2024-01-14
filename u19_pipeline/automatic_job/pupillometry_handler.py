@@ -389,7 +389,9 @@ if __name__ == '__main__':
     time.sleep(1)
 
     args = sys.argv[1:]
+    args[1] = args[1] + '/config.yaml'
     print(args)
+    
 
 
     PupillometryProcessingHandler.analyze_videos_pupillometry(args[1], args[0], args[2])
