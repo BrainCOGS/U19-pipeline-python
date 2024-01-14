@@ -9,11 +9,14 @@ import re
 import os
 import sys
 import copy
+import traceback
 from skimage.measure import EllipseModel
 from skimage.draw import ellipse_perimeter
 from scipy import stats
 
 
+import u19_pipeline.utils.slack_utils as slack_utils
+import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.acquisition as acquisition
 import u19_pipeline.pupillometry as pupillometry
 import u19_pipeline.automatic_job.params_config as config
@@ -21,6 +24,26 @@ from u19_pipeline.automatic_job import recording_handler
 from u19_pipeline.utils.file_utils import write_file
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 
+def pupillometry_exception_handler(func):
+    def inner_function(*args, **kwargs):
+        try:
+             argout = func(*args, **kwargs)
+             return argout
+        except Exception as e:
+            print('Exception HERE ................')
+
+            update_value_dict = copy.deepcopy(config.default_update_value_dict)
+            update_value_dict['error_info']['error_message'] = str(e)
+            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
+
+            slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,recording_series)
+
+
+
+
+            return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
+    return inner_function
 
 class PupillometryProcessingHandler():
 
@@ -315,7 +338,10 @@ class PupillometryProcessingHandler():
             key_update = dict((k, session_check[k]) for k in ('subject_fullname', 'session_date', 'session_number', 'model_id'))
             print('key_update1', key_update)
 
-            #status_update, message = slurmlib.check_slurm_job(ssh_user, ssh_host, slurm_jobid, local_user=local_user)
+
+
+            status_update, message = slurmlib.check_slurm_job('u19prod', 'spock.princeton.edu', session_check['pupillometry_job_id'], local_user=False)
+
 
             # Get message from slurm status check
             #update_value_dict['error_info']['error_message'] = message
@@ -331,26 +357,27 @@ class PupillometryProcessingHandler():
                 #    update_value_dict['error_info']['error_exception'] = error_log
 
             # Get video location
-            pupillometry_dir = dj.config.get('custom', {}).get('pupillometry_root_data_dir',None)
-            if pupillometry_dir is None:
-                raise Exception('pupillometry_root_data_dir not found in config, run initial_conf.py again')
+            if status_update == config.status_update_idx['NEXT_STATUS']:
+                pupillometry_dir = dj.config.get('custom', {}).get('pupillometry_root_data_dir',None)
+                if pupillometry_dir is None:
+                    raise Exception('pupillometry_root_data_dir not found in config, run initial_conf.py again')
 
-            # Create output location
-            pupillometry_processed_dir = pupillometry_dir[1]
-            output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(session_check['remote_path_video_file']).parent)
+                # Create output location
+                pupillometry_processed_dir = pupillometry_dir[1]
+                output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(session_check['remote_path_video_file']).parent)
 
-            #Find h5 files
-            h5_files = glob.glob(str(output_dir) + '/*.h5')
-            if len(h5_files) != 1:
-                raise Exception('Didn''t find any h5 files after deeplabcut analyze_video')
-            else:
-                h5_files = h5_files[0]
+                #Find h5 files
+                h5_files = glob.glob(str(output_dir) + '/*.h5')
+                if len(h5_files) != 1:
+                    raise Exception('Didn''t find any h5 files after deeplabcut analyze_video')
+                else:
+                    h5_files = h5_files[0]
 
-            pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
-            
-            key_update['pupil_diameter'] = pupil_data
-            print('key_update', key_update)
-            pupillometry.PupillometrySessionModelData.update1(key_update)
+                pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
+                
+                key_update['pupil_diameter'] = pupil_data
+                print('key_update', key_update)
+                pupillometry.PupillometrySessionModelData.update1(key_update)
 
             
 
@@ -365,5 +392,5 @@ if __name__ == '__main__':
     print(args)
 
 
-    PupillometryProcessingHandler.analyze_videos_pupillometry(args[0], args[1], args[2])
+    PupillometryProcessingHandler.analyze_videos_pupillometry(args[1], args[0], args[2])
 
