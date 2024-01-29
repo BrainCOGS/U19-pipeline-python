@@ -36,6 +36,10 @@ def pupillometry_exception_handler(func):
             update_value_dict['error_info']['error_message'] = str(e)
             update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
 
+            print(update_value_dict['error_info']['error_message'])
+            print(update_value_dict['error_info']['error_exception'])
+
+
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
