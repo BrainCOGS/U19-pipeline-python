@@ -93,7 +93,7 @@ cluster_vars = {
         "error_files_dir":               spock_home_dir + "/u19_pipeline/automatic_job/ErrorLog", 
         "user":                          default_user,
         "slurm_default":                 slurm_dict_spock_default, 
-        "hostname":                      "spock.princeton.edu",
+        "hostname":                      "spockmk2-loginvm.pni.princeton.edu",
         "script_path":                   "",
         "conda_env":                     'u19_pipeline_python_env'
     }

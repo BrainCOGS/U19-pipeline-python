@@ -52,6 +52,7 @@ class PupillometryProcessingHandler():
     process_script_path = spock_home_dir + "u19_pipeline/automatic_job/pupillometry_handler.py"
     spock_error_dir = spock_home_dir + "u19_pipeline/automatic_job/ErrorLog/" 
     spock_slurm_filepath = spock_home_dir + "u19_pipeline/"
+    spock_system_name = 'spockmk2-loginvm.pni.princeton.edu'
     
     pupillometry_slurm_filepath = os.path.abspath(os.path.realpath(__file__)+ "/../")
 
@@ -60,8 +61,8 @@ class PupillometryProcessingHandler():
 
     slurm_dict_pupillometry_spock = {
         'job-name': 'dj_ingestion',
-        'nodes': 1,
-        'cpus-per-task': 1,
+        'nodes': 4,
+        'cpus-per-task': 4,
         'time': '20:00:00',
         'mem': '50G',
         'mail-type': ['END', 'FAIL'],
@@ -154,7 +155,7 @@ class PupillometryProcessingHandler():
         id_slurm_job = -1
 
         #Get all associated variables given the selected processing cluster
-        command = ['ssh', 'u19prod@spock.princeton.edu', 'sbatch', 
+        command = ['ssh', 'u19prod@'+PupillometryProcessingHandler.spock_system_name, 'sbatch', 
         "--export=video_dir='"+str(video_dir)+
         "',model_dir='"+str(model_dir)+
         "',repository_dir='"+str(repository_dir)+
@@ -190,8 +191,6 @@ class PupillometryProcessingHandler():
         '''
         Create scp command from cluster directories and local slurm file
         '''
-        #user_host = 'alvaros@spock.princeton.edu'
-        #slurm_destination = user_host+':'+slurm_destination
 
         print("cp", slurm_file_local_path, slurm_destination)
 
@@ -340,7 +339,7 @@ class PupillometryProcessingHandler():
 
 
 
-            status_update, message = slurmlib.check_slurm_job('u19prod', 'spock.princeton.edu', session_check['pupillometry_job_id'], local_user=False)
+            status_update, message = slurmlib.check_slurm_job('u19prod', PupillometryProcessingHandler.spock_system_name, session_check['pupillometry_job_id'], local_user=False)
 
 
             # Get message from slurm status check
