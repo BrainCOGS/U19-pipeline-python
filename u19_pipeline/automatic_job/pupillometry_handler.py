@@ -36,12 +36,6 @@ def pupillometry_exception_handler(func):
             update_value_dict['error_info']['error_message'] = str(e)
             update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
 
-            slack_utils.send_slack_error_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
-                        update_value_dict['error_info'] ,recording_series)
-
-
-
-
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
@@ -305,7 +299,12 @@ class PupillometryProcessingHandler():
                 status_update = config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
-                return (status_update, update_value_dict)
+
+                slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,pupillometry_2_process)
+
+                #return (status_update, update_value_dict)
+                continue
             
             # Queue slurm file in spock
             status, slurm_jobid, error_message = PupillometryProcessingHandler.queue_pupillometry_slurm_file(
@@ -317,18 +316,25 @@ class PupillometryProcessingHandler():
                 status_update = config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
-                return (status_update, update_value_dict)
+
+                slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,pupillometry_2_process)
+
+                #return (status_update, update_value_dict)
+                continue
             
             # If success, store job_id
             key_insert['pupillometry_job_id'] = slurm_jobid
             pupillometry.PupillometrySessionModelData.update1(key_insert)
+            slack_utils.send_slack_pupillometry_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
+                             'Pupillometry job submitted', pupillometry_2_process)
 
     @staticmethod
     @recording_handler.exception_handler
     def check_processed_pupillometry_sessions():
 
         #status_update = config.status_update_idx['NO_CHANGE']
-        #update_value_dict = copy.deepcopy(config.default_update_value_dict)
+        update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         sessions_to_check = (acquisition.SessionVideo * pupillometry.PupillometrySessionModelData & 'pupillometry_job_id > 0 and pupil_diameter is NULL').fetch(as_dict=True)
 
@@ -337,23 +343,18 @@ class PupillometryProcessingHandler():
             key_update = dict((k, session_check[k]) for k in ('subject_fullname', 'session_date', 'session_number', 'model_id'))
             print('key_update1', key_update)
 
-
-
             status_update, message = slurmlib.check_slurm_job('u19prod', PupillometryProcessingHandler.spock_system_name, session_check['pupillometry_job_id'], local_user=False)
 
-
-            # Get message from slurm status check
-            #update_value_dict['error_info']['error_message'] = message
-
             #If job finished copy over output and/or error log
-            #if status_update == config.status_update_idx['NEXT_STATUS'] or status_update == config.status_update_idx['ERROR_STATUS']:
+            if status_update == config.status_update_idx['ERROR_STATUS']:
 
+                update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
+                update_value_dict['error_info']['error_exception'] = message
 
-                # If error log is not empty, get info about it
-                #if error_log:
-                #    status_update = config.status_update_idx['ERROR_STATUS']
-                #    update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
-                #    update_value_dict['error_info']['error_exception'] = error_log
+                slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,session_check)
+                continue
+                
 
             # Get video location
             if status_update == config.status_update_idx['NEXT_STATUS']:
@@ -368,7 +369,10 @@ class PupillometryProcessingHandler():
                 #Find h5 files
                 h5_files = glob.glob(str(output_dir) + '/*.h5')
                 if len(h5_files) != 1:
-                    raise Exception('Didn''t find any h5 files after deeplabcut analyze_video')
+                    update_value_dict['error_info']['error_message'] = 'Didn''t find any h5 files after deeplabcut analyze_video'
+                    slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,session_check)
+                    continue
                 else:
                     h5_files = h5_files[0]
 
@@ -377,6 +381,8 @@ class PupillometryProcessingHandler():
                 key_update['pupil_diameter'] = pupil_data
                 print('key_update', key_update)
                 pupillometry.PupillometrySessionModelData.update1(key_update)
+                slack_utils.send_slack_pupillometry_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
+                             'Pupillometry job finished', session_check)
 
             
 
