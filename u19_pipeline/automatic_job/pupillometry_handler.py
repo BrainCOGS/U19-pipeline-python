@@ -355,6 +355,8 @@ class PupillometryProcessingHandler():
                 update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
                 update_value_dict['error_info']['error_exception'] = message
 
+                key_update['pupillometry_job_id'] = -1
+                pupillometry.PupillometrySessionModelData.update1(key_update)
                 slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                         update_value_dict['error_info'] ,session_check)
                 continue
@@ -378,6 +380,8 @@ class PupillometryProcessingHandler():
                     update_value_dict['error_info']['error_message'] = 'Didn''t find any h5 files after deeplabcut analyze_video'
                     slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                         update_value_dict['error_info'] ,session_check)
+                    key_update['pupillometry_job_id'] = -1
+                    pupillometry.PupillometrySessionModelData.update1(key_update)
                     continue
                 else:
                     h5_files = h5_files[0]
