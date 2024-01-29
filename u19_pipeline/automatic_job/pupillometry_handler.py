@@ -318,7 +318,7 @@ class PupillometryProcessingHandler():
             # Error handling (queuing slurm file)
             if status != config.system_process['SUCCESS']:
                 status_update = config.status_update_idx['ERROR_STATUS']
-                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
+                update_value_dict['error_info']['error_message'] = 'Error to queue pupillometry slurm file'
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
                 slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
