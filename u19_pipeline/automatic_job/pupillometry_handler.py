@@ -370,6 +370,8 @@ class PupillometryProcessingHandler():
                 pupillometry_processed_dir = pupillometry_dir[1]
                 output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(session_check['remote_path_video_file']).parent)
 
+                print(output_dir)
+
                 #Find h5 files
                 h5_files = glob.glob(str(output_dir) + '/*.h5')
                 if len(h5_files) != 1:
