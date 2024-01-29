@@ -133,7 +133,7 @@ def send_slack_error_pupillometry_notification(webhook_url, error_info, session_
     m2_1["text"] = '*Pupillometry pipeline failed for:* \n' +\
         ' *subject_fullname* : ' + str(session_info['subject_fullname']) +'\n'+\
         ' *session_date* : ' + str(session_info['session_date']) +'\n'+\
-        ' *session_number* : ' + session_info['session_number'] +'\n'+\
+        ' *session_number* : ' + str(session_info['session_number']) +'\n'+\
         ' *path_video_file* : ' + session_info['remote_path_video_file']
     m2['text'] = m2_1
 
@@ -179,7 +179,7 @@ def send_slack_pupillometry_update_notification(webhook_url, base_message, sessi
     m2_1["text"] = '*' + base_message +'* \n' +\
         ' *subject_fullname* : ' + str(session_info['subject_fullname']) +'\n'+\
         ' *session_date* : ' + str(session_info['session_date']) +'\n'+\
-        ' *session_number* : ' + session_info['session_number'] +'\n'+\
+        ' *session_number* : ' + str(session_info['session_number']) +'\n'+\
         ' *path_video_file* : ' + session_info['remote_path_video_file']
     m2['text'] = m2_1
 
