@@ -252,7 +252,7 @@ class PupillometryProcessingHandler():
 
 
     @staticmethod
-    @recording_handler.exception_handler
+    @pupillometry_exception_handler
     def check_pupillometry_sessions_queue():
 
         status_update = config.status_update_idx['NO_CHANGE']
@@ -334,7 +334,7 @@ class PupillometryProcessingHandler():
                              'Pupillometry job submitted', pupillometry_2_process)
 
     @staticmethod
-    @recording_handler.pupillometry_exception_handler
+    @pupillometry_exception_handler
     def check_processed_pupillometry_sessions():
 
         #status_update = config.status_update_idx['NO_CHANGE']
@@ -400,6 +400,7 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     args[1] = args[1] + '/config.yaml'
     print(args)
+    #
     
 
 
