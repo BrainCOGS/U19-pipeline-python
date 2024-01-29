@@ -81,7 +81,7 @@ class PupillometryProcessingHandler():
         echo "OUTPUT_DIR: ${output_dir}"
         echo "PROCESS_SCRIPT_PATH:  ${process_script_path}"
 
-        module load anacondapy/2021.11
+        module load anacondapy/2023.07
 
         conda activate u19_pipeline_python_env
 
