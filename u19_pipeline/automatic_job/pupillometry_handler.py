@@ -386,8 +386,16 @@ class PupillometryProcessingHandler():
                 else:
                     h5_files = h5_files[0]
 
-                pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
-                
+                try:
+                    pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
+                except Exception as e:
+                    update_value_dict['error_info']['error_message'] = 'Could not get pupil diameter (check h5 or video file)'
+                    slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
+                        update_value_dict['error_info'] ,session_check)
+                    key_update['pupillometry_job_id'] = -1
+                    pupillometry.PupillometrySessionModelData.update1(key_update)
+                    continue
+
                 key_update['pupil_diameter'] = pupil_data
                 print('key_update', key_update)
                 pupillometry.PupillometrySessionModelData.update1(key_update)

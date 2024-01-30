@@ -185,7 +185,7 @@ def send_slack_pupillometry_update_notification(webhook_url, base_message, sessi
 
     message = dict()
     message['blocks'] = [m1,msep,m2]
-    message['text'] = 'Automation pipeline update recording:' + str(session_info['recording_id'])
+    message['text'] = 'Pupillometry pipeline update'
 
     print(message)
 
