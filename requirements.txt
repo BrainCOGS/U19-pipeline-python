@@ -24,7 +24,7 @@ scp
 paramiko
 psutil
 #deeplabcut
-'deeplabcut[gui,tf]'
+deeplabcut[gui,tf]
 tifffile == 2021.11.2
 # matlab
 # matlabengineforpython
