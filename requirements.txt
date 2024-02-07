@@ -2,6 +2,7 @@
 globus-sdk
 globus-cli
 fair-research-login
+datajoint
 six
 scipy
 python-dotenv
@@ -22,8 +23,8 @@ cellpose
 scp
 paramiko
 psutil
-deeplabcut
-tensorflow
+#deeplabcut
+'deeplabcut[gui,tf]'
 tifffile == 2021.11.2
 # matlab
 # matlabengineforpython
