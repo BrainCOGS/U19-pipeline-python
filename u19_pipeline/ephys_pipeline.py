@@ -17,11 +17,6 @@ import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
-try:
-    from ecephys_spike_sorting.modules.kilosort_helper.__main__ import get_noise_channels
-except Exception as e:
-    print(f'Error in loading "ecephys_spike_sorting" package - {str(e)}')
-
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_pipeline')
 
 lfp_filter_params = 'biquad,2,0,500'
@@ -216,9 +211,9 @@ class BehaviorSync(dj.Imported):
         ephys_sampling_rate: float     # sampling rate of the headstage of a probe, imSampRate in imec meta file
         """
 
-    def make(self, key):
+    def make(self, key, **kwargs):
         # Pull the Nidaq file/record
-
+        print(key)
         try:
             session_dir = find_full_path(get_ephys_root_data_dir(),
                                         get_session_directory(key))
@@ -234,6 +229,12 @@ class BehaviorSync(dj.Imported):
 
             if 'testuser' in behavior_key['subject_fullname']:
                 return
+
+            # If a specific block is requested, add that to our behavior_key. It should be an int referring to virmen block number.
+            # This is useful for sessions in which the nidaq stream was interrupted due to restarting virmen
+            if 'block' in kwargs:
+                print('block: ', kwargs['block'])
+                behavior_key['block'] = kwargs['block']
 
             print(behavior_key)
 
