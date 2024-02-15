@@ -291,8 +291,8 @@ class PupillometryProcessingHandler():
             # Create output location
             pupillometry_processed_dir = pupillometry_dir[1]
             output_dir = pathlib.Path(pupillometry_processed_dir,pathlib.Path(pupillometry_2_process['remote_path_video_file']).parent)
-            #if not output_dir.exists():
-            #    output_dir.mkdir(parents=True, exist_ok=True)
+            if not output_dir.exists():
+                output_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate slurm file and transfer it to spock
             status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(videoPath)
