@@ -47,6 +47,6 @@ def try_find_conf_file():
     if root_dir_found and conf_file_found:
         print('Local configuration file found !!, no need to run the configuration (unless configuration has changed)')
     elif root_dir_found:
-        print('Local configuration file not found. Ignore this if you have a global config. Run configuration notebook otherwise')
+        print('Local configuration file not found. Ignore this if you have a global config. Run configuration script (initial_conf.py) otherwise')
     else:
         print('Root dir not found, change this notebook to the project folder')

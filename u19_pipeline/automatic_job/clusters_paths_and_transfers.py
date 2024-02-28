@@ -10,7 +10,6 @@ from datetime import datetime
 from element_interface.utils import dict_to_uuid
 
 import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.automatic_job.machine_variables as mv
 #Functions to transfer files (globus, scp, smbclient)
 
 #FOR PNI endpoint
@@ -19,7 +18,8 @@ pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to
 pni_data_dir   = ''         
 
 #For tiger endpoint
-default_user   = mv.processing_user                           # This will change to our automatic client for globus transfers
+public_key_location = '~/.ssh/id_rsa_alvaros_tiger.pub'
+default_user   = 'u19prod'                           # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'della.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
 tiger_ep_dir   = '8e1bbdfe-d234-4a7c-93a5-86086a249918'  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
@@ -76,7 +76,8 @@ cluster_vars = {
         "slurm_default":                 slurm_dict_tiger_default, 
         "hostname":                      "della-gpu.princeton.edu",
         "script_path":                   "",
-        "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env' 
+        "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env'
+
     },
     "spock": {
         "home_dir":                      spock_home_dir, 
@@ -111,9 +112,9 @@ def scp_file_transfer(source, dest):
 
     print("scp", source, dest)
 
-    print(["scp", "-i", mv.public_key_location2, source, dest])
+    print(["scp", "-i", public_key_location, source, dest])
 
-    p = subprocess.Popen(["scp", "-i", mv.public_key_location2, source, dest])
+    p = subprocess.Popen(["scp", "-i", public_key_location, source, dest])
     transfer_status = p.wait()
     return transfer_status
 
