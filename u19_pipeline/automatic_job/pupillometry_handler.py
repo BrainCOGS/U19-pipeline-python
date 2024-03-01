@@ -347,10 +347,8 @@ class PupillometryProcessingHandler():
             key_update = dict((k, session_check[k]) for k in ('subject_fullname', 'session_date', 'session_number', 'model_id'))
             print('key_update1', key_update)
 
-            #status_update, message = slurmlib.check_slurm_job('u19prod', PupillometryProcessingHandler.spock_system_name, str(session_check['pupillometry_job_id']), local_user=False)
-            message = ''
-            status_update = config.status_update_idx['NEXT_STATUS']
-
+            status_update, message = slurmlib.check_slurm_job('u19prod', PupillometryProcessingHandler.spock_system_name, str(session_check['pupillometry_job_id']), local_user=False)
+            
             #If job finished copy over output and/or error log
             if status_update == config.status_update_idx['ERROR_STATUS']:
 

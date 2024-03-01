@@ -17,7 +17,11 @@ from u19_pipeline.automatic_job import ephys_element_ingest
 import u19_pipeline.automatic_job.params_config as config
 
 
+
 def exception_handler(func):
+    '''
+    Decorator function to get error message when a workflow manager function fails
+    '''
     def inner_function(*args, **kwargs):
         try:
              argout = func(*args, **kwargs)
@@ -70,8 +74,10 @@ class RecordingHandler():
                     value_update = update_dict['value_update']
                     field_update = next_status_series['UpdateField']
 
+                    # Update status in u19_recording.recording table (possibly other field as well)
                     RecordingHandler.update_status_pipeline(key, next_status, field_update, value_update)
 
+                    # Send slack Message to webhook if slack message activated for status
                     if next_status_series['SlackMessage']:
                         slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
                              next_status_series['SlackMessage'], recording_series)
