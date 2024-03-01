@@ -7,7 +7,7 @@ from paramiko import SSHClient, AutoAddPolicy, RSAKey
 from paramiko.auth_handler import AuthenticationException, SSHException
 from scp import SCPClient, SCPException
 
-import u19_pipeline.automatic_job.machine_variables as mv
+from u19_pipeline.automatic_job.clusters_paths_and_transfers import public_key_location as public_key_location
 
 #Steps on windows machine
 #   https://thesysadminchannel.com/solved-add-windowscapability-failed-error-code-0x800f0954-rsat-fix/
@@ -88,10 +88,10 @@ class RemoteClient:
 
 
 def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
-    rc = RemoteClient(host, username, mv.public_key_location, remote_path)
+    rc = RemoteClient(host, username, public_key_location, remote_path)
     print(host)
     print(username)
-    print(mv.public_key_location)
+    print(public_key_location)
     print(remote_path)
     print(local_path)
     rc._get_ssh_key()
