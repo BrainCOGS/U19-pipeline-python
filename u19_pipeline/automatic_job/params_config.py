@@ -7,47 +7,19 @@ import pathlib
 from scripts.conf_file_finding import get_root_directory
 import u19_pipeline.lab as lab
 
-
+#Dictionary with main configuration for each modality (ephys or imaging)
 recording_modality_dict = [
     {
         'recording_modality': 'electrophysiology',
-        'Description': '',
-        'RootDirectorty': '/braininit/Data/electrophysiology',
-        'FileExtensions': np.asarray(['ap.bin', 'ap.meta']),
-        'RecordingFilePattern': np.asarray(['/*g[0-9]/*imec[0-9]']),
-        'ProcessUnitFilePattern': np.asarray(['/*imec[0-9]/']),
-        'ProcessUnitDirectoryField': 'probe_directory',
-        'ProcessUnitField': 'probe',
-        'local_or_cluster': 'cluster',
-        'process_repository': 'BrainCogsEphysSorters',
-        'process_cluster': 'tiger',
-        'process_script': 'main_script.py'
+        'local_or_cluster': 'cluster', # Where processing will happen, locally or cluster
+        'process_repository': 'BrainCogsEphysSorters', # Which repositroy will be used to process
+        'process_cluster': 'spockmk2-loginvm.pni.princeton.edu', # Which cluster will be used to process
+        'process_script': 'main_script.py' # Script in process_repository to 
     },
     {
         'recording_modality': 'imaging',
-        'Description': '',
-        'RootDirectorty': '/braininit/Data/imaging',
-        'FileExtensions': np.asarray(['.avi', '.tiff','.tif']),
-        'RecordingFilePattern': np.asarray(['']),
-        'ProcessUnitFilePattern': np.asarray(['']),
-        'ProcessUnitDirectoryField': 'fov_directory',
-        'ProcessUnitField': 'fov',
         'local_or_cluster': 'local',
         'process_repository': 'element-calcium-imaging',
-        'process_cluster': 'spock',
-        'process_script': 'none'
-    },
-    {
-        'recording_modality': 'video_acquisition',
-        'Description': '',
-        'RootDirectorty': '/braininit/Data/imaging',
-        'FileExtensions': np.asarray(['.avi', '.mp4']),
-        'RecordingFilePattern': np.asarray(['']),
-        'ProcessUnitFilePattern': np.asarray(['']),
-        'ProcessUnitDirectoryField': 'video_directory',
-        'ProcessUnitField': '',
-        'local_or_cluster': 'local',
-        'process_repository': 'None',
         'process_cluster': 'spock',
         'process_script': 'none'
     },
@@ -56,15 +28,16 @@ recording_modality_dict = [
 recording_modality_list = [list(i.values()) for i in recording_modality_dict]
 recording_modality_df = pd.DataFrame(recording_modality_dict)
 
+#Dictionary with status configuration for recordings
 recording_status_dict = [
     {
-        'Value': -1,
-        'Key': 'ERROR',
-        'Label': 'Error in recording handling',
-        'UpdateField': None,
-        'ProcessFunction': None,
-        'FunctionField': None,
-        'SlackMessage': None 
+        'Value': -1,     # Status id
+        'Key': 'ERROR',  # Status "nickname"
+        'Label': 'Error in recording handling', # Status description
+        'UpdateField': None,       # Which field in the u19_recording.recording table will be updated
+        'ProcessFunction': None,   # Which function to execute in workflow for this status
+        'FunctionField': None,     # Which field of u19_recording.recording will be used in status function
+        'SlackMessage': None       # Slack notification message for this status
     },
     {
         'Value': 0,
@@ -109,6 +82,7 @@ recording_status_list = [[i['Value'], i['Label']] for i in recording_status_dict
 recording_status_df = pd.DataFrame(recording_status_dict)
 RECORDING_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df['Key'] == 'ERROR', 'Value'].values[0]
 
+#Dictionary with status configuration for recording process (units of each recording)
 recording_process_status_dict = [
     {
         'Value': -2,
@@ -214,17 +188,20 @@ recording_process_status_dict = [
 recording_process_status_list = [[i['Value'], i['Label']] for i in recording_process_status_dict]
 recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 
+# All error and success status values
 JOB_STATUS_ERROR_ID = recording_process_status_df.loc[recording_process_status_df['Key'] == 'ERROR', 'Value'].values[0]
 JOB_STATUS_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_FINISHED_ELEMENT_WORKFLOW', 'Value'].values[0]
 JOB_STATUS_POST_PROCESSED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'JOB_DATA_DELETED_CLUSTER', 'Value'].values[0]
 JOB_STATUS_ERROR_DELETED = recording_process_status_df.loc[recording_process_status_df['Key'] == 'ERROR_DELETED', 'Value'].values[0]
 
+# Return code for functions for errors, next state or no status change
 status_update_idx = {
     'NEXT_STATUS': 1,
     'NO_CHANGE': 0,
     'ERROR_STATUS':-1
 }
 
+# Degault Dictionary "skeleton" that is returned in all functions of workflow
 default_update_value_dict ={
     'value_update': None,
     'error_info': {
@@ -233,27 +210,14 @@ default_update_value_dict ={
     },
 }
 
-all_preprocess_params = {
-"process_cluster": [
-    "tiger",
-    "spock"],
-"dj_element_processing":[ 
-    "trigger",
-    "load",
-],  
-"processing_algorithm": [
-    "kilosort2",
-    "suite2p",
-]
-}
-
-
+# Return Codes from 
 system_process = {
     'COMPLETED': 1,
     'SUCCESS':   0,
     'ERROR':    -1
 }
 
+# Possible states from slurm queued jobs results and result in pipeline status (next state, no change or error)
 slurm_states = {
     'COMPLETED': {
         'pipeline_status': status_update_idx['NEXT_STATUS'],
@@ -287,13 +251,6 @@ slurm_states = {
         'message':         'Job was cancelled'
         }
 }
-
-
-program_selection_params_keys = [
-    'process_cluster',
-    'process_repository',
-    'process_script'
-]
 
 
 # Look for u19_matlab_dir (Should be present on same directory as U19-Pipeline_Python)

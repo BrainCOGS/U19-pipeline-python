@@ -55,7 +55,7 @@ slurm_dict_spock_default = {
 pni_root_data_dir   = dj.config['custom']['root_data_dir']
 
 tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
-spock_home_dir = '/usr/people/alvaros/BrainCogsProjects/Datajoint_projs/U19-pipeline_python'
+spock_home_dir = '/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing'
 
 #Cluster directories
 cluster_vars = {
