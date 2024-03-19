@@ -177,7 +177,7 @@ def generate_slurm_spock(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     module load anacondapy/2023.07-cuda
-    module load anacondapy/2023.07-cuda
+    module load anacondapy/matlab/R2022b
 
     conda activate u19_pipeline_python_env
 
