@@ -8,22 +8,24 @@ import numpy as np
 from scipy.optimize import curve_fit
 from astropy.stats import binom_conf_interval
 import datajoint as dj
+import subprocess
+
 
 def is_this_spock():
     """
     Check if current system is spock or scotty
     """
-    local_os = sys.platform
-    local_os = local_os[:(min(3, len(local_os)))]
 
-    path = os.getcwd()
-    in_smb = path.find('smb') == -1
-    in_usr_people = path.find('usr/people') == -1
-    in_jukebox = path.find('jukebox') == -1
+    isSpock = False
 
-    isSpock = ((in_smb or in_usr_people or in_jukebox) and
-        (not local_os.lower() == 'win') and
-        (not local_os.lower() == 'dar'))
+    p = subprocess.Popen("hostname", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.wait()
+
+    stdout, stderr = p.communicate()
+    if p.returncode == 0:
+        hostname = stdout.decode('UTF-8')
+        if 'spock' in hostname or 'scotty' in hostname:
+            isSpock = True
 
     return isSpock
 
