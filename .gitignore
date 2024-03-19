@@ -137,4 +137,6 @@ u19_pipeline/automatic_job/ParameterFiles/*.json
 u19_pipeline/automatic_job/OutputLog/*.json
 u19_pipeline/automatic_job/ChanMapFiles/*.mat
 
+u19_pipeline/automatic_job/slurm_pupillometry.slurm
+
 u19_pipeline/automatic_job/machine_variables.py

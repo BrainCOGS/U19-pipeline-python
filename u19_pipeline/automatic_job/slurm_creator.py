@@ -171,10 +171,13 @@ def generate_slurm_spock(slurm_dict):
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
     echo "RECORDING_PROCESS_ID: ${recording_process_id}"
+    echo "RAW_DATA_DIRECTORY: ${raw_data_directory}"
+    echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anacondapy/2021.11
+    module load anacondapy/2023.07-cuda
+    module load anacondapy/2023.07-cuda
 
     conda activate u19_pipeline_python_env
 
@@ -200,7 +203,7 @@ def generate_slurm_tiger(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     module load anaconda3/2022.5 
-    module load matlab/R2020a
+    module load matlab/R2022b
 
     conda activate BrainCogsEphysSorters_env
 
