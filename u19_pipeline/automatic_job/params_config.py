@@ -13,14 +13,14 @@ recording_modality_dict = [
         'recording_modality': 'electrophysiology',
         'local_or_cluster': 'cluster', # Where processing will happen, locally or cluster
         'process_repository': 'BrainCogsEphysSorters', # Which repositroy will be used to process
-        'process_cluster': 'spockmk2-loginvm.pni.princeton.edu', # Which cluster will be used to process
+        'process_cluster': 'spockmk2', # Which cluster will be used to process
         'process_script': 'main_script.py' # Script in process_repository to 
     },
     {
         'recording_modality': 'imaging',
         'local_or_cluster': 'local',
         'process_repository': 'element-calcium-imaging',
-        'process_cluster': 'spock',
+        'process_cluster': 'spockmk2',
         'process_script': 'none'
     },
 ]

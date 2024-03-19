@@ -79,7 +79,7 @@ cluster_vars = {
         "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env'
 
     },
-    "spock": {
+    "spockmk2": {
         "home_dir":                      spock_home_dir, 
         "root_data_dir_globus":          pni_data_dir   + "/Raw",
         "processed_data_dir_globus":     pni_data_dir   + "/Processed",
