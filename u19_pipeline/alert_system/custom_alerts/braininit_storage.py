@@ -1,5 +1,6 @@
 
 import pandas as pd
+import datajoint as dj
 
 import u19_pipeline.lab as lab
 
@@ -16,7 +17,10 @@ slack_configuration_dictionary = {
 
 def main():
 
-    braininit_path = lab.Path().get_local_path2('braininit/Data').as_posix()
+    conf = dj.config
+    braininit_path = conf['custom']['root_data_dir'][0]
+
+    #braininit_path = lab.Path().get_local_path2('braininit/Data').as_posix()
     command = "df "+ braininit_path + " | tail -1 | awk '{print $4}'"
     # a = os.popen(command).read()
 
@@ -25,7 +29,7 @@ def main():
     storage_left = subprocess.check_output(command, shell=True)
 
     print(storage_left)
-    
+
     storage_left = storage_left.decode().strip()
 
     print(storage_left)
