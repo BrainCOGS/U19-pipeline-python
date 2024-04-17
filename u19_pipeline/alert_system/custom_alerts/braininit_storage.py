@@ -20,8 +20,16 @@ def main():
     command = "df "+ braininit_path + " | tail -1 | awk '{print $4}'"
     # a = os.popen(command).read()
 
+    print(command)
+
     storage_left = subprocess.check_output(command, shell=True)
+
+    print(storage_left)
+    
     storage_left = storage_left.decode().strip()
+
+    print(storage_left)
+
     storage_left_kb = int(storage_left)
 
     print(storage_left_kb)
