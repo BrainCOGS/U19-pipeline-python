@@ -10,8 +10,7 @@ import u19_pipeline.alert_system.alert_system_utility as asu
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
-    'slack_notification_channel': ['custom_alerts'],
-    'slack_users_channel': ['alvaros']
+    'slack_notification_channel': ['custom_alerts']
 }
 
 zscore_alert = 2

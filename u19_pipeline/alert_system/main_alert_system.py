@@ -14,8 +14,7 @@ import time
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
-    'slack_notification_channel': ['custom_alerts'],
-    'slack_users_channel': ['alvaros']
+    'slack_notification_channel': ['custom_alerts']
 }
 
 def main_alert_system():
@@ -38,12 +37,15 @@ def main_alert_system():
             if alert_df.shape[0] > 0:
 
                 alert_dict = alert_df.to_dict('records')
+                webhooks_list = []
                 
-                query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
-                webhooks_list = (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
+                if 'slack_notification_channel' in slack_dict:
+                    query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
+                    webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
 
-                query_slack_user_channels = [{'user_id' : x} for x in slack_dict['slack_users_channel']]
-                webhooks_list += (lab.User & query_slack_user_channels).fetch('slack_webhook').tolist()
+                if 'slack_users_channel' in slack_dict:
+                    query_slack_user_channels = [{'user_id' : x} for x in slack_dict['slack_users_channel']]
+                    webhooks_list += (lab.User & query_slack_user_channels).fetch('slack_webhook').tolist()
 
                 for this_alert_record in alert_dict:
                     slack_json_message = slack_alert_message_format(this_alert_record, this_alert_submodule.name)
