@@ -367,6 +367,10 @@ def convert_behavior_file(mat_file):
 
     matin = convert_mat_file_to_dict(mat_file)
     converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
+    if bool(converted_metadata):
+        metadata_read = True
+    else:
+        metadata_read = False
 
     session_block_trial_df = pd.DataFrame()
 
@@ -394,7 +398,8 @@ def convert_behavior_file(mat_file):
         valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)
         valid_blocks, block_df = convert_towers_block_2_df(block, i+1)
         #Write string of block level Protocol  (from matlab obscured data)
-        block_df['shapingProtocol'] = converted_metadata['shaping_protocol'][i]
+        if metadata_read:
+            block_df['shapingProtocol'] = converted_metadata['shaping_protocol'][i]
 
         if valid_block and valid_blocks:
             session_current_block_trial_df = block_trial_df.merge(block_df, on='block', suffixes=['_block', '_trial'])
@@ -406,7 +411,9 @@ def convert_behavior_file(mat_file):
 
 
     #Write choice and trial type of each trial (from matlab obscured data)
-    session_block_trial_df['choice'] = converted_metadata['trial_choice']
-    session_block_trial_df['trialType'] = converted_metadata['trial_type']
+    if metadata_read:
+        session_block_trial_df['choice'] = converted_metadata['trial_choice']
+        session_block_trial_df['trialType'] = converted_metadata['trial_type']
+        
     session_block_trial_df = session_block_trial_df.reset_index(drop=True)
     return session_block_trial_df
