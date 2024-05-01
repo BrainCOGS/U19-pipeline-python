@@ -8,7 +8,7 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
   <details>
   <summary>Click to expand details</summary>
-  
+
   #### Install an integrated development environment
 
   + DataJoint development and use can be done with a plain text editor in the
@@ -22,12 +22,12 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
   #### Install a virtual environment
 
-  + A virtual environment allows you to install the packages required for a 
+  + A virtual environment allows you to install the packages required for a
     specific project within an isolated environment on your computer.
 
   + It is highly recommended to create a virtual environment to run the workflow.
 
-  + Conda and virtualenv are virtual environment managers and you can use either 
+  + Conda and virtualenv are virtual environment managers and you can use either
     option.  Below are the commands for Conda.
 
   + If you are setting up the pipeline on your local machine follow the instructions below for Conda.  If you are using `spock.pni.princeton.edu` or `scotty.pni.princeton.edu`, Conda is preinstalled and you can access it by running `module load anacondapy/2021.11`.
@@ -35,7 +35,7 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   + We will install Miniconda which is a minimal installer for conda.
   + Select the [Miniconda installer link](https://conda.io/en/latest/miniconda.html) for your operating system and follow the instructions.
 
-      + You may need to add the Miniconda directory to the PATH environment 
+      + You may need to add the Miniconda directory to the PATH environment
       variable
 
         + First locate the Miniconda directory
@@ -70,20 +70,20 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   </details>
 
 ### Configuration
-    
+
  #### Repository libraries installation and configuration
-    
+
  + The following instructions will allow a user to access and fetch data from the database.
-    
+
   ```bash
   conda activate <environment_name>
   cd U19-pipeline_python
   pip install -e .
   python initial_conf.py
   ```
-  (Username and password will be prompted at this moment: Princeton NETiD & NetiD password usually works)
-      
-  + The `initial_conf.py`  script will store a local file with credtentials to access DB and configuration variables/filepaths.
+  (Username and password will be prompted at this moment: Princeton NETiD & NETiD password usually works)
+
+  + The `initial_conf.py`  script will store a global file with credentials to access DB and configuration variables/filepaths.
   + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
 
 ## Tutorials
@@ -113,7 +113,7 @@ We have created some tutorial notebooks to help you start working with DataJoint
         [\\\cup.pni.princeton.edu\Bezos-center\\]()     (for Bezos) <br>
         [\\\cup.pni.princeton.edu\u19_dj\\]()   (for u19_dj) <br>
     - Authenticate with your **NetID and PU password** (NOT your PNI password, which may be different). When prompted for your username, enter PRINCETON\netid (note that PRINCETON can be upper or lower case) where netid is your PU NetID.
-      
+
     ### On OS X systems
     - Select "Go->Connect to Server..." from Finder and enter: <br>
         [smb://cup.pni.princeton.edu/braininit/]()    (for braininit) <br>
@@ -124,11 +124,11 @@ We have created some tutorial notebooks to help you start working with DataJoint
     ### On Linux systems
     - Follow extra steps depicted in this link: https://npcdocs.princeton.edu/index.php/Mounting_the_PNI_file_server_on_your_desktop
 
-    ### Notable data 
+    ### Notable data
     Here are some shortcuts to common used data accross PNI
 
     **Sue Ann's Towers Task**
-    - Imaging: [/Bezos-center/RigData/scope/bay3/sakoay/{protocol_name}/imaging/{subject_nickname}/]() 
+    - Imaging: [/Bezos-center/RigData/scope/bay3/sakoay/{protocol_name}/imaging/{subject_nickname}/]()
     - Behavior: [/braininit/RigData/scope/bay3/sakoay/{protocol_name}/data/{subject_nickname}/]()
 
     **Lucas Pinto's Widefield**
@@ -147,7 +147,7 @@ We have created some tutorial notebooks to help you start working with DataJoint
     ```key['session_Date'] = '2018-02-05'``` <br>
     4. Fetch filepath info:
     ```data_dir = (acquisition.SessionStarted & key).fetch('remote_path_behavior_file')``` <br>
-    
+
   </details>
 
 ## Major schemas in the pipeline
@@ -186,12 +186,12 @@ We have created some tutorial notebooks to help you start working with DataJoint
   ![Behavior Diagram](images/behavior_erd.png)
 
   ### ephys_element
-  + Ephys related tables were created with [DataJoint Element Array Ephys](https://github.com/datajoint/element-array-ephys), processing ephys data aquired with SpikeGLX and pre-processed by Kilosort2.  For this pipeline we are using the (acute) `ephys` module from `element-array-ephys`.
+  + Ephys related tables were created with [DataJoint Element Array Ephys](https://github.com/datajoint/element-array-ephys), processing ephys data aquired with SpikeGLX and pre-processed by Kilosort2.  For this pipeline, we are using the (acute) `ephys` module from `element-array-ephys`.
 
   ![Ephys Diagram](images/ephys_element_erd.png)
 
   ### imaging
-  + Imaging pipeline processed with customized algorithm for motion correction and CNMF for cell segmentation in matlab.
+  + Imaging pipeline processed with a customized algorithm for motion correction and CNMF for cell segmentation in matlab.
 
   ![Imaging Diagram](images/imaging_erd.png)
 
