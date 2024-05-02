@@ -4,20 +4,29 @@ from getpass import getpass
 import argparse
 
 
-def initial_conf(save_user=True, replace_user=False):
+def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     '''
     Inital configuration for datajoint DB (stores local conf file with dj custom config and dj stores)
     '''
 
     from scripts.conf_file_finding import try_find_conf_file
-    try_find_conf_file()
+    try:
+        try_find_conf_file()
+    except FileNotFoundError:
+        pass
+        print("DataJoint configuration file not found. Running configuration script...")
+        if global_config_flag:
+            print("Global configuration flag is set to True. The configuration will be saved in the global configuration file.")
+        else:
+            print("Global configuration flag is set to False. The configuration will be saved in the local configuration file.")
+
 
     import datajoint as dj
 
     host='datajoint00.pni.princeton.edu'
 
     user_already = False
-    if 'database.user' in dj.config:
+    if 'database.user' in dj.config and dj.config.instance._conf['database.user'] is not None:
         user_already = True
 
     if replace_user or not user_already:
@@ -27,7 +36,7 @@ def initial_conf(save_user=True, replace_user=False):
         dj.conn(host=host, user=user, password=password)
     else:
         dj.conn(host=host)
-    
+
     if (save_user and not user_already) or replace_user:
         dj.config['database.user'] = user
         dj.config['database.password'] = password
@@ -52,7 +61,7 @@ def initial_conf(save_user=True, replace_user=False):
         # If custom variables are directories, get local path for this system
         if 'dir' in custom_var:
             this_var = [lab.Path().get_local_path2(x).as_posix() for x in this_var]
-        
+
         # If only one instance of this variable it must be string not list
         if len(this_var) == 1:
             this_var = this_var[0]
@@ -73,7 +82,10 @@ def initial_conf(save_user=True, replace_user=False):
 
     dj.config['stores'] = dj_stores_dict
 
-    dj.config.save_local()
+    if global_config_flag:
+        dj.config.save_global()
+    else:
+        dj.config.save_local()
 
 
 if __name__ == '__main__':
@@ -82,14 +94,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_user', '-s', help="save user into conf file", type= bool, default=True)
     parser.add_argument('--replace_user', '-r', help="replace user in conf file", type= bool, default=False)
+    parser.add_argument('--global_config_flag', '-g', help="global true/false flag", type= bool, default=True)
 
     #print(parser.format_help())
     # usage: initial_conf.py [-h] [--save_user SAVE_USER] [--replace_user REPLACE_USER]
-    # 
+    #
     # optional arguments:
     #   -h, --help         show this help message and exit
     #   --save_user SAVE_USER,  (True/False) save user into conf file (default=True)
     #   --replace_user REPLACE_USER,  (True/False) replace user in conf file (default=False)
 
     args = parser.parse_args()
-    initial_conf(save_user=args.save_user, replace_user=args.replace_user)
+    initial_conf(save_user=args.save_user, replace_user=args.replace_user, global_config_flag=args.global_config_flag)
