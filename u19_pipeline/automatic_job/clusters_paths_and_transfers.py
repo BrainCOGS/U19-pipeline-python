@@ -39,15 +39,29 @@ slurm_dict_tiger_default = {
     'output': 'OutputLog/job_id_${job_id}".log',
     'error':  'ErrorLog/job_id_${job_id}".log'
 }
-slurm_dict_spock_default = {
-    'job-name': 'dj_ingestion',
+slurm_dict_spockmk2_ephys = {
+    'job-name': 'kilosort2',
     'nodes': 1,
-    'cpus-per-task': 1,
+    'ntasks': 1,
+    'time': '10:00:00',
+    'mem': '100G',
+    'gres': 'gpu:4',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['END'],
+    'output': 'OutputLog/job_id_${job_id}".log',
+    'error':  'ErrorLog/job_id_${job_id}".log'
+}
+slurm_dict_spock_default = {
+    'job-name': 'kilosort2',
+    'nodes': 1,
+    'ntasks': 1,
     'time': '10:00:00',
     'mem': '50G',
-    'mail-type': ['END', 'FAIL'],
+    'gres': 'gpu:4',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['END'],
     'output': 'OutputLog/job_id_${job_id}".log',
-    'error': 'ErrorLog/job_id_${job_id}".log'
+    'error':  'ErrorLog/job_id_${job_id}".log'
 }
 
 
