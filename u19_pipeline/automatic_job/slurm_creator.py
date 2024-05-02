@@ -74,6 +74,9 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
     
     #Get all associated variables given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+
+    print('queue_slurm_file **********************************')
+
     
     processing_repository = program_selection_params['process_repository']
     repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
@@ -95,6 +98,9 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
     #p = os.popen(command_new).read()
     p.wait()
     stdout, stderr = p.communicate()
+
+    print(stdout)
+    print(stderr)
 
     if p.returncode == config.system_process['SUCCESS']:
         error_message = ''
