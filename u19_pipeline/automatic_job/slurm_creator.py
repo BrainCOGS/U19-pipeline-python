@@ -177,9 +177,34 @@ def generate_slurm_spock(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     module load anacondapy/2023.07-cuda
-    module load matlab/R2022b
+    module load matlab/R2024a
 
     conda activate u19_pipeline_python_env
+
+    cd ${repository_dir}
+    python ${process_script_path}
+    #python ${process_script_path} ${recording_process_id}
+    '''
+    
+    return slurm_text   
+
+def generate_slurm_spockmk2_ephys(slurm_dict):
+
+    slurm_text = '#!/bin/bash\n'
+    slurm_text += create_slurm_params_file(slurm_dict)
+    slurm_text += '''
+    echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
+    echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
+    echo "RECORDING_PROCESS_ID: ${recording_process_id}"
+    echo "RAW_DATA_DIRECTORY: ${raw_data_directory}"
+    echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
+    echo "REPOSITORY_DIR: ${repository_dir}"
+    echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
+
+    module load anacondapy/2023.07-cuda
+    module load matlab/R2024a
+
+    conda activate BraincogsEphysSorters_Env
 
     cd ${repository_dir}
     python ${process_script_path}
@@ -203,7 +228,7 @@ def generate_slurm_tiger(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     module load anaconda3/2022.5 
-    module load matlab/R2022b
+    module load matlab/R2024a
 
     conda activate BrainCogsEphysSorters_env
 
