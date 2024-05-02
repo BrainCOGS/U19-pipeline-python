@@ -83,6 +83,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     dj.config['stores'] = dj_stores_dict
 
     if global_config_flag:
+        print("Global configuration flag is set to True. The configuration will be saved in the global configuration file.")
         dj.config.save_global()
     else:
         dj.config.save_local()
@@ -92,9 +93,15 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--save_user', '-s', help="save user into conf file", type= bool, default=True)
-    parser.add_argument('--replace_user', '-r', help="replace user in conf file", type= bool, default=False)
-    parser.add_argument('--global_config_flag', '-g', help="global true/false flag", type= bool, default=True)
+    parser.add_argument('--not_save_user', '-ns', help="prevent to save user into conf file", action="store_true")
+    parser.add_argument('--replace_user', '-r', help="replace user in conf file", action="store_true")
+    parser.add_argument('--not_global_config', '-ng', help="prevent to store global configuration file", action="store_true")
+
+    default_args = dict()
+    default_args['save_user'] = True
+    default_args['replace_user'] = False
+    default_args['global_config'] = True
+
 
     #print(parser.format_help())
     # usage: initial_conf.py [-h] [--save_user SAVE_USER] [--replace_user REPLACE_USER]
@@ -105,4 +112,15 @@ if __name__ == '__main__':
     #   --replace_user REPLACE_USER,  (True/False) replace user in conf file (default=False)
 
     args = parser.parse_args()
-    initial_conf(save_user=args.save_user, replace_user=args.replace_user, global_config_flag=args.global_config_flag)
+
+
+    if args.not_save_user:
+        default_args['save_user'] = False
+    if args.replace_user:
+        default_args['replace_user'] = True
+    if args.not_global_config:
+        default_args['global_config'] = False
+    
+    initial_conf(save_user=default_args['save_user'],
+                 replace_user=default_args['replace_user'],
+                 global_config_flag=default_args['global_config'])
