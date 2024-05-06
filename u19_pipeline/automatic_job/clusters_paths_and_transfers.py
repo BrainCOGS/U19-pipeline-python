@@ -41,8 +41,8 @@ slurm_dict_tiger_default = {
 }
 slurm_dict_spockmk2_ephys = {
     'job-name': 'kilosort2',
-    'nodes': 1,
-    'ntasks': 1,
+    'nodes': 4,
+    'ntasks': 4,
     'time': '20:00:00',
     'mem': '100G',
     'gres': 'gpu:1',
@@ -53,10 +53,10 @@ slurm_dict_spockmk2_ephys = {
 }
 slurm_dict_spock_default = {
     'job-name': 'kilosort2',
-    'nodes': 1,
-    'ntasks': 1,
+    'nodes': 4,
+    'ntasks': 4,
     'time': '20:00:00',
-    'mem': '50G',
+    'mem': '100G',
     'gres': 'gpu:1',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['END'],
