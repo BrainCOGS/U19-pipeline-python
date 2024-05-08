@@ -274,11 +274,12 @@ def get_error_log_str(recording_process_id):
         with open(log_file_local_path, 'r') as error_log_file:
             error_log_data = ' '.join(error_log_file.readlines())
 
-        error_log_data = error_log_data.replace("activate the default environment with 'conda activate' or create a new environment to customize with 'conda create'.",'')
+        error_log_data = error_log_data.replace("activate the default environment with 'conda activate' or create a new environment to customize with 'conda create'.\n",'')
 
     print('error_log_data   xxxxxxxxxx')
     print(error_log_data)    
-    
+    print('error_log_data   xxxxxxxxxx')
+
     return error_log_data
 
 
