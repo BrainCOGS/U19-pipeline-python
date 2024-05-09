@@ -182,8 +182,8 @@ def generate_slurm_spock(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anacondapy/2023.07-cuda
-    module load matlab/R2024a
+    module load anacondapy/2023.07-cuda -s
+    module load matlab/R2024a -s
 
     conda activate u19_pipeline_python_env
 
@@ -207,8 +207,8 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anacondapy/2023.07-cuda
-    module load matlab/R2024a
+    module load anacondapy/2023.07-cuda -s
+    module load matlab/R2024a -s
 
     conda activate BraincogsEphysSorters_Env
 
@@ -233,8 +233,8 @@ def generate_slurm_tiger(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anaconda3/2022.5 
-    module load matlab/R2024a
+    module load anaconda3/2022.5 -s
+    module load matlab/R2024a -s
 
     conda activate BrainCogsEphysSorters_env
 
@@ -258,7 +258,7 @@ def generate_slurm_dlc(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
     echo "MODEL_PATH: ${model_path}"
 
-    module load anacondapy/2021.11
+    module load anacondapy/2021.11 -s
     conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
 
     python ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
@@ -280,7 +280,7 @@ def generate_slurm_dlc2(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
     echo "MODEL_PATH: ${model_path}"
 
-    module load anaconda3/5.3.1
+    module load anaconda3/5.3.1 -s
     conda activate /home/alvaros/.conda/envs/u19_datajoint_py39_env
 
     python ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
