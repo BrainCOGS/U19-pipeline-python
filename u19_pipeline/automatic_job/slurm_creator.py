@@ -188,7 +188,7 @@ def generate_slurm_spock(slurm_dict):
     conda activate u19_pipeline_python_env
 
     cd ${repository_dir}
-    python -U ${process_script_path}
+    python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
     
@@ -213,7 +213,7 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     conda activate BraincogsEphysSorters_Env
 
     cd ${repository_dir}
-    python -U ${process_script_path}
+    python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
     
@@ -239,7 +239,7 @@ def generate_slurm_tiger(slurm_dict):
     conda activate BrainCogsEphysSorters_env
 
     cd ${repository_dir}
-    python -U ${process_script_path}
+    python -u ${process_script_path}
     '''
 
     return slurm_text
@@ -261,7 +261,7 @@ def generate_slurm_dlc(slurm_dict):
     module load anacondapy/2021.11 -s
     conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
 
-    python -U ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
+    python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
     return slurm_text 
@@ -283,7 +283,7 @@ def generate_slurm_dlc2(slurm_dict):
     module load anaconda3/5.3.1 -s
     conda activate /home/alvaros/.conda/envs/u19_datajoint_py39_env
 
-    python -U ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
+    python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
     return slurm_text 
