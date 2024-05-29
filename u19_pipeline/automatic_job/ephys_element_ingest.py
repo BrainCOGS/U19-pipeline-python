@@ -37,12 +37,15 @@ def process_session(sess_key):
                                                 get_session_directory(sess_key)))
     ephys_meta_filepaths = [fp for fp in sess_dir.rglob('*.ap.meta')]
 
+    print('ephys_meta_filepaths', ephys_meta_filepaths)
+
     if not len(ephys_meta_filepaths):
         print(f'No SpikeGLX data found for session:{sess_key} - at {sess_dir}')
         return
 
     probe_list, probe_insertion_list = [], []
     for meta_filepath in ephys_meta_filepaths:
+        print('meta_filepath', meta_filepath)
         spikeglx_meta = spikeglx.SpikeGLXMeta(meta_filepath)
 
         probe_key = {'probe_type': spikeglx_meta.probe_model, 'probe': spikeglx_meta.probe_SN}
