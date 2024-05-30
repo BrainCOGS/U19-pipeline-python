@@ -1,6 +1,4 @@
 
-globus-sdk
-globus-cli
 fair-research-login
 datajoint
 six
