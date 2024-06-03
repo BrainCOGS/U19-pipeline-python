@@ -185,7 +185,7 @@ def generate_slurm_spock(slurm_dict):
     module load anacondapy/2023.07-cuda -s
     module load matlab/R2024a -s
 
-    conda activate u19_pipeline_python_env
+    conda activate u19_pipeline_python_env2
 
     cd ${repository_dir}
     python -u ${process_script_path}
