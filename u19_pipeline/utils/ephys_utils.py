@@ -280,12 +280,10 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     # Count trial count differences
     trial_count_diff = np.abs(iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0]))
 
-    count = 0
     trials_diff_iteration_small = list()
     trials_diff_iteration_big = list()
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
-        count += 1
-        print(count)
+        print(idx_trial)
         print(iter_trials.shape[0])
         print(behavior_time_vector[idx_trial].shape[0])
         #For each trial iteration # should be equal to the behavioral file iterations
