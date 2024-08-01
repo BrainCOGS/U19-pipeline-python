@@ -410,7 +410,7 @@ class RecProcessHandler:
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict('records')
-        this_modality_program_selection_params_dict
+       
 
         # Get two columns, (recording_modality & "packed" program_selection_params)
         this_modality_program_selection_params = this_modality_program_selection_params.loc[:, 'recording_modality'].to_frame().copy()
