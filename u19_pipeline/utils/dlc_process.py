@@ -36,7 +36,7 @@ def getPupilDiameter(destinationFolder=None):
         An array that contains the pupil diameter (index is the video frame) [numpy Array]
     """
     # TODO make the function
-    
+
     # Read the analyzed video data h5 file
     h5_file = pu.get_filepattern_paths(destinationFolder, "/*.h5")
 
@@ -46,7 +46,7 @@ def getPupilDiameter(destinationFolder=None):
         raise Exception('No h5 file in directory: '+ destinationFolder)
     if len(h5_file) > 1:
         raise Exception('To many h5 files in directory: '+ destinationFolder)
-    
+
     h5_file = h5_file[0]
     labels = pd.read_hdf(h5_file)
 

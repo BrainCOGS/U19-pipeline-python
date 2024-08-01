@@ -18,10 +18,10 @@ from u19_pipeline.utils.DemoReadSGLXData.readSGLX import (
 
 class spice_glx_utility:
 
-    @staticmethod    
+    @staticmethod
     def load_spice_glx_digital_file(file_path, nidq_meta, d_line_list=None):
         # Read NIDAQ digital file.
-        #Inputs 
+        #Inputs
         # file_path   = path for the spike glx file
         # nidq_meta   = meta file read from readMeta spike glx utility
         # d_line_list = digital channels to read from the file
@@ -56,7 +56,7 @@ def get_idx_trial_start(trial_pulse_signal):
     #Get index of samples when trial has started based on a pulse signal
 
     #Get idx samples trial starts
-    trial_start_idx = np.where(np.diff(trial_pulse_signal) == 1) 
+    trial_start_idx = np.where(np.diff(trial_pulse_signal) == 1)
     trial_start_idx = trial_start_idx[0]
 
     #Detect fake trial init pulses (a single sample in 1 instead of 5ms signal)
@@ -76,7 +76,7 @@ def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx
     #Get index of iteration starts on a trial based on a pulse start signal
 
     #Get idx of iteration start during trial
-    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1) 
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
     iter_samples = iter_samples + trial_start_idx
     # First iteration is at trial start, just align first trial start
     iter_samples[0, 0] = trial_start_idx
@@ -91,7 +91,7 @@ def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx)
 
 
     #Get idx of odd iteration during trial
-    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1) 
+    iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
     iter_samples = iter_samples + trial_start_idx
 
     if iteration_pulse_signal_trial[0] == 1:
@@ -104,12 +104,12 @@ def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx)
     iter_samples = np.squeeze(iter_samples)
 
     #Get idx of even iteration during trial
-    iter_samples2 = np.where(np.diff(iteration_pulse_signal_trial) == 255) 
+    iter_samples2 = np.where(np.diff(iteration_pulse_signal_trial) == 255)
     iter_samples2 = iter_samples2 + trial_start_idx
     iter_samples2 = np.squeeze(iter_samples2)
 
     iter_samples = np.concatenate([iter_samples, iter_samples2])
-    iter_samples = np.sort(iter_samples) 
+    iter_samples = np.sort(iter_samples)
 
     return iter_samples
 
@@ -174,15 +174,15 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
             iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
         else:
             iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
-        
+
         #Append as an array of arrays (each trial is an array with idx of iterations)
         iter_start_idx.append(iter_samples)
         #Calculate time for each iteration start
         times = iter_samples/nidq_sampling_rate
         times = times - times[0]
         iter_times_idx.append(times)
-        
-        #Fill vector samples  
+
+        #Fill vector samples
         for j in range(iter_samples.shape[0]-1):
             iteration_vector_output['framenumber_vector_samples'][iter_samples[j]:iter_samples[j+1]] = j+1
 
@@ -237,7 +237,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
             trialnumber[idx] = current_trial
     trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype = np.int32)
 
-    # Fourth, find and remove the nidaq glitches 
+    # Fourth, find and remove the nidaq glitches
     # These are single samples where the iteration number is corrupted
     # ... likely because sampling happened faster than output of the behavior PC.
     # This is also where skipped frames are detected.
@@ -263,7 +263,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
 
     # This point we have framenumber_in_trial and trialnumber. Now just some refactoring to fit into the usual data structure
     iteration_vector_output = dict()
-    
+
     iteration_vector_output['trialnumber_vector_samples'] = trialnumber
     iteration_vector_output['framenumber_vector_samples'] = framenumber_in_trial
 
@@ -363,7 +363,7 @@ def fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, be
 
         if not status:
             raise ValueError("Coud not find missing iteration in trial")
-        
+
         iteration_dict['iter_start_idx'][idx_trial] = new_iter_start
 
         # Get new synced time vector for trial
@@ -447,7 +447,7 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
     # framenumber_in_trial has the length of the number of samples of the NIDAQ card, and every entry is the currently presented iteration number of the VR in the respective trial.
     # trialnumber has the length of the number of samples of the NIDAQ card, and every entry is the current trial.
     #
-    # NOTE: some minor glitches have to be catched, if a NIDAQ sample happenes to be recorded while the VR System updates the iteration number. 
+    # NOTE: some minor glitches have to be catched, if a NIDAQ sample happenes to be recorded while the VR System updates the iteration number.
     framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
     trialnumber = np.zeros(len(iterations_raw))*np.NaN
     current_trial = 0
@@ -462,22 +462,22 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
                 framenumber_in_trial[idx-1] = frame_number + overflow*(max_count+1) - 1 # In case this happened, the previous sample has to be corrected
             # Keep track of trial number
             endflag = framenumber_in_trial[idx-1] == (len(behavior_time_vector[current_trial])) # Trial end has been reached.
-            
+
             transitionflag = frame_number == 2 # Next trial should start at zero again (it starts with two ??)
             if endflag & transitionflag:      # Only at the transitions
-                    
+
                 current_trial = current_trial + 1  # Increases trial count
                 overflow = 0                       # Reset the 7 bit counter for the next trial
 
             if overflow == 0:
-                framenumber_in_trial[idx] = frame_number  
-            else:  
+                framenumber_in_trial[idx] = frame_number
+            else:
                 framenumber_in_trial[idx] = frame_number + overflow*(max_count+1) -1
 
             trialnumber[idx] = current_trial
     trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype = np.int64)
 
-    # 4: find and remove additional NIDAQ glitches of two types: 
+    # 4: find and remove additional NIDAQ glitches of two types:
     # a) single samples where the iteration number is corrupted because sampling happened faster than output of the behevior PC.
     # b) Skipped frames are detected and filled in.
     # Find the glitches
@@ -499,7 +499,7 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
             else:                          # If random number, nidaq sample in the middle of update.
                 framenumber_in_trial[g+1] = framenumber_in_trial[g]
 
-    # A set of final asserts, making sure that the code worked as intended  
+    # A set of final asserts, making sure that the code worked as intended
     assert len(trial_list) == len(session_trial_keys)          # Make sure the trial number is correct.
     assert np.sum(np.diff(framenumber_in_trial)>1) == 0 # No frames should be skipped
     assert np.sum(np.diff(framenumber_in_trial)<0)<len(trial_list) # Negative iterations only at trial transitions
@@ -532,7 +532,7 @@ def future_counter_get_signal():
     iterations_raw = np.array(framenumber, dtype=np.int) # Transform frames into integer
 
     framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
-    
+
     current_trial = 0
     almost_overflow = 0
     overflow = 0 # This variable keep track whenever the reset from max_count to 0 happens.
@@ -569,8 +569,8 @@ class xyz_pick_file_creator:
         Stores xyz_pick_files on ibl_postprocess directory for ibl_atlas_gui
         Input:
         recording_id             (int) = Reference to current directory
-        fragment_number          (int) = Reference to probe# of current recording 
-        chanmap_file             (str) = Filepath to find current chanmapfile built for the recording 
+        fragment_number          (int) = Reference to probe# of current recording
+        chanmap_file             (str) = Filepath to find current chanmapfile built for the recording
         processed_data_directory (str) = Filepath of processed job results
         """
 
@@ -602,7 +602,7 @@ class xyz_pick_file_creator:
         Get probe insertion coordinates based on a recording id and a probe# (frag)
         Input:
         recording_id             (int) = Reference to current directory
-        probe_num                (int) = Reference to probe# of current recording 
+        probe_num                (int) = Reference to probe# of current recording
         """
 
         coordinates_columns = ['real_ap_coordinates', 'real_depth_coordinates', 'real_ml_coordinates', 'phi_angle', 'theta_angle', 'rho_angle']
@@ -642,11 +642,11 @@ class xyz_pick_file_creator:
         Build numpy array with "brain" coordinates from insertion device and probe features
         Input:
         chanmap                (dict) = Mat file created from https://github.com/AllenInstitute/ecephys_spike_sorting.git library from SpikeGLX metadata file
-        shank                  (int) =  Shank # (1 index based)  to create file for 
+        shank                  (int) =  Shank # (1 index based)  to create file for
         real_ml_coordinates    (decimal, mm) =  mediolateral coordinates of probe insertion
         real_ap_coordinates    (decimal, mm) =  anteroposterior coordinates of probe insertion
         real_depth_coordinates (decimal, mm) =  depth mm coordinates of probe insertion
-        phi_angle              (decimal, deg) =  - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis   
+        phi_angle              (decimal, deg) =  - azimuth - rotation about the dv-axis [0, 360] - w.r.t the x+ axis
         theta_angle            (decimal, deg) =  - elevation - rotation about the ml-axis [0, 180] - w.r.t the z+ axis
         rho_angle              (decimal, deg) =  angle rotation on device itself
         """
@@ -671,7 +671,7 @@ class xyz_pick_file_creator:
         probe_track = np.zeros((len(probe_length),3))
         for i in range(len(probe_length)):
             probe_track[i,:] = probe_length[i]*probe_unitVec + np.array([probe_x0[0], probe_x0[1], 0])
-        
+
         # Step 4: Shift probe my ML|AP insertion coordinates
         probe_track_shifted = np.zeros(probe_track.shape)
         for i in range(len(probe_track_shifted)):
