@@ -36,7 +36,7 @@ class RecProcessHandler:
         Update status of each process job accordingly
         '''
 
-        #Get info from all the possible status for a processjob 
+        #Get info from all the possible status for a processjob
         df_all_process_job = RecProcessHandler.get_active_process_jobs()
 
         #For all active process jobs
@@ -50,12 +50,12 @@ class RecProcessHandler:
             config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status, :].squeeze()
             next_status_series    = config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status+1, :].squeeze()
 
-            # Get processing function    
+            # Get processing function
             function_status_process = getattr(RecProcessHandler, next_status_series['ProcessFunction'])
 
             #Trigger process, if success update recording process record
             try:
-                status, update_dict = function_status_process(rec_process_series, next_status_series) 
+                status, update_dict = function_status_process(rec_process_series, next_status_series)
 
                 print('update_dict', update_dict)
                 #Get dictionary of record process
@@ -65,8 +65,8 @@ class RecProcessHandler:
                 print(rec_process_series)
 
                 if status == config.status_update_idx['NEXT_STATUS']:
-                    
-                    
+
+
                     #Get values to update
                     next_status = next_status_series['Value']
                     value_update = update_dict['value_update']
@@ -138,7 +138,7 @@ class RecProcessHandler:
         status_series  (pd.Series)  = Series with information about the next status of the process (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
-                                      = 0  if recording process status not to be changed 
+                                      = 0  if recording process status not to be changed
                                       = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -153,7 +153,7 @@ class RecProcessHandler:
         proc_rel_path = rec_series['recording_process_post_path']
         modality = rec_series['recording_modality']
 
-        # If tiger, we trigger globus transfer 
+        # If tiger, we trigger globus transfer
         if rec_series['program_selection_params']['process_cluster'] == "tiger":
 
             if status_series['Key'] == 'RAW_FILE_TRANSFER_REQUEST':
@@ -169,17 +169,17 @@ class RecProcessHandler:
             if transfer_request['status'] == config.system_process['SUCCESS']:
                 status_update = config.status_update_idx['NEXT_STATUS']
                 update_value_dict['value_update'] = transfer_request['task_id']
-            
+
             else:
                 status_update = config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = transfer_request['error_info']
-                
+
         # If not tiger let's go to next status
         else:
             status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
-    
+
     @staticmethod
     @recording_handler.exception_handler
     def transfer_check(rec_series, status_series):
@@ -190,7 +190,7 @@ class RecProcessHandler:
         status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
-                                      = 0  if recording process status not to be changed 
+                                      = 0  if recording process status not to be changed
                                       = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -201,7 +201,7 @@ class RecProcessHandler:
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         id_task = rec_series[status_series['FunctionField']]
 
-        # If tiger, we trigger globus transfer 
+        # If tiger, we trigger globus transfer
         if rec_series['program_selection_params']['process_cluster'] == "tiger":
 
             transfer_request = ft.request_globus_transfer_status(str(id_task))
@@ -216,7 +216,7 @@ class RecProcessHandler:
             status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
-    
+
 
     @staticmethod
     @recording_handler.exception_handler
@@ -228,13 +228,13 @@ class RecProcessHandler:
         status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
-                                      = 0  if recording process status not to be changed 
+                                      = 0  if recording process status not to be changed
                                       = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
                                         'error_info':    error info to be inserted if error occured }
         """
-        
+
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
@@ -258,7 +258,7 @@ class RecProcessHandler:
         if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'electrophysiology':
             recording_key = (recording_process.Processing.proj('recording_id', insertion_number='fragment_number') & rec_series['query_key']).fetch1()
             del recording_key["job_id"]
-            
+
 
             chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
             chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
@@ -285,7 +285,7 @@ class RecProcessHandler:
                 status_update = config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
                 return (status_update, update_value_dict)
-            
+
             #Queue slurm file
             if status == config.system_process['SUCCESS']:
 
@@ -297,7 +297,7 @@ class RecProcessHandler:
                 status_update = config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering slurm file'
                 return (status_update, update_value_dict)
-                        
+
             if status == config.system_process['SUCCESS']:
                 status_update = config.status_update_idx['NEXT_STATUS']
                 update_value_dict['value_update'] = slurm_jobid
@@ -323,7 +323,7 @@ class RecProcessHandler:
         status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
-                                        = 0  if recording process status not to be changed 
+                                        = 0  if recording process status not to be changed
                                         = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -334,7 +334,7 @@ class RecProcessHandler:
         # Only queue if processing in tiger
         if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
             status_update = config.status_update_idx['NO_CHANGE']
-            
+
             local_user = False
             program_selection_params = rec_series['program_selection_params']
             if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
@@ -363,7 +363,7 @@ class RecProcessHandler:
                     update_value_dict['error_info']['error_exception'] = error_log
         else:
             status_update = config.status_update_idx['NEXT_STATUS']
-                
+
         return (status_update, update_value_dict)
 
     @staticmethod
@@ -376,7 +376,7 @@ class RecProcessHandler:
         status_series  (pd.Series) = Series with information about the next status of the process (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording process status has to be updated to next step in recording.RecordingProcess
-                                        = 0  if recording process status not to be changed 
+                                        = 0  if recording process status not to be changed
                                         = -1 if recording process status has to be updated to ERROR in recording.RecordingProcess
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -385,11 +385,11 @@ class RecProcessHandler:
 
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
         if rec_series['recording_modality'] == 'electrophysiology':
-            # Add extra function to create xyz picks file 
+            # Add extra function to create xyz picks file
             #chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
             #chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
             #ephys_utils.xyz_pick_file_creator.main_xyz_pick_file_function(rec_series['recording_id'], rec_series['fragment_number'], chanmap_file_local_path, rec_series['recording_process_post_path'])
-                        
+
             status_update = ep.populate_element_data(rec_series['job_id'])
 
         elif rec_series['recording_modality'] == 'imaging':
@@ -458,7 +458,7 @@ class RecProcessHandler:
 
                 if this_modality == 'imaging':
                     params_df = RecProcessHandler.get_imaging_params_jobs(these_process_keys)
-                
+
                 this_mod_df = this_mod_df.merge(params_df, on='job_id', how='left')
                 this_mod_df = this_mod_df.merge(this_mod_program_selection_params, on='recording_modality', how='left')
 
@@ -471,7 +471,7 @@ class RecProcessHandler:
                 df_process_jobs = pd.concat([df_process_jobs, this_mod_df], ignore_index=True)
 
             df_process_jobs = df_process_jobs.reset_index(drop=True)
-        
+
         print(df_process_jobs)
 
         return df_process_jobs
@@ -499,7 +499,7 @@ class RecProcessHandler:
         preparams_df = pd.DataFrame((ephys_pipeline.ephys_element.PreClusterParamSteps * \
         utility.smart_dj_join(ephys_pipeline.ephys_element.PreClusterParamSteps.Step, ephys_pipeline.ephys_element.PreClusterParamSet.proj('precluster_method', 'params')) *
         recording_process.Processing.EphysParams.proj('precluster_param_steps_id') & rec_process_keys).fetch(as_dict=True))
-        
+
         # Join precluster params for the same recording_process
         preparams_df['preparams'] = preparams_df.apply(lambda x : {x['precluster_method']: x['params']}, axis=1)
         preparams_df = preparams_df.sort_values(by=['job_id', 'step_number'])
@@ -561,19 +561,19 @@ class RecProcessHandler:
             recording_process_key_dict (dict): key to find recording_process record
             status                     (int):  value of the status to be updated
             update_field               (str):  name of the field to be updated as extra (only applicable to some status)
-            update_value             (str|int):  field value to be inserted on in task_field 
+            update_value             (str|int):  field value to be inserted on in task_field
         """
 
         if update_field is not None:
             update_task_id_dict = recording_process_key_dict.copy()
             update_task_id_dict[update_field] = update_value
             recording_process.Processing.update1(update_task_id_dict)
-        
+
         update_status_dict = recording_process_key_dict.copy()
         update_status_dict['status_processing_id'] = status
         recording_process.Processing.update1(update_status_dict)
 
-    
+
     @staticmethod
     def update_job_id_log(job_id, current_status, next_status, error_info_dict):
         """
@@ -592,7 +592,7 @@ class RecProcessHandler:
         key['status_processing_id_old'] = current_status
         key['status_processing_id_new'] = next_status
         key['status_timestamp'] = date_time
-        
+
         if error_info_dict['error_message'] is not None and len(error_info_dict['error_message']) >= 256:
             error_info_dict['error_message'] =error_info_dict['error_message'][:255]
 
@@ -630,7 +630,7 @@ class RecProcessHandler:
         # Get jobs that were processed in cluster
         df_inactive_jobs['local_or_cluster'] = df_inactive_jobs['program_selection_params'].map(lambda x: x['local_or_cluster'])
         df_inactive_jobs['process_cluster'] = df_inactive_jobs['program_selection_params'].map(lambda x: x['process_cluster'])
-        
+
         #Update all local jobs
         df_not_cluster = df_inactive_jobs.loc[df_inactive_jobs['local_or_cluster'] == 'local'].reset_index(drop=True)
         if df_not_cluster.shape[0] > 0:
@@ -647,7 +647,7 @@ class RecProcessHandler:
             for i in range(df_not_cluster_post_error.shape[0]):
                 RecProcessHandler.update_status_pipeline(df_not_cluster_post_error.loc[i, 'query_key'], config.JOB_STATUS_ERROR_DELETED)
                 RecProcessHandler.update_job_id_log(df_not_cluster_post_error.loc[i, 'job_id'], config.JOB_STATUS_ERROR_ID, config.JOB_STATUS_ERROR_DELETED, update_value_dict['error_info'])
-        
+
         #If no inactive job, after locals the end
         df_inactive_jobs = df_inactive_jobs.loc[df_inactive_jobs['local_or_cluster'] == 'cluster'].reset_index(drop=True)
         if df_inactive_jobs.shape[0] == 0:
@@ -702,7 +702,7 @@ class RecProcessHandler:
         for this_cluster in clusters:
             ft.delete_empty_data_directory_cluster(this_cluster, type="raw")
             ft.delete_empty_data_directory_cluster(this_cluster, type="processed")
-        
+
 
         # Update status for post-processed jobs
         df_post_processed = df_inactive_jobs.loc[(df_inactive_jobs['raw_dir_deleted'] == 1) & (df_inactive_jobs['processed_dir_deleted'] == 1) & (df_inactive_jobs['status_processing_id'] == config.JOB_STATUS_PROCESSED)]
@@ -717,7 +717,7 @@ class RecProcessHandler:
         for i in range(df_post_error.shape[0]):
             RecProcessHandler.update_status_pipeline(df_post_error.loc[i, 'query_key'], config.JOB_STATUS_ERROR_DELETED)
             RecProcessHandler.update_job_id_log(df_post_error.loc[i, 'job_id'], config.JOB_STATUS_ERROR_ID, config.JOB_STATUS_ERROR_DELETED, update_value_dict['error_info'])
-        
+
         return
 
     '''
@@ -726,12 +726,12 @@ class RecProcessHandler:
         """
         Filter dataframe with rec_process with a given status
         Args:
-            df_rec_process         (pd.DataFrame): recording process dataframe 
+            df_rec_process         (pd.DataFrame): recording process dataframe
             status                 (int):  value of the status to be filtered with
         Returns:
             df_rec_process_status  (pd.DataFrame): recording process dataframe filtered with given status
         """
-        
+
         df_rec_process_status = df_rec_process.loc[df_sessions['status_processing_id'] == status, :]
         df_rec_process_status = df_rec_process_status.reset_index(drop=True)
     '''
