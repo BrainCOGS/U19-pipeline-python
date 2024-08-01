@@ -1,21 +1,25 @@
 
+import copy
 import pathlib
 import time
 import traceback
-import pandas as pd
-import datajoint as dj
-import copy
-
 from datetime import datetime
-from u19_pipeline import recording, ephys_pipeline, imaging_pipeline, recording, recording_process, lab
 
-import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.utils.slack_utils as slack_utils
-import u19_pipeline.utils.scp_transfers as scp_tr
+import datajoint as dj
+import pandas as pd
 
-from u19_pipeline.automatic_job import ephys_element_ingest
 import u19_pipeline.automatic_job.params_config as config
-
+import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.scp_transfers as scp_tr
+import u19_pipeline.utils.slack_utils as slack_utils
+from u19_pipeline import (
+    ephys_pipeline,
+    imaging_pipeline,
+    lab,
+    recording,
+    recording_process,
+)
+from u19_pipeline.automatic_job import ephys_element_ingest
 
 
 def exception_handler(func):
@@ -34,7 +38,7 @@ def exception_handler(func):
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
-class RecordingHandler():
+class RecordingHandler:
 
     @staticmethod
     def pipeline_handler_main():
@@ -397,7 +401,6 @@ class RecordingHandler():
         for this_fov in fovs_ingested:
 
             # Scan_id always zero because TIFF splitted (FOVs) already on imaging_pipeline schema
-            scan_id = 0
             # Acquisition type will have Mesoscope or 2Photon
             scanner = rec_series['acquisition_type']
             # Hardcoded acquisition software

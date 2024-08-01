@@ -2,6 +2,7 @@
 import os
 import pathlib
 
+
 def chdir_to_root():
 
     root_dir_found = 0

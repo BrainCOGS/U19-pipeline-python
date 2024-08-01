@@ -1,20 +1,20 @@
 
-import datajoint as dj
-import pathlib
+import datetime
 import glob
+import json
+import pathlib
 import re
 import subprocess
-import json
-import datetime
 
-from element_array_ephys import probe as probe_element
+import datajoint as dj
 from element_array_ephys import ephys_precluster as ephys_element
+from element_array_ephys import probe as probe_element
 from element_array_ephys.readers import spikeglx
 from element_interface.utils import find_full_path
 
-from u19_pipeline import recording
-import u19_pipeline.utils.ephys_utils as ephys_utils
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
+import u19_pipeline.utils.ephys_utils as ephys_utils
+from u19_pipeline import recording
 from u19_pipeline.utils.DemoReadSGLXData.readSGLX import readMeta
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_pipeline')
@@ -183,7 +183,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
                     break
             else:
                 raise FileNotFoundError(
-                    'No SpikeGLX data found for probe insertion: {}'.format(ephys_recording_key))
+                    f'No SpikeGLX data found for probe insertion: {ephys_recording_key}')
 
     return spikeglx_meta_filepath
 

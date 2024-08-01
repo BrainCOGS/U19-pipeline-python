@@ -1,31 +1,33 @@
 
-import time
-import traceback
-import pandas as pd
-import datajoint as dj
 import copy
 import pathlib
-import numpy as np
-
-from u19_pipeline.automatic_job import recording_handler
-
-import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.utils.slack_utils as slack_utils
-import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
-import u19_pipeline.automatic_job.slurm_creator as slurmlib
-import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.automatic_job.ephys_element_populate as ep
-import u19_pipeline.automatic_job.imaging_element_populate as ip
-
+import time
+import traceback
 from datetime import datetime
-from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
-from u19_pipeline.utility import create_str_from_dict, is_this_spock
-from u19_pipeline.utils import ephys_utils
 
+import pandas as pd
 from ecephys_spike_sorting.common.SGLXMetaToCoords import MetaToCoords
 
-class RecProcessHandler():
+import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+import u19_pipeline.automatic_job.ephys_element_populate as ep
+import u19_pipeline.automatic_job.imaging_element_populate as ip
+import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
+import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.automatic_job.slurm_creator as slurmlib
+import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.slack_utils as slack_utils
+from u19_pipeline import (
+    ephys_pipeline,
+    imaging_pipeline,
+    recording,
+    recording_process,
+    utility,
+)
+from u19_pipeline.automatic_job import recording_handler
+from u19_pipeline.utility import is_this_spock
+
+
+class RecProcessHandler:
 
     @staticmethod
     def pipeline_handler_main():
@@ -45,7 +47,7 @@ class RecProcessHandler():
 
             #Filter current status info
             current_status = rec_process_series['status_processing_id']
-            current_status_series = config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status, :].squeeze()
+            config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status, :].squeeze()
             next_status_series    = config.recording_process_status_df.loc[config.recording_process_status_df['Value'] == current_status+1, :].squeeze()
 
             # Get processing function    
@@ -260,7 +262,7 @@ class RecProcessHandler():
 
             chanmap_filename = config.default_chanmap_filename % (rec_series['job_id'])
             chanmap_file_local_path =  pathlib.Path(config.chanmap_files_filepath,chanmap_filename).as_posix()
-            raw_directory_for_chanmap = rec_series['recording_process_pre_path']
+            rec_series['recording_process_pre_path']
 
             spikeglx_meta_filepath = ephys_pipeline.get_spikeglx_meta_filepath(recording_key)
             # Chanmap mat file generation

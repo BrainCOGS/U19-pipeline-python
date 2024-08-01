@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def get_primary_key_fields(t):
     """
     Get list of all fields that compose primary key
@@ -10,7 +11,7 @@ def get_primary_key_fields(t):
     """
 
     fields_t = pd.DataFrame.from_dict(t.heading.attributes, orient='index')
-    primary_field_list = fields_t.loc[fields_t['in_key'] == True].index.to_list()
+    primary_field_list = fields_t.loc[fields_t['in_key'] is True].index.to_list()
     
     return primary_field_list
 
@@ -27,8 +28,8 @@ def smart_dj_join(t1, t2):
     fields_t2 = pd.DataFrame.from_dict(t2.heading.attributes, orient='index')
 
     # Get only secondary fields and check matches
-    fields_t1_list = set(fields_t1.loc[fields_t1['in_key'] == False].index.to_list())
-    fields_t2_list = set(fields_t2.loc[fields_t2['in_key'] == False].index.to_list())
+    fields_t1_list = set(fields_t1.loc[fields_t1['in_key'] is False].index.to_list())
+    fields_t2_list = set(fields_t2.loc[fields_t2['in_key'] is False].index.to_list())
     intersected_fields = fields_t2_list.intersection(fields_t1_list)
 
     # If there are:

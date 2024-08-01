@@ -1,9 +1,7 @@
 
-import pathlib
-import os
 import glob
+import os
 import subprocess
-import sys
 
 file_patterns_acq = {
     "raw_imaging": ['/*.tiff', '/*.tif'],
@@ -17,7 +15,6 @@ def check_file_pattern_dir(filepath, file_patterns):
     """
     Check if directory (or its childs) contains some files with specific pattern names
     """
-    dirs_with_session_files = []
     child_dirs = [x[0] for x in os.walk(filepath)]
     patterns_found = 0
     for dir in child_dirs:
@@ -50,10 +47,7 @@ def get_size_directory(path):
     command = ["du", path, '-s']
     s = subprocess.run(command, capture_output=True)
     output = s.stdout.decode('UTF-8')
-    if len(output) != 0:
-        kbytes = int(output.split('\t')[0])
-    else:
-        kbytes = -1
+    kbytes = int(output.split("\t")[0]) if len(output) != 0 else -1
     return kbytes
 
 

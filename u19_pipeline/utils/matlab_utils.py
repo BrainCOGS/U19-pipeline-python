@@ -1,21 +1,21 @@
 """Authors: Ben Dichter, Cody Baker."""
 import os
 import sys
+from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from shutil import which
-import pandas as pd
 
 import numpy as np
-from datetime import datetime
+import pandas as pd
 from scipy.io import loadmat, matlab
-from collections import Iterable
-
 
 try:
     from typing import ArrayLike
 except ImportError:
+    from typing import Sequence, Union
+
     from numpy import ndarray
-    from typing import Union, Sequence
 
     # adapted from numpy typing
     ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
@@ -257,15 +257,15 @@ def convert_function_handle_to_str(mat_file_path):
         try:
             os.system(matlab_cmd)
         
-            with open("trial_choice.txt", "r") as f:
+            with open("trial_choice.txt") as f:
                 trial_choice = f.read().splitlines()
-            with open("trial_type.txt", "r") as f:
+            with open("trial_type.txt") as f:
                 trial_type = f.read().splitlines()
-            with open("shaping_protocol.txt", "r") as f:
+            with open("shaping_protocol.txt") as f:
                 shaping_protocol = f.read().splitlines()
-            with open("code_version.txt", "r") as f:
+            with open("code_version.txt") as f:
                 version = f.readline()
-            with open("protocol.txt", "r") as f:
+            with open("protocol.txt") as f:
                 protocol = f.readline()
 
             metadata['experiment_name'] = version
@@ -367,10 +367,7 @@ def convert_behavior_file(mat_file):
 
     matin = convert_mat_file_to_dict(mat_file)
     converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
-    if bool(converted_metadata):
-        metadata_read = True
-    else:
-        metadata_read = False
+    metadata_read = bool(bool(converted_metadata))
 
     session_block_trial_df = pd.DataFrame()
 
@@ -389,10 +386,7 @@ def convert_behavior_file(mat_file):
     num_blocks_conv = 0
     for i in range(length_blocks):
 
-        if dict_block:
-            block = matin['log']['block']
-        else:
-            block = matin['log']['block'][i]
+        block = matin['log']['block'] if dict_block else matin['log']['block'][i]
 
         #Convert trial df and block df
         valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)

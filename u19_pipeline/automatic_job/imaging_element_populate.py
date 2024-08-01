@@ -1,9 +1,10 @@
-from u19_pipeline import recording, recording_process
-from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
 import warnings
 
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import recording, recording_process
+from u19_pipeline.imaging_pipeline import imaging_element
+
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
@@ -38,10 +39,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                             dict(paramset_idx=paramset_idx)).fetch1(
                                                             'processing_method')
 
-    if len(preprocess_paramsets)==0:
-        preprocess_task_mode = 'none'
-    else:
-        preprocess_task_mode = 'load'
+    preprocess_task_mode = 'none' if len(preprocess_paramsets) == 0 else 'load'
 
     preprocess_key = dict(recording_id=process_key['recording_id'],
                             tiff_split=fragment_number,

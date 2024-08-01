@@ -1,20 +1,19 @@
-from concurrent.futures import process
-import os 
-import datajoint as dj
-import numpy as np
-from u19_pipeline import lab, imaging_rec, acquisition, subject, recording
-from u19_pipeline.imaging_element import imaging_element, scan_element, \
-                                        get_processed_dir, Equipment,\
-                                          get_imaging_root_data_dir, \
-                                        get_scan_image_files
-from u19_pipeline.ingest.imaging_element_ingest import process_scan
-from element_interface.scanimage_utils import get_scanimage_acq_time, parse_scanimage_header
-from element_interface.utils import find_full_path
-import scanreader
+import os
 import pathlib
+
+import scanreader
 import tifffile
-import datetime
-import h5py
+from element_interface.scanimage_utils import (
+    parse_scanimage_header,
+)
+
+from u19_pipeline import imaging_rec, lab, recording
+from u19_pipeline.imaging_element import (
+    get_imaging_root_data_dir,
+    get_scan_image_files,
+    imaging_element,
+    scan_element,
+)
 
 # subject_fullname = 'koay_K65'
 # session_date = '2018-02-02'
@@ -25,7 +24,7 @@ import h5py
 
 acq_software = 'ScanImage'
 #recording_id = os.environ['recording_id']
-recording_process_id = os.environ['recording_process_id']
+recording_process_id = os.environ['RECORDING_PROCESS_ID']
 #process_method = os.environ['process_method']
 #paramset_idx = os.environ['paramset_idx']
 
@@ -170,13 +169,13 @@ if rec_process_key not in scan_element.Scan():
         loaded_scan = scanreader.read_scan(scan_filepaths)
         header = parse_scanimage_header(loaded_scan)
         #scanner = header['SI_imagingSystem'].strip('\'') #TODO: If using tiffile, hardcode it to `mesoscope`
-    except Exception as e:
+    except Exception:
         print('LOADED Scan using Tifffile')
         scan_filepaths = scan_filepaths # TODO load all TIFF files from session possibly using TIFFSequence
         loaded_scan = tifffile.imread(scan_filepaths)
         #scanner = 'mesoscope'
     except: #TODO: Use except instead of else)
-        print(f'ScanImage loading error')  #TODO: Modify the error message
+        print('ScanImage loading error')  #TODO: Modify the error message
 
     #Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
     scan_element.Scan.insert1(
@@ -236,7 +235,7 @@ if task_mode == 'load':
             iscell_fp = plane_filepath / 'iscell.npy'
             if not ops_fp.exists() or not iscell_fp.exists():
                 raise FileNotFoundError(
-                    'No "ops.npy" or "iscell.npy" found. Invalid suite2p plane folder: {}'.format(plane_filepath))
+                    f'No "ops.npy" or "iscell.npy" found. Invalid suite2p plane folder: {plane_filepath}')
 
     elif processing_method == 'caiman':
         raise ValueError("caiman not supported yet")

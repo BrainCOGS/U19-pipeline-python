@@ -1,18 +1,19 @@
 
-import numpy as np
-import datajoint as dj
+import json
 import pathlib
 import warnings
-import json
 
+import datajoint as dj
+import numpy as np
+from bitstring import BitArray
 from scipy import signal as sp
 from scipy.io import loadmat
-from scipy.spatial.transform import Rotation as R
 
-from bitstring import BitArray
-from element_array_ephys import ephys as ephys_element
-
-from u19_pipeline.utils.DemoReadSGLXData.readSGLX import SampRate, makeMemMapRaw, ExtractDigital
+from u19_pipeline.utils.DemoReadSGLXData.readSGLX import (
+    ExtractDigital,
+    SampRate,
+    makeMemMapRaw,
+)
 
 
 class spice_glx_utility:
@@ -511,7 +512,7 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
         nidaqtime = np.sum(trialnumber == t)/nidq_sampling_rate
         matlabtime = np.max(behavior_time_vector[t])
         assert ((nidaqtime - matlabtime) / matlabtime) < 0.1 # # Make sure the nidaq-trial-duration and dj records are consistent; 10% arbitrarily chosen
-    nidaq_duration = iterations_test + skipped_frames
+    iterations_test + skipped_frames
     #dj_duration = iterstart[-1] + len(behavior_time_vector[-1])
     #assert np.abs(nidaq_duration - dj_duration) < 3 # at most two frames off - sometimes this happens at the beginning/end of the recording
 
@@ -559,7 +560,7 @@ def load_open_ephys_digital_file(file_path):
 
 
 
-class xyz_pick_file_creator():
+class xyz_pick_file_creator:
     '''
     Class that handles probe coordinates locations given initial isertion coordinates & shank coordinates
     '''
@@ -656,9 +657,9 @@ class xyz_pick_file_creator():
         phi   = phi_angle*np.pi/180
         theta = theta_angle*np.pi/180
         roll  = rho_angle*np.pi/180
-        x = np.array([i[0] for i in chanmap['xcoords']]);
-        y = np.array([i[0] for i in chanmap['ycoords']]);
-        k = np.array([i[0] for i in chanmap['kcoords']]);
+        x = np.array([i[0] for i in chanmap['xcoords']])
+        y = np.array([i[0] for i in chanmap['ycoords']])
+        k = np.array([i[0] for i in chanmap['kcoords']])
 
         # Step 2: Transform them into 3D, assuming the Probe is perpendicular to x|y plane
         avx           = np.mean(x[k==shank])                                  # Center "X" on middle of probe
@@ -674,7 +675,7 @@ class xyz_pick_file_creator():
             probe_track[i,:] = probe_length[i]*probe_unitVec + np.array([probe_x0[0], probe_x0[1], 0])
         
         # Step 4: Shift probe my ML|AP insertion coordinates
-        probe_track_shifted = np.zeros((probe_track.shape))
+        probe_track_shifted = np.zeros(probe_track.shape)
         for i in range(len(probe_track_shifted)):
             probe_track_shifted[i,:] = probe_track[i,:] + np.array([real_ml_coordinates*1000, real_ap_coordinates*1000, 0])
 

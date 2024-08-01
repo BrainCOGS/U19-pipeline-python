@@ -1,7 +1,8 @@
 
-import pandas as pd
-from getpass import getpass
 import argparse
+from getpass import getpass
+
+import pandas as pd
 
 
 def initial_conf(save_user=True, replace_user=False, global_config_flag=True):

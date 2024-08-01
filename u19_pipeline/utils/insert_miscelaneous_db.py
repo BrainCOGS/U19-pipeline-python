@@ -1,8 +1,9 @@
 
 import os
 import pathlib
-import numpy as np
+
 import datajoint as dj
+import numpy as np
 
 
 def add_researcher_user_table(user_id, full_name, email, phone):

@@ -1,14 +1,12 @@
-import datajoint as dj
 import pathlib
-import numpy as np
 
-from u19_pipeline import behavior
-from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
+import datajoint as dj
+import numpy as np
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
-import u19_pipeline.utils.path_utils as pu
-import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import behavior
+from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
 
 # Tables downstream from `ephys_pipeline` module ---------------------------------------
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_sync')
@@ -124,14 +122,14 @@ class CuratedClustersIteration(dj.Computed):
         thissession = behavior.TowersBlock().Trial() & key
         iterstart = thissession.fetch('vi_start')
 
-        first_vr_iteration = iterstart[0]
+        iterstart[0]
 
         # Obtain the precise times when the frames transition.
         # This is obtained from iteration_index_nidq
         ls = np.diff(iteration_index_nidq)
         ls[ls<0] = 1 # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others. 
         ls[np.isnan(ls)] = 0
-        iteration_transition_indexes = np.where(ls)[0]
+        np.where(ls)[0]
 
         # First iterations captured not in virmen because vr was not started yet
         #for i in range(first_vr_iteration):

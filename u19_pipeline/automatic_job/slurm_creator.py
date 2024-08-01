@@ -1,14 +1,13 @@
 
 
 import copy
-import os
-import subprocess
 import pathlib
-import json
 import re
+import subprocess
+
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
-from u19_pipeline.utility import create_str_from_dict, is_this_spock
-import u19_pipeline.automatic_job.params_config as config 
+import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utility import is_this_spock
 from u19_pipeline.utils.file_utils import write_file
 
 # Functions to create slurm jobs
@@ -159,7 +158,7 @@ def transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars):
 def create_slurm_params_file(slurm_dict):
 
     text_dict = ''
-    for slurm_param in slurm_dict.keys():
+    for slurm_param in slurm_dict:
 
         if isinstance(slurm_dict[slurm_param], list):
             for list_param in slurm_dict[slurm_param]:

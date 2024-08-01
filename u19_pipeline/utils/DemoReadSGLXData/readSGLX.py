@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Requires python 3
 
@@ -15,11 +14,11 @@ the 'meta' dictionary will make your data handling
 much easier!
 
 """
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
-from tkinter import Tk
-from tkinter import filedialog
+from tkinter import Tk, filedialog
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Parse ini file returning a dictionary whose keys are the metadata

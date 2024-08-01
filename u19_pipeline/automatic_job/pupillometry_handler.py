@@ -1,28 +1,26 @@
-import datajoint as dj
-import pathlib
-import deeplabcut
-import pandas as pd
-import numpy as np
-import glob
-import subprocess
-import re
-import os
-import sys
 import copy
+import glob
+import os
+import pathlib
+import re
+import subprocess
+import sys
 import traceback
-from skimage.measure import EllipseModel
-from skimage.draw import ellipse_perimeter
+
+import datajoint as dj
+import deeplabcut
+import numpy as np
+import pandas as pd
 from scipy import stats
+from skimage.measure import EllipseModel
 
-
-import u19_pipeline.utils.slack_utils as slack_utils
-import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.acquisition as acquisition
-import u19_pipeline.pupillometry as pupillometry
 import u19_pipeline.automatic_job.params_config as config
-from u19_pipeline.automatic_job import recording_handler
+import u19_pipeline.automatic_job.slurm_creator as slurmlib
+import u19_pipeline.pupillometry as pupillometry
+import u19_pipeline.utils.slack_utils as slack_utils
 from u19_pipeline.utils.file_utils import write_file
-import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+
 
 def pupillometry_exception_handler(func):
     def inner_function(*args, **kwargs):
@@ -43,7 +41,7 @@ def pupillometry_exception_handler(func):
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
-class PupillometryProcessingHandler():
+class PupillometryProcessingHandler:
 
     spock_home_dir = '/mnt/cup/braininit/Shared/repos/U19-pipeline_python/'
     spock_log_dir = spock_home_dir + "u19_pipeline/automatic_job/OutputLog/"
@@ -95,7 +93,7 @@ class PupillometryProcessingHandler():
     def create_pupillometry_slurm_params_file(slurm_dict):
 
         text_dict = ''
-        for slurm_param in slurm_dict.keys():
+        for slurm_param in slurm_dict:
 
             if isinstance(slurm_dict[slurm_param], list):
                 for list_param in slurm_dict[slurm_param]:
@@ -239,7 +237,7 @@ class PupillometryProcessingHandler():
         outlierFlags = outlierFlags.rename(columns={outlierFlags.columns[0]: "OutlierFlag"})
         # Concatenate outlier flags array to remove outliers from pupil diameter array
         temp = pd.concat([df, outlierFlags], axis=1)
-        temp.loc[temp['OutlierFlag']==True, 'PupilDiameter'] = None
+        temp.loc[temp['OutlierFlag'] is True, 'PupilDiameter'] = None
         pupilDiameter = temp['PupilDiameter']
         
         return pupilDiameter.to_numpy()
@@ -255,7 +253,7 @@ class PupillometryProcessingHandler():
     @pupillometry_exception_handler
     def check_pupillometry_sessions_queue():
 
-        status_update = config.status_update_idx['NO_CHANGE']
+        config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         sessions_missing_process = (acquisition.SessionVideo * 
@@ -300,7 +298,7 @@ class PupillometryProcessingHandler():
 
             # Error handling (generating slurm file)
             if status != config.system_process['SUCCESS']:
-                status_update = config.status_update_idx['ERROR_STATUS']
+                config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering pupillometry slurm file'
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
@@ -317,7 +315,7 @@ class PupillometryProcessingHandler():
             
             # Error handling (queuing slurm file)
             if status != config.system_process['SUCCESS']:
-                status_update = config.status_update_idx['ERROR_STATUS']
+                config.status_update_idx['ERROR_STATUS']
                 update_value_dict['error_info']['error_message'] = 'Error to queue pupillometry slurm file'
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
@@ -388,7 +386,7 @@ class PupillometryProcessingHandler():
 
                 try:
                     pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
-                except Exception as e:
+                except Exception:
                     update_value_dict['error_info']['error_message'] = 'Could not get pupil diameter (check h5 or video file)'
                     slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                         update_value_dict['error_info'] ,session_check)
@@ -407,6 +405,7 @@ class PupillometryProcessingHandler():
 if __name__ == '__main__':
     
     import time
+
     from scripts.conf_file_finding import try_find_conf_file
     try_find_conf_file()
     time.sleep(1)

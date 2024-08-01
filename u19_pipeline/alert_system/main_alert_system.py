@@ -1,16 +1,13 @@
 
-import pandas as pd
-import datajoint as dj
-import pkgutil
-import importlib
 import datetime
+import importlib
+import pkgutil
+import time
 import traceback
 
 import u19_pipeline.alert_system.custom_alerts as ca
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
-
-import time
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
@@ -88,7 +85,7 @@ def slack_alert_message_format(alert_dictionaty, alert_module_name):
     m2_1["type"] = "mrkdwn"
     
     m2_1["text"] = ''
-    for key in alert_dictionaty.keys():
+    for key in alert_dictionaty:
         m2_1["text"] += '*' + key + '* : ' + str(alert_dictionaty[key]) + '\n'
     m2['text'] = m2_1
 

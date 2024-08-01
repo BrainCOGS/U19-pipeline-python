@@ -1,5 +1,6 @@
 import os
 
+
 def write_file(path, text):
 
     os.umask(0)
