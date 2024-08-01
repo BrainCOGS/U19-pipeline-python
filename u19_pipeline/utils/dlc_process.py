@@ -82,9 +82,8 @@ def getPupilDiameter(destinationFolder=None):
 
     filename = pathlib.Path(destinationFolder, "pupil_diameter.pickle").as_posix()
 
-    file_to_store = open(filename, "wb")
-    pickle.dump(pupilDiameter, file_to_store)
-    file_to_store.close()
+    with open(filename, "wb") as file_to_store:
+        pickle.dump(pupilDiameter, file_to_store)
 
 
 if __name__ == "__main__":
