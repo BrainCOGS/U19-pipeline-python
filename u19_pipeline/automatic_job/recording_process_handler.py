@@ -416,8 +416,6 @@ class RecProcessHandler:
         this_modality_program_selection_params = this_modality_program_selection_params.loc[:, 'recording_modality'].to_frame().copy()
         this_modality_program_selection_params['program_selection_params'] = this_modality_program_selection_params_dict
 
-        this_modality_program_selection_params
-
         return this_modality_program_selection_params
 
     @staticmethod
