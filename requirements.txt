@@ -2,6 +2,7 @@ fair-research-login
 datajoint
 six
 scipy
+scikit-image>=0.22
 python-dotenv
 datajoint
 element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git
@@ -21,5 +22,6 @@ scp
 paramiko
 psutil
 tifffile
+tables
 # matlab
 # matlabengineforpython
