@@ -11,7 +11,7 @@ element-interface @ git+https://github.com/datajoint/element-interface.git
 ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git
 scanreader @ git+https://github.com/atlab/scanreader.git
 pandas
-numpy
+numpy<2.0
 astropy
 jupyterlab
 bitstring
