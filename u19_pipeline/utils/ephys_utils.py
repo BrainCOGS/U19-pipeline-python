@@ -404,6 +404,8 @@ def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector,
         return status, np.empty(0)
     else:
         diff_vector = np.diff(synced_time_vector - behavior_time_vector[:synced_time_vector.shape[0]])
+        #In case last peak is at the end of trial (append 0 to detect it)
+        diff_vector = np.append(diff_vector, np.array([0]))
 
     peaks, _ = sp.find_peaks(diff_vector, height=0.05, distance=20)
 
