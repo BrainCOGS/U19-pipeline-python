@@ -2,6 +2,7 @@ fair-research-login
 datajoint
 six
 scipy
+scikit-image>=0.22
 python-dotenv
 datajoint
 element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git
@@ -11,7 +12,7 @@ element-interface @ git+https://github.com/datajoint/element-interface.git
 ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git
 scanreader @ git+https://github.com/atlab/scanreader.git
 pandas
-numpy
+numpy<2.0
 astropy
 jupyterlab
 bitstring
@@ -21,5 +22,6 @@ scp
 paramiko
 psutil
 tifffile
+tables
 # matlab
 # matlabengineforpython
