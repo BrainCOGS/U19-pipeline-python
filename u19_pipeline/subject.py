@@ -2,7 +2,6 @@
 
 
 import datajoint as dj
-from . import lab
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'subject')
 

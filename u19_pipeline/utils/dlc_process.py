@@ -1,15 +1,14 @@
 
 import os
-import deeplabcut
-import pandas as pd
-import numpy as np
-import pickle
 import pathlib
+import pickle
 import sys
 
+import deeplabcut
+import numpy as np
+import pandas as pd
 from scipy import stats
 from skimage.measure import EllipseModel
-from skimage.draw import ellipse_perimeter
 
 import u19_pipeline.utils.path_utils as pu
 
@@ -37,7 +36,7 @@ def getPupilDiameter(destinationFolder=None):
         An array that contains the pupil diameter (index is the video frame) [numpy Array]
     """
     # TODO make the function
-    
+
     # Read the analyzed video data h5 file
     h5_file = pu.get_filepattern_paths(destinationFolder, "/*.h5")
 
@@ -47,7 +46,7 @@ def getPupilDiameter(destinationFolder=None):
         raise Exception('No h5 file in directory: '+ destinationFolder)
     if len(h5_file) > 1:
         raise Exception('To many h5 files in directory: '+ destinationFolder)
-    
+
     h5_file = h5_file[0]
     labels = pd.read_hdf(h5_file)
 
@@ -78,14 +77,13 @@ def getPupilDiameter(destinationFolder=None):
     outlierFlags = outlierFlags.rename(columns={outlierFlags.columns[0]: "OutlierFlag"})
     # Concatenate outlier flags array to remove outliers from pupil diameter array
     temp = pd.concat([df, outlierFlags], axis=1)
-    temp.loc[temp['OutlierFlag']==True, 'PupilDiameter'] = None
+    temp.loc[temp['OutlierFlag'] is True, 'PupilDiameter'] = None
     pupilDiameter = temp['PupilDiameter'].to_numpy()
 
     filename = pathlib.Path(destinationFolder, "pupil_diameter.pickle").as_posix()
 
-    file_to_store = open(filename, "wb")
-    pickle.dump(pupilDiameter, file_to_store)
-    file_to_store.close()
+    with open(filename, "wb") as file_to_store:
+        pickle.dump(pupilDiameter, file_to_store)
 
 
 if __name__ == "__main__":

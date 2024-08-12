@@ -1,11 +1,11 @@
 
 import pathlib
 import sys
+
 import datajoint as dj
 
-from u19_pipeline import recording, ephys_pipeline, recording, recording_process
-
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import ephys_pipeline, recording, recording_process
 
 
 def main(recording_id):

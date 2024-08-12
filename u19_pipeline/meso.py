@@ -1,7 +1,5 @@
 import datajoint as dj
 import numpy as np
-from u19_pipeline import acquisition
-
 
 schema = dj.schema('u19_meso')
 

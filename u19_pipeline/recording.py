@@ -1,7 +1,6 @@
-import datajoint as dj
-import copy
 
-from u19_pipeline import lab, subject, acquisition
+import datajoint as dj
+
 import u19_pipeline.automatic_job.params_config as config
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')

@@ -1,7 +1,7 @@
-from u19_pipeline.ephys_pipeline import probe_element, ephys_element
-from u19_pipeline import recording, recording_process
-
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import recording, recording_process
+from u19_pipeline.ephys_pipeline import ephys_element, probe_element
+
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
@@ -33,10 +33,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
                             dict(paramset_idx=paramset_idx)).fetch1(
                                                             'clustering_method')
 
-    if len(precluster_paramsets)==0:
-        task_mode = 'none'
-    else:
-        task_mode = 'load'
+    task_mode = 'none' if len(precluster_paramsets) == 0 else 'load'
 
     precluster_key = dict(recording_id=process_key['recording_id'],
                             insertion_number=fragment_number,

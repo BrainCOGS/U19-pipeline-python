@@ -1,11 +1,11 @@
 
-import pandas as pd
-import numpy as np
 import os
 import pathlib
 
-from scripts.conf_file_finding import get_root_directory
+import pandas as pd
+
 import u19_pipeline.lab as lab
+from scripts.conf_file_finding import get_root_directory
 
 #Dictionary with main configuration for each modality (ephys or imaging)
 recording_modality_dict = [

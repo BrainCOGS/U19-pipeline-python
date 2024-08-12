@@ -1,21 +1,21 @@
 """Authors: Ben Dichter, Cody Baker."""
 import os
 import sys
+from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from shutil import which
-import pandas as pd
 
 import numpy as np
-from datetime import datetime
+import pandas as pd
 from scipy.io import loadmat, matlab
-from collections import Iterable
-
 
 try:
     from typing import ArrayLike
 except ImportError:
+    from typing import Sequence, Union
+
     from numpy import ndarray
-    from typing import Union, Sequence
 
     # adapted from numpy typing
     ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
@@ -147,29 +147,29 @@ def convert_function_handle_to_str(mat_file_path):
      if matlab is installed on the system."""
     matlab_class = '''
     classdef Choice < uint32
-  
+
         enumeration
             L(1)
             R(2)
             nil(inf)
         end
-  
+
         methods (Static)
             function choices = all()
                 choices = enumeration('Choice')';
                 choices = choices(1:end-1);
             end
-    
+
             function num = count()
                 num = numel(enumeration('Choice'));
             end
         end
-  
+
         methods
             function opp = opposite(obj)
                 numValues   = numel(Choice.all());
                 assert(numValues == 2);     % the concept of "opposite" only works for sets of 2
-      
+
                 flipped     = double(obj);
                 flipped     = numValues+1 - flipped;
                 opp         = obj;
@@ -177,7 +177,7 @@ def convert_function_handle_to_str(mat_file_path):
                 opp(sel)    = flipped(sel);
             end
         end
-  
+
     end
     '''
     matlab_code = r'''
@@ -197,38 +197,38 @@ def convert_function_handle_to_str(mat_file_path):
     fid = fopen(protocol, 'wt');
     fprintf(fid, str_func);
     fclose(fid);
-    
+
     choice_data = [];
     shapingProtocol = [];
     for i = 1 : size(log.block, 2)
         for j = 1 : size(log.block(i).trial, 2)
             choice_data = [choice_data; string(log.block(i).trial(j).choice)];
         end
-        shapingProtocol = [shapingProtocol string(char(log.block(i).shapingProtocol))] 
+        shapingProtocol = [shapingProtocol string(char(log.block(i).shapingProtocol))]
     end
 
     shaping_protocol_file = 'shaping_protocol.txt';
     fid = fopen(shaping_protocol_file, 'wt');
     fprintf(fid,'%s\n', shapingProtocol);
     fclose(fid);
-    
+
     choice = 'trial_choice.txt';
     fid = fopen(choice, 'wt');
     fprintf(fid,'%s\n', choice_data);
     fclose(fid);
-    
+
     trial_type_data = [];
     for i = 1 : size(log.block, 2)
         for j = 1 : size(log.block(i).trial, 2)
             trial_type_data = [trial_type_data; string(log.block(i).trial(j).trialType)];
         end
     end
-    
+
     trial_type = 'trial_type.txt';
     fid = fopen(trial_type, 'wt');
     fprintf(fid,'%s\n', trial_type_data);
     fclose(fid);
-    
+
     quit;
     '''
 
@@ -256,16 +256,16 @@ def convert_function_handle_to_str(mat_file_path):
     if which('matlab') is not None:
         try:
             os.system(matlab_cmd)
-        
-            with open("trial_choice.txt", "r") as f:
+
+            with open("trial_choice.txt") as f:
                 trial_choice = f.read().splitlines()
-            with open("trial_type.txt", "r") as f:
+            with open("trial_type.txt") as f:
                 trial_type = f.read().splitlines()
-            with open("shaping_protocol.txt", "r") as f:
+            with open("shaping_protocol.txt") as f:
                 shaping_protocol = f.read().splitlines()
-            with open("code_version.txt", "r") as f:
+            with open("code_version.txt") as f:
                 version = f.readline()
-            with open("protocol.txt", "r") as f:
+            with open("protocol.txt") as f:
                 protocol = f.readline()
 
             metadata['experiment_name'] = version
@@ -302,16 +302,16 @@ def convert_towers_block_trial_2_df(current_block_trial, block_num):
     -------
     pandas.DataFrame
     """
-    
+
     valid_block = 0
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
     if isinstance(current_block_trial, np.ndarray) and current_block_trial.shape[0] > 0:
         current_block_trial = current_block_trial.tolist()
-        valid_block = 1 
+        valid_block = 1
     # One trial blocks are stored as dictionaries
     if isinstance(current_block_trial, dict):
         current_block_trial = [current_block_trial]
-        valid_block = 1 
+        valid_block = 1
 
     if valid_block:
         block_trial_df = pd.DataFrame(current_block_trial)
@@ -336,13 +336,13 @@ def convert_towers_block_2_df(current_block, num_block):
     valid_block = 0
 
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-    if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
+    if isinstance(current_block, np.ndarray) and current_block.shape[0] > 0:
         current_block = current_block.tolist()
-        valid_block = 1 
+        valid_block = 1
     # One trial blocks are stored as dictionaries
     if isinstance(current_block, dict):
         current_block = [current_block]
-        valid_block = 1 
+        valid_block = 1
 
     if valid_block:
         block_df = pd.DataFrame(current_block)
@@ -367,10 +367,7 @@ def convert_behavior_file(mat_file):
 
     matin = convert_mat_file_to_dict(mat_file)
     converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
-    if bool(converted_metadata):
-        metadata_read = True
-    else:
-        metadata_read = False
+    metadata_read = bool(bool(converted_metadata))
 
     session_block_trial_df = pd.DataFrame()
 
@@ -389,10 +386,7 @@ def convert_behavior_file(mat_file):
     num_blocks_conv = 0
     for i in range(length_blocks):
 
-        if dict_block:
-            block = matin['log']['block']
-        else:
-            block = matin['log']['block'][i]
+        block = matin['log']['block'] if dict_block else matin['log']['block'][i]
 
         #Convert trial df and block df
         valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)
@@ -414,6 +408,6 @@ def convert_behavior_file(mat_file):
     if metadata_read:
         session_block_trial_df['choice'] = converted_metadata['trial_choice']
         session_block_trial_df['trialType'] = converted_metadata['trial_type']
-        
+
     session_block_trial_df = session_block_trial_df.reset_index(drop=True)
     return session_block_trial_df

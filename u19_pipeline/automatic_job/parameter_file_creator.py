@@ -2,14 +2,14 @@
 
 #import os
 #import pathlib
-import subprocess
-import pathlib
 import json
-import re
-import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
-import u19_pipeline.automatic_job.params_config as config 
-from u19_pipeline.utils.file_utils import write_file
+import pathlib
+
 from scipy.io import savemat
+
+import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utils.file_utils import write_file
 
 # Functions to create parameter files and send them
 

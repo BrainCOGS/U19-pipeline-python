@@ -1,16 +1,14 @@
 
-import datajoint as dj
 import pathlib
 import subprocess
 
-from u19_pipeline import lab, acquisition, subject, recording
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.utils.dj_shortcuts as dj_short
-
-from element_calcium_imaging import scan as scan_element
+import datajoint as dj
 from element_calcium_imaging import imaging_preprocess as imaging_element
 from element_interface.utils import find_full_path
 
+import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.utils.dj_shortcuts as dj_short
+from u19_pipeline import lab, recording, subject
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
 
@@ -153,7 +151,6 @@ scan_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_scan_eleme
 imaging_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_imaging_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
-from u19_pipeline.reference import BrainArea as Location
 
 Session = TiffSplit
 
@@ -167,7 +164,6 @@ class Equipment(dj.Manual):
     """
 
 # 3. Utility functions -----------------------------------------------------------------
-from u19_pipeline import recording_process
 
 def get_imaging_root_data_dir():
     return dj.config.get('custom', {}).get('imaging_root_data_dir', None)
@@ -190,10 +186,10 @@ def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
     bucket_scan_dir = (TiffSplit & sess_key &
                              {'tiff_split': processing_task_key['scan_id']}).fetch1('tiff_split_directory')
-    user_id = (subject.Subject & processing_task_key).fetch1('user_id')
+    (subject.Subject & processing_task_key).fetch1('user_id')
 
     sess_dir = find_full_path(get_imaging_root_data_dir(), bucket_scan_dir)
-    relative_suite2p_dir = (pathlib.Path(bucket_scan_dir)  / process_method).as_posix()
+    (pathlib.Path(bucket_scan_dir)  / process_method).as_posix()
 
     if not sess_dir.exists():
         raise FileNotFoundError(f'Session directory not found ({sess_dir})')

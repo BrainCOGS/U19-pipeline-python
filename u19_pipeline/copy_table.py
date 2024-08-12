@@ -1,9 +1,10 @@
-import datajoint as dj
 import traceback
-from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
-from u19_pipeline import subject
+
+import datajoint as dj
 from tqdm import tqdm
 
+from u19_pipeline import subject
+from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
 
 acquisition_original = dj.create_virtual_module(
     'acquisition_original', 'u19_acquisition'
@@ -54,7 +55,7 @@ def copy_table(target_schema, src_schema, table_name, **kwargs):
             try:
                 target_table.insert1(t, skip_duplicates=True, **kwargs)
             except Exception:
-                print("Error when inserting {}".format(t))
+                print(f"Error when inserting {t}")
                 traceback.print_exc()
 
 
@@ -141,8 +142,7 @@ def copy_imaging_tables():
 
         else:
             temp_table = getattr(imaging, table)
-            if isinstance(temp_table, dj.Lookup) or \
-                    isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(imaging, imaging_original, table,
                            skip_duplicates=True)
             else:
@@ -187,8 +187,7 @@ def copy_meso_tables():
 
         else:
             temp_table = getattr(meso, table)
-            if isinstance(temp_table, dj.Lookup) or \
-                    isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(meso, meso_original, table)
             else:
                 copy_table(meso, meso_original, table,
@@ -216,8 +215,7 @@ def copy_meso_analysis_tables():
 
         else:
             temp_table = getattr(meso_analysis, table)
-            if isinstance(temp_table, dj.Lookup) or \
-                    isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(meso_analysis, meso_analysis_original, table)
             else:
                 copy_table(meso_analysis, meso_analysis_original, table,

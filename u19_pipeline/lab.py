@@ -1,12 +1,14 @@
 """This module defines tables in the schema U19_lab"""
 
 
+import os
+import pathlib
+import sys
+
 import datajoint as dj
 import numpy as np
 import pandas as pd
-import pathlib
-import sys
-import os
+
 from u19_pipeline.utility import is_this_spock
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
@@ -290,9 +292,9 @@ class Path(dj.Lookup):
         bucket_base_dir = path_df['bucket_path']
 
         if bucket_path.find('/mnt/cup/') != -1:
-            extra_bucket_dir = bucket_path.replace(bucket_base_dir + '/', '');
+            extra_bucket_dir = bucket_path.replace(bucket_base_dir + '/', '')
         else:
-            extra_bucket_dir = bucket_path.replace(path_df['global_path'] + '/', '');
+            extra_bucket_dir = bucket_path.replace(path_df['global_path'] + '/', '')
 
         if extra_bucket_dir[0] == '/':
             extra_bucket_dir = extra_bucket_dir[1:]
@@ -305,7 +307,7 @@ class Path(dj.Lookup):
             baseDir = path_df['net_location']
 
             # Correct extra bucket dir to adjust windows filesep
-            extra_bucket_dir = extra_bucket_dir.replace('/', '\\');
+            extra_bucket_dir = extra_bucket_dir.replace('/', '\\')
 
         else:
             # For mac and linux the accesible path is the local_path field

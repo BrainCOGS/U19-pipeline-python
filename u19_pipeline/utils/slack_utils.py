@@ -2,9 +2,9 @@
 
 import json
 import sys
-import random
-import requests
 from datetime import datetime
+
+import requests
 
 
 def send_slack_notification(webhook_url, slack_json_message):
