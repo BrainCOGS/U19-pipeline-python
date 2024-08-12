@@ -55,7 +55,7 @@ class RecProcessHandler():
             try:
                 status, update_dict = function_status_process(rec_process_series, next_status_series) 
 
-                print('update_dict', update_dict)
+                #print('update_dict', update_dict)
                 #Get dictionary of record process
                 key = rec_process_series['query_key']
 
