@@ -126,9 +126,10 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
     stdout, stderr = p.communicate()
     stdout = stdout.decode('UTF-8')
 
+    print('p.returncode !!!!!!!!!!!!', p.returncode)
+    print("config.system_process['SUCCESS']", config.system_process['SUCCESS'])
+
     if p.returncode == config.system_process['SUCCESS']:
-        print('job state ....')
-        print(stdout)
         state_slurm_job = stdout.split("\n")[2].strip()
 
         state_pipeline = config.slurm_states[state_slurm_job]['pipeline_status']
