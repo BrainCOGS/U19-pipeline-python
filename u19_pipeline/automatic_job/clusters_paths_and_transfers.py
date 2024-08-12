@@ -277,10 +277,12 @@ def get_error_log_str(recording_process_id):
         error_log_data = error_log_data.replace("activate the default environment with 'conda activate' or create a new environment to customize with 'conda create'.\n",'')
 
     print('error_log_data   xxxxxxxxxx')
-    if len(error_log_data) > 400:
-        print(error_log_data[-400:])
-    else:
-        print(error_log_data)
+    print('type(error_log_data)', type(error_log_data))
+    print('len(error_log_data)', len(error_log_data))
+    #if len(error_log_data) > 400:
+    #    print(error_log_data[-400:])
+    #else:
+    #    print(error_log_data)
     print('error_log_data   xxxxxxxxxx')
 
     return error_log_data
