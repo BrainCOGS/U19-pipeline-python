@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "u19-pipeline"
+dynamic = ["version"]
+description = "Datajoint schemas for Princeton U19"
+readme = "README.md"
+# license = ""
+authors = [
+    { name = "DataJoint", email = "support@datajoint.com" },
+    { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
+]
+dependencies = [
+    "astropy",
+    "bitstring",
+    "cellpose",
+    "datajoint",
+    "datajoint",
+    "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
+    "element-array-ephys @ git+https://github.com/BrainCOGS/element-array-ephys.git",
+    "element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git",
+    "element-interface @ git+https://github.com/datajoint/element-interface.git",
+    "fair-research-login",
+    "jupyterlab",
+    "numpy",
+    "pandas",
+    "paramiko",
+    "psutil",
+    "python-dotenv",
+    "scanreader @ git+https://github.com/atlab/scanreader.git",
+    "scikit-image",
+    "scipy",
+    "scp",
+    "six",
+    "suite2p",
+    "tables",
+    "tifffile",
+]
+
+[tool.hatch.version]
+path = "scripts/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/scripts",
+]
