@@ -8,7 +8,7 @@ import json
 import re
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
-import u19_pipeline.automatic_job.params_config as config 
+import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utils.file_utils import write_file
 
 # Functions to create slurm jobs
@@ -63,7 +63,7 @@ def generate_slurm_file(job_id, program_selection_params):
     print(status)
     print(slurm_destination)
     print(cluster_vars)
-    
+
     return status, slurm_destination
 
 
@@ -71,17 +71,17 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
 
     id_slurm_job = -1
     job_id = str(job_id)
-    
+
     #Get all associated variables given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
 
     print('queue_slurm_file **********************************')
 
-    
+
     processing_repository = program_selection_params['process_repository']
     repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
 
-    command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'sbatch', 
+    command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'sbatch',
     "--export=recording_process_id="+job_id+
     ",raw_data_directory='"+raw_directory+
     "',processed_data_directory='"+proc_directory+
@@ -115,7 +115,7 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
 
 
 def check_slurm_job(ssh_user, host, jobid, local_user=False):
-    
+
     if local_user:
         command = ['sacct', '--job', jobid, '--format=state']
     else:
@@ -141,7 +141,7 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
     else:
         state_pipeline = config.status_update_idx['ERROR_STATUS']
         error_message  = 'Failed to retrieve slurm job status'
-        
+
     return state_pipeline, error_message
 
 
@@ -186,14 +186,14 @@ def generate_slurm_spock(slurm_dict):
     module load anacondapy/2023.07-cuda -s
     module load matlab/R2024a -s
 
-    conda activate u19_pipeline_python_env2
+    conda activate u19_pipeline_python_env3
 
     cd ${repository_dir}
     python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
-    
-    return slurm_text   
+
+    return slurm_text
 
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
@@ -217,8 +217,8 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
-    
-    return slurm_text   
+
+    return slurm_text
 
 
 def generate_slurm_tiger(slurm_dict):
@@ -265,7 +265,7 @@ def generate_slurm_dlc(slurm_dict):
     python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
-    return slurm_text 
+    return slurm_text
 
 
 def generate_slurm_dlc2(slurm_dict):
@@ -287,5 +287,5 @@ def generate_slurm_dlc2(slurm_dict):
     python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
-    return slurm_text 
+    return slurm_text
 
