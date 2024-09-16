@@ -18,7 +18,7 @@ pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to
 pni_data_dir   = ''         
 
 #For tiger endpoint
-public_key_location = '~/.ssh/id_rsa_alvaros_tiger.pub'
+public_key_location = '~/.ssh/id_ed25519.pub'
 default_user   = 'u19prod'                           # This will change to our automatic client for globus transfers
 tiger_gpu_host = 'della.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
