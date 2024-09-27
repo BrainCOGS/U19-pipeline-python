@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["u19_pipeline"]
+packages = ["u19_pipeline", 'scripts']
 
 [tool.hatch.version]
 path = "scripts/__init__.py"
