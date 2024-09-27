@@ -83,9 +83,7 @@ ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__na
 
 
 # ------------- Create Neuropixels probe entries -------------
-for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
-                   'neuropixels 2.0 - SS', 'neuropixels 2.0 - MS'):
-    probe_element.ProbeType.create_neuropixels_probe(probe_type)
+probe_element.create_neuropixels_probe_types()
 
 
 # downstream tables for ephys element
