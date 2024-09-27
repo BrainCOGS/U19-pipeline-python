@@ -1,6 +1,5 @@
 import datajoint as dj
 import pathlib
-import deeplabcut
 import pandas as pd
 import numpy as np
 import glob
@@ -48,10 +47,10 @@ class PupillometryProcessingHandler():
     spock_home_dir = '/mnt/cup/braininit/Shared/repos/U19-pipeline_python/'
     spock_log_dir = spock_home_dir + "u19_pipeline/automatic_job/OutputLog/"
     process_script_path = spock_home_dir + "u19_pipeline/automatic_job/pupillometry_handler.py"
-    spock_error_dir = spock_home_dir + "u19_pipeline/automatic_job/ErrorLog/" 
+    spock_error_dir = spock_home_dir + "u19_pipeline/automatic_job/ErrorLog/"
     spock_slurm_filepath = spock_home_dir + "u19_pipeline/"
     spock_system_name = 'spockmk2-loginvm.pni.princeton.edu'
-    
+
     pupillometry_slurm_filepath = os.path.abspath(os.path.realpath(__file__)+ "/../")
 
     #pupillometry_slurm_filepath = 'u19_pipeline/'
@@ -82,14 +81,14 @@ class PupillometryProcessingHandler():
 
         module load anacondapy/2023.07
 
-        conda activate u19_pipeline_python_env2
+        conda activate u19_pipeline_python_env3
 
         cd ${repository_dir}
         python ${process_script_path} ${video_dir} ${model_dir} ${output_dir}
         #python ${process_script_path} ${recording_process_id}
         '''
-        
-        return slurm_text   
+
+        return slurm_text
 
     @staticmethod
     def create_pupillometry_slurm_params_file(slurm_dict):
@@ -104,7 +103,7 @@ class PupillometryProcessingHandler():
                 text_dict += '#SBATCH --' + str(slurm_param) + '=' + str(slurm_dict[slurm_param]) + '\n'
 
         return text_dict
-    
+
     @staticmethod
     def generate_slurm_file(video_dir):
         '''
@@ -127,7 +126,7 @@ class PupillometryProcessingHandler():
         print('slurm_dict', slurm_dict)
 
         slurm_text = PupillometryProcessingHandler.generate_slurm_pupillometry(slurm_dict)
-        
+
         slurm_file_local_path = str(pathlib.Path(PupillometryProcessingHandler.pupillometry_slurm_filepath,
                                                  PupillometryProcessingHandler.pupillometry_slurm_filename))
 
@@ -144,7 +143,7 @@ class PupillometryProcessingHandler():
 
         print(status)
         print(slurm_destination)
-        
+
         return status, slurm_destination
 
     @staticmethod
@@ -153,7 +152,7 @@ class PupillometryProcessingHandler():
         id_slurm_job = -1
 
         #Get all associated variables given the selected processing cluster
-        command = ['ssh', 'u19prod@'+PupillometryProcessingHandler.spock_system_name, 'sbatch', 
+        command = ['ssh', 'u19prod@'+PupillometryProcessingHandler.spock_system_name, 'sbatch',
         "--export=video_dir='"+str(video_dir)+
         "',model_dir='"+str(model_dir)+
         "',repository_dir='"+str(repository_dir)+
@@ -241,12 +240,13 @@ class PupillometryProcessingHandler():
         temp = pd.concat([df, outlierFlags], axis=1)
         temp.loc[temp['OutlierFlag']==True, 'PupilDiameter'] = None
         pupilDiameter = temp['PupilDiameter']
-        
+
         return pupilDiameter.to_numpy()
 
     @staticmethod
     def analyze_videos_pupillometry(configPath, videoPath, output_dir):
 
+        import deeplabcut
         # Analyze video and get pupil diameter data
         deeplabcut.analyze_videos(configPath, videoPath, destfolder=output_dir)
 
@@ -258,13 +258,13 @@ class PupillometryProcessingHandler():
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        sessions_missing_process = (acquisition.SessionVideo * 
+        sessions_missing_process = (acquisition.SessionVideo *
             pupillometry.PupillometrySessionModelData & 'pupillometry_job_id is NULL').fetch(as_dict=True)
-        
+
         print(sessions_missing_process)
 
         for pupillometry_2_process in sessions_missing_process:
-            
+
             # If error, job id = -1
             key_insert = dict((k, pupillometry_2_process[k]) for k in ('subject_fullname', 'session_date', 'session_number', 'model_id'))
             key_insert['pupillometry_job_id'] = -1
@@ -309,12 +309,12 @@ class PupillometryProcessingHandler():
 
                 #return (status_update, update_value_dict)
                 continue
-            
+
             # Queue slurm file in spock
             status, slurm_jobid, error_message = PupillometryProcessingHandler.queue_pupillometry_slurm_file(
-                videoPath, model_path, PupillometryProcessingHandler.spock_home_dir, output_dir, 
+                videoPath, model_path, PupillometryProcessingHandler.spock_home_dir, output_dir,
                 PupillometryProcessingHandler.process_script_path, slurm_filepath)
-            
+
             # Error handling (queuing slurm file)
             if status != config.system_process['SUCCESS']:
                 status_update = config.status_update_idx['ERROR_STATUS']
@@ -326,7 +326,7 @@ class PupillometryProcessingHandler():
 
                 #return (status_update, update_value_dict)
                 continue
-            
+
             # If success, store job_id
             key_insert['pupillometry_job_id'] = slurm_jobid
             pupillometry.PupillometrySessionModelData.update1(key_insert)
@@ -348,7 +348,7 @@ class PupillometryProcessingHandler():
             print('key_update1', key_update)
 
             status_update, message = slurmlib.check_slurm_job('u19prod', PupillometryProcessingHandler.spock_system_name, str(session_check['pupillometry_job_id']), local_user=False)
-            
+
             #If job finished copy over output and/or error log
             if status_update == config.status_update_idx['ERROR_STATUS']:
 
@@ -360,7 +360,7 @@ class PupillometryProcessingHandler():
                 slack_utils.send_slack_error_pupillometry_notification(config.slack_webhooks_dict['automation_pipeline_error_notification'],\
                         update_value_dict['error_info'] ,session_check)
                 continue
-                
+
 
             # Get video location
             if status_update == config.status_update_idx['NEXT_STATUS']:
@@ -402,10 +402,10 @@ class PupillometryProcessingHandler():
                 slack_utils.send_slack_pupillometry_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
                              'Pupillometry job finished', session_check)
 
-            
+
 
 if __name__ == '__main__':
-    
+
     import time
     from scripts.conf_file_finding import try_find_conf_file
     try_find_conf_file()
@@ -415,7 +415,7 @@ if __name__ == '__main__':
     args[1] = args[1] + '/config.yaml'
     print(args)
     #
-    
+
 
 
     PupillometryProcessingHandler.analyze_videos_pupillometry(args[1], args[0], args[2])
