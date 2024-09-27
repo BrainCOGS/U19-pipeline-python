@@ -144,10 +144,7 @@ def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
 ephys_element.activate(ephys_schema_name, probe_schema_name, linking_module=__name__)
 
 # Create Neuropixels probe entries -----------------------------------------------------
-for probe_type in ('neuropixels 1.0 - 3A', 'neuropixels 1.0 - 3B',
-                   'neuropixels 2.0 - SS', 'neuropixels 2.0 - MS'):
-    probe_element.ProbeType.create_neuropixels_probe(probe_type)
-
+probe_element.create_neuropixels_probe_types()
 
 def get_spikeglx_meta_filepath(ephys_recording_key):
     # attempt to retrieve from EphysRecording.EphysFile
