@@ -354,9 +354,9 @@ class RecProcessHandler():
                 ft.transfer_log_file(rec_series['job_id'], program_selection_params, ssh_host, log_type='OUTPUT')
                 error_log = ft.get_error_log_str(rec_series['job_id'])
 
-                # If error log is not empty, get info about it
-                if error_log:
-                    status_update = config.status_update_idx['ERROR_STATUS']
+                # If the program errored, print the log.
+                # Previous method of capturing the error_log was insufficient since Kilosort wrote to stderr
+                if status_update == config.status_update_idx['ERROR_STATUS']:
                     update_value_dict['error_info']['error_message'] = 'An error occured in processing (check LOG)'
                     update_value_dict['error_info']['error_exception'] = error_log
         else:
