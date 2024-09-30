@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "u19-pipeline"
-dynamic = '0.3.2'
+version = '0.3.2'
 description = "Datajoint schemas for Princeton U19"
 readme = "README.md"
 authors = [
