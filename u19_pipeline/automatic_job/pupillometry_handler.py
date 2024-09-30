@@ -81,7 +81,7 @@ class PupillometryProcessingHandler():
 
         module load anacondapy/2023.07
 
-        conda activate u19_pipeline_python_env3
+        conda activate u19_pipeline_python_env2
 
         cd ${repository_dir}
         python ${process_script_path} ${video_dir} ${model_dir} ${output_dir}
