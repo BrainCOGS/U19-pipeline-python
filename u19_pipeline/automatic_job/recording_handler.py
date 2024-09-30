@@ -43,7 +43,7 @@ class RecordingHandler():
         Update status of each process job accordingly
         '''
 
-        #Get info from all the possible status for a processjob 
+        #Get info from all the possible status for a processjob
         df_all_recordings = RecordingHandler.get_active_recordings()
 
         #For all active process jobs
@@ -58,12 +58,12 @@ class RecordingHandler():
 
             print('function to apply:', next_status_series['ProcessFunction'])
 
-            # Get processing function    
+            # Get processing function
             function_status_process = getattr(RecordingHandler, next_status_series['ProcessFunction'])
 
             #Trigger process, if success update recording process record
             try:
-                status, update_dict = function_status_process(recording_series) 
+                status, update_dict = function_status_process(recording_series)
 
                 #Get dictionary of record process
                 key = recording_series['query_key']
@@ -81,7 +81,7 @@ class RecordingHandler():
                     if next_status_series['SlackMessage']:
                         slack_utils.send_slack_update_notification(config.slack_webhooks_dict['automation_pipeline_update_notification'],\
                              next_status_series['SlackMessage'], recording_series)
-                
+
                 #An error occurred in process
                 if status == config.status_update_idx['ERROR_STATUS']:
                     next_status = config.RECORDING_STATUS_ERROR_ID
@@ -100,7 +100,7 @@ class RecordingHandler():
 
             time.sleep(2)
 
-    
+
     @staticmethod
     @exception_handler
     def local_transfer_request(rec_series):
@@ -111,7 +111,7 @@ class RecordingHandler():
         status_series  (pd.Series)  = Series with information about the next status of the recording (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
-                                      = 0  if recording status not to be changed 
+                                      = 0  if recording status not to be changed
                                       = -1 if recording status has to be updated to ERROR in recording.Recording
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -123,10 +123,10 @@ class RecordingHandler():
 
         data_directory = pathlib.Path(dj.config['custom']['root_data_dir'], rec_series['recording_modality'], rec_series['recording_directory']).as_posix()
         data_directory = pathlib.Path(data_directory).parent
-        
+
         pathlib.Path(data_directory).mkdir(parents=True, exist_ok=True)
 
-        
+
 
         #Encode Windows like directory for scp to work
 
@@ -149,7 +149,7 @@ class RecordingHandler():
         status_series  (pd.Series)  = Series with information about the next status of the recording (if neeeded)
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
-                                      = 0  if recording status not to be changed 
+                                      = 0  if recording status not to be changed
                                       = -1 if recording status has to be updated to ERROR in recording.Recording
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -183,13 +183,13 @@ class RecordingHandler():
         rec_series     (pd.Series)  = Series with information about the recording
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
-                                      = 0  if recording status not to be changed 
+                                      = 0  if recording status not to be changed
                                       = -1 if recording status has to be updated to ERROR in recording.Recording
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
                                         'error_info':    error info to be inserted if error occured }
         """
-        
+
         rec_series = in_rec_series.copy()
 
         if rec_series['recording_modality'] == 'electrophysiology':
@@ -197,8 +197,8 @@ class RecordingHandler():
 
         if rec_series['recording_modality'] == 'imaging':
             status_update, update_value_dict = RecordingHandler.imaging_preingestion(rec_series)
-            
-              
+
+
         return (status_update, update_value_dict)
 
 
@@ -227,7 +227,7 @@ class RecordingHandler():
 
         return df_recordings
 
-    
+
     @staticmethod
     def update_status_pipeline(recording_key_dict, status, update_field=None, update_value=None):
         """
@@ -236,7 +236,7 @@ class RecordingHandler():
             recording_key_dict        (dict):    key to find recording record
             status                     (int):    value of the status to be updated
             update_field               (str):    name of the field to be updated as extra (only applicable to some status)
-            update_value             (str|int):  field value to be inserted on in task_field 
+            update_value             (str|int):  field value to be inserted on in task_field
         """
 
         print('recording_key_dict', recording_key_dict)
@@ -249,7 +249,7 @@ class RecordingHandler():
             update_task_id_dict[update_field] = update_value
             print('update_task_id_dict', update_task_id_dict)
             recording.Recording.update1(update_task_id_dict)
-        
+
         update_status_dict = recording_key_dict.copy()
         update_status_dict['status_recording_id'] = status
         print('update_status_dict', update_status_dict)
@@ -294,7 +294,7 @@ class RecordingHandler():
         rec_series     (pd.Series)  = Series with information about the recording
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
-                                      = 0  if recording status not to be changed 
+                                      = 0  if recording status not to be changed
                                       = -1 if recording status has to be updated to ERROR in recording.Recording
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -325,9 +325,9 @@ class RecordingHandler():
         old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
         if len(old_recording_process) == 0:
 
-            connection = recording.Recording.connection 
+            connection = recording.Recording.connection
             with connection.transaction:
-                        
+
                 probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series['query_key']).fetch(as_dict=True)
                 probe_files = [dict(item, recording_process_pre_path=pathlib.Path(item['file_path']).parents[0].as_posix()) for item in probe_files]
 
@@ -353,8 +353,8 @@ class RecordingHandler():
                 for i in recording_processes:
                     probe_dir = pathlib.Path(dj.config['custom']['ephys_root_data_dir'][0], i['recording_process_pre_path']).as_posix()
                     ephys_pipeline.create_lfp_trace(config.catgt_script, recording_directory, probe_dir)
-        
-        
+
+
         status_update = config.status_update_idx['NEXT_STATUS']
 
         return (status_update, update_value_dict)
@@ -368,7 +368,7 @@ class RecordingHandler():
         rec_series     (pd.Series)  = Series with information about the recording
         Returns:
         status_update       (int)     = 1  if recording status has to be updated to next step in recording.Recording
-                                      = 0  if recording status not to be changed 
+                                      = 0  if recording status not to be changed
                                       = -1 if recording status has to be updated to ERROR in recording.Recording
         update_value_dict   (dict)    = Dictionary with next keys:
                                         {'value_update': value to be updated in this stage (if applicable)
@@ -403,10 +403,10 @@ class RecordingHandler():
             # Hardcoded acquisition software
             acq_software = 'ScanImage'
 
-             #Insert Scan and ScanInfo 
+             #Insert Scan and ScanInfo
             imaging_pipeline.scan_element.Scan.insert1(
             {**this_fov, 'scan_id': 0, 'scanner': scanner, 'acq_software': acq_software}, skip_duplicates=True)
-            
+
         #Populate ScanInfo for all fovs
         imaging_pipeline.scan_element.ScanInfo.populate(rec_series['query_key'], display_progress=True)
 
@@ -422,9 +422,9 @@ class RecordingHandler():
         old_recording_process = (recording_process.Processing() & rec_series['query_key']).fetch("KEY", as_dict=True)
         if len(old_recording_process) == 0:
 
-            connection = recording.Recording.connection 
+            connection = recording.Recording.connection
             with connection.transaction:
-                        
+
                 # Get fov directories for each recording process:
                 fov_files_df = pd.DataFrame((imaging_pipeline.scan_element.ScanInfo.ScanFile & rec_series['query_key']).fetch(as_dict=True))
                 fov_files = fov_files_df.groupby('tiff_split').first().reset_index().to_dict('records')

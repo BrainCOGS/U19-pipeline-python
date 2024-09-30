@@ -73,7 +73,7 @@ def get_ephys_root_data_dir():
 def get_session_directory(session_key):
 
     data_dir = str(get_ephys_root_data_dir())
-    sess_dir = (ephys.EphysSession & session_key).fetch1('ephys_directory')    
+    sess_dir = (ephys.EphysSession & session_key).fetch1('ephys_directory')
     session_dir =  pathlib.Path(data_dir + sess_dir)
     return session_dir.as_posix()
 
@@ -138,7 +138,7 @@ class BehaviorSync(dj.Imported):
         if status == 0:
             iteration_dict = ephys_utils.fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_time, nidq_sampling_rate)
 
-        final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
+        final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate,
                iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
                trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
 
@@ -148,7 +148,7 @@ class BehaviorSync(dj.Imported):
 
         self.insert_imec_sampling_rate(key, session_dir)
 
-        
+
 
     def insert_imec_sampling_rate(self, key, session_dir):
 
@@ -210,7 +210,7 @@ class CuratedClustersIteration(dj.Computed):
         # Obtain the precise times when the frames transition.
         # This is obtained from iteration_index_nidq
         ls = np.diff(iteration_index_nidq)
-        ls[ls<0] = 1 # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others. 
+        ls[ls<0] = 1 # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others.
         ls[np.isnan(ls)] = 0
         iteration_transition_indexes = np.where(ls)[0]
 

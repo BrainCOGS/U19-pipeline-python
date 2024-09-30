@@ -15,7 +15,7 @@ import u19_pipeline.automatic_job.params_config as config
 #FOR PNI endpoint
 #pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
 pni_ep_id = '005329dc-f31c-11ec-b3c1-15403b7b75ed'  # pni BRAINCOGS ep points to /braininit/Data/
-pni_data_dir   = ''         
+pni_data_dir   = ''
 
 #For tiger endpoint
 public_key_location = '~/.ssh/id_ed25519.pub'
@@ -24,7 +24,7 @@ tiger_gpu_host = 'della.princeton.edu'
 #tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
 tiger_ep_dir   = '8e1bbdfe-d234-4a7c-93a5-86086a249918'  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
 
-tiger_home_dir_globus = '/BRAINCOGS/Data/'   
+tiger_home_dir_globus = '/BRAINCOGS/Data/'
 
 #Slurm default values for queue job
 slurm_dict_tiger_default = {
@@ -68,46 +68,46 @@ slurm_dict_spock_default = {
 #PNI directories
 pni_root_data_dir   = dj.config['custom']['root_data_dir']
 
-tiger_home_dir = '/scratch/gpfs/BRAINCOGS'    
+tiger_home_dir = '/scratch/gpfs/BRAINCOGS'
 spock_home_dir = '/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing'
 
 #Cluster directories
 cluster_vars = {
     "tiger": {
-        "home_dir":                      tiger_home_dir, 
-        "root_data_dir_globus":          tiger_home_dir_globus + "/Raw", 
-        "processed_data_dir_globus":     tiger_home_dir_globus + "/Processed", 
-        "root_data_dir":                 tiger_home_dir + "/Data/Raw", 
-        "processed_data_dir":            tiger_home_dir + "/Data/Processed", 
-        "slurm_files_dir":               tiger_home_dir + "/SlurmFiles", 
-        "params_files_dir":              tiger_home_dir + "/ParameterFiles", 
-        "chanmap_files_dir":             tiger_home_dir + "/ChanMapFiles", 
-        "electrophysiology_process_dir": tiger_home_dir + "/electrophysiology_processing", 
-        "imaging_process_dir":           tiger_home_dir + "/imaging_processing", 
-        "log_files_dir":                 tiger_home_dir + "/OutputLog", 
-        "error_files_dir":               tiger_home_dir + "/ErrorLog", 
-        "user":                          default_user, 
-        "slurm_default":                 slurm_dict_tiger_default, 
+        "home_dir":                      tiger_home_dir,
+        "root_data_dir_globus":          tiger_home_dir_globus + "/Raw",
+        "processed_data_dir_globus":     tiger_home_dir_globus + "/Processed",
+        "root_data_dir":                 tiger_home_dir + "/Data/Raw",
+        "processed_data_dir":            tiger_home_dir + "/Data/Processed",
+        "slurm_files_dir":               tiger_home_dir + "/SlurmFiles",
+        "params_files_dir":              tiger_home_dir + "/ParameterFiles",
+        "chanmap_files_dir":             tiger_home_dir + "/ChanMapFiles",
+        "electrophysiology_process_dir": tiger_home_dir + "/electrophysiology_processing",
+        "imaging_process_dir":           tiger_home_dir + "/imaging_processing",
+        "log_files_dir":                 tiger_home_dir + "/OutputLog",
+        "error_files_dir":               tiger_home_dir + "/ErrorLog",
+        "user":                          default_user,
+        "slurm_default":                 slurm_dict_tiger_default,
         "hostname":                      "della-gpu.princeton.edu",
         "script_path":                   "",
         "conda_env":                     '/home/alvaros/.conda/envs/BrainCogsEphysSorters_env'
 
     },
     "spock": {
-        "home_dir":                      spock_home_dir, 
+        "home_dir":                      spock_home_dir,
         "root_data_dir_globus":          pni_data_dir   + "/Raw",
         "processed_data_dir_globus":     pni_data_dir   + "/Processed",
         "root_data_dir":                 spock_home_dir + "/Raw",
         "processed_data_dir":            spock_home_dir + "/Processed",
-        "slurm_files_dir":               spock_home_dir + "/SlurmFiles", 
+        "slurm_files_dir":               spock_home_dir + "/SlurmFiles",
         "params_files_dir":              spock_home_dir + "/ParameterFiles",
-        "chanmap_files_dir":             spock_home_dir + "/ChanMapFiles", 
-        "electrophysiology_process_dir": spock_home_dir + "/electrophysiology_processing", 
-        "imaging_process_dir":           spock_home_dir + "/imaging_processing",  
-        "log_files_dir":                 spock_home_dir + "/u19_pipeline/automatic_job/OutputLog", 
-        "error_files_dir":               spock_home_dir + "/u19_pipeline/automatic_job/ErrorLog", 
+        "chanmap_files_dir":             spock_home_dir + "/ChanMapFiles",
+        "electrophysiology_process_dir": spock_home_dir + "/electrophysiology_processing",
+        "imaging_process_dir":           spock_home_dir + "/imaging_processing",
+        "log_files_dir":                 spock_home_dir + "/u19_pipeline/automatic_job/OutputLog",
+        "error_files_dir":               spock_home_dir + "/u19_pipeline/automatic_job/ErrorLog",
         "user":                          default_user,
-        "slurm_default":                 slurm_dict_spock_default, 
+        "slurm_default":                 slurm_dict_spock_default,
         "hostname":                      "spockmk2-loginvm.pni.princeton.edu",
         "script_path":                   "",
         "conda_env":                     'u19_pipeline_python_env'
@@ -174,7 +174,7 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
     else:
         transfer_request['status'] = config.system_process['ERROR']
         transfer_request['error_info'] = p.stderr.decode('UTF-8')
-        
+
     return transfer_request
 
 
@@ -218,7 +218,7 @@ def globus_transfer_to_pni(job_id, processed_rel_path, modality):
     source_filepath = pathlib.Path(cluster_vars['tiger']['processed_data_dir_globus'], modality, processed_rel_path).as_posix()
 
     transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
-    
+
     return transfer_request
 
 def translate_globus_output(stdout_process):
@@ -306,7 +306,7 @@ def check_directory_exists_cluster(directory, cluster, modality, type_dir='raw')
 
     command = "'if [ -d " +  final_directory + " ]; "
     post_command = """then
-                   echo "1"  
+                   echo "1"
                    else echo "0"
                    fi'"""
 
@@ -414,13 +414,13 @@ def delete_empty_data_directory_cluster(cluster, type='raw'):
                         break
                     total_deletion +=1
                 else:
-                    #Delete processed files with "normal" ssh 
+                    #Delete processed files with "normal" ssh
                     status = delete_directory_cluster(dir, cluster)
                     if status == config.system_process['SUCCESS']:
                         deleted_dirs = 1
                         break
                     total_deletion +=1
-                
+
         # If in this round no directories were deleted we are done
         if deleted_dirs == 0 or total_deletion >= max_deletion:
             break

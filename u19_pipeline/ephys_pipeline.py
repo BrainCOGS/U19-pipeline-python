@@ -78,7 +78,7 @@ def get_ephys_root_data_dir():
 def get_session_directory(session_key):
 
     #root_dir = get_ephys_root_data_dir()
-    
+
     session_dir = pathlib.Path((recording.Recording & session_key).fetch1('recording_directory')).as_posix()
     #session_dir = pathlib.Path(root_dir, session_dir).as_posix()
 
@@ -251,14 +251,14 @@ class BehaviorSync(dj.Imported):
 
             # Synchronize between pulses and get iteration # vector for each sample
             recent_recording = behavior_key['session_date'] > datetime.date(2021,6,1) # Everything past June 1 2021
-            if recent_recording: 
-                # New synchronization method: digital_array[1,2] contain pulses for trial and frame number. 
+            if recent_recording:
+                # New synchronization method: digital_array[1,2] contain pulses for trial and frame number.
                 mode=None
                 iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
             else:
                 # Old synchronization: digital_array[0:7] contain a digital word that counts the virmen frames.
                 iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_word(digital_array, behavior_time, iterstart)
-                
+
             # Check # of trials (from database record of behavior in `behavior_time`) and iterations (extracted from NIDAQ in `iter_start_idx`) match
             trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = ephys_utils.assert_iteration_samples_count(iteration_dict['iter_start_idx'], behavior_time)
 
@@ -275,7 +275,7 @@ class BehaviorSync(dj.Imported):
             if status == 0:
                 iteration_dict = ephys_utils.fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_time, nidq_sampling_rate)
 
-            final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate, 
+            final_key = dict(key, nidq_sampling_rate = nidq_sampling_rate,
                     iteration_index_nidq = iteration_dict['framenumber_vector_samples'],
                     trial_index_nidq = iteration_dict['trialnumber_vector_samples'])
 
