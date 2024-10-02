@@ -13,23 +13,25 @@ subject = connect_mod('subject')
 @schema
 class BehaviorProfile(dj.Manual):
     definition = """
-    profile_id                    : int
+    profile_id                    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
-    profile_description           : varchar(255)          # Profile description
-    profile_variables             : longblob                  # Encoded for the variables
+    behavior_profile_name                  : varchar(255)          # Profile name
+    behavior_profile_description           : varchar(255)          # Profile description
+    behavior_profile_variables             : longblob                  # Encoded for the variables
     """
 
 @schema
 class RecordingProfile(dj.Manual):
     definition = """
-    profile_id                    : int
+    profile_id                    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
-    profile_description           : varchar(255)          # Profile description
-    profile_variables             : longblob                  # Encoded for the variables
+    recording_profile_name                  : varchar(255)          # Profile name
+    recording_profile_description           : varchar(255)          # Profile description
+    recording_profile_variables             : longblob                  # Encoded for the variables
     """
 
 @schema
