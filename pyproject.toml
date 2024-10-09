@@ -12,29 +12,28 @@ authors = [
     { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
 ]
 dependencies = [
-    "astropy",
+    "astropy>=6.0",
     "bitstring",
     "cellpose",
-    "datajoint",
-    "datajoint",
+    "datajoint>=0.14.2",
     "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
     "element-array-ephys @ git+https://github.com/BrainCOGS/element-array-ephys.git",
     "element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git",
     "element-interface @ git+https://github.com/datajoint/element-interface.git",
     "fair-research-login",
     "jupyterlab",
-    "numpy",
-    "pandas",
+    "numpy>=1.23",
+    "pandas>=2.0",
     "paramiko",
     "psutil",
-    "python-dotenv",
+    "python-dotenv>=0.20",
     "scanreader @ git+https://github.com/atlab/scanreader.git",
     "scikit-image",
     "scipy",
     "scp",
     "six",
     "suite2p",
-    "tables",
+    "tables>=3.8",
     "tifffile",
 ]
 
@@ -47,4 +46,5 @@ path = "scripts/__init__.py"
 [tool.hatch.build.targets.sdist]
 include = [
     "/scripts",
+    "/u19_pipeline",
 ]
