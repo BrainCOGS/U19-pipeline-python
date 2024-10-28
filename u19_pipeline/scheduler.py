@@ -13,25 +13,37 @@ subject = connect_mod('subject')
 @schema
 class BehaviorProfile(dj.Manual):
     definition = """
-    profile_id                    : int auto_increment
+    behavior_profile_id                    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
     behavior_profile_name                  : varchar(255)          # Profile name
     behavior_profile_description           : varchar(255)          # Profile description
-    behavior_profile_variables             : longblob                  # Encoded for the variables
+    behavior_profile_variables             : blob                  # Encoded for the variables
     """
+
+# @schema
+# class TestProfile(dj.Manual):
+#     definition = """
+#     recording_profile_id                    : int auto_increment
+#     ---
+#     -> lab.User
+#     date_created                 : date
+#     recording_profile_name                  : varchar(255)          # Profile name
+#     recording_profile_description           : varchar(255)          # Profile description
+#     recording_profile_variables             : blob # Encoded for the variables
+#     """
 
 @schema
 class RecordingProfile(dj.Manual):
     definition = """
-    profile_id                    : int auto_increment
+    recording_profile_id                    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
     recording_profile_name                  : varchar(255)          # Profile name
     recording_profile_description           : varchar(255)          # Profile description
-    recording_profile_variables             : longblob                  # Encoded for the variables
+    recording_profile_variables             : blob                  # Encoded for the variables
     """
 
 @schema
@@ -63,7 +75,7 @@ class Schedule(dj.Manual):
 class InputOutputRig(dj.Lookup):
     definition = """
     # Which Inputs and Outputs can be installed in rigs (for RigTester purposes)
-    input_output_name          : varchar(32)                 # Name and ID for Input/Output 
+    input_output_name          : varchar(32)                 # Name and ID for Input/Output
     ---
     description                : varchar(255)                # Input/Output description
     direction                  : enum('Input', 'Output')     # Input/Output direction (for RigTester purposes)
@@ -88,10 +100,10 @@ class InputOutputRig(dj.Lookup):
 @schema
 class InputOutputProfileList(dj.Manual):
     definition = """
-    # InputOutputProfile full list of InputsOutputs and type of test for each 
-    ->lab.InputOutputProfile
-    input_output_num           : int                         # # Of Input/Output for this profile        
+    # InputOutputProfile full list of InputsOutputs and type of test for each
+    -> InputOutputProfile
+    input_output_num           : int                         # # Of Input/Output for this profile
     ---
-    ->lab.InputOutputRig
+    -> InputOutputRig
     check_type                 : enum('Mandatory','Optional') # Prevent training if missing this input/output
     """
