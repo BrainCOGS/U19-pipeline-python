@@ -39,7 +39,6 @@ class RecordingProfile(dj.Manual):
     definition = """
     recording_profile_id                    : int auto_increment
     ---
-    -> lab.User
     date_created                 : date
     recording_profile_name                  : varchar(255)          # Profile name
     recording_profile_description           : varchar(255)          # Profile description
