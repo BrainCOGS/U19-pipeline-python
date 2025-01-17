@@ -17,6 +17,7 @@ class BehaviorProfile(dj.Manual):
     ---
     -> lab.User
     date_created                 : date
+    date_last_used                 : date
     behavior_profile_name                  : varchar(255)          # Profile name
     behavior_profile_description           : varchar(255)          # Profile description
     behavior_profile_variables             : blob                  # Encoded for the variables
@@ -56,6 +57,7 @@ class Schedule(dj.Manual):
     -> [nullable] BehaviorProfile                         # Reference to `BehaviorProfile`
     -> [nullable] RecordingProfile                        # Reference to `RecordingProfile`
     -> [nullable] InputOutputProfile                      # Reference to `InputOutputProfile`
+    experimenters_instructions  :varchar(64532)
     """
 
 @schema
