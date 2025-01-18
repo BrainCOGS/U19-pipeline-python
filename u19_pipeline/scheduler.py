@@ -87,6 +87,20 @@ class InputOutputRig(dj.Lookup):
     ]
 
 @schema
+class TechDuties(dj.Lookup):
+    definition = """
+    # Defines
+    tech_duty : varchar(100)                 # Name and ID for Input/Output
+    ---
+    description                : varchar(255)                # Input/Output description
+    """
+    contents = [
+        ['Off', '',],
+        ['Watering Only', '',],
+        ['Training', '',],
+    ]
+
+@schema
 class InputOutputProfileList(dj.Manual):
     definition = """
     # InputOutputProfile full list of InputsOutputs and type of test for each
