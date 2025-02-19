@@ -2,26 +2,29 @@
 
 import datajoint as dj
 
-prefix = dj.config['custom']['database.prefix']
+prefix = dj.config["custom"]["database.prefix"]
 
-schema = dj.schema(prefix + 'scheduler')
+schema = dj.schema(prefix + "scheduler")
 
-connect_mod = lambda x: dj.VirtualModule(x, prefix  + x)
-lab = connect_mod('lab')
-subject = connect_mod('subject')
+def connect_mod(x):
+    return dj.VirtualModule(x, prefix + x)
+lab = connect_mod("lab")
+subject = connect_mod("subject")
+
 
 @schema
-class BehaviorProfile(dj.Manual):
+class TrainingProfile(dj.Manual):
     definition = """
-    behavior_profile_id                    : int auto_increment
+    training_profile_id                    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
     date_last_used                 : date
-    behavior_profile_name                  : varchar(255)          # Profile name
-    behavior_profile_description           : varchar(255)          # Profile description
-    behavior_profile_variables             : blob                  # Encoded for the variables
+    name                  : varchar(255)          # Profile name
+    description           : varchar(255)          # Profile description
+    variables             : varchar(16384)        # Encoded for the variables
     """
+
 
 @schema
 class RecordingProfile(dj.Manual):
@@ -34,6 +37,7 @@ class RecordingProfile(dj.Manual):
     recording_profile_variables             : blob                  # Encoded for the variables
     """
 
+
 @schema
 class InputOutputProfile(dj.Manual):
     definition = """
@@ -45,6 +49,7 @@ class InputOutputProfile(dj.Manual):
     input_output_profile_description  : varchar(255)                # Input/Output profile description
     input_output_profile_date         : date                        # Input/Output profile creation date
     """
+
 
 @schema
 class Schedule(dj.Manual):
@@ -60,6 +65,7 @@ class Schedule(dj.Manual):
     experimenters_instructions  :varchar(64532)
     """
 
+
 @schema
 class InputOutputRig(dj.Lookup):
     definition = """
@@ -71,20 +77,21 @@ class InputOutputRig(dj.Lookup):
     test_type                  : enum('Automatic', 'Manual') # Manual if technician have to check test (e.g. Speaker) Automatic otherwise
     """
     contents = [
-            ['Arduino', '', 'Input', 'Automatic'],
-            ['MotionSensor',  '', 'Input', 'Automatic'],
-            ['LateralCamera',  '', 'Input', 'Automatic'],
-            ['TopCamera',  '', 'Input', 'Automatic'],
-            ['Speakers',  '', 'Output', 'Manual'],
-            ['Motors',  '', 'Output', 'Manual'],
-            ['Reward',  '', 'Output', 'Manual'],
-            ['Laser',  '', 'Output', 'Manual'],
-            ['LeftPuff',  '', 'Output', 'Manual'],
-            ['RightPuff',  '', 'Output', 'Manual'],
-            ['LeftReward',  '', 'Output', 'Manual'],
-            ['RightReward',  '', 'Output', 'Manual'],
-            ['Lickometer',  '', 'Output', 'Manual'],
+        ["Arduino", "", "Input", "Automatic"],
+        ["MotionSensor", "", "Input", "Automatic"],
+        ["LateralCamera", "", "Input", "Automatic"],
+        ["TopCamera", "", "Input", "Automatic"],
+        ["Speakers", "", "Output", "Manual"],
+        ["Motors", "", "Output", "Manual"],
+        ["Reward", "", "Output", "Manual"],
+        ["Laser", "", "Output", "Manual"],
+        ["LeftPuff", "", "Output", "Manual"],
+        ["RightPuff", "", "Output", "Manual"],
+        ["LeftReward", "", "Output", "Manual"],
+        ["RightReward", "", "Output", "Manual"],
+        ["Lickometer", "", "Output", "Manual"],
     ]
+
 
 @schema
 class TechDuties(dj.Lookup):
@@ -95,10 +102,11 @@ class TechDuties(dj.Lookup):
     description                : varchar(255)                # Input/Output description
     """
     contents = [
-        ['Off', '',],
-        ['Watering Only', '',],
-        ['Training', '',],
+        ["Off", ""],
+        ["Watering Only", ""],
+        ["Training", ""],
     ]
+
 
 @schema
 class InputOutputProfileList(dj.Manual):
@@ -109,4 +117,34 @@ class InputOutputProfileList(dj.Manual):
     ---
     -> InputOutputRig
     check_type                 : enum('Mandatory','Optional') # Prevent training if missing this input/output
+    """
+
+
+@schema
+class Shift(dj.Lookup):
+    definition = """
+    # Defines
+    shift: varchar(100)                 # Name and ID for Input/Output
+    ---
+    start_time: time        # Date agnostic time; make sure to add the datetime when using it with tech_scheduler
+    end_time: time          # Date agnostic time; make sure to add the datetime when using it with tech_scheduler
+    """
+    contents = [
+        ["Day", "09:00:00", "17:00:00"],
+        ["Evening", "17:00:00", "01:00:00"],
+        ["Night", "01:00:00", "09:00:00"],
+    ]
+
+
+@schema
+class TechSchedule(dj.Manual):
+    definition = """
+    shift_index: int auto_increment
+    ---
+    date                 : date
+    -> Shift
+    -> lab.User
+    -> TechDuties
+    start_time : datetime          # Datetime of when the shift ends
+    end_time : datetime          # Datetime of when the shift ends
     """
