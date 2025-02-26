@@ -29,3 +29,14 @@ class TaskLevelParameterSet(dj.Lookup):
     set_id=1             : int                          # parameter set id
     """
 
+
+@schema
+class Subtask(dj.Lookup):
+    definition = """
+    %{
+    #
+    subtask                     : varchar(32)                   #
+    ---
+    subtask_description         : varchar(512)                  #
+    %}
+    """
