@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "u19-pipeline"
-version = '0.3.3'
+version = '0.3.4'
 description = "Datajoint schemas for Princeton U19"
 readme = "README.md"
 authors = [
@@ -39,7 +39,11 @@ dependencies = [
 requires-python = ">=3.10"
 
 [tool.setuptools]
-packages = ["u19_pipeline*", 'scripts*']
+packages = ["u19_pipeline"]
+
+
+[tool.setuptools.packages.find]
+include = ["u19_pipeline*", "scripts*"]
 
 [tool.hatch.version]
 path = "scripts/__init__.py"
