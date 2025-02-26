@@ -38,7 +38,7 @@ def main_alert_system():
 
                 alert_dict = alert_df.to_dict('records')
                 webhooks_list = []
-                
+
                 if 'slack_notification_channel' in slack_dict:
                     query_slack_webhooks = [{'webhook_name' : x} for x in slack_dict['slack_notification_channel']]
                     webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch('webhook_url').tolist()
@@ -57,17 +57,17 @@ def main_alert_system():
         except Exception as e:
             dict_error = dict()
             dict_error['message'] = 'error while executing ' + this_alert_submodule.name + " alert code"
-            dict_error['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
+            dict_error['error_exception'] = (''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__)))
             slack_json_message = slack_alert_message_format(dict_error, this_alert_submodule.name)
             webhook_custom = (lab.SlackWebhooks & "webhook_name='custom_alerts'").fetch('webhook_url').tolist()
             if webhook_custom:
                 su.send_slack_notification(webhook_custom[0], slack_json_message)
-            
+
         del my_alert_module
 
 def slack_alert_message_format(alert_dictionaty, alert_module_name):
 
-    now = datetime.datetime.now() 
+    now = datetime.datetime.now()
     datestr = now.strftime('%d-%b-%Y %H:%M:%S')
 
     msep = dict()
@@ -86,7 +86,7 @@ def slack_alert_message_format(alert_dictionaty, alert_module_name):
     m2['type'] = 'section'
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
-    
+
     m2_1["text"] = ''
     for key in alert_dictionaty.keys():
         m2_1["text"] += '*' + key + '* : ' + str(alert_dictionaty[key]) + '\n'

@@ -30,7 +30,7 @@ def exception_handler(func):
             print('Exception HERE ................')
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
             update_value_dict['error_info']['error_message'] = str(e)
-            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
+            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__)))
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 

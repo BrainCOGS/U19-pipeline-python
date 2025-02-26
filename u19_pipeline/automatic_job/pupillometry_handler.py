@@ -33,7 +33,7 @@ def pupillometry_exception_handler(func):
 
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
             update_value_dict['error_info']['error_message'] = str(e)
-            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)))
+            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__)))
 
             print(update_value_dict['error_info']['error_message'])
             print(update_value_dict['error_info']['error_exception'])
@@ -196,8 +196,6 @@ class PupillometryProcessingHandler():
         p = subprocess.Popen(["cp", slurm_file_local_path, slurm_destination])
         transfer_status = p.wait()
         return transfer_status
-
-        return status
 
     @staticmethod
     def getPupilDiameter(analyzedVideoDataPath):
