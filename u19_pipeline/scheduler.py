@@ -6,8 +6,11 @@ prefix = dj.config["custom"]["database.prefix"]
 
 schema = dj.schema(prefix + "scheduler")
 
+
 def connect_mod(x):
     return dj.VirtualModule(x, prefix + x)
+
+
 lab = connect_mod("lab")
 subject = connect_mod("subject")
 
@@ -15,14 +18,15 @@ subject = connect_mod("subject")
 @schema
 class TrainingProfile(dj.Manual):
     definition = """
-    training_profile_id                    : int auto_increment
+    training_profile_id    : int auto_increment
     ---
     -> lab.User
     date_created                 : date
     date_last_used                 : date
-    name                  : varchar(255)          # Profile name
-    description           : varchar(255)          # Profile description
-    variables             : varchar(16384)        # Encoded for the variables
+    training_profile_name                  : varchar(255)          # Profile name
+    training_profile_description           : varchar(255)          # Profile description
+    training_profile_variables             : varchar(16384)        # Encoded for the variables
+    deprecated            : int                   # Deprecation  to hide
     """
 
 
@@ -58,11 +62,13 @@ class Schedule(dj.Manual):
     -> lab.Location                                      # Full rig name, e.g., 165I-Rig1-T
     timeslot                     : int                   # timeslot by number
     ---
-    -> [nullable] subject.Subject                             # subject name
-    -> [nullable] BehaviorProfile                         # Reference to `BehaviorProfile`
-    -> [nullable] RecordingProfile                        # Reference to `RecordingProfile`
-    -> [nullable] InputOutputProfile                      # Reference to `InputOutputProfile`
+    -> subject.Subject                             # subject name
+    -> TrainingProfile                         # Reference to `TrainingProfile`
+    -> RecordingProfile                        # Reference to `RecordingProfile`
+    -> InputOutputProfile                      # Reference to `InputOutputProfile`
     experimenters_instructions  :varchar(64532)
+    level                       : int
+    sublevel                    : int
     """
 
 
