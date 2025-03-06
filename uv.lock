@@ -4941,7 +4941,7 @@ dependencies = [
     { name = "tifffile" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 pipeline = [
     { name = "cellpose" },
     { name = "ecephys-spike-sorting" },
@@ -4960,33 +4960,30 @@ pipeline = [
 requires-dist = [
     { name = "astropy", specifier = ">=6.0" },
     { name = "bitstring" },
+    { name = "cellpose", marker = "extra == 'pipeline'" },
     { name = "datajoint", specifier = ">=0.14.2" },
+    { name = "ecephys-spike-sorting", marker = "extra == 'pipeline'", specifier = ">=0.1.0" },
+    { name = "ecephys-spike-sorting", marker = "extra == 'pipeline'", git = "https://github.com/jenniferColonell/ecephys_spike_sorting.git" },
+    { name = "element-array-ephys", marker = "extra == 'pipeline'", git = "https://github.com/BrainCOGS/element-array-ephys.git" },
+    { name = "element-calcium-imaging", marker = "extra == 'pipeline'", git = "https://github.com/BrainCOGS/element-calcium-imaging.git" },
+    { name = "element-interface", marker = "extra == 'pipeline'", git = "https://github.com/datajoint/element-interface.git" },
     { name = "fair-research-login" },
+    { name = "jupyterlab", marker = "extra == 'pipeline'", specifier = ">=4.3.4" },
     { name = "numpy", specifier = ">=1.23" },
     { name = "pandas", specifier = ">=2.0" },
+    { name = "paramiko", marker = "extra == 'pipeline'" },
+    { name = "psutil", marker = "extra == 'pipeline'" },
     { name = "python-dotenv", specifier = ">=0.20" },
+    { name = "scanreader", marker = "extra == 'pipeline'", git = "https://github.com/atlab/scanreader.git" },
     { name = "scikit-image" },
     { name = "scipy" },
+    { name = "scp", marker = "extra == 'pipeline'" },
+    { name = "six", marker = "extra == 'pipeline'" },
     { name = "suite2p" },
     { name = "tables", specifier = ">=3.8" },
     { name = "tifffile" },
 ]
-
-[package.metadata.requires-dev]
-pipeline = [
-    { name = "cellpose" },
-    { name = "ecephys-spike-sorting", specifier = ">=0.1.0" },
-    { name = "ecephys-spike-sorting", git = "https://github.com/jenniferColonell/ecephys_spike_sorting.git" },
-    { name = "element-array-ephys", git = "https://github.com/BrainCOGS/element-array-ephys.git" },
-    { name = "element-calcium-imaging", git = "https://github.com/BrainCOGS/element-calcium-imaging.git" },
-    { name = "element-interface", git = "https://github.com/datajoint/element-interface.git" },
-    { name = "jupyterlab", specifier = ">=4.3.4" },
-    { name = "paramiko" },
-    { name = "psutil" },
-    { name = "scanreader", git = "https://github.com/atlab/scanreader.git" },
-    { name = "scp" },
-    { name = "six" },
-]
+provides-extras = ["pipeline"]
 
 [[package]]
 name = "uri-template"
