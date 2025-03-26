@@ -20,12 +20,29 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
   + Install the Jupyter extension for VS Code.
 
+  #### Install git
+  + Linux and Mac operating systems come preinstalled with Git.  If running in Windows get [Git](https://gitforwindows.org/).
+
+  #### Install graphviz
+  + To display DataJoint Diagrams, [install graphviz](https://graphviz.org/download/).
+
   #### Install a virtual environment
 
   + A virtual environment allows you to install the packages required for a
     specific project within an isolated environment on your computer.
 
   + It is highly recommended to create a virtual environment to run the workflow.
+
+  ##### uv
+
+  `uv` is a new tool by Astral that makes installing and management of Python versions, packages and virtual environments easy and seemless. Often, you can just invoke `uv run` and the script or package name and `uv` will ensure it is run in a virtual environment.
+
+  To get started, install uv from [here](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1), then run `uv sync` to create a virtual environment. The environment `.venv` will install the `u19_pipeline` package as well as the dependencies required for non-pipeline usage.
+
+  > [!note]-
+  > If you intend on installing this in a production environment, run `uv sync --group=pipeline`. This will install the additional packages that are necessary for the cluster.
+
+  ##### Conda
 
   + Conda and virtualenv are virtual environment managers and you can use either
     option.  Below are the commands for Conda.
@@ -61,12 +78,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
       conda activate <environment_name>
       ```
 
-    #### Install git
-    + Linux and Mac operating systems come preinstalled with Git.  If running in Windows get [Git](https://gitforwindows.org/).
-
-    #### Install graphviz
-    + To display DataJoint Diagrams, [install graphviz](https://graphviz.org/download/).
-
   </details>
 
 ### Configuration
@@ -81,6 +92,11 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   pip install -e .
   python initial_conf.py
   ```
+  or
+  ```bash
+  cd U19-pipeline_python
+  uv run initial_conf.py
+  ```
   (Username and password will be prompted at this moment: Princeton NETiD & NETiD password usually works)
 
   + The `initial_conf.py`  script will store a global file with credentials to access DB and configuration variables/filepaths.
@@ -92,16 +108,19 @@ We have created some tutorial notebooks to help you start working with DataJoint
 
 1. Querying data
     + `jupyter notebook notebooks/tutorials/1-Explore U19 data pipeline with DataJoint.ipynb`
+    + `uv run jupyter notebook notebooks/tutorials/1-Explore U19 data pipeline with DataJoint.ipynb`
 
 2. Building analysis pipelines
     + Recommended if you are going to create new databases or tables for analysis.
     + `jupyter notebook notebooks/tutorials/2-Analyze data with U19 pipeline and save results.ipynb`
     + `jupyter notebook notebooks/tutorials/3-Build a simple data pipeline.ipynb`
+    + `uv run jupyter notebook notebooks/tutorials/2-Analyze data with U19 pipeline and save results.ipynb`
+    + `uv run jupyter notebook notebooks/tutorials/3-Build a simple data pipeline.ipynb`
 
 ## Accessing data files on your system
 
 + There are several data files (behavior, imaging & electrophysiology) that are referenced in the database.
-+ To access thse files you should mount PNI file server volumes on your system.
++ To access these files you should mount PNI file server volumes on your system.
 + There are three main file servers across PNI where data is stored (braininit, Bezos & u19_dj).
 
   <details>
