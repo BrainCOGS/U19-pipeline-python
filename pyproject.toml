@@ -12,31 +12,36 @@ authors = [
     { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
 ]
 dependencies = [
+    "datajoint>=0.14.2",
+    "numpy>=1.23",
+    "pandas>=2.0",
+    "python-dotenv>=0.20",
+    "scikit-image",
+    "scipy",
+    "tables>=3.8",
+]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+pipeline = [
+    "jupyterlab>=4.3.4",
+    "cellpose",
     "astropy>=6.0",
     "bitstring",
-    "cellpose",
-    "datajoint>=0.14.2",
+    "fair-research-login",
     "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
     "element-array-ephys @ git+https://github.com/BrainCOGS/element-array-ephys.git",
     "element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git",
     "element-interface @ git+https://github.com/datajoint/element-interface.git",
-    "fair-research-login",
-    "jupyterlab",
-    "numpy>=1.23",
-    "pandas>=2.0",
+    "ecephys-spike-sorting>=0.1.0",
     "paramiko",
     "psutil",
-    "python-dotenv>=0.20",
-    "scanreader @ git+https://github.com/atlab/scanreader.git",
-    "scikit-image",
-    "scipy",
     "scp",
+    "scanreader @ git+https://github.com/atlab/scanreader.git",
     "six",
     "suite2p",
-    "tables>=3.8",
     "tifffile",
 ]
-requires-python = ">=3.10"
 
 [tool.setuptools]
 packages = {find = {include = ["u19_pipeline*", "scripts*"]}}
@@ -49,4 +54,13 @@ path = "scripts/__init__.py"
 include = [
     "/scripts",
     "/u19_pipeline",
+]
+
+[tool.ruff]
+# Allow lines to be as long as 120.
+line-length = 120
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.10",
 ]

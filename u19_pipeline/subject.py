@@ -2,9 +2,18 @@
 
 
 import datajoint as dj
-from . import lab
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'subject')
+prefix = dj.config["custom"]["database.prefix"]
+
+schema = dj.schema(prefix + "subject")
+
+
+def connect_mod(x):
+    return dj.VirtualModule(x, prefix + x)
+
+
+lab = connect_mod("lab")
+
 
 @schema
 class Species(dj.Lookup):
