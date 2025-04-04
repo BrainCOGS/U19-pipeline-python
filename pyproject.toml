@@ -12,18 +12,13 @@ authors = [
     { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
 ]
 dependencies = [
-    "astropy>=6.0",
-    "bitstring",
     "datajoint>=0.14.2",
-    "fair-research-login",
     "numpy>=1.23",
     "pandas>=2.0",
     "python-dotenv>=0.20",
     "scikit-image",
     "scipy",
-    "suite2p",
     "tables>=3.8",
-    "tifffile",
 ]
 requires-python = ">=3.10"
 
@@ -31,6 +26,9 @@ requires-python = ">=3.10"
 pipeline = [
     "jupyterlab>=4.3.4",
     "cellpose",
+    "astropy>=6.0",
+    "bitstring",
+    "fair-research-login",
     "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
     "element-array-ephys @ git+https://github.com/BrainCOGS/element-array-ephys.git",
     "element-calcium-imaging @ git+https://github.com/BrainCOGS/element-calcium-imaging.git",
@@ -41,6 +39,8 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/atlab/scanreader.git",
     "six",
+    "suite2p",
+    "tifffile",
 ]
 
 [tool.setuptools]
