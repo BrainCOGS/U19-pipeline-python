@@ -1,10 +1,18 @@
 """This module defines tables in the schema U19_action"""
 
-
 import datajoint as dj
-from . import lab, reference, subject
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'action')
+prefix = dj.config["custom"]["database.prefix"]
+
+schema = dj.schema(prefix + "action")
+
+
+def connect_mod(x):
+    return dj.VirtualModule(x, prefix + x)
+
+
+subject = connect_mod("subject")
+lab = connect_mod("lab")
 
 
 @schema
@@ -59,7 +67,7 @@ class WaterType(dj.Lookup):
     definition = """
     watertype_name       : varchar(255)
     """
-    contents = zip(['Water', 'Water 10% Sucrose', 'Milk', 'Unknown'])
+    contents = zip(["Water", "Water 10% Sucrose", "Milk", "Unknown"])
 
 
 @schema
@@ -94,11 +102,8 @@ class SurgeryType(dj.Lookup):
     definition = """
     surgery_type         : varchar(32)
     """
-    contents = zip([
-        'Craniotomy',
-        'Hippocampal window',
-        'GRIN lens implant'
-    ])
+    contents = zip(["Craniotomy", "Hippocampal window", "GRIN lens implant"])
+
 
 @schema
 class Surgery(dj.Manual):
@@ -132,4 +137,14 @@ class VirusInjection(dj.Manual):
     rate_of_injection    : float                        # rate of injection
     virus_dilution       : float                        # x dilution of the original virus
     -> reference.BrainArea
+    """
+
+
+@schema
+class Transport(dj.Manual):
+    definition = """
+    -> subject.Subject
+    transport_datetime: datetime
+    ---
+    -> lab.User.proj(transport_person="user_id")
     """

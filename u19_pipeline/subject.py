@@ -269,6 +269,16 @@ class Cage(dj.Lookup):
 
 
 @schema
+class SubjectCoowners(dj.Manual):
+    definition = """
+    -> Subject
+    -> lab.User.proj(coowner='user_id')
+    ---
+    active=1: int  # Default value
+    """
+
+
+@schema
 class CagingStatus(dj.Manual):
     definition = """
     -> Subject
