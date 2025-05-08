@@ -87,7 +87,7 @@ def main_live_monitor_alert():
     sessions = pd.DataFrame((acquisition.SessionStarted & query & query_started_recently).fetch('KEY','session_location','session_start_time',as_dict=True))
     sessions = sessions.loc[~sessions['subject_fullname'].str.startswith('testuser'),:]
 
-    print('sessions STARTED RECENTLY\n', sessions)
+    #print('sessions STARTED RECENTLY\n', sessions)
 
     if sessions.shape[0] > 0:
 
@@ -99,7 +99,7 @@ def main_live_monitor_alert():
         sessions = sessions.drop(columns=['session_location', 'session_start_time'])
         sessions = sessions.reset_index(drop=True)
 
-        print('Last session started on rig\n', sessions)
+        #print('Last session started on rig\n', sessions)
 
         #Only analyze sessions that have not been reported
         query_reported  = {} 
@@ -113,7 +113,7 @@ def main_live_monitor_alert():
             sessions = sessions.drop(columns='_merge')
             sessions = sessions.reset_index(drop=True)
 
-        print('Sessions not reported\n', sessions)
+        #print('Sessions not reported\n', sessions)
 
     if sessions.shape[0] > 0:
 
