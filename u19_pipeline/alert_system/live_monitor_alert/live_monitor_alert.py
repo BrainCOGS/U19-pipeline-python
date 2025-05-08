@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 
 import u19_pipeline.utils.slack_utils as su
 
-SECONDS_ALERT = 180
+MINUTES_ALERT = 3
 
 def get_webhook_list(lab):
     #Get webhook lists
     slack_configuration_dictionary = {
-        'slack_notification_channel': ['alvaro_luna']
+        'slack_notification_channel': ['rig_training_error_notification']
     }
     webhooks_list = []
     query_slack_webhooks = [{'webhook_name' : x} for x in slack_configuration_dictionary['slack_notification_channel']]
@@ -33,7 +33,7 @@ def slack_alert_message_format_live_stats(alert_dictionary1, alert_dictionary2, 
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ':rotating_light: * Live Monitor Alert* on ' + datestr + '\n' +\
-    'More than ' + str(time_no_response) + ' s without new trial' + '\n'
+    'More than ' + str(time_no_response) + ' min without new trial' + '\n'
     m1['text'] = m1_1
 
     #Info#
@@ -80,14 +80,12 @@ def main_live_monitor_alert():
     query['is_finished'] = 0
 
     #Only look for sessions started in the last 1:30
-    last_time_start = datetime.now(tz=ZoneInfo('America/New_York')) - timedelta(hours=3,minutes=30)
+    last_time_start = datetime.now(tz=ZoneInfo('America/New_York')) - timedelta(hours=8,minutes=30)
     last_time_start = last_time_start.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
 
     query_started_recently = "session_start_time > '" + last_time_start + "'" 
     sessions = pd.DataFrame((acquisition.SessionStarted & query & query_started_recently).fetch('KEY','session_location','session_start_time',as_dict=True))
     sessions = sessions.loc[~sessions['subject_fullname'].str.startswith('testuser'),:]
-
-    #print('sessions STARTED RECENTLY\n', sessions)
 
     if sessions.shape[0] > 0:
 
@@ -98,8 +96,6 @@ def main_live_monitor_alert():
         sessions = pd.merge(sessions, sessions2, on=['session_location', 'session_start_time'])
         sessions = sessions.drop(columns=['session_location', 'session_start_time'])
         sessions = sessions.reset_index(drop=True)
-
-        #print('Last session started on rig\n', sessions)
 
         #Only analyze sessions that have not been reported
         query_reported  = {} 
@@ -113,7 +109,7 @@ def main_live_monitor_alert():
             sessions = sessions.drop(columns='_merge')
             sessions = sessions.reset_index(drop=True)
 
-        #print('Sessions not reported\n', sessions)
+        # print('Sessions not reported\n', sessions)
 
     if sessions.shape[0] > 0:
 
@@ -128,8 +124,8 @@ def main_live_monitor_alert():
             # Filter sessions whose last trial info is greater than 300s
             right_now_est = datetime.now(tz=ZoneInfo('America/New_York'))
             right_now_est = right_now_est.replace(tzinfo=None)
-            live_stats['seconds_elapsed_last_stat'] = (right_now_est- live_stats['current_datetime']).dt.total_seconds()
-            live_stats['alert'] = live_stats['seconds_elapsed_last_stat'] >8    
+            live_stats['minutes_elapsed_last_stat'] = (right_now_est- live_stats['current_datetime']).dt.total_seconds()/60
+            live_stats['alert'] = live_stats['minutes_elapsed_last_stat'] > MINUTES_ALERT    
             live_stats = live_stats.loc[live_stats['alert']==True,:]
 
 
@@ -151,16 +147,27 @@ def main_live_monitor_alert():
                 session_stats = session_stats.rename({'current_datetime': 'last_live_stat'}, axis=1)
                 query_live_stats = live_stats[['subject_fullname', 'session_date', 'session_number', 'current_datetime']].to_dict('records')
                 live_stats = live_stats.drop(columns=['current_datetime', 'alert'])
-                ls_full_df = pd.DataFrame((acquisition.LiveSessionStats & query_live_stats).fetch(as_dict=True))
+                ls_full_df = pd.DataFrame((acquisition.LiveSessionStats & query_live_stats).fetch('KEY', 'current_datetime', 'level',\
+                            'sublevel', 'performance', 'bias', 'mean_duration_trial', 'median_duration_trial', as_dict=True))
                 ls_full_df = pd.merge(ls_full_df, live_stats, on=['subject_fullname', 'session_date', 'session_number'])
-                ls_full_df = ls_full_df.drop(columns=['subject_fullname', 'session_date', 'session_number'])
+                ls_full_df = ls_full_df.drop(columns=['subject_fullname', 'session_date', 'session_number', 'block'])
                 ls_full_df = ls_full_df.rename({'current_datetime': 'last_stat_time'}, axis=1)
+                ls_full_df['minutes_elapsed_last_stat'] = ls_full_df['minutes_elapsed_last_stat'].astype(int)
+
+                mid = ls_full_df['minutes_elapsed_last_stat']
+                ls_full_df = ls_full_df.drop(columns=['minutes_elapsed_last_stat'])
+                ls_full_df.insert(0, 'minutes_elapsed_last_stat', mid)
 
                 mid = ls_full_df['last_stat_time']
                 ls_full_df = ls_full_df.drop(columns=['last_stat_time'])
                 ls_full_df.insert(0, 'last_stat_time', mid)
 
+                double_cols = ls_full_df.select_dtypes(include=['float64']).columns
+                ls_full_df[double_cols] = ls_full_df[double_cols].applymap('{:.2f}'.format)
+
                 ls_full_dict = ls_full_df.to_dict('records')
+
+                #print(ls_full_df)
 
                 webhooks_list = get_webhook_list(lab)
 
@@ -170,12 +177,13 @@ def main_live_monitor_alert():
 
                     #Format message for session and live stat dictionary
                     this_session_stats = session_data_df.iloc[idx_alert,:]
-                    slack_json_message = slack_alert_message_format_live_stats(this_session_stats.to_dict(), this_alert_record, int(this_alert_record['seconds_elapsed_last_stat']))
+                    slack_json_message = slack_alert_message_format_live_stats(this_session_stats.to_dict(), this_alert_record, this_alert_record['minutes_elapsed_last_stat'])
 
                     #Send alert
                     for this_webhook in webhooks_list:
+                        #print(this_webhook)
                         su.send_slack_notification(this_webhook, slack_json_message)
-                        time.sleep(1)
+                        time.sleep(0.5)
 
                     reported_session = this_session_stats[['subject_fullname', 'session_date', 'session_number']].copy()
                     reported_session['report_datetime'] = right_now_est
