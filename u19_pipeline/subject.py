@@ -2,9 +2,18 @@
 
 
 import datajoint as dj
-from . import lab
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'subject')
+prefix = dj.config["custom"]["database.prefix"]
+
+schema = dj.schema(prefix + "subject")
+
+
+def connect_mod(x):
+    return dj.VirtualModule(x, prefix + x)
+
+
+lab = connect_mod("lab")
+
 
 @schema
 class Species(dj.Lookup):
@@ -265,6 +274,16 @@ class Cage(dj.Lookup):
     cage                 : char(8)                      # name of a cage
     ---
     -> lab.User.proj(cage_owner="user_id")
+    """
+
+
+@schema
+class SubjectCoowners(dj.Manual):
+    definition = """
+    -> Subject
+    -> lab.User.proj(coowner='user_id')
+    ---
+    active=1: int  # Default value
     """
 
 
