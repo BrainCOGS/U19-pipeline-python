@@ -80,7 +80,7 @@ def main_live_monitor_alert():
     query['is_finished'] = 0
 
     #Only look for sessions started in the last 1:30
-    last_time_start = datetime.now(tz=ZoneInfo('America/New_York')) - timedelta(hours=8,minutes=30)
+    last_time_start = datetime.now(tz=ZoneInfo('America/New_York')) - timedelta(hours=1,minutes=30)
     last_time_start = last_time_start.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
 
     query_started_recently = "session_start_time > '" + last_time_start + "'" 
