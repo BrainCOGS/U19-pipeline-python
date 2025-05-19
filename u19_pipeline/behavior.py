@@ -36,6 +36,7 @@ class TowersBlock(dj.Imported):
     block                : tinyint                      # block number
     ---
     -> task.TaskLevelParameterSet
+    sublevel             : int                          # sublevel data in this block
     n_trials             : int                          # number of trials in this block
     first_trial          : int                          # trial_idx of the first trial in this block
     block_duration       : float                        # in secs, duration of the block
