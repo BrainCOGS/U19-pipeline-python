@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import u19_pipeline.utils.slack_utils as su
 
-MINUTES_ALERT = 3
+MINUTES_ALERT = 5
 
 def get_webhook_list(lab):
     #Get webhook lists
@@ -108,8 +108,6 @@ def main_live_monitor_alert():
             sessions = sessions.loc[sessions['_merge'] == 'left_only']
             sessions = sessions.drop(columns='_merge')
             sessions = sessions.reset_index(drop=True)
-
-        # print('Sessions not reported\n', sessions)
 
     if sessions.shape[0] > 0:
 
