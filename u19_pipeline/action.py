@@ -144,7 +144,8 @@ class VirusInjection(dj.Manual):
 class Transport(dj.Manual):
     definition = """
     -> subject.Subject
-    transport_datetime: datetime
+    transport_out_datetime: datetime
     ---
+    transport_in_datetime: datetime
     -> lab.User.proj(transport_person="user_id")
     """
