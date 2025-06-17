@@ -157,5 +157,6 @@ class Transport(dj.Manual):
     transport_out_datetime: datetime
     ---
     transport_in_datetime: datetime
-    -> lab.User.proj(transport_person="user_id")
+    -> lab.User.proj(transport_out_person="user_id")
+    -> lab.User.proj(transport_in_person="user_id")
     """
