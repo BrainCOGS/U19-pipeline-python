@@ -26,6 +26,16 @@ class Weighing(dj.Manual):
     weight               : float                        # in grams
     """
 
+@schema
+class Responsibilites(dj.Manual):
+    definition = """
+    -> subject.Subject
+    ---
+    subject_status       : enum('InExperiments','WaterRestrictionOnly','AdLibWater','Dead')
+    water_per_day=null   : float                        # in mL
+    technician_duties    : varchar(4096)
+    owner_duties         : varchar(2048)
+    """
 
 @schema
 class SubjectStatus(dj.Manual):
