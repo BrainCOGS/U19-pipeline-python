@@ -26,8 +26,9 @@ class Weighing(dj.Manual):
     weight               : float                        # in grams
     """
 
+
 @schema
-class Responsibilites(dj.Manual):
+class Responsibilities(dj.Manual):
     definition = """
     -> subject.Subject
     ---
@@ -36,6 +37,7 @@ class Responsibilites(dj.Manual):
     technician_duties    : varchar(4096)
     owner_duties         : varchar(2048)
     """
+
 
 @schema
 class SubjectStatus(dj.Manual):
@@ -156,7 +158,42 @@ class Transport(dj.Manual):
     -> subject.Subject
     transport_out_datetime: datetime
     ---
-    transport_in_datetime: datetime
+    transport_in_datetime: datetime=null
     -> lab.User.proj(transport_out_person="user_id")
-    -> lab.User.proj(transport_in_person="user_id")
+    -> lab.User.proj(transport_in_person="user_id")=null
+    """
+
+
+@schema
+class ActionItem(dj.Manual):
+    definition = """
+    action_item_idx: int auto_increment
+    ---
+    -> subject.Subject
+    description: varchar(1024)
+    start_date: date
+    end_date: date
+    """
+
+
+@schema
+class ResponsibilitiesAlt(dj.Manual):
+    definition = """
+    -> subject.Subject
+    ---
+    subject_status       : enum('InExperiments','WaterRestrictionOnly','AdLibWater','Dead')
+    water_per_day=null   : float                        # in mL
+    responsibilities: varchar(4096)
+    """
+
+
+@schema
+class ResponsibilitiesAltHistoric(dj.Manual):
+    definition = """
+    -> subject.Subject
+    effective_date: date
+    ---
+    subject_status       : enum('InExperiments','WaterRestrictionOnly','AdLibWater','Dead')
+    water_per_day=null   : float                        # in mL
+    responsibilities: varchar(4096)
     """
