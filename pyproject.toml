@@ -62,5 +62,6 @@ line-length = 120
 
 [dependency-groups]
 dev = [
+    "ipykernel>=6.29.5",
     "ruff>=0.9.10",
 ]
