@@ -64,4 +64,5 @@ line-length = 120
 dev = [
     "ipykernel>=6.29.5",
     "ruff>=0.9.10",
+    "setuptools>=75.8.0",
 ]
