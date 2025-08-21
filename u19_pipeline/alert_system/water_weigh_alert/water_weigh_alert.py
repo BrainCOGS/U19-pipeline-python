@@ -134,7 +134,7 @@ def slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_w
     m1['type'] = 'section'
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = ':rotating_light: *TEST TEST TEST TEST TEST TEST Subjects Status Alert *'
+    m1_1["text"] = ':rotating_light: *Subjects Status Alert *'
     m1['text'] = m1_1
 
     #Info#
@@ -189,15 +189,15 @@ def main_water_weigh_alert():
     subjects_not_watered = subject_data.loc[subject_data['current_need_water'] > 0, ['subject_fullname', 'current_need_water']]
     subjects_not_watered = subjects_not_watered.reset_index(drop=True)
     subjects_not_watered['current_need_water'] = subjects_not_watered['current_need_water'].apply(lambda x: f"{x:.1f}")
-    subjects_not_watered = subjects_not_watered.head()
+    # subjects_not_watered = subjects_not_watered.head()
 
     subjects_not_weighted = subject_data.loc[subject_data['need_weight'], ['subject_fullname', 'need_weight']]
     subjects_not_weighted = subjects_not_weighted.reset_index(drop=True)
-    subjects_not_weighted = subjects_not_weighted.head()
+    #subjects_not_weighted = subjects_not_weighted.head()
 
     subjects_not_trained = subject_data.loc[subject_data['training_status']==1, ['subject_fullname', 'scheduled_rig']]
     subjects_not_trained = subjects_not_trained.reset_index(drop=True)
-    subjects_not_trained = subjects_not_trained.head()
+    #subjects_not_trained = subjects_not_trained.head()
 
     slack_json_message = slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_weighted, subjects_not_trained)
 
