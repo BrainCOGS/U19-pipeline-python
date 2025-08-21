@@ -134,7 +134,7 @@ if __name__ == "__main__":
     default_args = dict()
     default_args["save_user"] = True
     default_args["replace_user"] = False
-    default_args["global_config"] = True
+    default_args["global_config"] = False
 
     # print(parser.format_help())
     # usage: initial_conf.py [-h] [--save_user SAVE_USER] [--replace_user REPLACE_USER]
