@@ -165,8 +165,9 @@ class Protocol(dj.Lookup):
     ---
     reference_weight_pct=null : float                        # percentage of initial allowed
     protocol_description="" : varchar(255)                 # description
+    active : int # whether the protocol is active (active = 1, inactive = 0 )
     """
-    contents = [['1910', 0.8, 'Tank Lab protocol']]
+    contents = [["1910", 0.8, "Tank Lab protocol"]]
 
 
 @schema
