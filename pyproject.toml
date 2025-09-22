@@ -13,6 +13,7 @@ authors = [
 ]
 dependencies = [
     "datajoint>=0.14.2",
+    "icalevents>=0.3.0",
     "numpy>=1.23",
     "pandas>=2.0",
     "python-dotenv>=0.20",

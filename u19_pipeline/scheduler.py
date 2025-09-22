@@ -154,3 +154,14 @@ class TechSchedule(dj.Manual):
     start_time : datetime          # Datetime of when the shift ends
     end_time : datetime          # Datetime of when the shift ends
     """
+
+
+@schema
+class SchedulingNotes(dj.Manual):
+    definition = """
+    notes_index: int auto_increment
+    ---
+    date                 : date
+    message : varchar(32768)
+    -> lab.User
+    """

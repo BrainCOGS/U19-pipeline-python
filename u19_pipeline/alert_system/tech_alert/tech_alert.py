@@ -1,24 +1,22 @@
 import datetime
+import re
 import sys
-
-# import datajoint as dj
+from datetime import timedelta
 from pprint import pprint
+
+import datajoint as dj
+from icalevents.icalevents import events
 
 from u19_pipeline.utils import slack_utils as su
 
 
 def tech_schedule():
-    import datajoint as dj
-
-    scheduler = dj.create_virtual_module("scheduler", "u19_scheduler")
     lab = dj.create_virtual_module("lab", "u19_lab")
 
-    today = datetime.date.today()
-    yesterday = today - datetime.timedelta(days=1)
-    next_week = today + datetime.timedelta(weeks=1)
+    slack_configuration_dictionary = {"webhook_name": "wheniwork_ical_url"}
+    url = (lab.SlackWebhooks & slack_configuration_dictionary).fetch1("webhook_url")
+    schedule_data = fetch_and_parse_icalevents(url)
 
-    schedule_query = scheduler.TechSchedule * lab.User() & f'date BETWEEN "{yesterday}" AND "{next_week}"'
-    schedule_data = schedule_query.fetch(as_dict=True)
     return schedule_data
 
 
@@ -56,9 +54,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
     m2_1["type"] = "mrkdwn"
 
     m2_1["text"] = "\n".join(
-        f"*{shift['full_name']}* is expected to work today between "
-        f"{shift['start_time'].strftime('%I:%M %p')} and {shift['end_time'].strftime('%I:%M %p')} "
-        f"(actual times may vary). Duties: {shift['tech_duties']}"
+        f"*{shift['personnel']}* ({shift['duties']}) is expected to work today between "
+        f"{shift['start'].strftime('%I:%M %p')} and {shift['end'].strftime('%I:%M %p')} "
+        "(actual times may vary)."
         for shift in shifts_today
     )
 
@@ -69,30 +67,34 @@ def slack_alert_message_format_tech_alert(schedule_data):
     message["text"] = "🗓 *Today's Tech Schedule:*"
 
     # Check for "Watering Only", "Off", or no one scheduled
-    next_week = datetime.date.today() + datetime.timedelta(weeks=1)
+    next_week = today + datetime.timedelta(weeks=1)
     upcoming_shifts = [shift for shift in shifts if shift["date"] <= next_week]
 
     alerts = []
     # Today + next 7 days
-    for day in range(8):
-        date_to_check = datetime.date.today() + datetime.timedelta(days=day)
+    for day in range(7):
+        date_to_check = today + datetime.timedelta(days=day)
         shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check and not is_off(shift)]
 
         if not shifts_on_date:
             alerts.append(
-                f"\n<!channel> No technician is scheduled for {date_to_check.strftime('%A, %B %d')}. Please assign someone for coverage."
+                f"- <!channel> No technician is scheduled for {date_to_check.strftime('%A, %B %d')}. Please assign someone for coverage."
             )
         else:
             for shift in shifts_on_date:
                 if day == 1:
                     alerts.append(
-                        f"\nTomorrow ({date_to_check.strftime('%A, %B %d')}): {shift['full_name']} is scheduled for '{shift['tech_duties']}'."
+                        f"- Tomorrow ({date_to_check.strftime('%A, %B %d')}): {shift['personnel']} is scheduled for '{shift['duties']}'."
                     )
                 elif day == 2:
                     alerts.append(
-                        f"\nOvermorrow ({date_to_check.strftime('%A, %B %d')}): {shift['full_name']} is scheduled for '{shift['tech_duties']}'."
+                        f"- Overmorrow ({date_to_check.strftime('%A, %B %d')}): {shift['personnel']} is scheduled for '{shift['duties']}'."
                     )
-                if shift["tech_duties"] in ["Watering Only", "Off"]:
+                elif "Lab Cleanup" in shift["duties"]:
+                    alerts.append(
+                        f"- Experimenters, {date_to_check.strftime('%A, %B %d')} will have no training due to lab cleanup."
+                    )
+                if shift["duties"] in ["Watering Only", "Off"]:
                     alerts.append("Experimenters, please make arrangements if you need to train.")
         date_to_check = datetime.date.today() + datetime.timedelta(days=day)
         shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check]
@@ -101,9 +103,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
             alerts.append(f"No one is scheduled for {date_to_check.strftime('%A, %B %d')}.")
         else:
             for shift in shifts_on_date:
-                if shift["tech_duties"] in ["Watering Only", "Off"]:
+                if shift["duties"] in ["Watering Only"]:
                     alerts.append(
-                        f"{shift['full_name']} is scheduled for '{shift['tech_duties']}' on {date_to_check.strftime('%A, %B %d')}."
+                        f"- {shift['personnel']} is scheduled for '{shift['duties']}' on {date_to_check.strftime('%A, %B %d')}."
                     )
 
     if alerts:
@@ -112,19 +114,19 @@ def slack_alert_message_format_tech_alert(schedule_data):
         m3["type"] = "section"
         m3_1 = dict()
         m3_1["type"] = "mrkdwn"
-        m3_1["text"] = f"*Upcoming Alerts:*\n{alert_text}"
+        m3_1["text"] = f"*:rotating_light: Upcoming Shifts: :rotating_light:*\n{alert_text}"
         m3["text"] = m3_1
         message["blocks"].append(m3)
 
     return message
 
 
-def is_not_training(tech_duties):
-    return tech_duties not in ["Watering Only", "Off"]
+def is_not_training(duties):
+    return duties not in ["Watering Only", "Off"]
 
 
 def is_off(shift):
-    return shift["tech_duties"] == "Off"
+    return shift["duties"] == "Off"
 
 
 def main_technician_alert():
@@ -142,6 +144,7 @@ def main_technician_alert():
     for this_webhook in webhooks_list:
         su.send_slack_notification(this_webhook, slack_json_message)
 
+
     return slack_json_message
 
 
@@ -152,73 +155,73 @@ def generate_sample_data():
     sample_data = [
         {
             "date": yesterday,
-            "full_name": "John Doe",
-            "start_time": datetime.time(9, 0),
-            "end_time": datetime.time(17, 0),
-            "tech_duties": "General Duties",
+            "personnel": "John Doe",
+            "start": datetime.time(9, 0),
+            "end": datetime.time(17, 0),
+            "duties": "General Duties",
         },
         {
             "date": today,
-            "full_name": "Jane Smith",
-            "start_time": datetime.time(10, 0),
-            "end_time": datetime.time(18, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Jane Smith",
+            "start": datetime.time(10, 0),
+            "end": datetime.time(18, 0),
+            "duties": "General Duties",
         },
         {
             "date": today + datetime.timedelta(days=1),
-            "full_name": "Bob Johnson",
-            "start_time": datetime.time(8, 0),
-            "end_time": datetime.time(16, 0),
-            "tech_duties": "Watering Only",
+            "personnel": "Bob Johnson",
+            "start": datetime.time(8, 0),
+            "end": datetime.time(16, 0),
+            "duties": "Watering Only",
         },
         {
             "date": today + datetime.timedelta(days=1),
-            "full_name": "Alice Johnson",
-            "start_time": datetime.time(8, 0),
-            "end_time": datetime.time(16, 0),
-            "tech_duties": "Watering Only",
+            "personnel": "Alice Johnson",
+            "start": datetime.time(8, 0),
+            "end": datetime.time(16, 0),
+            "duties": "Watering Only",
         },
         {
             "date": today + datetime.timedelta(days=2),
-            "full_name": "Bob Brown",
-            "start_time": datetime.time(9, 0),
-            "end_time": datetime.time(17, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Bob Brown",
+            "start": datetime.time(9, 0),
+            "end": datetime.time(17, 0),
+            "duties": "General Duties",
         },
         {
             "date": today + datetime.timedelta(days=3),
-            "full_name": "Charlie Davis",
-            "start_time": datetime.time(10, 0),
-            "end_time": datetime.time(18, 0),
-            "tech_duties": "Off",
+            "personnel": "Charlie Davis",
+            "start": datetime.time(10, 0),
+            "end": datetime.time(18, 0),
+            "duties": "Off",
         },
         {
             "date": today + datetime.timedelta(days=4),
-            "full_name": "Eve Wilson",
-            "start_time": datetime.time(9, 0),
-            "end_time": datetime.time(17, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Eve Wilson",
+            "start": datetime.time(9, 0),
+            "end": datetime.time(17, 0),
+            "duties": "General Duties",
         },
         {
             "date": today + datetime.timedelta(days=5),
-            "full_name": "Frank White",
-            "start_time": datetime.time(8, 0),
-            "end_time": datetime.time(16, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Frank White",
+            "start": datetime.time(8, 0),
+            "end": datetime.time(16, 0),
+            "duties": "General Duties",
         },
         {
             "date": today + datetime.timedelta(days=6),
-            "full_name": "Grace Black",
-            "start_time": datetime.time(10, 0),
-            "end_time": datetime.time(18, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Grace Black",
+            "start": datetime.time(10, 0),
+            "end": datetime.time(18, 0),
+            "duties": "General Duties",
         },
         {
             "date": today + datetime.timedelta(days=7),
-            "full_name": "Hank Green",
-            "start_time": datetime.time(9, 0),
-            "end_time": datetime.time(17, 0),
-            "tech_duties": "General Duties",
+            "personnel": "Hank Green",
+            "start": datetime.time(9, 0),
+            "end": datetime.time(17, 0),
+            "duties": "General Duties",
         },
     ]
 
@@ -232,14 +235,86 @@ def test_slack_alert_message_format_tech_alert():
 
 
 def main_loop():
-    from scripts.conf_file_finding import try_find_conf_file
+    return main_technician_alert()
 
-    try_find_conf_file()
+
+def fetch_and_parse_icalevents(weburl: str):
+    """Fetch and filter iCal events for VR-related duties.
+
+    Args:
+        weburl (str): url to the iCal feed
+        logger (Logger): Local Python logger
+
+    Returns:
+        list[dict]: _description_
+    """
+
+    start_date = datetime.date.today() - timedelta(weeks=2)
+    end_date = datetime.date.today() + timedelta(weeks=2)
+    try:
+        vr_events = events(url=weburl, start=start_date, end=end_date)
+    except Exception as e:
+        print(f"Error fetching events from WhenIWork: {e}")
+        return []
+
+    # Define mapping of substrings to event types and their corresponding colors
+    vr_types = [
+        (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
+        (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
+        (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
+    ]
+
+    filtered_events: list[dict[str, str | int]] = []
+
+    # Consolidate lab clean-up events
+
+    lab_clean_up_events = [
+        event for event in vr_events if re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+    ]
+    non_lab_clean_up_events = [
+        event for event in vr_events if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+    ]
+    if lab_clean_up_events:
+        unique_days = sorted(set(event.start.date() for event in lab_clean_up_events))
+        for day in unique_days:
+            filtered_events.append(
+                {
+                    "date": day,
+                    "personnel": "Lab",
+                    "duties": "Lab Cleanup (no training)",
+                    "start": datetime.time(9, 0),
+                    "end": datetime.time(17, 0),
+                }
+            )
+
+    # Remove individual lab cleanup events from the filtered events
+    vr_events = non_lab_clean_up_events
+
+    for event in vr_events:
+        summary = event.summary.lower()
+        for pattern, event_type, color, duties in vr_types:
+            if re.search(pattern, summary):
+                person = event.summary.split("(")[0].strip()
+                filtered_events.append(
+                    {
+                        "date": event.start.date(),
+                        "start": event.start,
+                        "end": event.end,
+                        "title": person + " - " + duties,
+                        "id": event.uid,
+                        "type": event_type,
+                        "color": color,
+                        "personnel": person,
+                        "duties": duties,
+                    }
+                )
+
+    return filtered_events
 
 
 if __name__ == "__main__":
     print("Command-line arguments:", sys.argv)
-    if len(sys.argv[1]) < 2:
+    if len(sys.argv) < 2:
         main_loop()
     else:
         if sys.argv[1].lower() == "test":
