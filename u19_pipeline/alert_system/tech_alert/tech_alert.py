@@ -71,8 +71,8 @@ def slack_alert_message_format_tech_alert(schedule_data):
     upcoming_shifts = [shift for shift in shifts if shift["date"] <= next_week]
 
     alerts = []
-    # Today + next 7 days
-    for day in range(7):
+    # Today + next 4 days
+    for day in range(5):
         date_to_check = today + datetime.timedelta(days=day)
         shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check and not is_off(shift)]
 
