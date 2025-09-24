@@ -262,6 +262,7 @@ def fetch_and_parse_icalevents(weburl: str):
         (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
         (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
         (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
+        (r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at", "VR Brody Mice", "purple", " VR with Brody (Mice)"),
     ]
 
     filtered_events: list[dict[str, str | int]] = []
