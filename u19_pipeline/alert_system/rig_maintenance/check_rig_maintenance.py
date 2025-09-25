@@ -19,13 +19,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Add the u19_pipeline to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 try:
+    # When installed/used as a package, import directly
     from u19_pipeline import lab, rig_maintenance
     from u19_pipeline.utils import slack_utils as su
-except ImportError as e:
+except Exception as e:  # pragma: no cover - only happens when package not available
     print(f"Error importing modules: {e}")
     print("Make sure u19_pipeline is properly installed and configured.")
     sys.exit(1)
