@@ -12,19 +12,15 @@ Features:
 - Uses the rigs_issues_and_troubleshooting webhook for notifications
 """
 
+import json
 import logging
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-# Rich imports for enhanced logging
-from rich.console import Console
-from rich.logging import RichHandler
-from rich.table import Table
-
 # Add the u19_pipeline to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 try:
     from u19_pipeline import lab, rig_maintenance
@@ -34,45 +30,59 @@ except ImportError as e:
     print("Make sure u19_pipeline is properly installed and configured.")
     sys.exit(1)
 
+logger = logging.getLogger("rig_maintenance")
+
 
 def setup_logging():
     """
     Set up logging with rich formatting to both file and console.
-    
+
     Returns:
-        tuple: (logger, console, log_file_path)
+        tuple: (logger, file_console, console, log_file_path, log_file_handle)
     """
-    # Create logs directory if it doesn't exist
-    log_dir = Path(__file__).parent / "logs"
-    log_dir.mkdir(exist_ok=True)
-    
+    # Create logs directory in the user's home directory (allow override via env var)
+    # Default: ~/.u19_pipeline/logs
+    env_log_dir = os.getenv("U19_PIPELINE_LOG_DIR")
+    if env_log_dir:
+        log_dir = Path(env_log_dir)
+    else:
+        log_dir = Path.home() / "u19_pipeline_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
     # Create log file with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"rig_maintenance_check_{timestamp}.log"
-    
-    # Create console for rich output using context manager
-    log_file_handle = open(log_file, "w")
-    console = Console(file=log_file_handle, width=120)
-    
-    # Set up logger
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[
-            RichHandler(console=console, rich_tracebacks=True),
-            logging.FileHandler(log_file, mode='a')
-        ]
-    )
-    
+
+    # Open log file handle
+    log_file_handle = open(log_file, "a", encoding="utf-8")
+
+    # Configure standard logging: StreamHandler (console) + FileHandler (file)
     logger = logging.getLogger("rig_maintenance")
-    return logger, console, log_file, log_file_handle
+    logger.setLevel(logging.INFO)
+
+    # Avoid adding handlers multiple times if setup_logging is called more than once
+    if not logger.handlers:
+        # Console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        # File handler
+        file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="[%X]")
+        console_handler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
+
+        logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
+    # Prevent messages from also being handled by the root logger
+    logger.propagate = False
+
+    return logger, log_file, log_file_handle
 
 
 def get_slack_webhook():
     """
     Get the Slack webhook URL for rig issues and troubleshooting.
-    
+
     Returns:
         str or None: Webhook URL if found, None otherwise
     """
@@ -81,18 +91,18 @@ def get_slack_webhook():
         webhook_url = (lab.SlackWebhooks & slack_configuration_dictionary).fetch1("webhook_url")
         return webhook_url
     except Exception as e:
-        logging.error(f"Failed to get Slack webhook: {e}")
+        logger.warning(f"Failed to get Slack webhook: {e}")
         return None
 
 
 def create_slack_message(overdue_items, current_date):
     """
     Create a Slack message for overdue maintenance summary.
-    
+
     Args:
         overdue_items (list): List of overdue maintenance items
         current_date (date): Current date
-    
+
     Returns:
         dict: Slack message payload
     """
@@ -105,84 +115,114 @@ def create_slack_message(overdue_items, current_date):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"🎉 *All rig maintenance is up to date!*\n\nChecked on {current_date}"
-                    }
+                        "text": f"🎉 *All rig maintenance is up to date!*\n\nChecked on {current_date}",
+                    },
                 }
-            ]
+            ],
         }
         return message
-    
+
     # Group items by status
-    no_record_items = [item for item in overdue_items if item['status'] == 'NO_RECORD']
-    overdue_items_list = [item for item in overdue_items if item['status'] == 'OVERDUE']
-    
-    # Build message blocks
+    no_record_items = [item for item in overdue_items if item["status"] == "NO_RECORD"]
+    overdue_items_list = [item for item in overdue_items if item["status"] == "OVERDUE"]
+
+    # Build message blocks. Slack limits: max 50 blocks and ~3000 chars per text field.
     blocks = [
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"⚠️ *Rig Maintenance Alert* - {current_date}\n\n{len(overdue_items)} items require attention"
-            }
+                "text": f"⚠️ *Rig Maintenance Alert* - {current_date}\n\n{len(overdue_items)} items require attention",
+            },
         },
-        {"type": "divider"}
+        {"type": "divider"},
     ]
-    
+
     if no_record_items:
-        no_record_text = "\n".join([f"• {item['location']} - {item['maintenance_type']}" 
-                                   for item in no_record_items])
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn", 
-                "text": f"📋 *No Maintenance Records* ({len(no_record_items)} items):\n{no_record_text}"
+        no_record_text = "\n".join([f"• {item['location']} - {item['maintenance_type']}" for item in no_record_items])
+        # Truncate if too long for Slack
+        if len(no_record_text) > 2500:
+            truncated = no_record_text[:2400] + "\n• ... (truncated)"
+            no_record_text = truncated
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"📋 *No Maintenance Records* ({len(no_record_items)} items):\n{no_record_text}",
+                },
             }
-        })
-    
+        )
+
     if overdue_items_list:
         if no_record_items:
             blocks.append({"type": "divider"})
-            
+
         # Sort by most overdue first
-        overdue_items_list.sort(key=lambda x: x['days_overdue'], reverse=True)
-        overdue_text = "\n".join([f"• {item['location']} - {item['maintenance_type']}: "
-                                 f"{item['days_overdue']} days overdue (last: {item['last_maintenance']})"
-                                 for item in overdue_items_list])
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"🚨 *Overdue Maintenance* ({len(overdue_items_list)} items):\n{overdue_text}"
-            }
-        })
-    
-    message = {
-        "text": f"Rig Maintenance Alert - {len(overdue_items)} items require attention",
-        "blocks": blocks
-    }
-    
+        overdue_items_list.sort(key=lambda x: x["days_overdue"], reverse=True)
+        overdue_text = "\n".join(
+            [
+                f"• {item['location']} - {item['maintenance_type']}: "
+                f"{item['days_overdue']} days overdue (last: {item['last_maintenance']})"
+                for item in overdue_items_list
+            ]
+        )
+
+        # If the overdue_text is too large or blocks would exceed limits, fall back to a short list
+        if len(overdue_text) > 2500 or len(blocks) + 1 > 45:
+            # Provide a short top-N list and include full details in the log only
+            top_n = overdue_items_list[:25]
+            short_text = "\n".join(
+                [f"• {it['location']} - {it['maintenance_type']} ({it['days_overdue']} days)" for it in top_n]
+            )
+            if len(overdue_items_list) > len(top_n):
+                short_text += f"\n• ... and {len(overdue_items_list) - len(top_n)} more items (see logs)"
+
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (f"🚨 *Overdue Maintenance* ({len(overdue_items_list)} items):\n{short_text}"),
+                    },
+                }
+            )
+        else:
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"🚨 *Overdue Maintenance* ({len(overdue_items_list)} items):\n{overdue_text}",
+                    },
+                }
+            )
+
+    message = {"text": f"Rig Maintenance Alert - {len(overdue_items)} items require attention", "blocks": blocks}
+
     return message
 
 
 def send_slack_notification(overdue_items, current_date):
     """
     Send Slack notification with maintenance summary.
-    
+
     Args:
         overdue_items (list): List of overdue maintenance items
         current_date (date): Current date
     """
     webhook_url = get_slack_webhook()
     if not webhook_url:
-        logging.warning("No Slack webhook found - skipping notification")
+        logger.warning("No Slack webhook found - skipping notification")
         return
-    
+
     try:
         message = create_slack_message(overdue_items, current_date)
+        # Log the message payload for debugging
+        logger.debug("Slack payload: %s", json.dumps(message, default=str))
         su.send_slack_notification(webhook_url, message)
-        logging.info("✅ Slack notification sent successfully")
     except Exception as e:
-        logging.error(f"❌ Failed to send Slack notification: {e}")
+        logger.exception(f"❌ Failed to prepare/send Slack notification: {e}")
 
 
 def check_overdue_maintenance():
@@ -196,7 +236,8 @@ def check_overdue_maintenance():
     current_date = datetime.now().date()
 
     # Get all maintenance types and their intervals
-    maintenance_types = rig_maintenance.MaintenanceType.fetch(as_dict=True)
+    maintenance_fetch = getattr(rig_maintenance.MaintenanceType, "fetch")
+    maintenance_types = maintenance_fetch(as_dict=True)
 
     # Get all locations (rigs)
     queries = [
@@ -207,38 +248,44 @@ def check_overdue_maintenance():
 
     merged_queries = " and ".join(queries)
 
-    locations = (lab.Location & merged_queries).fetch(as_dict=True)
+    loc_query = lab.Location & merged_queries
+    loc_fetch = getattr(loc_query, "fetch")
+    locations = loc_fetch(as_dict=True)
 
-    logging.info(f"🔍 Checking maintenance status as of [bold blue]{current_date}[/bold blue]")
-    logging.info("=" * 60)
+    logger.info(f"🔍 Checking maintenance status as of {current_date}")
+    logger.debug("=" * 60)
 
     for location in locations:
-        location_name = location['location']
-        logging.info(f"\n🔧 Checking rig: [bold yellow]{location_name}[/bold yellow]")
-        logging.info("-" * 61)
+        location_name = location["location"]
+        logger.info(f"🔧 Checking rig: {location_name}")
+        logger.debug("-" * 61)
 
         for mtype in maintenance_types:
-            maintenance_type = mtype['maintenance_type']
-            interval_days = mtype['interval_days']
+            maintenance_type = mtype["maintenance_type"]
+            interval_days = mtype["interval_days"]
 
             # Find the most recent maintenance record for this rig and type
-            recent_maintenance = (rig_maintenance.RigMaintenance &
-                                {'location': location_name,
-                                 'maintenance_type': maintenance_type}).fetch(
-                                'maintenance_date', order_by='maintenance_date DESC', limit=1)
+            recent_q = rig_maintenance.RigMaintenance & {
+                "location": location_name,
+                "maintenance_type": maintenance_type,
+            }
+            recent_fetch = getattr(recent_q, "fetch")
+            recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
 
             if len(recent_maintenance) == 0:
                 # No maintenance record exists
-                overdue_items.append({
-                    'location': location_name,
-                    'maintenance_type': maintenance_type,
-                    'last_maintenance': None,
-                    'days_since_last': None,
-                    'interval_days': interval_days,
-                    'status': 'NO_RECORD',
-                    'message': f'No maintenance record found for {maintenance_type}'
-                })
-                logging.info(f"  {maintenance_type:.<40} [red]NO RECORD FOUND ❌[/red]")
+                overdue_items.append(
+                    {
+                        "location": location_name,
+                        "maintenance_type": maintenance_type,
+                        "last_maintenance": None,
+                        "days_since_last": None,
+                        "interval_days": interval_days,
+                        "status": "NO_RECORD",
+                        "message": f"No maintenance record found for {maintenance_type}",
+                    }
+                )
+                logger.info(f"  {maintenance_type:.<40} NO RECORD FOUND ❌")
             else:
                 last_maintenance_date = recent_maintenance[0]
                 days_since_last = (current_date - last_maintenance_date).days
@@ -246,80 +293,88 @@ def check_overdue_maintenance():
                 if days_since_last > interval_days:
                     # Maintenance is overdue
                     days_overdue = days_since_last - interval_days
-                    overdue_items.append({
-                        'location': location_name,
-                        'maintenance_type': maintenance_type,
-                        'last_maintenance': last_maintenance_date,
-                        'days_since_last': days_since_last,
-                        'interval_days': interval_days,
-                        'days_overdue': days_overdue,
-                        'status': 'OVERDUE',
-                        'message': f'{maintenance_type} is {days_overdue} days overdue'
-                    })
-                    logging.info(f"  {maintenance_type:.<30} [red]OVERDUE by {days_overdue} days ❌[/red]")
+                    overdue_items.append(
+                        {
+                            "location": location_name,
+                            "maintenance_type": maintenance_type,
+                            "last_maintenance": last_maintenance_date,
+                            "days_since_last": days_since_last,
+                            "interval_days": interval_days,
+                            "days_overdue": days_overdue,
+                            "status": "OVERDUE",
+                            "message": f"{maintenance_type} is {days_overdue} days overdue",
+                        }
+                    )
+                    logger.info(f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌")
                 else:
                     # Maintenance is up to date
                     days_until_due = interval_days - days_since_last
-                    logging.info(f"  {maintenance_type:.<30} [green]OK ({days_until_due} days until due) ✅[/green]")
+                    logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
 
     return overdue_items
 
 
 def log_summary(overdue_items):
     """
-    Log a summary of overdue maintenance items using rich formatting.
-    
+    Log a summary of overdue maintenance items using plain-text formatting.
+
     Args:
         overdue_items (list): List of overdue maintenance items
     """
     if not overdue_items:
-        logging.info("\n" + "=" * 60)
-        logging.info("🎉 [bold green]All maintenance is up to date![/bold green]")
-        logging.info("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("🎉 All maintenance is up to date!")
+        logger.debug("=" * 60)
         return
-    
-    logging.info("\n" + "=" * 60)
-    logging.info("⚠️  [bold red]OVERDUE MAINTENANCE SUMMARY[/bold red]")
-    logging.info("=" * 60)
-    
+
+    logger.debug("=" * 60)
+    logger.info("⚠️  OVERDUE MAINTENANCE SUMMARY")
+    logger.debug("=" * 60)
+
     # Group by status
-    no_record_items = [item for item in overdue_items if item['status'] == 'NO_RECORD']
-    overdue_items_list = [item for item in overdue_items if item['status'] == 'OVERDUE']
-    
+    no_record_items = [item for item in overdue_items if item["status"] == "NO_RECORD"]
+    overdue_items_list = [item for item in overdue_items if item["status"] == "OVERDUE"]
+
     if no_record_items:
-        # Create a table for no record items
-        table = Table(title=f"📋 RIGS WITH NO MAINTENANCE RECORDS ({len(no_record_items)} items)")
-        table.add_column("Location", style="cyan")
-        table.add_column("Maintenance Type", style="magenta")
-        
+        # Print a plain-text table for no-record items
+        logger.warning(f"📋 RIGS WITH NO MAINTENANCE RECORDS ({len(no_record_items)} items)")
+        loc_w = 30
+        type_w = 40
+        logger.debug(f"{'.' * (loc_w + type_w + 5)}")
+        logger.debug(f"{'Location':<{loc_w}} | {'Maintenance Type':<{type_w}}")
+        logger.debug(f"{'.' * (loc_w + type_w + 5)}")
         for item in no_record_items:
-            table.add_row(item['location'], item['maintenance_type'])
-        
-        logging.info(table)
-    
+            logger.debug(f"{item['location']:<{loc_w}} | {item['maintenance_type']:<{type_w}}")
+        logger.debug(f"{'.' * (loc_w + type_w + 5)}")
+
     if overdue_items_list:
         # Sort by days overdue (most overdue first)
-        overdue_items_list.sort(key=lambda x: x['days_overdue'], reverse=True)
-        
-        # Create a table for overdue items
-        table = Table(title=f"🚨 OVERDUE MAINTENANCE ({len(overdue_items_list)} items)")
-        table.add_column("Location", style="cyan")
-        table.add_column("Maintenance Type", style="magenta")
-        table.add_column("Days Overdue", justify="right", style="red")
-        table.add_column("Last Done", style="yellow")
-        
+        overdue_items_list.sort(key=lambda x: x["days_overdue"], reverse=True)
+
+        # Print a plain-text table for overdue items
+        logger.info(f"🚨 OVERDUE MAINTENANCE ({len(overdue_items_list)} items)")
+        loc_w = 30
+        type_w = 30
+        days_w = 12
+        last_w = 20
+        total_w = loc_w + type_w + days_w + last_w + 9
+        logger.debug(f"{'.' * total_w}")
+        header = (
+            f"{'Location':<{loc_w}} | {'Maintenance Type':<{type_w}} | "
+            f"{'Days Overdue':>{days_w}} | {'Last Done':<{last_w}}"
+        )
+        logger.debug(header)
+        logger.debug(f"{'.' * total_w}")
         for item in overdue_items_list:
-            table.add_row(
-                item['location'], 
-                item['maintenance_type'],
-                str(item['days_overdue']),
-                str(item['last_maintenance'])
+            row = (
+                f"{item['location']:<{loc_w}} | {item['maintenance_type']:<{type_w}} | "
+                f"{str(item.get('days_overdue', '')):>{days_w}} | {str(item.get('last_maintenance', '')):<{last_w}}"
             )
-        
-        logging.info(table)
-    
-    logging.info(f"\n[bold]Total items requiring attention: {len(overdue_items)}[/bold]")
-    logging.info("=" * 60)
+            logger.debug(row)
+        logger.debug(f"{'.' * total_w}")
+
+    logger.warning(f"Total items requiring attention: {len(overdue_items)}")
+    logger.debug("=" * 60)
 
 
 def main():
@@ -327,35 +382,38 @@ def main():
     log_file_handle = None
     try:
         # Set up logging
-        logger, console, log_file, log_file_handle = setup_logging()
-        
-        logging.info("🔧 [bold blue]Rig Maintenance Status Checker[/bold blue]")
-        logging.info("=" * 60)
-        logging.info(f"📝 Log file: {log_file}")
-        
+        _, log_file, log_file_handle = setup_logging()
+
+        logger.info("🔧 Rig Maintenance Status Checker")
+        logger.info("=" * 60)
+        logger.info(f"📝 Log file: {log_file}")
+
         # Check for overdue maintenance
         overdue_items = check_overdue_maintenance()
-        
+
         # Log summary with rich formatting
         log_summary(overdue_items)
-        
+
         # Send Slack notification with summary only
         current_date = datetime.now().date()
         send_slack_notification(overdue_items, current_date)
-        
+
         # Exit with error code if there are overdue items
         if overdue_items:
             sys.exit(1)
         else:
             sys.exit(0)
-            
+
     except Exception as e:
-        logging.error(f"❌ Error during maintenance check: {e}")
+        logger.exception(f"❌ Error during maintenance check: {e}")
         sys.exit(1)
     finally:
         # Close the log file handle
         if log_file_handle:
-            log_file_handle.close()
+            try:
+                log_file_handle.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
