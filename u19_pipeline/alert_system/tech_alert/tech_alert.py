@@ -47,24 +47,30 @@ def slack_alert_message_format_tech_alert(schedule_data):
     m1_1["text"] = "🗓 *Today's Tech Schedule:*"
     m1["text"] = m1_1
 
+    message = dict()
+    message["blocks"] = [m1, msep]
+    message["text"] = "🗓 *Today's Tech Schedule:*"
+
     # Info#
     m2 = dict()
     m2["type"] = "section"
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
 
-    m2_1["text"] = "\n".join(
-        f"*{shift['personnel']}* ({shift['duties']}) is expected to work today between "
-        f"{shift['start'].strftime('%I:%M %p')} and {shift['end'].strftime('%I:%M %p')} "
-        "(actual times may vary)."
-        for shift in shifts_today
-    )
-
+    # If there are shifts today, list them; otherwise provide a short fallback
+    if shifts_today:
+        m2_1["text"] = "\n".join(
+            f"*{shift['personnel']}* ({shift['duties']}) is expected to work today between "
+            f"{shift['start'].strftime('%I:%M %p')} and {shift['end'].strftime('%I:%M %p')} "
+            "(actual times may vary)."
+            for shift in shifts_today
+        )
+    else:
+        # Ensure we don't send an empty section block to Slack (it will reject it)
+        m2_1["text"] = "- <!channel> No technician is scheduled for today. Please assign someone for coverage"
     m2["text"] = m2_1
-
-    message = dict()
-    message["blocks"] = [m1, msep, m2, msep]
-    message["text"] = "🗓 *Today's Tech Schedule:*"
+    message["blocks"].append(m2)
+    message["blocks"].append(msep)
 
     # Check for "Watering Only", "Off", or no one scheduled
     next_week = today + datetime.timedelta(weeks=1)
@@ -72,7 +78,7 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
     alerts = []
     # Today + next 4 days
-    for day in range(5):
+    for day in range(start = 1, stop = 7):
         date_to_check = today + datetime.timedelta(days=day)
         shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check and not is_off(shift)]
 
@@ -143,7 +149,7 @@ def main_technician_alert():
     # Send alert
     for this_webhook in webhooks_list:
         su.send_slack_notification(this_webhook, slack_json_message)
-
+    pprint(slack_json_message)
 
     return slack_json_message
 
