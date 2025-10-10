@@ -245,7 +245,20 @@ class BehaviorSync(dj.Imported):
             # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
             nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
             nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
-            digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+            
+            
+            new_trial_channel = 1
+            new_iteration_channel = 2
+            # If PXIe card (nidq) card use for recording deduce digital channels
+            if nidq_meta['typeThis'] == 'nidq':
+                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+            # If onebox card (obx) card use for recording digital channels are 0-2
+            else:
+                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta, d_line_list=[0,2])
+                if digital_array.shape[1] == 2:
+                    new_trial_channel = 0
+                    new_iteration_channel = 1
+
 
             print('after reading spikeglx data')
 
@@ -254,7 +267,7 @@ class BehaviorSync(dj.Imported):
             if recent_recording:
                 # New synchronization method: digital_array[1,2] contain pulses for trial and frame number.
                 mode=None
-                iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[1,:], digital_array[2,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
+                iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(digital_array[new_trial_channel,:], digital_array[new_iteration_channel,:], nidq_sampling_rate, behavior_time.shape[0], behavior_time, mode)
             else:
                 # Old synchronization: digital_array[0:7] contain a digital word that counts the virmen frames.
                 iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_word(digital_array, behavior_time, iterstart)

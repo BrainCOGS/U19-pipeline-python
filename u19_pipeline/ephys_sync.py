@@ -42,7 +42,11 @@ class BehaviorSync(dj.Imported):
         # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
         nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
         nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
-        digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+
+        if nidq_meta['typeThis'] == 'nidq':
+            digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+        else:
+            digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta, d_line_list=[1,2])
 
         # Synchronize between pulses and get iteration # vector for each sample
         mode='counter_bit0'

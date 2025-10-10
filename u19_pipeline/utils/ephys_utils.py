@@ -28,6 +28,7 @@ class spice_glx_utility:
         # Get all digitial channels if not provided
         if d_line_list is None:
             list_start_end_chan = nidq_meta['niXDChans1'].split(sep=':')
+            print(list_start_end_chan)
             if  len(list_start_end_chan) == 2:
                 d_line_list = list(range(int(list_start_end_chan[0]), int(list_start_end_chan[1])+1))
             else:
@@ -37,7 +38,7 @@ class spice_glx_utility:
 
         #Get first and last sample idx from the file
         t_start = 0
-        t_end = np.float(nidq_meta['fileTimeSecs'])
+        t_end = np.float64(nidq_meta['fileTimeSecs'])
         dw = 0
         first_sample_index = int(nidq_sampling_rate * t_start)
         last_sample_index = int(nidq_sampling_rate * t_end) - 1

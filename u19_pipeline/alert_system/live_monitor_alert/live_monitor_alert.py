@@ -32,7 +32,7 @@ def slack_alert_message_format_live_stats(alert_dictionary1, alert_dictionary2, 
     m1['type'] = 'section'
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = ':rotating_light: * Live Monitor Alert* on ' + datestr + '\n' +\
+    m1_1["text"] = ':rotating_light: *Live Monitor Alert* on ' + datestr + '\n' +\
     'More than ' + str(time_no_response) + ' min without new trial' + '\n'
     m1['text'] = m1_1
 
