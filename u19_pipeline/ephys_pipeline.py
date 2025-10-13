@@ -215,7 +215,20 @@ class BehaviorSync(dj.Imported):
             session_dir = find_full_path(get_ephys_root_data_dir(),
                                         get_session_directory(key))
             print(session_dir)
-            nidq_bin_full_path = list(session_dir.glob('*nidq.bin*'))[0]
+
+            #Check if session is Nidq or OneBox
+            nidq_session = list(session_dir.glob('*nidq.bin*'))
+            obx_session = list(session_dir.glob('*obx.bin*'))
+
+            if len(nidq_session) == 0 and len(obx_session) == 0:
+                print('No session found')
+                return
+            elif len(nidq_session) > 0:
+                ephys_session_fullpath = nidq_session[0]
+            else:
+                ephys_session_fullpath = obx_session[0]
+
+
             # And get the datajoint record
             behavior = dj.create_virtual_module('behavior', 'u19_behavior')
 
@@ -243,7 +256,7 @@ class BehaviorSync(dj.Imported):
             print('after reading behavior data')
 
             # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
-            nidq_meta          = readSGLX.readMeta(nidq_bin_full_path)
+            nidq_meta          = readSGLX.readMeta(ephys_session_fullpath)
             nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
             
             
@@ -251,10 +264,11 @@ class BehaviorSync(dj.Imported):
             new_iteration_channel = 2
             # If PXIe card (nidq) card use for recording deduce digital channels
             if nidq_meta['typeThis'] == 'nidq':
-                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
             # If onebox card (obx) card use for recording digital channels are 0-2
             else:
-                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta, d_line_list=[0,2])
+                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta, d_line_list=[0,2])
+                # If no sync pulse found trial and iteration signals are 0 & 1 respectively
                 if digital_array.shape[1] == 2:
                     new_trial_channel = 0
                     new_iteration_channel = 1
