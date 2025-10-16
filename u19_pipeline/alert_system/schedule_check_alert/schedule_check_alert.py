@@ -29,12 +29,11 @@ def main_schedule_check_alert():
 
     alert = 0
     schedule_df = get_schedule_query()
+    tomorrow_schedule = schedule_df.loc[schedule_df['date'] == (datetime.date.today() + datetime.timedelta(days=1)),:]
 
-    today_schedule = schedule_df.loc[schedule_df['date'] == datetime.date.today(),:]
-
-    if today_schedule.shape[0] == 0:
+    if tomorrow_schedule.shape[0] == 0:
         alert = 1
-        slack_json_message = slack_alert_message_format_schedule()
+        slack_json_message = slack_alert_empty_schedule()
     else:
         schedule_df = schedule_df.groupby(['date', 'location']).agg({'subject_fullname': [('#subj', 'count')]})
         schedule_df.columns = schedule_df.columns.droplevel()
@@ -115,7 +114,7 @@ def slack_alert_message_format_schedule(schedule_df_string):
 
     message = dict()
     message["blocks"] = [m1, msep, m2, msep]
-    message["text"] = "Locked Tables Alert"
+    message["text"] = "Suspicious Schedule Alert"
 
     return message
 
@@ -145,6 +144,6 @@ def slack_alert_empty_schedule():
 
     message = dict()
     message["blocks"] = [m1, msep, m2, msep]
-    message["text"] = "Locked Tables Alert"
+    message["text"] = "Schedule Empty Alert"
 
     return message
