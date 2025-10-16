@@ -20,6 +20,7 @@ dependencies = [
     "scikit-image",
     "scipy",
     "tables>=3.8",
+    "astropy"
 ]
 requires-python = ">=3.10"
 

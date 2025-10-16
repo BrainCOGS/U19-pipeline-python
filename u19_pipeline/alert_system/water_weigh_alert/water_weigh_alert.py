@@ -3,10 +3,14 @@ import pathlib
 import time
 
 import datajoint as dj
-from h11 import Data
+import u19_pipeline.lab as lab
 import pandas as pd
 
 import u19_pipeline.utils.slack_utils as su
+
+slack_configuration_dictionary = {
+    'slack_notification_channel': ['subject_health'],
+}
 
 # Query from file
 QUERY_FILE = pathlib.Path(pathlib.Path(__file__).resolve().parent, "get_subject_data.sql").as_posix()
@@ -125,15 +129,6 @@ def find_unreturned_subjects() -> pd.DataFrame:
     return unreturned_subjects
 
 
-def get_webhook_list(lab):
-    # Get webhook lists
-    slack_configuration_dictionary = {"slack_notification_channel": ["subject_health"]}
-    webhooks_list = []
-    query_slack_webhooks = [{"webhook_name": x} for x in slack_configuration_dictionary["slack_notification_channel"]]
-    webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
-    return webhooks_list
-
-
 def slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport):
     now = datetime.datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
@@ -226,8 +221,6 @@ def slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_w
 
 def main_water_weigh_alert():
     dj.conn()
-    lab = dj.create_virtual_module("lab", "u19_lab")
-    webhooks_list = get_webhook_list(lab)
 
     subject_data = get_subject_data()
 
@@ -253,6 +246,8 @@ def main_water_weigh_alert():
         subjects_not_watered, subjects_not_weighted, subjects_not_trained,
         missing_transport=subject_not_returned
     )
+
+    webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
 
     # Send alert
     for this_webhook in webhooks_list:
