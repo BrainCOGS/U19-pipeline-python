@@ -267,7 +267,7 @@ class BehaviorSync(dj.Imported):
                 digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
             # If onebox card (obx) card use for recording digital channels are 0-2
             else:
-                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta, d_line_list=[0,2])
+                digital_array      = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta, d_line_list=[0,1])
                 # If no sync pulse found trial and iteration signals are 0 & 1 respectively
                 if digital_array.shape[1] == 2:
                     new_trial_channel = 0
