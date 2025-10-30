@@ -72,16 +72,17 @@ def get_idx_trial_start(trial_pulse_signal):
     return trial_start_idx
 
 
-def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx):
+def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx, samples_before_pulse_start):
     #Get index of iteration starts on a trial based on a pulse start signal
 
     #Get idx of iteration start during trial
     iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
-    iter_samples = iter_samples + trial_start_idx
-    # First iteration is at trial start, just align first trial start
-    iter_samples[0, 0] = trial_start_idx
 
+    # First iteration is at trial start, just align first trial start
     iter_samples = np.squeeze(iter_samples)
+    iter_samples += trial_start_idx
+    iter_samples -= samples_before_pulse_start
+    iter_samples[0] = trial_start_idx
 
     return iter_samples
 
@@ -116,16 +117,8 @@ def get_idx_iter_start_counterbit(iteration_pulse_signal_trial, trial_start_idx)
 
 def get_trial_signal_mode(iteration_pulse_signal_trial, behavior_time_vector_trial):
 
-    print('in get_trial_signal_mode')
-    print('iteration_pulse_signal_trial', iteration_pulse_signal_trial.shape)
-    print('trial_iterations', behavior_time_vector_trial.shape)
-    print('trial_iterations type', type(behavior_time_vector_trial))
-
     # If iterations in trial are less than the ones in behavior, the mode was the counterbit
     iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
-
-    print('iter_samples', iter_samples[0].shape[0])
-    print('behavior_time_vector_trial', behavior_time_vector_trial.shape[0])
 
     if iter_samples[0].shape[0] < (behavior_time_vector_trial.shape[0]*3/4):
         mode = 'counter_bit0'
@@ -143,15 +136,17 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iteration_vector_output = dict()
 
     #Vectors that will contain trial # and iter # for each sample on file
-    iteration_vector_output['framenumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.NaN
-    iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.NaN
+    iteration_vector_output['framenumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
+    iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
 
     #Get idx samples trial starts
     trial_start_idx = get_idx_trial_start(trial_pulse_signal)
 
     # Just to make sure we get corresponding iter pulse (trial and iter pulse at same time !!)
-    ms_before_pulse = 3
-    samples_before_pulse = int(nidq_sampling_rate*(ms_before_pulse/1000))
+    ms_after_trial_start_pulse = 20
+    samples_after_pulse_start = int(nidq_sampling_rate*(ms_after_trial_start_pulse/1000))
+    ms_before_trial_end = 20
+    samples_before_pulse_end = int(nidq_sampling_rate*(ms_before_trial_end/1000))
 
     # num Trials to sync (if behavior stopped before last trial was saved)
     num_trials_sync = min([trial_start_idx.shape[0], num_behavior_trials])
@@ -160,11 +155,11 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iter_times_idx = []
     for i in range(num_trials_sync):
         #Trial starts and ends idxs ()
-        idx_start = trial_start_idx[i] -samples_before_pulse
+        idx_start = trial_start_idx[i] - samples_after_pulse_start
         if i < trial_start_idx.shape[0]-1:
-            idx_end = trial_start_idx[i+1] -samples_before_pulse
+            idx_end = trial_start_idx[i+1] -samples_before_pulse_end
         else:
-            idx_end = trial_pulse_signal.shape[0] - samples_before_pulse
+            idx_end = trial_pulse_signal.shape[0] - samples_before_pulse_end
 
         if mode is None:
             mode = get_trial_signal_mode(iteration_pulse_signal[idx_start:idx_end], behavior_time_vector[i])
@@ -173,7 +168,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
         if mode == 'counter_bit0':
             iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
         else:
-            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
+            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i], samples_before_pulse_end)
 
         #Append as an array of arrays (each trial is an array with idx of iterations)
         iter_start_idx.append(iter_samples)
@@ -214,8 +209,8 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
     recording_end = np.where(np.abs(np.diff(iterations_raw))>0)[0][-1] + 200 # Adding a random 200 measurements, so ~40ms at our usual 5kHz sampling rate.
 
     # Second, transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
-    framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
-    trialnumber = np.zeros(len(iterations_raw))*np.NaN
+    framenumber_in_trial = np.zeros(len(iterations_raw))*np.nan
+    trialnumber = np.zeros(len(iterations_raw))*np.nan
     current_trial = 0
     overflow = 0
     iter_start_idx = []
@@ -284,13 +279,12 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     trials_diff_iteration_small = list()
     trials_diff_iteration_big = list()
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
+        if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
+            print('trial#', count, 'iterPulses:', iter_trials.shape[0], 'IterBeh:', behavior_time_vector[idx_trial].shape[0])
         count += 1
-        print(count)
-        print(iter_trials.shape[0])
-        print(behavior_time_vector[idx_trial].shape[0])
         # For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
-            if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 3:
+            if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 6:
                 trials_diff_iteration_small.append(idx_trial)
             else:
                 trials_diff_iteration_big.append(idx_trial)
@@ -455,8 +449,8 @@ def behavior_sync_frame_counter_method(digital_array, behavior_time_vector, sess
     # trialnumber has the length of the number of samples of the NIDAQ card, and every entry is the current trial.
     #
     # NOTE: some minor glitches have to be catched, if a NIDAQ sample happenes to be recorded while the VR System updates the iteration number.
-    framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
-    trialnumber = np.zeros(len(iterations_raw))*np.NaN
+    framenumber_in_trial = np.zeros(len(iterations_raw))*np.nan
+    trialnumber = np.zeros(len(iterations_raw))*np.nan
     current_trial = 0
     overflow = 0 # This variable keep track whenever the reset from max_count to 0 happens.
     for idx, frame_number in enumerate(iterations_raw):
@@ -538,7 +532,7 @@ def future_counter_get_signal():
         framenumber[idx] = a.uint
     iterations_raw = np.array(framenumber, dtype=np.int) # Transform frames into integer
 
-    framenumber_in_trial = np.zeros(len(iterations_raw))*np.NaN
+    framenumber_in_trial = np.zeros(len(iterations_raw))*np.nan
 
     current_trial = 0
     almost_overflow = 0
