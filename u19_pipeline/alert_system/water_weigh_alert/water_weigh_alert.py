@@ -1,7 +1,6 @@
 import datetime
 import pathlib
 import time
-from pprint import pprint
 
 import datajoint as dj
 import pandas as pd
@@ -276,12 +275,11 @@ def main_water_weigh_alert():
         subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport=subject_not_returned
     )
 
-    pprint(slack_json_message)
     webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
 
     # Send alert
     for this_webhook in webhooks_list:
-        # su.send_slack_notification(this_webhook, slack_json_message)
+        su.send_slack_notification(this_webhook, slack_json_message)
         time.sleep(1)
 
 
