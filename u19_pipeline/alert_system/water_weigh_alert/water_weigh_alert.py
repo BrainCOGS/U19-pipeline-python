@@ -1,15 +1,17 @@
 import datetime
 import pathlib
 import time
+from pprint import pprint
 
 import datajoint as dj
-import u19_pipeline.lab as lab
 import pandas as pd
 
+import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
+from u19_pipeline.utils.subject_metadata import fetch_slack_handles_for_lab_managers_by_subject
 
 slack_configuration_dictionary = {
-    'slack_notification_channel': ['subject_health'],
+    "slack_notification_channel": ["subject_health"],
 }
 
 # Query from file
@@ -114,24 +116,51 @@ def find_unreturned_subjects() -> pd.DataFrame:
 
     # Obtain the last transport date
     local_transport_data: pd.DataFrame
-    local_transport_data = dj.U("subject_fullname").aggr(
-        action.Transport() & f'DATE(transport_out_datetime) = "{today}"',
-        # transport_out_datetime="MAX(transport_out_datetime)",
-        last_transport="MAX(transport_out_datetime)",
-        transport_in_datetime="MAX(transport_in_datetime)",
-    ).fetch(format='frame')
+    local_transport_data = (
+        dj.U("subject_fullname")
+        .aggr(
+            action.Transport() & f'DATE(transport_out_datetime) = "{today}"',
+            # transport_out_datetime="MAX(transport_out_datetime)",
+            last_transport="MAX(transport_out_datetime)",
+            transport_in_datetime="MAX(transport_in_datetime)",
+        )
+        .fetch(format="frame")
+    )
 
-    unreturned_subjects: pd.DataFrame = local_transport_data[
-    local_transport_data["transport_in_datetime"].isnull()
-    ]
-
+    unreturned_subjects: pd.DataFrame = local_transport_data[local_transport_data["transport_in_datetime"].isnull()]
 
     return unreturned_subjects
 
 
-def slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport):
+def slack_alert_message_format_weight_water(
+    subjects_not_watered: pd.DataFrame,
+    subjects_not_weighted: pd.DataFrame,
+    subjects_not_trained: pd.DataFrame,
+    missing_transport: pd.DataFrame,
+):
     now = datetime.datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
+
+    print(missing_transport)
+    temp_missing_transport = missing_transport.copy().reset_index()
+    notifiable_subjects = set(
+        temp_missing_transport["subject_fullname"].tolist()
+        + subjects_not_watered["subject_fullname"].tolist()
+        + subjects_not_weighted["subject_fullname"].tolist()
+    )
+
+    slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(notifiable_subjects)
+    lab_manager_text = "\n\n"
+    if len(slack_handles) >= 1:
+        lab_manager_text += "Lab Manager"
+    if len(slack_handles) > 1:
+        lab_manager_text += "s"
+
+    slack_handles_formatted = ", ".join("<@" + handle + ">" for handle in slack_handles)
+    if slack_handles_formatted:
+        lab_manager_text += (
+            " " + slack_handles_formatted + ", please be advised that your labs' subjects are listed below."
+        )
 
     msep = dict()
     msep["type"] = "divider"
@@ -141,7 +170,8 @@ def slack_alert_message_format_weight_water(subjects_not_watered, subjects_not_w
     m1["type"] = "section"
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = ":rotating_light: *Subjects Status Alert *"
+
+    m1_1["text"] = ":rotating_light: *Subjects Status Alert *" + lab_manager_text
     m1["text"] = m1_1
 
     # Info for subjects missing water
@@ -243,13 +273,17 @@ def main_water_weigh_alert():
     subject_not_returned = find_unreturned_subjects()
 
     slack_json_message = slack_alert_message_format_weight_water(
-        subjects_not_watered, subjects_not_weighted, subjects_not_trained,
-        missing_transport=subject_not_returned
+        subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport=subject_not_returned
     )
 
+    pprint(slack_json_message)
     webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
 
     # Send alert
     for this_webhook in webhooks_list:
-        su.send_slack_notification(this_webhook, slack_json_message)
+        # su.send_slack_notification(this_webhook, slack_json_message)
         time.sleep(1)
+
+
+if __name__ == "__main__":
+    main_water_weigh_alert()

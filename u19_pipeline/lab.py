@@ -1,15 +1,16 @@
 """This module defines tables in the schema U19_lab"""
 
+import os
+import pathlib
+import sys
 
 import datajoint as dj
 import numpy as np
 import pandas as pd
-import pathlib
-import sys
-import os
+
 from u19_pipeline.utility import is_this_spock
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'lab')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "lab")
 
 
 @schema
@@ -23,18 +24,27 @@ class Lab(dj.Lookup):
     pi_name              : varchar(64)
     """
     contents = [
-        ['tanklab', 'Princeton',
-         'Princeton Neuroscience Institute, Princeton University Princeton, NJ 08544',
-         'America/New_York',
-         'D. W. Tank'],
-        ['wittenlab', 'Princeton',
-         'Princeton Neuroscience Institute, Princeton University Princeton, NJ 08544',
-         'America/New_York',
-         'I. Witten'],
-        ['wanglab', 'Princeton',
-         'Neuroscience Institute, Princeton University Princeton, NJ 08544',
-         'America/New_York',
-         'S. Wang']
+        [
+            "tanklab",
+            "Princeton",
+            "Princeton Neuroscience Institute, Princeton University Princeton, NJ 08544",
+            "America/New_York",
+            "D. W. Tank",
+        ],
+        [
+            "wittenlab",
+            "Princeton",
+            "Princeton Neuroscience Institute, Princeton University Princeton, NJ 08544",
+            "America/New_York",
+            "I. Witten",
+        ],
+        [
+            "wanglab",
+            "Princeton",
+            "Neuroscience Institute, Princeton University Princeton, NJ 08544",
+            "America/New_York",
+            "S. Wang",
+        ],
     ]
 
 
@@ -48,15 +58,15 @@ class Location(dj.Lookup):
     location_description="" : varchar(255)
     """
     contents = [
-        ['Bezos2', ''],
-        ['Bezos3',  ''],
-        ['BezosMeso', ''],
-        ['TrainVR1', ''],
-        ['floater', ''],
-        ['vivarium', ''],
-        ['pni-171jppw32', ''],
-        ['pni-174cr4jk2', ''],
-        ['valhalla', '']
+        ["Bezos2", ""],
+        ["Bezos3", ""],
+        ["BezosMeso", ""],
+        ["TrainVR1", ""],
+        ["floater", ""],
+        ["vivarium", ""],
+        ["pni-171jppw32", ""],
+        ["pni-174cr4jk2", ""],
+        ["valhalla", ""],
     ]
 
 
@@ -67,10 +77,7 @@ class Project(dj.Lookup):
     ---
     project_description="" : varchar(255)
     """
-    contents = [
-        ['behavioral task', ''],
-        ['accumulation of evidence', '']
-    ]
+    contents = [["behavioral task", ""], ["accumulation of evidence", ""]]
 
 
 @schema
@@ -78,22 +85,24 @@ class MobileCarrier(dj.Lookup):
     definition = """
     mobile_carrier       : varchar(16)                  # allowed mobile carries
     """
-    contents = zip([
-        'alltel',
-        'att',
-        'boost',
-        'cingular',
-        'cingular2',
-        'cricket',
-        'metropcs',
-        'nextel',
-        'sprint',
-        'tmobile',
-        'tracfone',
-        'uscellular',
-        'verizon',
-        'virgin'
-    ])
+    contents = zip(
+        [
+            "alltel",
+            "att",
+            "boost",
+            "cingular",
+            "cingular2",
+            "cricket",
+            "metropcs",
+            "nextel",
+            "sprint",
+            "tmobile",
+            "tracfone",
+            "uscellular",
+            "verizon",
+            "virgin",
+        ]
+    )
 
 
 @schema
@@ -202,51 +211,50 @@ class Path(dj.Lookup):
     """
 
     contents = [
-        ['/Bezos-center', 'windows', 'Y:', r'\\cup.pni.princeton.edu\Bezos-center', ''],
-        ['/Bezos-center', 'mac', '/Volumes/Bezos-center', '//cup.pni.princeton.edu/Bezos-center', ''],
-        ['/Bezos-center', 'linux', '/mnt/Bezos-center', '//cup.pni.princeton.edu/Bezos-center', ''],
-        ['/braininit', 'windows', 'Z:', r'\\cup.pni.princeton.edu\braininit', ''],
-        ['/braininit', 'mac', '/Volumes/braininit', '//cup.pni.princeton.edu/Bezos-center', ''],
-        ['/braininit', 'linux', '/mnt/braininit', '//cup.pni.princeton.edu/Bezos-center', '']
+        ["/Bezos-center", "windows", "Y:", r"\\cup.pni.princeton.edu\Bezos-center", ""],
+        ["/Bezos-center", "mac", "/Volumes/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
+        ["/Bezos-center", "linux", "/mnt/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
+        ["/braininit", "windows", "Z:", r"\\cup.pni.princeton.edu\braininit", ""],
+        ["/braininit", "mac", "/Volumes/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
+        ["/braininit", "linux", "/mnt/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
     ]
 
     def get_local_path(self, path, local_os=None):
-
         # determine local os
         if local_os is None:
             local_os = sys.platform
-            local_os = local_os[:(min(3, len(local_os)))]
-        if local_os.lower() == 'glo':
+            local_os = local_os[: (min(3, len(local_os)))]
+        if local_os.lower() == "glo":
             local = 0
-            home = '~'
+            home = "~"
 
-        elif local_os.lower() == 'lin':
+        elif local_os.lower() == "lin":
             local = 1
-            home = os.environ['HOME']
+            home = os.environ["HOME"]
 
-        elif local_os.lower() == 'win':
+        elif local_os.lower() == "win":
             local = 2
-            home = os.environ['HOME']
+            home = os.environ["HOME"]
 
-        elif local_os.lower() == 'dar':
+        elif local_os.lower() == "dar":
             local = 3
-            home = '~'
+            home = "~"
 
         else:
-            raise NameError('unknown OS')
+            raise NameError("unknown OS")
 
-        path = path.replace(os.path.sep, '/')
-        path = path.replace('~', home)
+        path = path.replace(os.path.sep, "/")
+        path = path.replace("~", home)
 
-        globs = dj.U('global_path') & self
-        systems = ['linux', 'windows', 'mac']
+        globs = dj.U("global_path") & self
+        systems = ["linux", "windows", "mac"]
 
         mapping = [[], []]
 
-        for iglob, glob in enumerate(globs.fetch('KEY')):
-            mapping[iglob].append(glob['global_path'])
+        for iglob, glob in enumerate(globs.fetch("KEY")):
+            mapping[iglob].append(glob["global_path"])
             for system in systems:
-                mapping[iglob].append((self & glob & {'system': system}).fetch1('local_path'))
+                mapping[iglob].append((self & glob & {"system": system}).fetch1("local_path"))
 
         mapping = np.asarray(mapping)
 
@@ -254,63 +262,62 @@ class Path(dj.Lookup):
             for j in range(len(systems)):
                 n = len(mapping[i, j])
                 if j != local and path[:n] == mapping[i, j][:n]:
-                    path = os.path.join(mapping[i, local], path[n+1:])
+                    path = os.path.join(mapping[i, local], path[n + 1 :])
                     break
 
-        if os.path.sep == '\\' and local_os.lower() != 'glo':
-            path = path.replace('/', '\\')
+        if os.path.sep == "\\" and local_os.lower() != "glo":
+            path = path.replace("/", "\\")
 
         else:
-            path = path.replace('\\', '/')
+            path = path.replace("\\", "/")
 
         return path
 
     def get_local_path2(self, bucket_path):
-
         local_os = sys.platform
-        local_os = local_os[:(min(3, len(local_os)))]
+        local_os = local_os[: (min(3, len(local_os)))]
 
-        if local_os.lower() == 'lin':
-            system = 'linux'
-        elif local_os.lower() == 'win':
-            system = 'windows'
-        elif local_os.lower() == 'dar':
-            system = 'mac'
+        if local_os.lower() == "lin":
+            system = "linux"
+        elif local_os.lower() == "win":
+            system = "windows"
+        elif local_os.lower() == "dar":
+            system = "mac"
 
         # Get path table from db and filter by OS
         path_df = self.get_path_table()
-        path_df = path_df[path_df['system'] == system]
+        path_df = path_df[path_df["system"] == system]
 
         # Search in path which of the main buckets we are referring from
-        path_df['idx_global_path'] = path_df['global_path'].apply(lambda x: bucket_path.find(x))
-        path_df = path_df[path_df['idx_global_path'] != -1]
-        path_df = path_df[path_df['idx_global_path'] == path_df['idx_global_path'].min()].squeeze()
+        path_df["idx_global_path"] = path_df["global_path"].apply(lambda x: bucket_path.find(x))
+        path_df = path_df[path_df["idx_global_path"] != -1]
+        path_df = path_df[path_df["idx_global_path"] == path_df["idx_global_path"].min()].squeeze()
         path_df = path_df.to_dict()
 
         # Remove bucket "base" dir from path
-        bucket_base_dir = path_df['bucket_path']
+        bucket_base_dir = path_df["bucket_path"]
 
-        if bucket_path.find('/mnt/cup/') != -1:
-            extra_bucket_dir = bucket_path.replace(bucket_base_dir + '/', '');
+        if bucket_path.find("/mnt/cup/") != -1:
+            extra_bucket_dir = bucket_path.replace(bucket_base_dir + "/", "")
         else:
-            extra_bucket_dir = bucket_path.replace(path_df['global_path'] + '/', '');
+            extra_bucket_dir = bucket_path.replace(path_df["global_path"] + "/", "")
 
-        if extra_bucket_dir[0] == '/':
+        if extra_bucket_dir[0] == "/":
             extra_bucket_dir = extra_bucket_dir[1:]
 
         # If we are in spock already directory is the bucket_path column
         if is_this_spock():
-            baseDir = path_df['bucket_path']
-        elif system == 'windows':
+            baseDir = path_df["bucket_path"]
+        elif system == "windows":
             # For pc the accesible path is the net_location field
-            baseDir = path_df['net_location']
+            baseDir = path_df["net_location"]
 
             # Correct extra bucket dir to adjust windows filesep
-            extra_bucket_dir = extra_bucket_dir.replace('/', '\\');
+            extra_bucket_dir = extra_bucket_dir.replace("/", "\\")
 
         else:
             # For mac and linux the accesible path is the local_path field
-            baseDir = path_df['local_path']
+            baseDir = path_df["local_path"]
 
         format_dir = pathlib.PurePath(baseDir, extra_bucket_dir)
         format_dir = pathlib.Path(format_dir)
@@ -323,7 +330,7 @@ class Path(dj.Lookup):
         path table serves to corresponding paths between local system and bucket cloud.
         """
         path_df = pd.DataFrame(self.fetch())
-        path_df['global_path'] = path_df['global_path'].str.replace('/', '')
+        path_df["global_path"] = path_df["global_path"].str.replace("/", "")
         return path_df
 
 
@@ -353,8 +360,7 @@ class SlackGroups(dj.Lookup):
     ---
     group_id: varchar(255)
     """
-    contents = [
-    ]
+    contents = []
 
 
 @schema
@@ -365,6 +371,7 @@ class SlackWebhooks(dj.Lookup):
     webhook_url             : varchar(255)
     """
 
+
 @schema
 class DjCustomVariables(dj.Lookup):
     definition = """
@@ -374,6 +381,7 @@ class DjCustomVariables(dj.Lookup):
     value                   : varchar(255)
     """
 
+
 @schema
 class DjStores(dj.Lookup):
     definition = """
@@ -382,3 +390,23 @@ class DjStores(dj.Lookup):
     protocol                : varchar(32)
     location                : varchar(255)
     """
+
+
+@schema
+class LabManager(dj.Lookup):
+    definition = """
+    -> User.proj(lab_manager="user_id")
+    ---
+    -> Lab
+    """
+
+    contents = [
+        [
+            "jteran",
+            "tanklab",
+        ],
+        [
+            "rf6456",
+            "wittenlab",
+        ],
+    ]
