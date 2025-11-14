@@ -173,6 +173,7 @@ def create_slurm_params_file(slurm_dict):
 def generate_slurm_spock(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
+    slurm_text += 'source ~/.bashrc'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
@@ -198,6 +199,7 @@ def generate_slurm_spock(slurm_dict):
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
+    slurm_text += 'source ~/.bashrc'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
