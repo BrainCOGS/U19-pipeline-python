@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 import u19_pipeline.utils.slack_utils as su
 
-MINUTES_ALERT = 20
+MINUTES_ALERT = 2
 SECONDS_ALERT = MINUTES_ALERT*60
 MIN_SESSIONS_COMPLETED = 3
 
@@ -194,7 +194,7 @@ def main_live_monitor_alert():
             live_stats['alert_vio'] = live_stats['alert_vio'] & (pd.isna(live_stats['last_non_violation_trial']))
             
             print(live_stats.T)
-            
+
             live_stats['alert_vio'] = live_stats['alert_vio'] & (~pd.isna(live_stats['last_violation_trial']))
              
 
@@ -214,8 +214,13 @@ def main_live_monitor_alert():
             #If there are any sessions to alert (more then SECONDS_ALERT)
             if live_stats.shape[0] > 0:
 
-                live_stats['current_datetime'] = live_stats[['last_violation_trial', 'last_non_violation_trial']].fillna(fake_date).max(axis=1)
-                live_stats['seconds_elapsed_last_valid_stat'] = live_stats[['seconds_elapsed_last_stat_nvio', 'seconds_elapsed_session_started']].fillna(-np.inf).max(axis=1)
+                live_stats['current_datetime'] = fake_date
+                live_stats['current_datetime'] = live_stats.loc[live_stats['alert_vio']==True, 'last_violation_trial']
+                live_stats['current_datetime'] = live_stats.loc[live_stats['alert_nvio']==True, 'last_non_violation_trial']
+
+                live_stats['seconds_elapsed_last_valid_stat'] = 0
+                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_vio']==True, 'seconds_elapsed_last_stat_nvio']
+                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_nvio']==True, 'seconds_elapsed_session_started']
 
                 #get_session_info to alert (plus slack researcher)
                 query_live_stats_sessions = live_stats[['subject_fullname', 'session_date', 'session_number']].to_dict('records')
