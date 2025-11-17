@@ -343,9 +343,19 @@ class VideoType(dj.Lookup):
     ---
     video_type_description  : varchar(2555)
     """
-    contents = [['pupillometry', ''],
-                ['behavior',  '']
-                ]
+    contents = [["pupillometry", ""], ["behavior", ""]]
+
+
+@schema
+class SlackGroups(dj.Lookup):
+    definition = """
+    group_name: varchar(64)
+    ---
+    group_id: varchar(255)
+    """
+    contents = [
+    ]
+
 
 @schema
 class SlackWebhooks(dj.Lookup):

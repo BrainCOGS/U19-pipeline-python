@@ -173,6 +173,7 @@ def create_slurm_params_file(slurm_dict):
 def generate_slurm_spock(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
+    #slurm_text += module_defininition_text() 
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
@@ -183,6 +184,7 @@ def generate_slurm_spock(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
+    source ~/.bashrc
     module load anacondapy/2023.07-cuda -s
     module load matlab/R2024a -s
 
@@ -195,9 +197,41 @@ def generate_slurm_spock(slurm_dict):
 
     return slurm_text
 
+def module_defininition_text():
+
+    return '''
+    module ()
+    {
+        local _mlredir=1;
+        if [ -n "${MODULES_REDIRECT_OUTPUT+x}" ]; then
+            if [ "$MODULES_REDIRECT_OUTPUT" = '0' ]; then
+                _mlredir=0;
+            else
+                if [ "$MODULES_REDIRECT_OUTPUT" = '1' ]; then
+                    _mlredir=1;
+                fi;
+            fi;
+        fi;
+        case " $@ " in
+            *' --no-redirect '*)
+                _mlredir=0
+            ;;
+            *' --redirect '*)
+                _mlredir=1
+            ;;
+        esac;
+        if [ $_mlredir -eq 0 ]; then
+            _module_raw "$@";
+        else
+            _module_raw "$@" 2>&1;
+        fi
+    }
+    '''
+
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
     slurm_text = '#!/bin/bash\n'
+    slurm_text += 'source ~/.bashrc'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
