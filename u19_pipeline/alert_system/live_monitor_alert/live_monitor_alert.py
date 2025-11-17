@@ -237,7 +237,19 @@ def main_live_monitor_alert():
                 #session_stats = session_stats.rename({'current_datetime': 'last_live_stat'}, axis=1)
                 query_live_stats = live_stats[['subject_fullname', 'session_date', 'session_number', 'current_datetime']].to_dict('records')
                 live_stats_mini = live_stats[['subject_fullname', 'session_date', 'session_number', 'seconds_elapsed_last_valid_stat']].copy()
+
+                print('query_live_stats')
+                print(query_live_stats)
+                
+                print('live_stats_mini')
+                print(live_stats_mini)
+
+
                 ls_full_df = pd.DataFrame((acquisition.LiveSessionStats & query_live_stats).fetch(as_dict=True))
+
+                print('ls_full_df')
+                print(ls_full_df)
+
                 ls_full_df = pd.merge(ls_full_df, live_stats_mini, on=['subject_fullname', 'session_date', 'session_number'])
                 ls_full_df = ls_full_df.drop(columns=['subject_fullname', 'session_date', 'session_number'])
                 ls_full_df = ls_full_df.rename({'current_datetime': 'last_trial_time'}, axis=1)
