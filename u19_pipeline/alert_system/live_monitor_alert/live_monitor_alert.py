@@ -129,9 +129,10 @@ def main_live_monitor_alert():
         sessions = pd.merge(sessions,count_sessions_df, how='left')
         sessions['num_sessions'] = sessions['num_sessions'].fillna(0)
 
+        print('Subjects with   min_num_sessions\n', sessions)
+
         sessions = sessions.loc[sessions['num_sessions']>= MIN_SESSIONS_COMPLETED, :]
 
-    print('Subjects with  completed min_num_sessions\n', sessions)
 
     if sessions.shape[0] > 0:
 
