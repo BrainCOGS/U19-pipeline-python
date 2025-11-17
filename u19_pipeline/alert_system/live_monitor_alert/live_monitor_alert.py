@@ -1,4 +1,5 @@
 import datajoint as dj
+import numpy as np
 import pandas as pd
 import time
 from zoneinfo import ZoneInfo
@@ -167,7 +168,7 @@ def main_live_monitor_alert():
 
             print('live_stats')
             print(live_stats)
-            
+
             fake_date = pd.Timestamp('1900-01-01')
 
             # Filter sessions whose last trial info is greater than 300s
