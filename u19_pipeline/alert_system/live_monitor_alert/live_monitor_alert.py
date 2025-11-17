@@ -11,10 +11,15 @@ MINUTES_ALERT = 20
 SECONDS_ALERT = MINUTES_ALERT*60
 MIN_SESSIONS_COMPLETED = 3
 
+slack_configuration_dictionary = {
+    'slack_notification_channel': ['alvaro_luna']
+}
 
+'''
 slack_configuration_dictionary = {
     'slack_notification_channel': ['rig_training_error_notification']
 }
+'''
 
 def slack_alert_message_format_live_stats(alert_dictionary1, alert_dictionary2, time_no_response):
     'Format dictionaries for live monitor slack alert json'
@@ -174,12 +179,17 @@ def main_live_monitor_alert():
             # Filter sessions whose last trial info is greater than 300s
             right_now_est = datetime.now(tz=ZoneInfo('America/New_York'))
             right_now_est = right_now_est.replace(tzinfo=None)
+
+            print('SECONDS_ALERT')
+            print(SECONDS_ALERT)
+
             live_stats['seconds_elapsed_last_stat_nvio'] = (right_now_est- live_stats['last_non_violation_trial']).dt.total_seconds()
             live_stats['alert_nvio'] = live_stats['seconds_elapsed_last_stat_nvio'] > SECONDS_ALERT
 
             live_stats['seconds_elapsed_session_started'] = (right_now_est- live_stats['session_start_time']).dt.total_seconds()
-            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT & pd.isna(live_stats['last_non_violation_trial'].isna()) & ~pd.isna(live_stats['last_violation_trial'].isna())
+            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT & pd.isna(live_stats['last_non_violation_trial']) & ~pd.isna(live_stats['last_violation_trial'])
 
+            print(live_stats.T)
 
             live_stats = live_stats.loc[(live_stats['alert_nvio']==True) | (live_stats['alert_vio']==True),:]
 
