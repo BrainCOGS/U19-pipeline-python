@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 import u19_pipeline.utils.slack_utils as su
 
-MINUTES_ALERT = 2
+MINUTES_ALERT = 1
 SECONDS_ALERT = MINUTES_ALERT*60
 MIN_SESSIONS_COMPLETED = 3
 
