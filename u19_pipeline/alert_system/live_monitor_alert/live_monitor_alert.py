@@ -1,4 +1,5 @@
 import datajoint as dj
+import numpy as np
 import pandas as pd
 import time
 from zoneinfo import ZoneInfo
@@ -164,6 +165,10 @@ def main_live_monitor_alert():
         if live_stats.shape[0] > 0:
 
             live_stats = pd.merge(sessions,live_stats, how='inner')
+
+            print('live_stats')
+            print(live_stats)
+
             fake_date = pd.Timestamp('1900-01-01')
 
             # Filter sessions whose last trial info is greater than 300s
@@ -178,7 +183,10 @@ def main_live_monitor_alert():
 
             live_stats = live_stats.loc[(live_stats['alert_nvio']==True) | (live_stats['alert_vio']==True),:]
 
-            #If there are any sessions to alert (more then 300s)
+            print('live_stats filtered')
+            print(live_stats)
+
+            #If there are any sessions to alert (more then SECONDS_ALERT)
             if live_stats.shape[0] > 0:
 
                 live_stats['current_datetime'] = live_stats[['last_violation_trial', 'last_non_violation_trial']].fillna(fake_date).max(axis=1)
