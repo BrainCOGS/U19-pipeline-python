@@ -187,7 +187,13 @@ def main_live_monitor_alert():
             live_stats['alert_nvio'] = live_stats['seconds_elapsed_last_stat_nvio'] > SECONDS_ALERT
 
             live_stats['seconds_elapsed_session_started'] = (right_now_est- live_stats['session_start_time']).dt.total_seconds()
-            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT & pd.isna(live_stats['last_non_violation_trial']) & ~pd.isna(live_stats['last_violation_trial'])
+            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT & (pd.isna(live_stats['last_non_violation_trial'])) & (~pd.isna(live_stats['last_violation_trial']))
+
+            print("pd.isna(live_stats['last_non_violation_trial']")
+            print(pd.isna(live_stats['last_non_violation_trial']))
+
+            print("(~pd.isna(live_stats['last_violation_trial']))")
+            print((~pd.isna(live_stats['last_violation_trial'])))
 
             print(live_stats.T)
 
@@ -235,7 +241,7 @@ def main_live_monitor_alert():
 
                     #Format message for session and live stat dictionary
                     this_session_stats = session_data_df.iloc[idx_alert,:]
-                    slack_json_message = slack_alert_message_format_live_stats(this_session_stats.to_dict(), this_alert_record, int(this_alert_record['seconds_elapsed_last_valid_stat']))
+                    slack_json_message = slack_alert_message_format_live_stats(this_session_stats.to_dict(), this_alert_record, int(this_alert_record['seconds_elapsed_last_valid_stat'])/60)
 
                     #Send alert
                     webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
