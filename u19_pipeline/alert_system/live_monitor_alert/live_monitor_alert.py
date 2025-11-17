@@ -219,8 +219,8 @@ def main_live_monitor_alert():
                 live_stats['current_datetime'] = live_stats.loc[live_stats['alert_nvio']==True, 'last_non_violation_trial']
 
                 live_stats['seconds_elapsed_last_valid_stat'] = 0
-                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_vio']==True, 'seconds_elapsed_last_stat_nvio']
-                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_nvio']==True, 'seconds_elapsed_session_started']
+                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_vio']==True, 'seconds_elapsed_session_started']
+                live_stats['seconds_elapsed_last_valid_stat'] = live_stats.loc[live_stats['alert_nvio']==True, 'seconds_elapsed_last_stat_nvio']
 
                 #get_session_info to alert (plus slack researcher)
                 query_live_stats_sessions = live_stats[['subject_fullname', 'session_date', 'session_number']].to_dict('records')
