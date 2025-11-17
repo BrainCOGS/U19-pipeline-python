@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import u19_pipeline.utils.slack_utils as su
 
 MINUTES_ALERT = 20
+SECONDS_ALERT = MINUTES_ALERT*60
+MIN_SESSIONS_COMPLETED = 3
 
 
 slack_configuration_dictionary = {
@@ -101,14 +103,29 @@ def main_live_monitor_alert():
         query_reported['session_date'] = datetime.today().strftime('%Y-%m-%d')
         sessions_reported = pd.DataFrame((acquisition.ReportedLiveSessionStats  & query_reported).fetch('KEY', as_dict = True))
 
-        if sessions_reported.shape[0] > 0:
+    if sessions_reported.shape[0] > 0:
 
-            sessions = pd.merge(sessions,sessions_reported, how='left', indicator=True)
-            sessions = sessions.loc[sessions['_merge'] == 'left_only']
-            sessions = sessions.drop(columns='_merge')
-            sessions = sessions.reset_index(drop=True)
+        sessions = pd.merge(sessions,sessions_reported, how='left', indicator=True)
+        sessions = sessions.loc[sessions['_merge'] == 'left_only']
+        sessions = sessions.drop(columns='_merge')
+        sessions = sessions.reset_index(drop=True)
 
-        print('Sessions not reported\n', sessions)
+    print('Sessions not reported\n', sessions)
+
+    #Only analyze sessions subjects > NUM_SESSIONS_COMPLETED have not been reported
+    if sessions.shape[0] > 0:
+
+        query_subjects = "subject_fullname in ('"+ "', '".join(sessions['subject_fullname']) + "')"
+
+        count_sessions_table = (subject.Subject).aggr((acquisition.Session & query_subjects), num_sessions="count(subject_fullname)")
+        count_sessions_df = pd.DataFrame(count_sessions_table.fetch(as_dict=True))
+
+        sessions = pd.merge(sessions,count_sessions_df, how='left')
+        sessions['num_sessions'] = sessions['num_sessions'].fillna(0)
+
+        sessions = sessions.loc[sessions['num_sessions']>= MIN_SESSIONS_COMPLETED, :]
+
+    print('Subjects with  completed min_num_sessions\n', sessions)
 
     if sessions.shape[0] > 0:
 
@@ -149,19 +166,19 @@ def main_live_monitor_alert():
             live_stats = pd.merge(sessions,live_stats, how='inner')
             fake_date = pd.Timestamp('1900-01-01')
 
-            # Filter sessions whose last trial info is greater than MINUTES_ALERT
+            # Filter sessions whose last trial info is greater than 300s
             right_now_est = datetime.now(tz=ZoneInfo('America/New_York'))
             right_now_est = right_now_est.replace(tzinfo=None)
             live_stats['seconds_elapsed_last_stat_nvio'] = (right_now_est- live_stats['last_non_violation_trial']).dt.total_seconds()
-            live_stats['alert_nvio'] = live_stats['seconds_elapsed_last_stat_nvio'] > MINUTES_ALERT
+            live_stats['alert_nvio'] = live_stats['seconds_elapsed_last_stat_nvio'] > SECONDS_ALERT
 
             live_stats['seconds_elapsed_session_started'] = (right_now_est- live_stats['session_start_time']).dt.total_seconds()
-            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > MINUTES_ALERT & pd.isna(live_stats['last_non_violation_trial'].isna()) & ~pd.isna(live_stats['last_violation_trial'].isna())
+            live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT & pd.isna(live_stats['last_non_violation_trial'].isna()) & ~pd.isna(live_stats['last_violation_trial'].isna())
 
 
             live_stats = live_stats.loc[(live_stats['alert_nvio']==True) | (live_stats['alert_vio']==True),:]
 
-            #If there are any sessions to alert (more then MINUTES_ALERT)
+            #If there are any sessions to alert (more then 300s)
             if live_stats.shape[0] > 0:
 
                 live_stats['current_datetime'] = live_stats[['last_violation_trial', 'last_non_violation_trial']].fillna(fake_date).max(axis=1)
@@ -213,4 +230,3 @@ def main_live_monitor_alert():
 
                     acquisition.ReportedLiveSessionStats.insert1(reported_session.to_dict())
                     idx_alert += 1
-
