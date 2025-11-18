@@ -178,10 +178,10 @@ def main_live_monitor_alert():
             right_now_est = datetime.now(tz=ZoneInfo('America/New_York'))
             right_now_est = right_now_est.replace(tzinfo=None)
 
-            live_stats['seconds_elapsed_last_stat_nvio'] = (right_now_est- live_stats['last_non_violation_trial']).dt.total_seconds()
+            live_stats['seconds_elapsed_last_stat_nvio'] = pd.Int64Dtype((right_now_est- live_stats['last_non_violation_trial']).dt.total_seconds())
             live_stats['alert_nvio'] = live_stats['seconds_elapsed_last_stat_nvio'] > SECONDS_ALERT
 
-            live_stats['seconds_elapsed_session_started'] = (right_now_est- live_stats['session_start_time']).dt.total_seconds()
+            live_stats['seconds_elapsed_session_started'] = pd.Int64Dtype((right_now_est- live_stats['session_start_time']).dt.total_seconds())
             live_stats['alert_vio'] = live_stats['seconds_elapsed_session_started'] > SECONDS_ALERT
             live_stats['alert_vio'] = live_stats['alert_vio'] & (pd.isna(live_stats['last_non_violation_trial']))
             live_stats['alert_vio'] = live_stats['alert_vio'] & (~pd.isna(live_stats['last_violation_trial']))
