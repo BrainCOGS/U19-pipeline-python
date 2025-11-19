@@ -5,7 +5,7 @@ def main_live_session_stats_deletion():
 
     acquisition = dj.create_virtual_module('acquisition', 'u19_acquisition')
 
-    old_session_stats_query = "current_datetime < NOW() - INTERVAL 15 DAY"
+    old_session_stats_query = "current_datetime < NOW() - INTERVAL 5 DAY"
 
     order_cols = "'subject_fullname', 'session_date', 'session_number', 'trial_idx'"
     connection = acquisition.LiveSessionStats.connection
