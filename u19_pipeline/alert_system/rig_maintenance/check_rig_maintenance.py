@@ -16,12 +16,14 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
+
+import pandas as pd
 
 try:
     # When installed/used as a package, import directly
-    from u19_pipeline import lab, rig_maintenance
+    from u19_pipeline import lab, rig_maintenance, scheduler
     from u19_pipeline.utils import slack_utils as su
 except Exception as e:  # pragma: no cover - only happens when package not available
     print(f"Error importing modules: {e}")
@@ -120,83 +122,39 @@ def create_slack_message(overdue_items, current_date):
         }
         return message
 
-    # Group items by status
-    no_record_items = [item for item in overdue_items if item["status"] == "NO_RECORD"]
-    overdue_items_list = [item for item in overdue_items if item["status"] == "OVERDUE"]
+    # Split into overdue vs upcoming items based on status
+    overdue_list = [item for item in overdue_items if item.get("status") == "OVERDUE"]
+    upcoming_list = [item for item in overdue_items if item.get("status") == "UPCOMING"]
 
-    # Build message blocks. Slack limits: max 50 blocks and ~3000 chars per text field.
+    rigs_overdue = {item["location"] for item in overdue_list}
+    rigs_upcoming = {item["location"] for item in upcoming_list}
+    rigs_with_issues = sorted(rigs_overdue | rigs_upcoming)
+
+    overdue_lines = "\n".join(f"• {loc}" for loc in sorted(rigs_overdue)) or "• None"
+    upcoming_lines = "\n".join(f"• {loc}" for loc in sorted(rigs_upcoming)) or "• None"
+
+    text = (
+        f"⚠️ *Rig Maintenance Alert* - {current_date}\n\n"
+        f"*Overdue maintenance* rigs ({len(rigs_overdue)}):\n{overdue_lines}\n\n"
+        f"*Upcoming maintenance within warning window* rigs ({len(rigs_upcoming)}):\n{upcoming_lines}\n\n"
+        "For full details of overdue and upcoming items per rig, please visit "
+        "<https://braincogs-webgui.pni.princeton.edu/rig_maintenance|the rig maintenance web page>."
+    )
+
     blocks = [
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"⚠️ *Rig Maintenance Alert* - {current_date}\n\n{len(overdue_items)} items require attention",
+                "text": text,
             },
-        },
-        {"type": "divider"},
+        }
     ]
 
-    if no_record_items:
-        no_record_text = "\n".join([f"• {item['location']} - {item['maintenance_type']}" for item in no_record_items])
-        # Truncate if too long for Slack
-        if len(no_record_text) > 2500:
-            truncated = no_record_text[:2400] + "\n• ... (truncated)"
-            no_record_text = truncated
-        blocks.append(
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"📋 *No Maintenance Records* ({len(no_record_items)} items):\n{no_record_text}",
-                },
-            }
-        )
-
-    if overdue_items_list:
-        if no_record_items:
-            blocks.append({"type": "divider"})
-
-        # Sort by most overdue first
-        overdue_items_list.sort(key=lambda x: x["days_overdue"], reverse=True)
-        overdue_text = "\n".join(
-            [
-                f"• {item['location']} - {item['maintenance_type']}: "
-                f"{item['days_overdue']} days overdue (last: {item['last_maintenance']})"
-                for item in overdue_items_list
-            ]
-        )
-
-        # If the overdue_text is too large or blocks would exceed limits, fall back to a short list
-        if len(overdue_text) > 2500 or len(blocks) + 1 > 45:
-            # Provide a short top-N list and include full details in the log only
-            top_n = overdue_items_list[:25]
-            short_text = "\n".join(
-                [f"• {it['location']} - {it['maintenance_type']} ({it['days_overdue']} days)" for it in top_n]
-            )
-            if len(overdue_items_list) > len(top_n):
-                short_text += f"\n• ... and {len(overdue_items_list) - len(top_n)} more items (see logs)"
-
-            blocks.append(
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": (f"🚨 *Overdue Maintenance* ({len(overdue_items_list)} items):\n{short_text}"),
-                    },
-                }
-            )
-        else:
-            blocks.append(
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"🚨 *Overdue Maintenance* ({len(overdue_items_list)} items):\n{overdue_text}",
-                    },
-                }
-            )
-
-    message = {"text": f"Rig Maintenance Alert - {len(overdue_items)} items require attention", "blocks": blocks}
+    message = {
+        "text": f"Rig Maintenance Alert - {len(rigs_with_issues)} rigs have overdue or upcoming maintenance",
+        "blocks": blocks,
+    }
 
     return message
 
@@ -231,7 +189,15 @@ def check_overdue_maintenance():
         list: List of dictionaries containing overdue maintenance information
     """
     overdue_items = []
+    upcoming_items = []
     current_date = datetime.now().date()
+
+    # Determine which locations are active based on recent schedules (last 30 days)
+
+    five_weeks_ago = date.today() - timedelta(weeks=5)
+    query = scheduler.Schedule & f'date >= "{five_weeks_ago}"' & 'subject_fullname not like "test%"'
+    locations = query.fetch("location")
+    unique_locations = sorted(set(locations))
 
     # Get all maintenance types and their intervals
     maintenance_fetch = getattr(rig_maintenance.MaintenanceType, "fetch")
@@ -242,11 +208,13 @@ def check_overdue_maintenance():
         'system_type = "rig"',
         'acquisition_type in ("behavior", "electrophysiology", "2photon")',
         "(location_description is not NULL and length(trim(location_description)) > 0)",
+        f"location in ({', '.join([f'"{loc}"' for loc in unique_locations])})",
     ]
 
     merged_queries = " and ".join(queries)
 
     loc_query = lab.Location & merged_queries
+
     loc_fetch = getattr(loc_query, "fetch")
     locations = loc_fetch(as_dict=True)
 
@@ -255,12 +223,21 @@ def check_overdue_maintenance():
 
     for location in locations:
         location_name = location["location"]
+        rig_number_of_lines = location["number_of_lines"]
         logger.info(f"🔧 Checking rig: {location_name}")
         logger.debug("-" * 61)
 
         for mtype in maintenance_types:
             maintenance_type = mtype["maintenance_type"]
+            main_num_of_lines = mtype.get("number_of_lines", 0)
+            if not (main_num_of_lines == 0 or main_num_of_lines == rig_number_of_lines):
+                # logger.info(
+                #     f"  {maintenance_type:.<30} SKIPPED (rig has {rig_number_of_lines} lines, "
+                #     f"maintenance type for {main_num_of_lines} lines)"
+                # )
+                continue
             interval_days = mtype["interval_days"]
+            notification_window = mtype.get("notification_window", 0)
 
             # Find the most recent maintenance record for this rig and type
             recent_q = rig_maintenance.RigMaintenance & {
@@ -305,11 +282,30 @@ def check_overdue_maintenance():
                     )
                     logger.info(f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌")
                 else:
-                    # Maintenance is up to date
+                    # Not yet overdue: check if within notification window
                     days_until_due = interval_days - days_since_last
-                    logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
+                    if 0 < days_until_due <= notification_window:
+                        upcoming_items.append(
+                            {
+                                "location": location_name,
+                                "maintenance_type": maintenance_type,
+                                "last_maintenance": last_maintenance_date,
+                                "days_since_last": days_since_last,
+                                "interval_days": interval_days,
+                                "days_until_due": days_until_due,
+                                "notification_window": notification_window,
+                                "status": "UPCOMING",
+                                "message": f"{maintenance_type} due in {days_until_due} days",
+                            }
+                        )
+                        logger.info(
+                            f"  {maintenance_type:.<30} DUE SOON in {days_until_due} days (window {notification_window}) ⚠️"
+                        )
+                    else:
+                        logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
 
-    return overdue_items
+    # Return combined list; status distinguishes OVERDUE vs UPCOMING
+    return overdue_items + upcoming_items
 
 
 def log_summary(overdue_items):
@@ -391,6 +387,13 @@ def main():
 
         # Log summary with rich formatting
         log_summary(overdue_items)
+
+        records = pd.DataFrame(overdue_items)
+        records.columns = [" ".join(w.capitalize() for w in col.split("_")) for col in records.columns]
+        print(records)
+
+        records = records[["Location", "Maintenance Type", "Status"]]
+
 
         # Send Slack notification with summary only
         current_date = datetime.now().date()
