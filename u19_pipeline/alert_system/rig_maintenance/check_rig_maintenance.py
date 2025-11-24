@@ -371,6 +371,58 @@ def log_summary(overdue_items):
     logger.debug("=" * 60)
 
 
+def dataframe_to_slack_table_block(df: pd.DataFrame, truncate_cell: int = 200, use_markdown: bool = False) -> dict:
+    """
+    Convert a DataFrame into one Slack table block.
+    Docs: https://docs.slack.dev/reference/block-kit/blocks/table-block/
+
+    Args:
+        df: DataFrame to render.
+        truncate_cell: Max chars per cell (Slack text field limit safety).
+        use_markdown: Use mrkdwn cells instead of plain_text.
+
+    Returns:
+        dict: Slack table block.
+    """
+    cell_type = "mrkdwn" if use_markdown else "raw_text"
+
+    def mk_cell(val):
+        text = "" if pd.isna(val) else str(val)
+        if len(text) > truncate_cell:
+            text = text[: truncate_cell - 3] + "..."
+        return {"type": cell_type, "text": text}
+
+    headers = [[mk_cell(c) for c in df.columns]]
+    rows = [[mk_cell(v) for v in row] for row in df.itertuples(index=False, name=None)]
+
+    block = {
+        "type": "table",
+        "column_settings": [{"is_wrapped": True}],
+        # Using your approach: make the header the first row in the rows array
+        "rows": headers + rows,
+    }
+    return block
+
+
+def dataframe_to_slack_table_blocks(df: pd.DataFrame, chunk_size: int = 15, **kwargs) -> list[dict]:
+    """
+    Chunk a DataFrame into multiple Slack table blocks by rows.
+
+    Args:
+        df: Source DataFrame.
+        chunk_size: Rows per table block.
+        **kwargs: Passed to dataframe_to_slack_table_block.
+
+    Returns:
+        list[dict]: List of table blocks.
+    """
+    blocks = []
+    for start in range(0, len(df), chunk_size):
+        sub = df.iloc[start : start + chunk_size]
+        blocks.append(dataframe_to_slack_table_block(sub, **kwargs))
+    return blocks
+
+
 def main():
     """Main function to run the maintenance check."""
     log_file_handle = None
@@ -394,6 +446,47 @@ def main():
 
         records = records[["Location", "Maintenance Type", "Status"]]
 
+        # for loc in records["Location"].unique():
+        #     table_blocks = dataframe_to_slack_table_blocks(records[records["Location"] == loc], chunk_size=100)
+        #     payload = {"blocks": table_blocks}
+        #     value = requests.post(webhook, json=payload, headers={"Content-Type": "application/json"})
+        #     repr(value)
+
+        # table_blocks = dataframe_to_slack_table_blocks(records, chunk_size=10)
+        # # payload = {"blocks": table_blocks[-1]}
+        # payload = {"blocks": table_blocks[1:3]}
+        # pprint(payload)
+        # value = requests.post(webhook, json=payload, headers={"Content-Type": "application/json"})
+        # repr(value)
+        # pprint(value)
+
+        # for loc in records["Location"].unique():
+        #     loc_df = records[records["Location"] == loc]
+        #     payload = {"text": f"```{loc_df.to_markdown(index=False)}```"}
+        #     requests.post(
+        #         webhook,
+        #         json=payload,
+        #         headers={"Content-Type": "application/json"},
+        #     )
+
+        # chunk_md = [records.iloc[i : i + 10].to_markdown(index=False) for i in range(0, len(records), 10)]
+
+        # merged_string = "```" + "```\n ```".join(chunk_md) + "```"
+
+        # # for idx, markdown in enumerate(chunk_md):
+        # #     payload = {"text": f"""\n```{markdown}```\n"""}
+        # #     requests.post(webhook, json=payload, headers={"Content-Type": "application/json"})
+
+        # payload = {
+        #     "text":
+        #     merged_string
+        #     # f"""\n```{records.to_string(index=False)}```\n
+        # }
+        # requests.post(
+        #     webhook,
+        #     json=payload,
+        #     headers={"Content-Type": "application/json"},
+        # )
 
         # Send Slack notification with summary only
         current_date = datetime.now().date()
