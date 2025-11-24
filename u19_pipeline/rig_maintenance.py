@@ -22,6 +22,8 @@ class MaintenanceType(dj.Lookup):
     ---
     description              : varchar(255)                 # Description of maintenance
     interval_days            : int                           # Required interval in days
+    notification_window       : int                           # Number of days to notify before maintenance due date
+    number_of_lines          : int                           #  Show this dependent on how many lines the rig has 0. Applies to all rigs 1. Applies to rigs with one line 2. Applies to rigs with two lines
     """
     contents = [
         ["Replacing lines", "Replacing water/reward lines", 30],

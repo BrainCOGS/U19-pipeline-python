@@ -55,7 +55,14 @@ class Location(dj.Lookup):
     # are located. This could be a room, a rig, or a bench
     location             : varchar(32)
     ---
-    location_description="" : varchar(255)
+    system_type="" : varchar(255)
+    ip_address="" : varchar(255)
+    system_user="" : varchar(255)
+    acquisition_type="" : varchar(255)
+    bucket_default_path="" : varchar(255)
+    imaging_default_path="" : varchar(255)
+    ephys_default_path="" : varchar(255)
+    number_of_lines=0 : int
     """
     contents = [
         ["Bezos2", ""],
