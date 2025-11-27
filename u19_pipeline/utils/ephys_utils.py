@@ -143,9 +143,9 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     trial_start_idx = get_idx_trial_start(trial_pulse_signal)
 
     # Just to make sure we get corresponding iter pulse (trial and iter pulse at same time !!)
-    ms_after_trial_start_pulse = 20
+    ms_after_trial_start_pulse = 1
     samples_after_pulse_start = int(nidq_sampling_rate*(ms_after_trial_start_pulse/1000))
-    ms_before_trial_end = 20
+    ms_before_trial_end = 1
     samples_before_pulse_end = int(nidq_sampling_rate*(ms_before_trial_end/1000))
 
     # num Trials to sync (if behavior stopped before last trial was saved)
@@ -155,7 +155,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iter_times_idx = []
     for i in range(num_trials_sync):
         #Trial starts and ends idxs ()
-        idx_start = trial_start_idx[i] - samples_after_pulse_start
+        idx_start = trial_start_idx[i] + samples_after_pulse_start
         if i < trial_start_idx.shape[0]-1:
             idx_end = trial_start_idx[i+1] -samples_before_pulse_end
         else:
