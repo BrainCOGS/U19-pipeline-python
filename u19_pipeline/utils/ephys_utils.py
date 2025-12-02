@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation as R
 from bitstring import BitArray
 from element_array_ephys import ephys as ephys_element
 
-from u19_pipeline.utils.DemoReadSGLXData.readSGLX import SampRate, makeMemMapRaw, ExtractDigital
+import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 
 
 class spice_glx_utility:
@@ -34,7 +34,7 @@ class spice_glx_utility:
             else:
                 raise ValueError('Could not infer channel list from nidq_meta["niXDChans1"] ')
 
-        nidq_sampling_rate = SampRate(nidq_meta)
+        nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
 
         #Get first and last sample idx from the file
         t_start = 0
@@ -44,12 +44,45 @@ class spice_glx_utility:
         last_sample_index = int(nidq_sampling_rate * t_end) - 1
 
         #Read binary and digital
-        nidq_raw_data = makeMemMapRaw(file_path, nidq_meta)  # Pull raw bin data
-        digital_array = ExtractDigital(                               # extract interation index
+        nidq_raw_data = readSGLX.makeMemMapRaw(file_path, nidq_meta)  # Pull raw bin data
+        digital_array = readSGLX.ExtractDigital(                               # extract interation index
             nidq_raw_data, first_sample_index, last_sample_index,
             dw, d_line_list, nidq_meta)
 
         return digital_array
+    
+
+def read_nidq_meta_samp_rate(ephys_session_fullpath):
+
+    #Nidaq file
+    nidq_meta          = readSGLX.readMeta(ephys_session_fullpath)
+    nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
+
+    return nidq_meta, nidq_sampling_rate
+
+def load_trial_iteration_signals(ephys_session_fullpath, nidq_meta):
+
+    # 1: load meta data, and the content of the NIDAQ file. Its content is digital.            
+    new_trial_channel = 1
+    new_iteration_channel = 2
+    # If PXIe card (nidq) card use for recording deduce digital channels
+    if nidq_meta['typeThis'] == 'nidq':
+        digital_array      = spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
+    # If onebox card (obx) card use for recording digital channels are 0-2
+    else:
+        digital_array      = spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta, d_line_list=[0,1])
+        # If no sync pulse found trial and iteration signals are 0 & 1 respectively
+        channel0_pulses = np.where(np.diff(digital_array[0])==1)[0].shape[0]
+        channel1_pulses = np.where(np.diff(digital_array[1])==1)[0].shape[0]
+
+        if channel0_pulses > channel1_pulses:
+            new_trial_channel = 1
+            new_iteration_channel = 0
+        else:
+            new_trial_channel = 0
+            new_iteration_channel = 1    
+
+    return digital_array[new_trial_channel,:], digital_array[new_iteration_channel,:]
 
 
 def get_idx_trial_start(trial_pulse_signal):
@@ -72,7 +105,7 @@ def get_idx_trial_start(trial_pulse_signal):
     return trial_start_idx
 
 
-def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx, samples_before_pulse_start):
+def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx, samples_before_pulse_start, behavior_iterations):
     #Get index of iteration starts on a trial based on a pulse start signal
 
     #Get idx of iteration start during trial
@@ -83,6 +116,9 @@ def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx
     iter_samples += trial_start_idx
     iter_samples -= samples_before_pulse_start
     iter_samples[0] = trial_start_idx
+
+    if behavior_iterations < iter_samples.shape[0]:
+        iter_samples = iter_samples[:-1]
 
     return iter_samples
 
@@ -136,16 +172,26 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iteration_vector_output = dict()
 
     #Vectors that will contain trial # and iter # for each sample on file
-    iteration_vector_output['framenumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
-    iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
+    #iteration_vector_output['framenumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
+    #iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
 
     #Get idx samples trial starts
     trial_start_idx = get_idx_trial_start(trial_pulse_signal)
 
+    print('len trial_start_idx', trial_start_idx.shape)
+
+    if mode is None:
+        mode = get_trial_signal_mode(iteration_pulse_signal[trial_start_idx[0]:trial_start_idx[1]], behavior_time_vector[0])
+
     # Just to make sure we get corresponding iter pulse (trial and iter pulse at same time !!)
-    ms_after_trial_start_pulse = 1
+    if mode == 'counter_bit0':
+        ms_after_trial_start_pulse = 1
+        ms_before_trial_end = 1
+    else:
+        ms_after_trial_start_pulse = -4
+        ms_before_trial_end = 4
+
     samples_after_pulse_start = int(nidq_sampling_rate*(ms_after_trial_start_pulse/1000))
-    ms_before_trial_end = 1
     samples_before_pulse_end = int(nidq_sampling_rate*(ms_before_trial_end/1000))
 
     # num Trials to sync (if behavior stopped before last trial was saved)
@@ -161,14 +207,13 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
         else:
             idx_end = trial_pulse_signal.shape[0] - samples_before_pulse_end
 
-        if mode is None:
-            mode = get_trial_signal_mode(iteration_pulse_signal[idx_start:idx_end], behavior_time_vector[i])
+
 
         #Get idx of iteration start of current trial
         if mode == 'counter_bit0':
             iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
         else:
-            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i], samples_before_pulse_end)
+            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i], samples_before_pulse_end, behavior_time_vector[i].shape[0])
 
         #Append as an array of arrays (each trial is an array with idx of iterations)
         iter_start_idx.append(iter_samples)
@@ -178,17 +223,17 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
         iter_times_idx.append(times)
 
         #Fill vector samples
-        for j in range(iter_samples.shape[0]-1):
-            iteration_vector_output['framenumber_vector_samples'][iter_samples[j]:iter_samples[j+1]] = j+1
+        #for j in range(iter_samples.shape[0]-1):
+        #    iteration_vector_output['framenumber_vector_samples'][iter_samples[j]:iter_samples[j+1]] = j+1
 
         #Last iteration # is from start of iteration to end of trial
-        if i < trial_start_idx.shape[0]-1:
-            iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:trial_start_idx[i+1]] = i+1
-            iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:trial_start_idx[i+1]] = iter_samples.shape[0]
+        #if i < trial_start_idx.shape[0]-1:
+        #    iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:trial_start_idx[i+1]] = i+1
+        #    iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:trial_start_idx[i+1]] = iter_samples.shape[0]
         # For last trial, lets finish it 1s after last iteration detected
-        else:
-            iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:iter_samples[-1]+int(nidq_sampling_rate)] = i+1
-            iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:iter_samples[-1]+int(nidq_sampling_rate)] = iter_samples.shape[0]
+        #else:
+        #    iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:iter_samples[-1]+int(nidq_sampling_rate)] = i+1
+        #    iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:iter_samples[-1]+int(nidq_sampling_rate)] = iter_samples.shape[0]
 
     iteration_vector_output['iter_start_idx'] = np.asarray(iter_start_idx.copy(), dtype=object)
     iteration_vector_output['iter_times_idx'] = np.asarray(iter_times_idx.copy(), dtype=object)
@@ -371,18 +416,18 @@ def fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, be
         iteration_dict['iter_times_idx'][idx_trial] = new_times
 
         # Fix framenumber in the sample vector
-        for j in range(new_iter_start.shape[0]-1):
-            iteration_dict['framenumber_vector_samples'][new_iter_start[j]:new_iter_start[j+1]] = j+1
+        #for j in range(new_iter_start.shape[0]-1):
+        #    iteration_dict['framenumber_vector_samples'][new_iter_start[j]:new_iter_start[j+1]] = j+1
 
         #Last iteration fixed as well
-        next_trial = idx_trial+1
-        start_iteration_next_trial = iteration_dict['iter_start_idx'][next_trial][0]
+        #next_trial = idx_trial+1
+        #start_iteration_next_trial = iteration_dict['iter_start_idx'][next_trial][0]
 
-        print('next_trial ........', next_trial)
-        print('last iteration of this trial so far', new_iter_start[-1])
-        print('start next trial iteration', start_iteration_next_trial)
+        #print('next_trial ........', next_trial)
+        #print('last iteration of this trial so far', new_iter_start[-1])
+        #print('start next trial iteration', start_iteration_next_trial)
 
-        iteration_dict['framenumber_vector_samples'][new_iter_start[-1]:start_iteration_next_trial] = new_iter_start.shape[0]
+        #iteration_dict['framenumber_vector_samples'][new_iter_start[-1]:start_iteration_next_trial] = new_iter_start.shape[0]
 
         return iteration_dict
 
@@ -556,7 +601,110 @@ def load_open_ephys_digital_file(file_path):
     pass
 
 
+def get_iteration_intertrial_from_virmen_time(trial_pulse_signal, nidq_sampling_rate, num_behavior_trials, behavior_time_vector):
 
+    #Get idx samples trial starts
+    trial_start_idx = get_idx_trial_start(trial_pulse_signal)
+
+    iter_start_idx = []
+    for i in range(num_behavior_trials):
+
+        new_synced_iteration_vector = trial_start_idx[i]+np.int64(behavior_time_vector[i]*nidq_sampling_rate)
+        iter_start_idx.append(new_synced_iteration_vector.squeeze())
+
+    np.asarray(iter_start_idx.copy(), dtype=object)
+
+    return trial_start_idx, iter_start_idx
+
+
+def get_full_vector_samples(iter_start_idx_vectors, nidq_sampling_rate, total_samples):
+
+    framenumber_vector_samples = np.zeros(total_samples)*np.nan
+    trialnumber_vector_samples = np.zeros(total_samples)*np.nan
+
+    for i in range(len(iter_start_idx_vectors)):
+
+        this_trial_iter_vector = iter_start_idx_vectors[i]
+        if i < len(iter_start_idx_vectors)-1:
+            next_trial_iter_vector = iter_start_idx_vectors[i+1]
+
+        #Fill vector samples
+        for j in range(this_trial_iter_vector.shape[0]-1):
+            framenumber_vector_samples[this_trial_iter_vector[j]:this_trial_iter_vector[j+1]] = j+1
+
+        #Last iteration # is from start of iteration to end of trial
+        if i < len(iter_start_idx_vectors)-1:
+            trialnumber_vector_samples[this_trial_iter_vector[0]:next_trial_iter_vector[0]] = i+1
+            framenumber_vector_samples[this_trial_iter_vector[-1]:next_trial_iter_vector[0]] = this_trial_iter_vector.shape[0]
+        # For last trial, lets finish it 1s after last iteration detected
+        else:
+            #print('total_samples', total_samples)
+            #print('this_trial_iter_vector[-1]', this_trial_iter_vector[-1])
+            #print('this_trial_iter_vector[0]', this_trial_iter_vector[0])
+            #print('this_trial_iter_vector[-1]+int(nidq_sampling_rate)', this_trial_iter_vector[-1]+int(nidq_sampling_rate))
+            trialnumber_vector_samples[this_trial_iter_vector[0]:this_trial_iter_vector[-1]+int(nidq_sampling_rate)] = i+1
+            framenumber_vector_samples[this_trial_iter_vector[-1]:this_trial_iter_vector[-1]+int(nidq_sampling_rate)] = this_trial_iter_vector.shape[0]
+
+    return trialnumber_vector_samples, framenumber_vector_samples
+
+
+def get_index_type_vectors(trial_index_nidq, iteration_index_nidq, nidq_sampling_rate):
+
+    status = False
+
+    trial_index_nidq = trial_index_nidq.copy()
+    iteration_index_nidq = iteration_index_nidq.copy()
+
+    first_non_nan = np.where(~np.isnan(trial_index_nidq))[0][0]
+
+    trial_index_nidq[:first_non_nan] = 0
+    iteration_index_nidq[:first_non_nan] = -1
+
+    idx_trial = np.where((np.diff(trial_index_nidq)) == 1 )[0] + 1
+    idx_iteration = np.where((np.diff(iteration_index_nidq)) == 1)[0] + 1
+
+    idx_iteration_final = []
+    for i in range(idx_trial.shape[0]):
+
+        if i < idx_trial.shape[0]-1:
+            iterations_this_trial = idx_iteration[(idx_iteration > idx_trial[i]) & (idx_iteration <idx_trial[i+1])]
+        else:
+            iterations_this_trial = idx_iteration[(idx_iteration > idx_trial[i])]
+        idx_this_trial_iterations = np.insert(iterations_this_trial, 0, idx_trial[i])
+
+        idx_iteration_final.append(idx_this_trial_iterations)
+
+    trial_index_nidq[:first_non_nan] = np.nan
+    iteration_index_nidq[:first_non_nan] = np.nan
+
+    trial_index_nidq2, iteration_index_nidq2 = get_full_vector_samples(idx_iteration_final, nidq_sampling_rate, trial_index_nidq.shape[0])
+
+
+    iteration_equal = np.allclose(iteration_index_nidq, iteration_index_nidq2, equal_nan=True)
+    trial_equal = np.allclose(trial_index_nidq, trial_index_nidq2, equal_nan=True)
+
+    print('iteration_equal', iteration_equal)
+    print('trial_equal', trial_equal)
+
+    print('np.where(np.isnan(iteration_index_nidq))[0].shape', np.where(np.isnan(iteration_index_nidq))[0].shape)
+    print('np.where(np.isnan(iteration_index_nidq2))[0].shape', np.where(np.isnan(iteration_index_nidq2))[0].shape)
+
+    if trial_equal and iteration_equal:
+        status = True
+
+    return status, idx_trial, idx_iteration_final
+
+
+
+def get_index_trial_vector_from_iteration(iteration_start_idx):
+
+    trial_start_idx = np.zeros(len(iteration_start_idx), dtype=np.int64)
+
+    for i in range(len(iteration_start_idx)):
+
+        trial_start_idx[i] = iteration_start_idx[i][0]
+
+    return trial_start_idx
 
 
 class xyz_pick_file_creator():
