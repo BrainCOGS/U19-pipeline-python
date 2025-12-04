@@ -195,6 +195,16 @@ class UserProtocol(dj.Lookup):
 
 
 @schema
+class LabManager(dj.Lookup):
+    definition = """
+    -> lab_man_index
+    ---
+    -> User.proj(lab_manager="user_id")
+    -> Lab
+    """
+
+
+@schema
 class NotificationSettings(dj.Manual):
     definition = """
     notification_settings_date : date                         # date from which this is valid.
@@ -397,23 +407,3 @@ class DjStores(dj.Lookup):
     protocol                : varchar(32)
     location                : varchar(255)
     """
-
-
-@schema
-class LabManager(dj.Lookup):
-    definition = """
-    -> User.proj(lab_manager="user_id")
-    ---
-    -> Lab
-    """
-
-    contents = [
-        [
-            "jteran",
-            "tanklab",
-        ],
-        [
-            "rf6456",
-            "wittenlab",
-        ],
-    ]
