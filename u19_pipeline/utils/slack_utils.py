@@ -34,7 +34,7 @@ def format_df_for_slack_message(df):
         df[i] = df[i].str.pad(width=max_len, side='right', fillchar='_')
         column_pad = i.ljust(max_len, '_')
         df = df.rename(columns={i:column_pad})
-    
+
     df = df.to_string(index=False)
     df = df.replace(' ',' --- ')
 
@@ -44,8 +44,7 @@ def send_slack_notification(webhook_url, slack_json_message):
     byte_length = str(sys.getsizeof(slack_json_message))
     headers = {"Content-Type": "application/json", "Content-Length": byte_length}
     response = requests.post(webhook_url, data=json.dumps(slack_json_message), headers=headers)
-    if response.status_code != 200:
-        raise Exception(response.status_code, response.text)
+    response.raise_for_status()
 
 
 def send_slack_update_notification(webhook_url, base_message, session_info):
