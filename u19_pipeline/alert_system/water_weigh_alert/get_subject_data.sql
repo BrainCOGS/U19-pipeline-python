@@ -25,6 +25,8 @@ max(effective_date) as last_status
 
 from u19_action.subject_status ss 
 
+where effective_date <= curdate()
+
 group by subject_fullname
 ) max_status
 on max_status.subject_fullname = ss.subject_fullname
