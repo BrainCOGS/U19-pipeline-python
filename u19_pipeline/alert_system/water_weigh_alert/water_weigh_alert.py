@@ -14,6 +14,7 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
+from u19_pipeline.utils.subject_metadata import fetch_slack_handles_for_lab_managers_by_subject
 
 slack_configuration_dictionary = {
     "slack_notification_channel": ["subject_health"],
@@ -314,10 +315,35 @@ def find_unreturned_subjects() -> pd.DataFrame:
 
 
 def slack_alert_message_format_weight_water(
-    subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport, individual_alert=False
+    subjects_not_watered: pd.DataFrame,
+    subjects_not_weighted: pd.DataFrame,
+    subjects_not_trained: pd.DataFrame,
+    missing_transport: pd.DataFrame,
+    individual_alert: bool = False,
 ):
     now = datetime.datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
+
+    print(missing_transport)
+    temp_missing_transport = missing_transport.copy().reset_index()
+    notifiable_subjects = set(
+        temp_missing_transport["subject_fullname"].tolist()
+        + subjects_not_watered["subject_fullname"].tolist()
+        + subjects_not_weighted["subject_fullname"].tolist()
+    )
+
+    slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(notifiable_subjects)
+    lab_manager_text = "\n\n"
+    if len(slack_handles) >= 1:
+        lab_manager_text += "Lab Manager"
+    if len(slack_handles) > 1:
+        lab_manager_text += "s"
+
+    slack_handles_formatted = ", ".join("<@" + handle + ">" for handle in slack_handles)
+    if slack_handles_formatted:
+        lab_manager_text += (
+            " " + slack_handles_formatted + ", please be advised that your labs' subjects are listed below."
+        )
 
     msep = dict()
     msep["type"] = "divider"
@@ -327,7 +353,8 @@ def slack_alert_message_format_weight_water(
     m1["type"] = "section"
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = ":rotating_light: *Subjects Status Alert *"
+
+    m1_1["text"] = ":rotating_light: *Subjects Status Alert *" + lab_manager_text
     m1["text"] = m1_1
 
     # Info for subjects missing water
