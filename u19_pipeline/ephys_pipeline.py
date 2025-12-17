@@ -206,6 +206,44 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
     return spikeglx_meta_filepath
 
 
+def get_full_vectors_from_key(rec_key):
+
+    full_session_path = get_full_session_directory(rec_key)
+    
+    if isinstance(full_session_path, str) and len(full_session_path) == 0:
+        print('No session found for this key')
+        return
+
+    nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(full_session_path)
+    nChan = int(nidq_meta['nSavedChans'])
+    num_samples = int(int(nidq_meta['fileSizeBytes'])/(2*nChan))
+
+    try:
+        sync_data = (BehaviorSync & rec_key).fetch1('sync_data')
+    except:
+        print('No sync data was sound for this session')
+        return
+
+
+    trial_index_nidq_virmen, iteration_index_nidq_virmen =\
+        ephys_utils.get_full_vector_samples(sync_data['iteration_idx_vector_from_virmen'],nidq_sampling_rate,num_samples)
+    
+    trial_index_nidq, iteration_index_nidq =\
+        ephys_utils.get_full_vector_samples(sync_data['iteration_idx_vector'],nidq_sampling_rate,num_samples)
+
+
+    time_vector = ephys_utils.get_time_vector(trial_index_nidq, nidq_sampling_rate)
+
+    all_vectors = dict()
+    all_vectors['trial_index_nidq_virmen'] = trial_index_nidq_virmen
+    all_vectors['iteration_index_nidq_virmen'] = iteration_index_nidq_virmen
+
+    all_vectors['trial_index_nidq'] = trial_index_nidq
+    all_vectors['iteration_index_nidq'] = iteration_index_nidq
+
+    all_vectors['time_vector'] = time_vector
+
+    return all_vectors
 
 # downstream tables for ephys element
 @schema
@@ -298,6 +336,7 @@ class BehaviorSync(dj.Imported):
 
             #Failed sync by a lot, error
             status_regular = 1
+            status_fix = 0
             if status < 1:
                 status_regular = 0
                 print('Regular ephys sync failed')
@@ -332,7 +371,7 @@ class BehaviorSync(dj.Imported):
 
             print('ephys_session_fullpath', ephys_session_fullpath)
 
-            self.insert_imec_sampling_rate(key, ephys_session_fullpath)
+            self.insert_imec_sampling_rate(key, ephys_session_fullpath.parent)
 
         except Exception as e:
             print(e)

@@ -20,6 +20,7 @@ dependencies = [
     "scikit-image",
     "scipy",
     "tables>=3.8",
+    "astropy>=6.0",
 ]
 requires-python = ">=3.12"
 
@@ -27,7 +28,6 @@ requires-python = ">=3.12"
 pipeline = [
     "jupyterlab>=4.3.4",
     "cellpose",
-    "astropy>=6.0",
     "bitstring",
     "fair-research-login",
     "ecephys_spike_sorting @ git+https://github.com/jenniferColonell/ecephys_spike_sorting.git",
@@ -65,6 +65,5 @@ line-length = 120
 dev = [
     "ipykernel>=6.29.5",
     "ruff>=0.9.10",
-    "setuptools>=75.8.0",
-    "pynapple",
+    "setuptools>=75.8.0"
 ]

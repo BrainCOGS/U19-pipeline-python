@@ -366,8 +366,8 @@ def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_di
 
     # We miss last trial (surely recording was stop before behavior)
     if trial_count_diff < 2 and len(trials_diff_iteration_small) == 0:
-        print('Only missed last trial (Pass) xxxxxxxxxxxxxx')
-        status = 1
+        print('Missed one trial signal xxxxxxxxxxxxxx')
+        status = -1
         return status
 
     # Iterations differ in more than two trials
@@ -646,6 +646,19 @@ def get_full_vector_samples(iter_start_idx_vectors, nidq_sampling_rate, total_sa
             framenumber_vector_samples[this_trial_iter_vector[-1]:this_trial_iter_vector[-1]+int(nidq_sampling_rate)] = this_trial_iter_vector.shape[0]
 
     return trialnumber_vector_samples, framenumber_vector_samples
+
+
+def get_time_vector(trial_index_nidq, nidq_sampling_rate):
+
+    time_vector = np.arange(0, trial_index_nidq.shape[0])
+    time_vector = time_vector.astype(np.float64)
+    time_vector = time_vector/nidq_sampling_rate
+
+    session_start_index = np.where(trial_index_nidq == 1)[0][0]
+    time_vector -= time_vector[session_start_index]
+
+    return time_vector
+
 
 
 def get_index_type_vectors(trial_index_nidq, iteration_index_nidq, nidq_sampling_rate):
