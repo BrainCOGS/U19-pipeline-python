@@ -321,16 +321,14 @@ def slack_alert_message_format_weight_water(
     missing_transport: pd.DataFrame,
     individual_alert: bool = False,
 ):
-    now = datetime.datetime.now()
-    datestr = now.strftime("%d-%b-%Y %H:%M:%S")
 
     print(missing_transport)
     temp_missing_transport = missing_transport.copy().reset_index()
-    notifiable_subjects = set(
+    notifiable_subjects = list(set(
         temp_missing_transport["subject_fullname"].tolist()
         + subjects_not_watered["subject_fullname"].tolist()
         + subjects_not_weighted["subject_fullname"].tolist()
-    )
+    ))
 
     slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(notifiable_subjects)
     lab_manager_text = "\n\n"
