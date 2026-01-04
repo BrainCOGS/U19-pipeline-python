@@ -346,7 +346,7 @@ class BehaviorSync(dj.Imported):
 
             print('after all main ehpys fix sync code', status_regular, status_fix)
 
-            if status_regular or status_fix:
+            if status_regular > 0 or status_fix > 0:
                 dictionary_sync_data['trial_idx_vector'] = iteration_dict['trial_start_idx']
                 dictionary_sync_data['iteration_idx_vector'] = iteration_dict['iter_start_idx']
             else:

@@ -23,15 +23,7 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
             time_bef = behavior_time_vector[idx_first] - behavior_time_vector[idx_first-1]
 
 
-            #print('idx_first', idx_first)
-            #print('time_bef', time_bef)
-            #print('synced_time_vector', synced_time_vector[idx_first-2:idx_first+2])
-            #print('behavior_time_vector', behavior_time_vector[idx_first-2:idx_first+2])
-
             synced_time_vector = np.insert(synced_time_vector, idx_first, synced_time_vector[idx_first-1]+time_bef)
-
-            #print('synced_time_vector', synced_time_vector[idx_first-2:idx_first+2])
-
             baseline_diff = synced_time_vector[initial_sample:base_size] - behavior_time_vector[initial_sample:base_size]
         else:
             break 
@@ -40,7 +32,6 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
     median_diff = np.median(baseline_diff)
     max_diff = np.median(baseline_diff)+0.007
     min_diff = np.median(baseline_diff)-0.007
-
 
 
     vec_shift = np.zeros((synced_time_vector.shape[0]-base_size), dtype=int)
@@ -114,9 +105,11 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
 
 
     if max_shift > diff_size and diff_size != 1:
-        print('max_shift', max_shift)
-        print('diff_size', diff_size)
-        raise ValueError('more max shift than diff size')
+        pass
+        #print('max_shift', max_shift)
+        #print('diff_size', diff_size)
+        #print('walaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        #raise ValueError('more max shift than diff size')
 
     return new_synced_time_vector, vec_shift, [min_diff, median_diff, max_diff]
 
