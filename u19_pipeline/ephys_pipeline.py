@@ -373,6 +373,8 @@ class BehaviorSync(dj.Imported):
 
             self.insert_imec_sampling_rate(key, ephys_session_fullpath.parent)
 
+            print('sync code executed sucessfully !!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
         except Exception as e:
             print(e)
 
