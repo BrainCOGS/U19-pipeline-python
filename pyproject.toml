@@ -12,7 +12,7 @@ authors = [
     { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
 ]
 dependencies = [
-    "datajoint>=0.14.2",
+    "datajoint<2.0.0",
     "icalevents>=0.3.0",
     "numpy>=1.23",
     "pandas>=2.0",
@@ -45,7 +45,7 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/atlab/scanreader.git",
     "six",
-    "suite2p",
+    # "suite2p",
     "tifffile",
 ]
 
