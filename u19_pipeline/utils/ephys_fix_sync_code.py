@@ -13,6 +13,7 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
 
     baseline_diff = synced_time_vector[initial_sample:base_size] - behavior_time_vector[initial_sample:base_size] 
 
+    '''
     while(1):
 
         base_greater = np.where(baseline_diff >0)
@@ -26,7 +27,8 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
             synced_time_vector = np.insert(synced_time_vector, idx_first, synced_time_vector[idx_first-1]+time_bef)
             baseline_diff = synced_time_vector[initial_sample:base_size] - behavior_time_vector[initial_sample:base_size]
         else:
-            break 
+            break
+    '''
 
 
     median_diff = np.median(baseline_diff)
@@ -98,8 +100,6 @@ def get_shift_vector(synced_time_vector, behavior_time_vector, base_size=40,init
     for i in range(idx_end, new_synced_time_vector.shape[0]):
         if i+vec_shift[-1] < new_synced_time_vector.shape[0]:
             new_synced_time_vector[i] = synced_time_vector[i+vec_shift[-1]]
-
-    vec_shift[vec_shift < -1] = -1 
 
     max_shift = np.max(np.abs(vec_shift))
 
@@ -363,7 +363,7 @@ def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq
             break
 
     print('after sync_evaluation_process2', status)
-
+    
     if status == 1:
         iteration_dict['trial_start_idx'] = ephys_utils.get_index_trial_vector_from_iteration(iteration_dict['iter_start_idx'])
 

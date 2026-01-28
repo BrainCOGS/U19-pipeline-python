@@ -325,7 +325,10 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     trials_diff_iteration_big = list()
     for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
-            print('trial#', count, 'iterPulses:', iter_trials.shape[0], 'IterBeh:', behavior_time_vector[idx_trial].shape[0])
+            print('trial#', count,
+                  'iterPulses:', iter_trials.shape[0],
+                  'IterBeh:', behavior_time_vector[idx_trial].shape[0],
+                  'Difference (', behavior_time_vector[idx_trial].shape[0]-iter_trials.shape[0], ')')
         count += 1
         # For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:

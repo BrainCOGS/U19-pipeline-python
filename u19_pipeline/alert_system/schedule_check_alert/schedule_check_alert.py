@@ -54,6 +54,8 @@ def main_schedule_check_alert():
         subjects_tomorrow = schedule_comp['#subj_tomorrow'].sum()
         total_rigs_less_subjects = schedule_comp['rig_less_subjects'].sum()
 
+        print(schedule_comp)
+
         if subjects_tomorrow/subjects_today < 0.7:
             alert = 1
 
