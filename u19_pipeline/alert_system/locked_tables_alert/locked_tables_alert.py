@@ -9,13 +9,13 @@ import u19_pipeline.lab as lab
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
-    'slack_notification_channel': ['alvaro_luna', 'christian_tabedzki']
+    'slack_notification_channel': ['dev_notifications']
 }
 
 
 def main_locked_tables_alert():
 
-    locked_tables_query = 'show open tables where in_use > 0' 
+    locked_tables_query = 'show open tables where in_use > 0'
     conn = dj.conn()
     locked_tables_df = pd.DataFrame(conn.query(locked_tables_query, as_dict=True).fetchall())
 
@@ -26,7 +26,7 @@ def main_locked_tables_alert():
         locked_tables_df = locked_tables_df.drop('Name_locked',axis=1)
         locked_tables_df = su.format_df_for_slack_message(locked_tables_df)
         slack_json_message = slack_alert_message_format_locked_tables(locked_tables_df)
-    
+
         webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
         # Send alert
         for this_webhook in webhooks_list:
