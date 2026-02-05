@@ -18,11 +18,9 @@
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anaconda3/5.3.1
     module load matlab/R2020a
 
-    conda activate BrainCogsEphysSorters_env
-
     cd ${repository_dir}
+    source .venv/bin/activate
     python ${process_script_path}
     

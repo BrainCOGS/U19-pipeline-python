@@ -79,11 +79,8 @@ class PupillometryProcessingHandler():
         echo "OUTPUT_DIR: ${output_dir}"
         echo "PROCESS_SCRIPT_PATH:  ${process_script_path}"
 
-        module load anacondapy/2023.07
-
-        conda activate u19_pipeline_python_env2
-
         cd ${repository_dir}
+        source .venv/bin/activate
         python ${process_script_path} ${video_dir} ${model_dir} ${output_dir}
         #python ${process_script_path} ${recording_process_id}
         '''

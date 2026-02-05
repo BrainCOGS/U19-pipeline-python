@@ -16,13 +16,12 @@ echo "MODEL_DIR: ${model_dir}"
 echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 echo "OUTPUT_DIR: ${output_dir}"
 
-module load anacondapy/2021.11
 module load cudnn
 module load cudatoolkit
 
-conda activate u19_datajoint_py39_env
-
 cd ${repository_dir}
+source .venv/bin/activate
+
 python ${process_script_path} ${video_dir} ${model_dir} ${output_dir}
 #python ${process_script_path} ${recording_process_id}
         

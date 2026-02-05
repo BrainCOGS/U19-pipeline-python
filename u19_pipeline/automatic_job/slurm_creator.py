@@ -185,12 +185,10 @@ def generate_slurm_spock(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
     source ~/.bashrc
-    module load anacondapy/2023.07-cuda -s
     module load matlab/R2024a -s
 
-    conda activate u19_pipeline_python_env3
-
     cd ${repository_dir}
+    source .venv/bin/activate
     python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
@@ -245,9 +243,8 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     module load anacondapy/2023.07-cuda -s
     module load matlab/R2024a -s
 
-    conda activate BraincogsEphysSorters_Env
-
     cd ${repository_dir}
+    source .venv/bin/activate
     python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
@@ -268,12 +265,11 @@ def generate_slurm_tiger(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anaconda3/2022.5 -s
     module load matlab/R2024a -s
 
-    conda activate BrainCogsEphysSorters_env
 
     cd ${repository_dir}
+    source .venv/bin/activate
     python -u ${process_script_path}
     '''
 
@@ -293,9 +289,9 @@ def generate_slurm_dlc(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
     echo "MODEL_PATH: ${model_path}"
 
-    module load anacondapy/2021.11 -s
-    conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
 
+    cd ${repository_dir}
+    source .venv/bin/activate
     python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 
@@ -315,9 +311,8 @@ def generate_slurm_dlc2(slurm_dict):
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
     echo "MODEL_PATH: ${model_path}"
 
-    module load anaconda3/5.3.1 -s
-    conda activate /home/alvaros/.conda/envs/u19_datajoint_py39_env
-
+    cd ${repository_dir}
+    source .venv/bin/activate
     python -u ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
     '''
 

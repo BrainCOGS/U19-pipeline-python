@@ -42,42 +42,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   > [!note]-
   > If you intend on installing this in a production environment, run `uv sync --group=pipeline`. This will install the additional packages that are necessary for the cluster.
 
-  ##### Conda
-
-  + Conda and virtualenv are virtual environment managers and you can use either
-    option.  Below are the commands for Conda.
-
-  + If you are setting up the pipeline on your local machine follow the instructions below for Conda.  If you are using `spock.pni.princeton.edu` or `scotty.pni.princeton.edu`, Conda is preinstalled and you can access it by running `module load anacondapy/2021.11`.
-
-  + We will install Miniconda which is a minimal installer for conda.
-  + Select the [Miniconda installer link](https://conda.io/en/latest/miniconda.html) for your operating system and follow the instructions.
-
-      + You may need to add the Miniconda directory to the PATH environment
-      variable
-
-        + First locate the Miniconda directory
-
-        + Then modify and run the following command
-          ```bash
-          export PATH="<absolute-path-to-miniconda-directory>/bin:$PATH"
-          ```
-
-    + Create a new conda environment
-      + Type the following command into a terminal window
-        ```bash
-        conda create -n <environment_name> python=<version>
-        ```
-
-      + Example command to create a conda environment
-        ```bash
-        conda create -n <environment_name> python=3.9
-        ```
-
-    + Activate the conda environment
-      ```bash
-      conda activate <environment_name>
-      ```
-
   </details>
 
 ### Configuration
@@ -86,13 +50,6 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
 
  + The following instructions will allow a user to access and fetch data from the database.
 
-  ```bash
-  conda activate <environment_name>
-  cd U19-pipeline_python
-  pip install -e .
-  python initial_conf.py
-  ```
-  or
   ```bash
   cd U19-pipeline_python
   uv run initial_conf.py
