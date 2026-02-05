@@ -26,7 +26,7 @@ requires-python = ">=3.12,<3.14"
 [project.optional-dependencies]
 pipeline = [
     "jupyterlab>=4.3.4",
-    "cellpose<0.4",
+    "cellpose",
     "astropy>=6.0",
     "bitstring",
     "fair-research-login",
@@ -40,7 +40,7 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/atlab/scanreader.git",
     "six",
-    "suite2p",
+    "suite2p<=0.14",
     "tifffile",
 ]
 
