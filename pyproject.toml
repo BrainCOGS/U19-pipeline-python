@@ -40,8 +40,9 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/atlab/scanreader.git",
     "six",
-    "suite2p<0.14",
+    "suite2p",
     "tifffile",
+    "torch==2.4.1",
 ]
 
 [tool.setuptools]
