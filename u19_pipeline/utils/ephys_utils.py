@@ -92,6 +92,10 @@ def get_idx_trial_start(trial_pulse_signal):
     trial_start_idx = np.where(np.diff(trial_pulse_signal) == 1)
     trial_start_idx = trial_start_idx[0]
 
+    #Get idx samples trial pulse start end
+    trial_start_pulse_end_idx = np.where(np.diff(trial_pulse_signal) == 255)
+    trial_start_pulse_end_idx = trial_start_pulse_end_idx[0]
+
     #Detect fake trial init pulses (a single sample in 1 instead of 5ms signal)
     fake_trial_init = []
     for idx, sample in enumerate(trial_start_idx):
@@ -102,20 +106,32 @@ def get_idx_trial_start(trial_pulse_signal):
             fake_trial_init.append(idx)
 
     trial_start_idx = np.delete(trial_start_idx, fake_trial_init)
-    return trial_start_idx
+    trial_start_pulse_end_idx = np.delete(trial_start_pulse_end_idx, fake_trial_init)
+    return trial_start_idx, trial_start_pulse_end_idx
 
 
-def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, trial_start_idx, samples_before_pulse_start, behavior_iterations):
+def get_idx_iter_start_pulsesignal(iteration_pulse_signal_trial, iteration_pulse_start_signal,trial_start_idx, samples_before_pulse_start, behavior_iterations):
     #Get index of iteration starts on a trial based on a pulse start signal
 
-    #Get idx of iteration start during trial
+    #Get idx of iteration start during trial (pulse signal after trial start signal)
     iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
-
-    # First iteration is at trial start, just align first trial start
     iter_samples = np.squeeze(iter_samples)
-    iter_samples += trial_start_idx
-    iter_samples -= samples_before_pulse_start
-    iter_samples[0] = trial_start_idx
+    # First iteration is at trial start, just align first trial start
+    iter_samples += samples_before_pulse_start
+
+    iter_start_samples = np.where(np.diff(iteration_pulse_start_signal) == 1)
+    iter_start_samples = np.squeeze(iter_start_samples)
+
+    #print('iter_start_samples', iter_start_samples)
+
+    #print('iter_start_samples.size', iter_start_samples.size)
+    #print('type(iter_start_samples)', type(iter_start_samples))
+
+    # If we find some kind of pulse at the start of  
+    if iter_start_samples.size > 0:
+        iter_samples = np.insert(iter_samples, 0, trial_start_idx)
+    else:
+        iter_samples[0] = trial_start_idx
 
     if behavior_iterations < iter_samples.shape[0]:
         iter_samples = iter_samples[:-1]
@@ -176,7 +192,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     #iteration_vector_output['trialnumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
 
     #Get idx samples trial starts
-    trial_start_idx = get_idx_trial_start(trial_pulse_signal)
+    trial_start_idx, trial_end_pulse_idx = get_idx_trial_start(trial_pulse_signal)
 
     print('len trial_start_idx', trial_start_idx.shape)
 
@@ -200,8 +216,9 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
     iter_start_idx = []
     iter_times_idx = []
     for i in range(num_trials_sync):
-        #Trial starts and ends idxs ()
-        idx_start = trial_start_idx[i] + samples_after_pulse_start
+        #Trial starts for iteration signal when trial pulse ends () 
+        idx_start = trial_end_pulse_idx[i]
+        idx_start_before = trial_start_idx[i] + samples_after_pulse_start
         if i < trial_start_idx.shape[0]-1:
             idx_end = trial_start_idx[i+1] -samples_before_pulse_end
         else:
@@ -211,9 +228,9 @@ def get_iteration_sample_vector_from_digital_lines_pulses(trial_pulse_signal, it
 
         #Get idx of iteration start of current trial
         if mode == 'counter_bit0':
-            iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i])
+            iter_samples = get_idx_iter_start_counterbit(iteration_pulse_signal[idx_start_before:idx_end], trial_start_idx[i])
         else:
-            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], trial_start_idx[i], samples_before_pulse_end, behavior_time_vector[i].shape[0])
+            iter_samples = get_idx_iter_start_pulsesignal(iteration_pulse_signal[idx_start:idx_end], iteration_pulse_signal[idx_start_before:idx_start], trial_start_idx[i], idx_start, behavior_time_vector[i].shape[0])
 
         #Append as an array of arrays (each trial is an array with idx of iterations)
         iter_start_idx.append(iter_samples)
@@ -607,7 +624,7 @@ def load_open_ephys_digital_file(file_path):
 def get_iteration_intertrial_from_virmen_time(trial_pulse_signal, nidq_sampling_rate, num_behavior_trials, behavior_time_vector):
 
     #Get idx samples trial starts
-    trial_start_idx = get_idx_trial_start(trial_pulse_signal)
+    trial_start_idx,_ = get_idx_trial_start(trial_pulse_signal)
 
     iter_start_idx = []
     for i in range(num_behavior_trials):
