@@ -632,7 +632,7 @@ def get_iteration_intertrial_from_virmen_time(trial_pulse_signal, nidq_sampling_
         new_synced_iteration_vector = trial_start_idx[i]+np.int64(behavior_time_vector[i]*nidq_sampling_rate)
         iter_start_idx.append(new_synced_iteration_vector.squeeze())
 
-    np.asarray(iter_start_idx.copy(), dtype=object)
+    iter_start_idx = np.asarray(iter_start_idx.copy(), dtype=object)
 
     return trial_start_idx, iter_start_idx
 
@@ -667,6 +667,28 @@ def get_full_vector_samples(iter_start_idx_vectors, nidq_sampling_rate, total_sa
 
     return trialnumber_vector_samples, framenumber_vector_samples
 
+def get_time_vector_as_behavior(trial_idx_vector, nidq_sampling_rate):
+
+    first_iter_session = trial_idx_vector[0][0]
+    time_0 = first_iter_session/nidq_sampling_rate
+
+    trial_times_ind = []
+    trial_times_full = []
+
+    for i in range(trial_idx_vector.shape[0]):
+
+        time_vector = trial_idx_vector[i]/nidq_sampling_rate
+        time_vector_ind = time_vector - time_vector[0]
+        time_vector_full = time_vector - time_0
+
+        trial_times_ind.append(time_vector_ind)
+        trial_times_full.append(time_vector_full)
+
+    trial_times_ind= np.asarray(trial_times_ind.copy(), dtype=object)
+    trial_times_full = np.asarray(trial_times_full.copy(), dtype=object)
+
+
+    return trial_times_ind, trial_times_full
 
 def get_time_vector(trial_index_nidq, nidq_sampling_rate):
 

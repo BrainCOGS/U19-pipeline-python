@@ -88,14 +88,14 @@ def get_session_directory(session_key):
 
 def get_full_session_directory(recording_key):
 
-    session_dir =  find_full_path(get_ephys_root_data_dir(),get_session_directory(recording_key))
+    session_dir =  find_full_path([get_ephys_root_data_dir()[0]],get_session_directory(recording_key))
 
-    print(session_dir)
+    print('ephys dir:', session_dir)
     nidq_session = list(session_dir.glob('*nidq.bin*'))
     obx_session = list(session_dir.glob('*obx.bin*'))
 
     if len(nidq_session) == 0 and len(obx_session) == 0:
-        print('No session found')
+        print('No ephys session found')
         ephys_session_fullpath = ''
     elif len(nidq_session) > 0:
         ephys_session_fullpath = nidq_session[0]
@@ -205,19 +205,43 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
 
     return spikeglx_meta_filepath
 
-
 def get_full_vectors_from_key(rec_key):
+    """
+    Get time and "old school" synchronization vectors from a recording key.
 
+    Args:
+        rec_key (dict): Dictionrary with recording_id key to fetch data from e.g. {'recording_id':500}
+
+    Returns:
+        all_vectors (dict): Dictionary with all corresponding vectors:
+        'trial_index_nidq': corresponding behavior trial for all nidaq vector samples (calculated from "pulse only sync")
+        'iteration_index_nidq': corresponding behavior iteration for all nidaq vector samples (calculated from "pulse only sync")
+        'trial_index_nidq_virmen': corresponding behavior trial for all nidaq vector samples (calculated from "virmen assisted sync")
+        'iteration_index_nidq_virmen': corresponding behavior iteration for all nidaq vector samples (calculated from "virmen assisted sync")
+        'time_vector': corresponding time in (s) for all nidaq vector samples (calculated from "pulse only sync")
+        'time_as_behavior_trial_ind': corresponding time from nidaq signal for behavior iteration "start time".
+                                      Each trial individual time [0, ...] x ntrials (calculated from "pulse only sync") 
+        'time_as_behavior_fullsession': corresponding time from nidaq signal for behavior iteration "start time".
+                                      Cumulative time for all session [0, ...] x 1 (calculated from "pulse only sync") 
+        'time_as_behavior_trial_ind_virmen': corresponding time from nidaq signal for behavior iteration "start time".
+                                      Each trial individual time [0, ...] x ntrials (calculated from "virmen assisted sync") 
+        'time_as_behavior_fullsession_virmen': corresponding time from nidaq signal for behavior iteration "start time".
+                                      Cumulative time for all session [0, ...] x 1 (calculated from "virmen assisted sync") 
+    """
+
+    # Read ephys file
     full_session_path = get_full_session_directory(rec_key)
     
     if isinstance(full_session_path, str) and len(full_session_path) == 0:
         print('No session found for this key')
         return
 
+    # Get sampling rate and calculate channels and samples
     nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(full_session_path)
     nChan = int(nidq_meta['nSavedChans'])
     num_samples = int(int(nidq_meta['fileSizeBytes'])/(2*nChan))
 
+    # Read behavior sync record
     try:
         sync_data = (BehaviorSync & rec_key).fetch1('sync_data')
     except:
@@ -225,15 +249,25 @@ def get_full_vectors_from_key(rec_key):
         return
 
 
+    #Calculate trial & iteration idxs for all nidaq vector samples 
     trial_index_nidq_virmen, iteration_index_nidq_virmen =\
         ephys_utils.get_full_vector_samples(sync_data['iteration_idx_vector_from_virmen'],nidq_sampling_rate,num_samples)
     
     trial_index_nidq, iteration_index_nidq =\
         ephys_utils.get_full_vector_samples(sync_data['iteration_idx_vector'],nidq_sampling_rate,num_samples)
 
-
+    #Calculate time for all nidaq vector samples 
     time_vector = ephys_utils.get_time_vector(trial_index_nidq, nidq_sampling_rate)
 
+    #Calculate time for iteration start samples 
+    trial_times_ind, trial_times_full =\
+        ephys_utils.get_time_vector_as_behavior(sync_data['iteration_idx_vector'], nidq_sampling_rate)
+
+    trial_times_ind_virmen, trial_times_full_virmen =\
+        ephys_utils.get_time_vector_as_behavior(sync_data['iteration_idx_vector_from_virmen'], nidq_sampling_rate)
+
+
+    #Store data
     all_vectors = dict()
     all_vectors['trial_index_nidq_virmen'] = trial_index_nidq_virmen
     all_vectors['iteration_index_nidq_virmen'] = iteration_index_nidq_virmen
@@ -242,6 +276,12 @@ def get_full_vectors_from_key(rec_key):
     all_vectors['iteration_index_nidq'] = iteration_index_nidq
 
     all_vectors['time_vector'] = time_vector
+
+    all_vectors['time_as_behavior_trial_ind'] = trial_times_ind
+    all_vectors['time_as_behavior_fullsession'] = trial_times_full
+
+    all_vectors['time_as_behavior_trial_ind_virmen'] = trial_times_ind_virmen
+    all_vectors['time_as_behavior_fullsession_virmen'] = trial_times_full_virmen
 
     return all_vectors
 
@@ -257,7 +297,7 @@ class BehaviorSync(dj.Imported):
     sync_data=null        : longblob     # Dictionary with summarized sync data, iteration & trial start idxs and virmen aided sync 
     regular_sync_status   : tinyint      # =1 if all pulses found and sync was done without fix; = 0 otherwise
     fixed_sync_status     : tinyint      # =1 if "fix" method was succesfull to patch missing pulses; =0 othewise
-    virmen_sync_status    : tinyint     # =1 if "virmen" borrowed sync method was successfull; =0 otherwise
+    virmen_sync_status    : tinyint      # =1 if "virmen" borrowed sync method was successfull; =0 otherwise
     """
 
     @property
@@ -367,13 +407,16 @@ class BehaviorSync(dj.Imported):
                     fixed_sync_status = status_fix,
                     virmen_sync_status = 1)
 
-            BehaviorSync.insert1(final_key,allow_direct_insert=True)
-
             print('ephys_session_fullpath', ephys_session_fullpath)
-
-            self.insert_imec_sampling_rate(key, ephys_session_fullpath.parent)
-
             print('sync code executed sucessfully !!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
+            print(kwargs)
+
+            if 'populate' not in kwargs or kwargs['populate'] == True:
+                BehaviorSync.insert1(final_key,allow_direct_insert=True)
+                self.insert_imec_sampling_rate(key, ephys_session_fullpath.parent)
+            else:
+                return final_key
 
         except Exception as e:
             print(e)
