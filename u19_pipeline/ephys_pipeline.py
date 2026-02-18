@@ -205,7 +205,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
 
     return spikeglx_meta_filepath
 
-def get_full_vectors_from_key(rec_key):
+def get_full_vectors_from_key(rec_key, apply_behavior_shift=False, behavior_time=None):
     """
     Get time and "old school" synchronization vectors from a recording key.
 
@@ -265,7 +265,22 @@ def get_full_vectors_from_key(rec_key):
 
     trial_times_ind_virmen, trial_times_full_virmen =\
         ephys_utils.get_time_vector_as_behavior(sync_data['iteration_idx_vector_from_virmen'], nidq_sampling_rate)
+    
+    if apply_behavior_shift:
+        cum_sum = 0
+        for i in range(trial_times_ind.shape[0]):
 
+            trial_times_ind[i]        = trial_times_ind[i]        + behavior_time[i][0]
+            trial_times_ind_virmen[i] = trial_times_ind_virmen[i] + behavior_time[i][0]
+
+            cum_sum += behavior_time[i][0]
+            trial_times_full[i]        = trial_times_full[i]        + behavior_time[i][0]
+            trial_times_full_virmen[i] = trial_times_full_virmen[i] + behavior_time[i][0]
+
+        print(cum_sum)
+
+    trial_times_ind[-1][-1] = trial_times_ind[-1][-2] + (trial_times_ind[-1][-2] - trial_times_ind[-1][-3])
+    trial_times_full[-1][-1] = trial_times_full[-1][-2] + (trial_times_full[-1][-2] - trial_times_full[-1][-3])
 
     #Store data
     all_vectors = dict()
@@ -298,6 +313,7 @@ class BehaviorSync(dj.Imported):
     regular_sync_status   : tinyint      # =1 if all pulses found and sync was done without fix; = 0 otherwise
     fixed_sync_status     : tinyint      # =1 if "fix" method was succesfull to patch missing pulses; =0 othewise
     virmen_sync_status    : tinyint      # =1 if "virmen" borrowed sync method was successfull; =0 otherwise
+    block_sync=null       : tinyint      # null if full session used, #block used otherwise
     """
 
     @property
@@ -406,6 +422,9 @@ class BehaviorSync(dj.Imported):
                     regular_sync_status = status_regular,
                     fixed_sync_status = status_fix,
                     virmen_sync_status = 1)
+            
+            if 'block' in kwargs:
+                final_key['block_sync'] = kwargs['block']
 
             print('ephys_session_fullpath', ephys_session_fullpath)
             print('sync code executed sucessfully !!!!!!!!!!!!!!!!!!!!!!!!!!!')

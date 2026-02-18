@@ -247,8 +247,26 @@ def complete_last_part_sync_vec(sync_time_vector, behavior_time_vector):
         #print('insert_part',insert_part)
 
         new_sync_time_vector = np.append(new_sync_time_vector, insert_part[1:])
-        borrowed_indexes.append([behavior_time_vector.shape[0]-diff_size, behavior_time_vector.shape[0]-1])
+        
     
+    count = -1
+    while new_sync_time_vector[count] > (behavior_time_vector[count]+1):
+        count -=1
+        if count == -10:
+            break
+
+    if count < -1:
+        #print('count', count)
+
+        time_vector = behavior_time_vector[count:]-behavior_time_vector[count]
+            
+        new_sync_time_vector[count:] =\
+                    np.repeat(new_sync_time_vector[count], -count) + time_vector
+                
+        borrowed_indexes.append([behavior_time_vector.shape[0]+count, behavior_time_vector.shape[0]-1])
+        #print('count', count)
+        #print('borrowed_indexes', borrowed_indexes)
+
     return new_sync_time_vector, borrowed_indexes
     
 
@@ -364,8 +382,8 @@ def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq
 
     print('after sync_evaluation_process2', status)
     
-    if status == 1:
-        iteration_dict['trial_start_idx'] = ephys_utils.get_index_trial_vector_from_iteration(iteration_dict['iter_start_idx'])
+    #if status == 1:
+    iteration_dict['trial_start_idx'] = ephys_utils.get_index_trial_vector_from_iteration(iteration_dict['iter_start_idx'])
 
     print('after get_index_trial_vector_from_iteration')
 

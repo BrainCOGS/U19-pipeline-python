@@ -13,6 +13,8 @@ from bitstring import BitArray
 from element_array_ephys import ephys as ephys_element
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
+import u19_pipeline.behavior as behavior
+import u19_pipeline.acquisition as acquisition
 
 
 class spice_glx_utility:
@@ -59,6 +61,77 @@ def read_nidq_meta_samp_rate(ephys_session_fullpath):
     nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
 
     return nidq_meta, nidq_sampling_rate
+
+def get_real_behavior_time(behavior_key, apply_fix=True):
+    """
+    'Get "real" behavior time for each iteration. Get behavior file time from db and apply shift fix'
+
+    Args:
+        behavior_key (dict): Dictionary with reference to the behavior session
+        apply_fix (boolean): If false, Original times from db are returned. If true, fixed times are returned
+
+    Returns:
+        behavior_time (numpy array): Array of arrays with s
+    """
+    
+    # Get behavior record
+    thissession = behavior.TowersBlock().Trial() & behavior_key
+    behavior_time, trial_start_time = thissession.fetch('trial_time', 'trial_abs_start')
+
+    #If no session return error
+    if len(trial_start_time) == 0:
+        raise ValueError('No behavior found')
+
+    #Return original times if apply_fix is false
+    if not apply_fix:
+
+        new_behavior_trial_times = []
+        full_session_behavior_times = []
+        for idx_trial in range(behavior_time.shape[0]):
+
+            new_behavior_trial_times.append(behavior_time[idx_trial].squeeze())
+            if idx_trial == 0:
+                last_time = 0
+            else:
+                last_time = full_session_behavior_times[-1][-1]
+
+            full_session_behavior_times.append(new_behavior_trial_times[-1]+last_time)
+
+        behavior_time = np.asarray(new_behavior_trial_times, dtype=object)
+        full_session_behavior_times = np.concatenate(full_session_behavior_times)
+
+        return behavior_time
+    
+    #Get end time for the session (used to append last iteration in last trial)
+    session_datetimes = (acquisition.Session() & behavior_key).fetch('session_start_time', 'session_end_time')
+    seconds_end = (session_datetimes[1][0]- session_datetimes[0][0]).seconds
+    last_iter_last_trial = seconds_end - trial_start_time[-1]
+
+
+    #Apply shift for all trials
+    new_behavior_trial_times = []
+    full_session_behavior_times = []
+    for idx_trial in range(behavior_time.shape[0]):
+
+        if idx_trial == 0:
+            last_time = 0
+        else:
+            last_time = full_session_behavior_times[-1][-1]
+
+        if idx_trial < behavior_time.shape[0]-1:
+            new_behavior_trial_times.append(np.append(behavior_time[idx_trial].squeeze()[1:], trial_start_time[idx_trial+1]-trial_start_time[idx_trial]))
+        else:
+            new_behavior_trial_times.append(np.append(behavior_time[idx_trial].squeeze()[1:], behavior_time[idx_trial].squeeze()[-1]+(behavior_time[idx_trial].squeeze()[-1]-behavior_time[idx_trial].squeeze()[-2])))
+            #new_behavior_trial_times.append(np.append(behavior_time[idx_trial].squeeze()[1:], last_iter_last_trial))
+
+
+        full_session_behavior_times.append(new_behavior_trial_times[-1]+last_time)
+
+    behavior_time = np.asarray(new_behavior_trial_times, dtype=object)
+    full_session_behavior_times = np.concatenate(full_session_behavior_times)
+
+    return behavior_time, full_session_behavior_times
+
 
 def load_trial_iteration_signals(ephys_session_fullpath, nidq_meta):
 
@@ -367,6 +440,11 @@ def evaluate_sync_process(trial_count_diff, trials_diff_iteration_big, trials_di
       = 0, missed by just a couple pulses, resync
       = -1, missed by a lot, error
     """
+
+    if total_trials < 3:
+        print('too few trials not reliable sync')
+        status = -1
+        return status
 
     if len(trials_diff_iteration_big) > 1:
         print('Missed by a lot some trials: ', trials_diff_iteration_big)
