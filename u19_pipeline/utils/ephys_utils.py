@@ -132,6 +132,18 @@ def get_real_behavior_time(behavior_key, apply_fix=True):
 
     return behavior_time, full_session_behavior_times
 
+def get_consecutive_trials_vector_from_iteration_matrix(iteration_matrix):
+
+    consecutive_trials = iteration_matrix[:,1].copy()
+    blocks_session = np.unique(iteration_matrix[:,0])
+    for i in range(blocks_session.shape[0]-1):
+
+        this_block = blocks_session[i]
+        indices = np.argwhere(iteration_matrix[:,0] == this_block)
+        last_index = indices[-1][0] # Access the last element and extract the index
+        consecutive_trials[last_index+1:] += iteration_matrix[last_index,1]
+
+    return consecutive_trials
 
 def load_trial_iteration_signals(ephys_session_fullpath, nidq_meta):
 
