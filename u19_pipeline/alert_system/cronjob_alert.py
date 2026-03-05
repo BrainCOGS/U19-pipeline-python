@@ -12,7 +12,7 @@ import u19_pipeline.alert_system.live_session_stats_deletion.live_session_stats_
 import u19_pipeline.alert_system.noDB_backup_creation.noDB_backup_creation_script as noDBbcs
 
 
-mas.main_alert_system()
+#mas.main_alert_system()
 old.main_old_log_deletion()
 lssd.main_live_session_stats_deletion()
 noDBbcs.main_noDB_backup()
