@@ -23,5 +23,6 @@ paramiko
 psutil
 tifffile
 tables
+openpyxl
 # matlab
 # matlabengineforpython
