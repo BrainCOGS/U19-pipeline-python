@@ -21,6 +21,7 @@ dependencies = [
     "scipy",
     "tables>=3.8",
     "astropy>=6.0",
+    "openpyxl"
 ]
 requires-python = ">=3.12"
 
