@@ -95,7 +95,7 @@ def write_rig_status_file():
 def write_schedule_file():
 
     schedule_query = dict()
-    schedule_query['date'] = datetime.date.today() + datetime.timedelta(days=1)
+    schedule_query['date'] = datetime.date.today()
 
     subject_query = 'subject_fullname is not null'
 
@@ -110,9 +110,6 @@ def write_schedule_file():
 
 
 def write_past_sessions_file(day_schedule):
-
-    print('write_past_sessions_file')
-    print(day_schedule)
 
     all_subjects_schedule = "', '".join(day_schedule['subject_fullname'])
     all_subjects_schedule = "subject_fullname in ('" +all_subjects_schedule+ "')"
@@ -144,8 +141,6 @@ def write_past_sessions_file(day_schedule):
     allblocks['sublevel'] = allblocks['sublevel'].astype('Int64')
     allblocks['choice'] = allblocks['choice'].apply(cast_choice)
     allblocks['trialType'] = allblocks['trialType'].apply(cast_choice)
-
-    print(allblocks)
 
     file_write = pathlib.Path(nodb_virmen_backup_dir, PAST_SESSION_PERFORMANCE_FILENAME)
     allblocks.to_csv(file_write, index=False)
