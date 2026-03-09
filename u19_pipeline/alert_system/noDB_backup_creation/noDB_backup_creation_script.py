@@ -201,8 +201,8 @@ def write_weighinig_gui_ss_file():
 
         if pathlib.Path.is_file(pathlib.Path(headplate_path)):
             img = Image(headplate_path)
-            img.width = 60
-            img.height = 60
+            img.width = 50
+            img.height = 50
             sheet.add_image(img, cell_image)
             sheet.row_dimensions[i+3].height = 50 
         else:
