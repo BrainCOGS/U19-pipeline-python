@@ -1,27 +1,37 @@
 #!/usr/bin/env bash
 # dump_prod.sh
 # ------------
-# Dump the first N rows from each u19_ production schema using mysqldump,
+# Dump the first N rows from each u19_ production schema using mariadb-dump
+# executed inside Docker,
 # rewrite every DB-name reference from the prod prefix to the test prefix,
 # and write the combined result to a single SQL file.
 #
 # The output file is suitable for direct ingestion by ingest_test.sh.
 #
-# Requires: mysqldump, jq  (brew install mariadb-client jq)
+# Requires: docker, jq, and a MySQL client defaults file (.my.cnf)
+#
+# Example .my.cnf:
+#   [client]
+#   user=
+#   password=
+#   ssl
+#   skip-ssl-verify-server-cert
 #
 # Usage:
-#   ./scripts/dump_prod.sh --out <file> [OPTIONS]
+#   ./dump_prod.sh --out <file> [OPTIONS]
 #
 # Options:
 #   -o, --out PATH           Output SQL file (required)
 #   -c, --config PATH        DataJoint JSON config file
 #                            (default: dj_local_conf.json, then ~/.datajoint_config.json)
+#       --mysql-cnf PATH     MySQL client defaults file to mount into the container
+#                            (default: ./.my.cnf, then ~/.my.cnf)
+#       --docker-image IMG   Docker image containing MariaDB client tools
+#                            (default: mariadb:11)
 #   -s, --schemas "a b c"   Space-separated short schema names (default: all)
 #   -l, --limit N            Max rows per table (default: 1000)
 #       --host HOST          Prod server host (default: database.host from config)
 #       --port PORT          Prod server port (default: database.port from config)
-#       --user USER          Prod server user (default: database.user from config)
-#       --password PASS      Prod server password (default: database.password from config)
 #       --prod-prefix PREFIX Override prod DB prefix
 #       --test-prefix PREFIX Override test DB prefix
 #   -n, --dry-run            Print commands without executing
@@ -29,16 +39,22 @@
 #
 # Examples:
 #   # Dump all schemas
-#   ./scripts/dump_prod.sh --config dj_local_conf.json --out /tmp/u19_test.sql
+#   ./dump_prod.sh --config dj_local_conf.json --out /tmp/u19_test.sql
 #
 #   # Dump only lab and subject, 500 rows each
-#   ./scripts/dump_prod.sh --config dj_local_conf.json \
+#   ./dump_prod.sh --config dj_local_conf.json \
 #       --out /tmp/u19_test.sql --schemas "lab subject" --limit 500
 #
-#   # Dry run — show what would be executed
-#   ./scripts/dump_prod.sh --config dj_local_conf.json --out /tmp/u19_test.sql --dry-run
+#   # Dry run — show the Docker mariadb-dump commands without executing
+#   ./dump_prod.sh --config dj_local_conf.json --out /tmp/u19_test.sql --dry-run
+#
+#   # Use an explicit client defaults file
+#   ./dump_prod.sh --config dj_local_conf.json --mysql-cnf "$HOME/.my.cnf" \
+#       --out /tmp/u19_test.sql
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -49,11 +65,11 @@ LIMIT=1000
 CONFIG_PATH=""
 OUT_FILE=""
 DRY_RUN=false
+MYSQL_CNF_PATH=""
+DOCKER_IMAGE="mariadb:11"
 
 HOST_OVERRIDE=""
 PORT_OVERRIDE=""
-USER_OVERRIDE=""
-PASS_OVERRIDE=""
 PROD_PREFIX_OVERRIDE=""
 TEST_PREFIX_OVERRIDE=""
 
@@ -65,12 +81,12 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -o|--out)            OUT_FILE="$2";             shift 2 ;;
         -c|--config)         CONFIG_PATH="$2";          shift 2 ;;
+           --mysql-cnf)      MYSQL_CNF_PATH="$2";       shift 2 ;;
+           --docker-image)   DOCKER_IMAGE="$2";         shift 2 ;;
         -s|--schemas)        SCHEMA_NAMES="$2";         shift 2 ;;
         -l|--limit)          LIMIT="$2";                shift 2 ;;
            --host)           HOST_OVERRIDE="$2";        shift 2 ;;
            --port)           PORT_OVERRIDE="$2";        shift 2 ;;
-           --user)           USER_OVERRIDE="$2";        shift 2 ;;
-           --password)       PASS_OVERRIDE="$2";        shift 2 ;;
            --prod-prefix)    PROD_PREFIX_OVERRIDE="$2"; shift 2 ;;
            --test-prefix)    TEST_PREFIX_OVERRIDE="$2"; shift 2 ;;
         -n|--dry-run)        DRY_RUN=true;              shift   ;;
@@ -94,14 +110,13 @@ err() { echo "$(date '+%Y-%m-%d %H:%M:%S')  ERROR    $*" >&2; }
 require_binary() {
     if ! command -v "$1" &>/dev/null; then
         err "'$1' not found on PATH."
-        err "  macOS:  brew install mariadb-client && export PATH=\"\$(brew --prefix mariadb-client)/bin:\$PATH\""
-        err "  Ubuntu: apt-get install mariadb-client"
+        err "  Install the missing dependency and retry."
         exit 1
     fi
 }
 
 require_binary jq
-require_binary mysqldump
+require_binary docker
 
 # ---------------------------------------------------------------------------
 # Load config
@@ -119,16 +134,33 @@ find_config() {
 CONFIG_FILE="$(find_config)"
 log "Config: $CONFIG_FILE"
 
+find_mysql_cnf() {
+    local candidate=""
+
+    if [[ -n "$MYSQL_CNF_PATH" ]]; then
+        candidate="$MYSQL_CNF_PATH"
+    else
+        for c in "${SCRIPT_DIR}/.my.cnf" "$HOME/.my.cnf"; do
+            if [[ -f "$c" ]]; then
+                candidate="$c"
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$candidate" && -f "$candidate" ]]; then
+        echo "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+        return
+    fi
+
+    err "No MySQL defaults file found. Use --mysql-cnf or create .my.cnf."
+    exit 1
+}
+
+MYSQL_CNF_FILE="$(find_mysql_cnf)"
+
 HOST="$(    [[ -n "$HOST_OVERRIDE" ]] && echo "$HOST_OVERRIDE" || jq -r '."database.host"    // "127.0.0.1"' "$CONFIG_FILE")"
 PORT="$(    [[ -n "$PORT_OVERRIDE" ]] && echo "$PORT_OVERRIDE" || jq -r '."database.port"    // 3306'        "$CONFIG_FILE")"
-USER="$(    [[ -n "$USER_OVERRIDE" ]] && echo "$USER_OVERRIDE" || jq -r '."database.user"    // ""'          "$CONFIG_FILE")"
-PASSWORD="$(
-    if [[ -n "$PASS_OVERRIDE" ]]; then
-        echo "$PASS_OVERRIDE"
-    else
-        jq -r '."database.password" // ""' "$CONFIG_FILE"
-    fi
-)"
 
 PROD_PREFIX="$(
     [[ -n "$PROD_PREFIX_OVERRIDE" ]] && echo "$PROD_PREFIX_OVERRIDE" \
@@ -139,15 +171,34 @@ TEST_PREFIX="$(
     || jq -r '.custom["database.test.prefix"] // "u19_test_"' "$CONFIG_FILE"
 )"
 
-MYSQL_QUERY_CLIENT=""
-if command -v mysql &>/dev/null; then
-    MYSQL_QUERY_CLIENT="mysql"
-elif command -v mariadb &>/dev/null; then
-    MYSQL_QUERY_CLIENT="mariadb"
-else
-    err "Neither 'mysql' nor 'mariadb' found on PATH (one is required for metadata queries)."
-    exit 1
-fi
+docker_mariadb_args() {
+    local args=(
+        docker run --rm
+        -v "${MYSQL_CNF_FILE}:/root/.my.cnf:ro"
+        "$DOCKER_IMAGE"
+    )
+
+    printf '%s\n' "${args[@]}"
+}
+
+run_docker_mariadb() {
+    local client_command="$1"
+    shift
+
+    local docker_args=()
+    while IFS= read -r arg; do
+        docker_args+=("$arg")
+    done < <(docker_mariadb_args)
+
+    local client_args=(
+        "$client_command"
+        --protocol=TCP
+        --host="$HOST"
+        --port="$PORT"
+    )
+
+    "${docker_args[@]}" "${client_args[@]}" "$@"
+}
 
 sql_escape_literal() {
     echo "$1" | sed "s/'/''/g"
@@ -155,10 +206,7 @@ sql_escape_literal() {
 
 sql_query() {
     local query="$1"
-    MYSQL_PWD="$PASSWORD" "$MYSQL_QUERY_CLIENT" \
-        --host="$HOST" \
-        --port="$PORT" \
-        --user="$USER" \
+    run_docker_mariadb mariadb \
         --batch \
         --raw \
         --skip-column-names \
@@ -192,7 +240,9 @@ if [[ "$TEST_PREFIX" == "$PROD_PREFIX" ]]; then
     exit 1
 fi
 
-log "Source: ${USER}@${HOST}:${PORT}"
+log "Source host: ${HOST}:${PORT}"
+log "MySQL defaults file: ${MYSQL_CNF_FILE}"
+log "Docker image: ${DOCKER_IMAGE}"
 log "Prefixes: prod='${PROD_PREFIX}'  →  test='${TEST_PREFIX}'"
 log "Output file: $OUT_FILE"
 $DRY_RUN && log "DRY-RUN mode — no commands will be executed."
@@ -236,15 +286,12 @@ for SCHEMA in $SCHEMA_NAMES; do
     log "  Dumping  ${PROD_DB}  (will be restored as ${TEST_DB})"
     log "================================================================"
 
-    schema_sql="mysqldump --host=${HOST} --port=${PORT} --user=${USER} --add-drop-table --add-drop-database --create-options --no-tablespaces --skip-comments --no-data --databases ${PROD_DB}"
+    schema_sql="docker run --rm -v ${MYSQL_CNF_FILE}:/root/.my.cnf:ro ${DOCKER_IMAGE} mariadb-dump --protocol=TCP --host=${HOST} --port=${PORT} --add-drop-table --add-drop-database --create-options --no-tablespaces --skip-comments --no-data --databases ${PROD_DB}"
     if $DRY_RUN; then
         log "  [DRY-RUN] ${schema_sql} | sed -e '${SED_EXPR}' -e '${CACHE_FILTER_EXPR_1}' -e '${CACHE_FILTER_EXPR_2}' -e '${CACHE_FILTER_EXPR_3}' >> ${OUT_FILE}"
     else
         {
-            MYSQL_PWD="$PASSWORD" mysqldump \
-                --host="$HOST" \
-                --port="$PORT" \
-                --user="$USER" \
+            run_docker_mariadb mariadb-dump \
                 --single-transaction \
                 --quick \
                 --add-drop-table \
@@ -310,15 +357,14 @@ for SCHEMA in $SCHEMA_NAMES; do
         fi
 
         if $DRY_RUN; then
-            log "  [DRY-RUN] mysqldump ${PROD_DB} ${TABLE_NAME} --no-create-info --skip-triggers --where=\"${WHERE_EXPR}\" | sed -e '${SED_EXPR}' -e '${CACHE_FILTER_EXPR_1}' -e '${CACHE_FILTER_EXPR_2}' -e '${CACHE_FILTER_EXPR_3}' >> ${OUT_FILE}"
+            dump_sql="docker run --rm -v ${MYSQL_CNF_FILE}:/root/.my.cnf:ro ${DOCKER_IMAGE} mariadb-dump --protocol=TCP --host=${HOST} --port=${PORT}"
+            dump_sql+=" --no-create-info --skip-triggers --where=\"${WHERE_EXPR}\" ${PROD_DB} ${TABLE_NAME}"
+            log "  [DRY-RUN] ${dump_sql} | sed -e '${SED_EXPR}' -e '${CACHE_FILTER_EXPR_1}' -e '${CACHE_FILTER_EXPR_2}' -e '${CACHE_FILTER_EXPR_3}' >> ${OUT_FILE}"
             continue
         fi
 
         {
-            MYSQL_PWD="$PASSWORD" mysqldump \
-                --host="$HOST" \
-                --port="$PORT" \
-                --user="$USER" \
+            run_docker_mariadb mariadb-dump \
                 --single-transaction \
                 --quick \
                 --no-tablespaces \

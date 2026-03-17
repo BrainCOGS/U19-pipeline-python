@@ -6,8 +6,11 @@
 # - updates a stable "latest" backup filename
 # - deletes backups older than a retention window
 #
+# dump_prod.sh now runs mariadb-dump inside Docker and expects credentials in a
+# MySQL client defaults file such as ./.my.cnf or ~/.my.cnf.
+#
 # Usage:
-#   ./scripts/cron_backup_u19_database.sh [OPTIONS] [-- DUMP_PROD_ARGS...]
+#   ./cron_backup_u19_database.sh [OPTIONS] [-- DUMP_PROD_ARGS...]
 #
 # Options:
 #   --backup-dir DIR       Directory for SQL backups
@@ -21,7 +24,14 @@
 # Any args after -- are passed directly to dump_prod.sh.
 #
 # Example cron (nightly at 2:15am):
-# 15 2 * * * /Users/ct5868/code/U19-pipeline_python/scripts/cron_backup_u19_database.sh -- --config /Users/ct5868/code/U19-pipeline_python/dj_local_conf.json >> /tmp/u19_backup.log 2>&1
+# 15 2 * * * cd /Users/user/code/U19-pipeline-python && ./cron_backup_u19_database.sh -- --config /Users/ct5868/code/U19-pipeline-python/dj_local_conf.json >> /tmp/u19_backup.log 2>&1
+#
+# Example .my.cnf:
+#   [client]
+#   user=
+#   password=
+#   ssl
+#   skip-ssl-verify-server-cert
 
 set -euo pipefail
 
@@ -108,7 +118,11 @@ log "Starting nightly SQL backup."
 log "Backup directory: ${BACKUP_DIR}"
 log "Retention days: ${RETENTION_DAYS}"
 
-"$DUMP_SCRIPT" "${DUMP_ARGS[@]}" --out "$TMP_FILE"
+if ((${#DUMP_ARGS[@]})); then
+    "$DUMP_SCRIPT" "${DUMP_ARGS[@]}" --out "$TMP_FILE"
+else
+    "$DUMP_SCRIPT" --out "$TMP_FILE"
+fi
 
 mv "$TMP_FILE" "$DATED_FILE"
 cp -f "$DATED_FILE" "$LATEST_FILE"
