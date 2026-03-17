@@ -1,0 +1,2 @@
+GRANT ALL PRIVILEGES ON `u19_test_%`.* TO 'u19test'@'%';
+FLUSH PRIVILEGES;
