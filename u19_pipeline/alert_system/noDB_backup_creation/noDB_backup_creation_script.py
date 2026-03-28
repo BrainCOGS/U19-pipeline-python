@@ -204,7 +204,7 @@ def write_weighinig_gui_ss_file():
             img.width = 50
             img.height = 50
             sheet.add_image(img, cell_image)
-            sheet.row_dimensions[i+3].height = 50 
+            sheet.row_dimensions[i+3].height = 60
         else:
             sheet.row_dimensions[i+3].height = 15
 
