@@ -67,7 +67,7 @@ def slack_alert_message_format_tech_alert(schedule_data):
         )
     else:
         # Ensure we don't send an empty section block to Slack (it will reject it)
-        m2_1["text"] = "- <!channel> No technician is scheduled for today. Please assign someone for coverage"
+        m2_1["text"] = "- No technician is scheduled for today. Please assign someone for coverage"
     m2["text"] = m2_1
     message["blocks"].append(m2)
     message["blocks"].append(msep)
@@ -84,7 +84,7 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
         if not shifts_on_date:
             alerts.append(
-                f"- <!channel> No technician is scheduled for {date_to_check.strftime('%A, %B %d')}. Please assign someone for coverage."
+                f"- No technician is scheduled for {date_to_check.strftime('%A, %B %d')}. Please assign someone for coverage."
             )
         else:
             for shift in shifts_on_date:
