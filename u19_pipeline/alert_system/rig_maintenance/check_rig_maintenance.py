@@ -203,33 +203,41 @@ def check_overdue_maintenance():
     maintenance_fetch = getattr(rig_maintenance.MaintenanceType, "fetch")
     maintenance_types = maintenance_fetch(as_dict=True)
 
+    # Separate maintenance types by system type
+    rig_maintenance_types = [m for m in maintenance_types if m.get("number_of_lines") >= 0]
+    hosting_maintenance_types = [m for m in maintenance_types if m.get("number_of_lines") < 0]
+
     # Get all locations (rigs)
-    queries = [
+    rig_queries = [
         'system_type = "rig"',
         'acquisition_type in ("behavior", "electrophysiology", "2photon")',
         "(location_description is not NULL and length(trim(location_description)) > 0)",
         f"location in ({', '.join([f'"{loc}"' for loc in unique_locations])})",
     ]
 
-    merged_queries = " and ".join(queries)
+    merged_rig_queries = " and ".join(rig_queries)
 
-    loc_query = lab.Location & merged_queries
+    rig_loc_query = lab.Location & merged_rig_queries
 
-    loc_fetch = getattr(loc_query, "fetch")
-    locations = loc_fetch(as_dict=True)
+    rig_loc_fetch = getattr(rig_loc_query, "fetch")
+    rig_locations = rig_loc_fetch(as_dict=True)
 
     logger.info(f"🔍 Checking maintenance status as of {current_date}")
     logger.debug("=" * 60)
 
-    for location in locations:
+    # Check rigs
+    for location in rig_locations:
         location_name = location["location"]
-        rig_number_of_lines = location["number_of_lines"]
+        rig_number_of_lines = location.get("number_of_lines", 0)
+
         logger.info(f"🔧 Checking rig: {location_name}")
         logger.debug("-" * 61)
 
-        for mtype in maintenance_types:
+        for mtype in rig_maintenance_types:
             maintenance_type = mtype["maintenance_type"]
             main_num_of_lines = mtype.get("number_of_lines", 0)
+
+            # For rigs, check line compatibility
             if not (main_num_of_lines == 0 or main_num_of_lines == rig_number_of_lines):
                 # logger.info(
                 #     f"  {maintenance_type:.<30} SKIPPED (rig has {rig_number_of_lines} lines, "
@@ -240,6 +248,104 @@ def check_overdue_maintenance():
             notification_window = mtype.get("notification_window", 0)
 
             # Find the most recent maintenance record for this rig and type
+            recent_q = rig_maintenance.RigMaintenance & {
+                "location": location_name,
+                "maintenance_type": maintenance_type,
+            }
+            recent_fetch = getattr(recent_q, "fetch")
+            recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
+
+            if len(recent_maintenance) == 0:
+                # No maintenance record exists
+                overdue_items.append(
+                    {
+                        "location": location_name,
+                        "maintenance_type": maintenance_type,
+                        "last_maintenance": None,
+                        "days_since_last": None,
+                        "interval_days": interval_days,
+                        "status": "NO_RECORD",
+                        "message": f"No maintenance record found for {maintenance_type}",
+                    }
+                )
+                logger.info(f"  {maintenance_type:.<40} NO RECORD FOUND ❌")
+            else:
+                last_maintenance_date = recent_maintenance[0]
+                days_since_last = (current_date - last_maintenance_date).days
+                days_until_due = interval_days - days_since_last
+
+                if interval_days <= 0:
+                    # If the interval is 0 or negative, it is an as-needed maintenance type,
+                    # so we only log if there is no record
+                    logger.info(
+                        f"  {maintenance_type:.<30} AS-NEEDED (record exists, no interval) ✅"
+                    )
+                elif days_since_last > interval_days:
+                    # Maintenance is overdue
+                    days_overdue = days_since_last - interval_days
+                    overdue_items.append(
+                        {
+                            "location": location_name,
+                            "maintenance_type": maintenance_type,
+                            "last_maintenance": last_maintenance_date,
+                            "days_since_last": days_since_last,
+                            "interval_days": interval_days,
+                            "days_overdue": days_overdue,
+                            "status": "OVERDUE",
+                            "message": f"{maintenance_type} is {days_overdue} days overdue",
+                        }
+                    )
+                    logger.info(f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌")
+                else:
+                    # Not yet overdue: check if within notification window
+                    if 0 < days_until_due <= notification_window:
+                        upcoming_items.append(
+                            {
+                                "location": location_name,
+                                "maintenance_type": maintenance_type,
+                                "last_maintenance": last_maintenance_date,
+                                "days_since_last": days_since_last,
+                                "interval_days": interval_days,
+                                "days_until_due": days_until_due,
+                                "notification_window": notification_window,
+                                "status": "UPCOMING",
+                                "message": f"{maintenance_type} due in {days_until_due} days",
+                            }
+                        )
+                        logger.info(
+                            f"  {maintenance_type:.<30} DUE SOON in "
+                            f"{days_until_due} days (window {notification_window}) ⚠️"
+                        )
+                    else:
+                        logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
+
+    # Get all hosting VMs for certificate & secret updates
+    hosting_queries = [
+        'system_type = "hosting"',
+        'location_description = "VM"',
+        "(location is not NULL and length(trim(location)) > 0)",
+    ]
+
+    merged_hosting_queries = " and ".join(hosting_queries)
+
+    hosting_loc_query = lab.Location & merged_hosting_queries
+
+    hosting_loc_fetch = getattr(hosting_loc_query, "fetch")
+    hosting_locations = hosting_loc_fetch(as_dict=True)
+
+    # Check hosting VMs
+    for location in hosting_locations:
+        location_name = location["location"]
+
+        logger.info(f"🖥️  Checking hosting VM: {location_name}")
+        logger.debug("-" * 61)
+
+        for mtype in hosting_maintenance_types:
+            maintenance_type = mtype["maintenance_type"]
+            interval_days = mtype["interval_days"]
+            notification_window = mtype.get("notification_window", 0)
+
+            # Find the most recent maintenance record for this hosting VM and type
             recent_q = rig_maintenance.RigMaintenance & {
                 "location": location_name,
                 "maintenance_type": maintenance_type,

@@ -125,6 +125,17 @@ class InputOutputProfileList(dj.Manual):
     check_type                 : enum('Mandatory','Optional') # Prevent training if missing this input/output
     """
 
+@schema
+class RigStatus(dj.Manual):
+    definition = """
+    # Status for each IO module of the rig
+    -> lab.Location
+    -> scheduler.InputOutputRig
+    ---
+    current_status       : enum('OK','Not OK','N/A')    # if module is working or not
+    -> [nullable] scheduler.RigIOTechReport
+    last_status_update   : datetime                     # at what time status changed
+    """
 
 @schema
 class Shift(dj.Lookup):

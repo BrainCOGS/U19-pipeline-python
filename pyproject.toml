@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "u19-pipeline"
-version = '0.3.6'
+version = "0.4.0"
 description = "Datajoint schemas for Princeton U19"
 readme = "README.md"
 authors = [
@@ -21,6 +21,7 @@ dependencies = [
     "scipy",
     "tables>=3.8",
     "astropy>=6.0",
+    "openpyxl"
 ]
 requires-python = ">=3.12"
 

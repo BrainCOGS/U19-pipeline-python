@@ -1,11 +1,24 @@
-version: '3'
 services:
-  datajoint:
-    build: .
-    env_file: .env
+
+
+
+  mariadb:
+    image: mariadb:11.4
+    container_name: u19-local-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: u19_test_bootstrap
+      MARIADB_USER: u19test
+      MARIADB_PASSWORD: u19test_pw
     volumes:
-      - ./notebooks:/notebooks
-      - ./images:/images
-      - .:/src/U19-pipeline
+      - ./init-db/:/docker-entrypoint-initdb.d/:ro
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     ports:
-      - "8800:8888"
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-uu19test", "-pu19test_pw"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
