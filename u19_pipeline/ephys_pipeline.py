@@ -214,7 +214,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
 
     return spikeglx_meta_filepath
 
-def get_full_vectors_from_key(rec_key):
+def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     """
     Get time and "old school" synchronization vectors from a recording key.
 
@@ -277,6 +277,20 @@ def get_full_vectors_from_key(rec_key):
 
     #Store data
     all_vectors = dict()
+
+    all_vectors['time_as_behavior_trial_ind'] = trial_times_ind
+    all_vectors['time_as_behavior_fullsession'] = trial_times_full
+
+    all_vectors['time_as_behavior_trial_ind_virmen'] = trial_times_ind_virmen
+    all_vectors['time_as_behavior_fullsession_virmen'] = trial_times_full_virmen
+
+    if single_vec_mode:
+        for this_key in all_vectors.keys():
+            print('this_key', this_key)
+            print(all_vectors[this_key].shape)
+            all_vectors[this_key] = np.concatenate(([x for x in all_vectors[this_key]]), axis=0) 
+            print(all_vectors[this_key].shape)
+
     all_vectors["trial_index_nidq_virmen"] = trial_index_nidq_virmen
     all_vectors["iteration_index_nidq_virmen"] = iteration_index_nidq_virmen
 
@@ -284,12 +298,7 @@ def get_full_vectors_from_key(rec_key):
     all_vectors["iteration_index_nidq"] = iteration_index_nidq
 
     all_vectors["time_vector"] = time_vector
-
-    all_vectors['time_as_behavior_trial_ind'] = trial_times_ind
-    all_vectors['time_as_behavior_fullsession'] = trial_times_full
-
-    all_vectors['time_as_behavior_trial_ind_virmen'] = trial_times_ind_virmen
-    all_vectors['time_as_behavior_fullsession_virmen'] = trial_times_full_virmen
+    
 
     return all_vectors
 
