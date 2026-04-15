@@ -14,7 +14,7 @@ authors = [
 dependencies = [
     "datajoint<2.0.0",
     "icalevents>=0.3.0",
-    "numpy>=1.23",
+    "numpy>=1.23,<1.30",
     "pandas>=2.0",
     "python-dotenv>=0.20",
     "scikit-image",
