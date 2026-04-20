@@ -356,6 +356,11 @@ class BehaviorSync(dj.Imported):
             thissession = behavior.TowersBlock().Trial() & behavior_key
             behavior_time, iterstart = thissession.fetch("trial_time", "vi_start")
 
+            if key['recording_id']==530:
+                print(type(behavior_time))
+                print(len(behavior_time))
+                behavior_time = behavior_time[:-2]
+
             print("len iterstart", len(iterstart))
 
             if len(iterstart) == 0:
