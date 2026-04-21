@@ -16,7 +16,7 @@ dependencies = [
     "icalevents>=0.3.0",
     "numpy>=1.23",
     "pandas>=2.0",
-    "python-dotenv>=0.20",
+    "python-dotenv>=1.2.2",
     "scikit-image",
     "scipy",
     "tables>=3.8",
