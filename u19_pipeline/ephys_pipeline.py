@@ -165,8 +165,8 @@ def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
     p.wait()
     stdout, stderr = p.communicate()
 
-    print(stdout)
-    print(stderr.decode("UTF-8"))
+    print('stdout', stdout)
+    print('stderr', stderr.decode("UTF-8"))
 
     if stderr:
         error = json.loads(stderr.decode("UTF-8"))
