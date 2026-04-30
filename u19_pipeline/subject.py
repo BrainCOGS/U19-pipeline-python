@@ -374,3 +374,14 @@ class Zygosity(dj.Manual):
     ---
     zygosity             : enum('Present','Absent','Homozygous','Heterozygous')
     """
+
+@schema
+class HeadMotorPosition(dj.Manual):
+    definition = """
+    Subject
+    -> lab.Location
+    ---
+    ml_position:      float        # mediolateral default position for motor
+    ap_position:      float        # anterioposterior default position for motor
+    dv_position:      float        # dorsoventral default position for motor
+"""
