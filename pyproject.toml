@@ -30,7 +30,7 @@ analysis = [
     "matplotlib>=3.7",
     "seaborn>=0.12",
     "plotly>=5.14",
-    "jupyterlab>=4.3.4",
+    "jupyterlab>=4.5.7",
 ]
 pipeline = [
     "cellpose",
