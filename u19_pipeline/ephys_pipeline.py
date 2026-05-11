@@ -137,6 +137,7 @@ def append_cat_gt_params_from_probedir(probe_dirname):
 
 
 def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
+
     found_lfp_trace = glob.glob(probe_directory + "/*lf.bin")
     if len(found_lfp_trace) > 0:
         return
@@ -163,6 +164,9 @@ def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
     p = subprocess.Popen(cat_gt_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
     stdout, stderr = p.communicate()
+
+    print('stdout', stdout)
+    print('stderr', stderr.decode("UTF-8"))
 
     if stderr:
         error = json.loads(stderr.decode("UTF-8"))
@@ -371,6 +375,11 @@ class BehaviorSync(dj.Imported):
             behavior = dj.create_virtual_module("behavior", "u19_behavior")
             thissession = behavior.TowersBlock().Trial() & behavior_key
             behavior_time, iterstart = thissession.fetch("trial_time", "vi_start")
+
+            if key['recording_id']==530:
+                print(type(behavior_time))
+                print(len(behavior_time))
+                behavior_time = behavior_time[:-2]
 
             print("len iterstart", len(iterstart))
 

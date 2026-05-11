@@ -32,6 +32,7 @@ USER_SLACK_FILENAME = 'UserSlack.csv'
 RIG_STATUS_FILENAME = 'RigStatusTable.csv'
 DAY_SCHEDULE_FILENAME = 'ScheduleDay.csv'
 PAST_SESSION_PERFORMANCE_FILENAME = 'PastSessions.csv'
+SUBJECT_MOTOR_POSITION_FILENAME = 'SubjectMotorPosition.csv'
 
 WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME_TEMPLATE = 'Weighing_GUI_Replacement_SpreadSheet_Template.xlsx'
 WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME = 'Weighing_GUI_Replacement_SpreadSheet.xlsx'
@@ -145,6 +146,16 @@ def write_past_sessions_file(day_schedule):
     file_write = pathlib.Path(nodb_virmen_backup_dir, PAST_SESSION_PERFORMANCE_FILENAME)
     allblocks.to_csv(file_write, index=False)
 
+def write_subject_motor_position(day_schedule):
+
+    all_subjects_schedule = "', '".join(day_schedule['subject_fullname'])
+    all_subjects_schedule = "subject_fullname in ('" +all_subjects_schedule+ "')"
+
+    sp = pd.DataFrame((subject.HeadMotorPosition & all_subjects_schedule).fetch(as_dict=True))
+
+    file_write = pathlib.Path(nodb_virmen_backup_dir, SUBJECT_MOTOR_POSITION_FILENAME)
+    sp.to_csv(file_write, index=False)
+
 
 def write_weighinig_gui_ss_file():
 
@@ -219,6 +230,7 @@ def main_noDB_backup():
     write_rig_status_file()
     day_schedule = write_schedule_file()
     write_past_sessions_file(day_schedule)
+    write_subject_motor_position(day_schedule)
     write_weighinig_gui_ss_file()
 
 

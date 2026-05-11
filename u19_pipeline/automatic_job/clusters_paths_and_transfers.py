@@ -41,7 +41,7 @@ slurm_dict_tiger_default = {
 }
 slurm_dict_spockmk2_ephys = {
     'job-name': 'kilosort2',
-    'nodes': 4,
+    'nodes': 1,
     'ntasks': 4,
     'time': '30:00:00',
     'mem': '50G',
@@ -53,7 +53,7 @@ slurm_dict_spockmk2_ephys = {
 }
 slurm_dict_spock_default = {
     'job-name': 'kilosort2',
-    'nodes': 4,
+    'nodes': 1,
     'ntasks': 4,
     'time': '30:00:00',
     'mem': '50G',

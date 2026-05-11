@@ -58,7 +58,7 @@ class PupillometryProcessingHandler():
 
     slurm_dict_pupillometry_spock = {
         'job-name': 'dj_ingestion',
-        'nodes': 4,
+        'nodes': 1,
         'cpus-per-task': 4,
         'time': '20:00:00',
         'mem': '50G',
