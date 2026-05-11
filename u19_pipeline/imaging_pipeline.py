@@ -186,6 +186,17 @@ def get_scan_image_files(job_id):
 
     return tiff_filepaths
 
+def get_calcium_imaging_files(scan_key, acq_software):
+
+    filepaths = (TiffSplit.File * TiffSplit & scan_key).fetch('tiff_split_directory', 'tiff_split_filename', as_dict=True)
+
+    tiff_filepaths = [find_full_path(get_imaging_root_data_dir(), 
+                      pathlib.Path(file['tiff_split_directory']) / 
+                                   file['tiff_split_filename']).as_posix()
+                      for file in filepaths]
+
+    return tiff_filepaths
+
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1('KEY')
     bucket_scan_dir = (TiffSplit & sess_key &
