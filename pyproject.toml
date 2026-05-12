@@ -46,7 +46,7 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/BrainCOGS/scanreader.git,
     "six",
-    # "suite2p",
+    "suite2p",
     "tifffile",
 ]
 
