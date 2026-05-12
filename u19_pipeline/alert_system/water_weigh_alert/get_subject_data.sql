@@ -215,12 +215,12 @@ left join
 (
 select 
 subject_fullname,
-timeslot,
-location as scheduled_rig
+GROUP_CONCAT(CONCAT(location, ' (slot ', timeslot, ')') ORDER BY timeslot, location SEPARATOR ', ') as scheduled_rig
 
 from u19_scheduler.schedule s 
 
 where date = curdate()
+group by subject_fullname
 ) schedule_subject
 on schedule_subject.subject_fullname = ss.subject_fullname
 
@@ -229,4 +229,3 @@ on schedule_subject.subject_fullname = ss.subject_fullname
 where ss.subject_status not in ("Dead","Missing", "AdLibWater")
 
 order by s.user_id, UPPER(cs.cage), ss.subject_fullname
-
