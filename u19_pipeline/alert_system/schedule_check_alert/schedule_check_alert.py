@@ -10,8 +10,8 @@ import u19_pipeline.lab as lab
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
-    #'slack_notification_channel': ['rigs_issues_and_troubleshooting'],
-    "slack_users_channel": ["alvaros"]
+    'slack_notification_channel': ['dev_notifications'],
+    #"slack_users_channel": ["alvaros"]
 }
 
 def get_schedule_query():
