@@ -79,16 +79,6 @@ def main_schedule_check_alert():
             time.sleep(1)
 
 
-def get_webhook_list(lab):
-    # Get webhook lists
-    #slack_configuration_dictionary = {"slack_notification_channel": ["rigs_issues_and_troubleshooting"]}
-    slack_configuration_dictionary = {"slack_users_channel": ["alvaro_luna"]}
-    webhooks_list = []
-    query_slack_webhooks = [{"webhook_name": x} for x in slack_configuration_dictionary["slack_notification_channel"]]
-    webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
-    return webhooks_list
-
-
 def slack_alert_message_format_schedule(schedule_df_string):
     now = datetime.datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")

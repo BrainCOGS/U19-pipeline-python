@@ -11,12 +11,6 @@ MINUTES_ALERT = 20
 SECONDS_ALERT = MINUTES_ALERT*60
 MIN_SESSIONS_COMPLETED = 3
 
-'''
-slack_configuration_dictionary = {
-    'slack_notification_channel': ['alvaro_luna']
-}
-'''
-
 slack_configuration_dictionary = {
     'slack_notification_channel': ['rig_training_error_notification']
 }
