@@ -44,7 +44,7 @@ pipeline = [
     "paramiko",
     "psutil",
     "scp",
-    "scanreader @ git+https://github.com/BrainCOGS/scanreader.git,
+    "scanreader @ git+https://github.com/BrainCOGS/scanreader.git",
     "six",
     "suite2p",
     "tifffile",
