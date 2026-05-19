@@ -73,3 +73,6 @@ dev = [
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
 ]
+
+[tool.uv]
+exclude-newer = "14 days"
