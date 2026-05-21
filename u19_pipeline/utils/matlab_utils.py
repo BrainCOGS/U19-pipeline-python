@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from scipy.io import loadmat, matlab
-from collections import Iterable
+from collections.abc import Iterable
 
 
 try:
@@ -406,7 +406,7 @@ def convert_behavior_file(mat_file):
             if num_blocks_conv == 0:
                 session_block_trial_df = session_current_block_trial_df.copy()
             else:
-                session_block_trial_df = session_block_trial_df.append(session_current_block_trial_df)
+                session_block_trial_df = pd.concat([session_block_trial_df, session_current_block_trial_df],ignore_index=True)
             num_blocks_conv +=1
 
 

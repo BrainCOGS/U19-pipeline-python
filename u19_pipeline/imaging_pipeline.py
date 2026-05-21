@@ -2,12 +2,17 @@
 import datajoint as dj
 import pathlib
 import subprocess
+from pathlib import Path
 
-from u19_pipeline import lab, acquisition, subject, recording
+from u19_pipeline import lab, subject, recording
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.tiff_utils as tu
 
-from element_calcium_imaging import scan as scan_element
+
+import datajoint as dj
+
+#from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging_preprocess as imaging_element
 from element_interface.utils import find_full_path
 
@@ -29,46 +34,161 @@ class ImagingPipelineSession(dj.Computed):
         self.insert1(key)
 
 
+
 @schema
 class AcquiredTiff(dj.Imported):
+
     definition = """
-    # metainfo about imaging session
-    # `make` function is declared in the `U19-pipeline-matlab`
-    -> ImagingPipelineSession
+    -> imaging_pipeline.ImagingPipelineSession
     ---
-    file_name_base       : varchar(255)                 # base name of the file
-    scan_width           : int                          # width of scanning in pixels
-    scan_height          : int                          # height of scanning in pixels
-    acq_time             : datetime                     # acquisition time
-    n_depths             : tinyint                      # number of depths
-    scan_depths          : blob                         # depth values in this scan
-    frame_rate           : float                        # imaging frame rate
-    inter_fov_lag_sec    : float                        # time lag in secs between fovs
-    frame_ts_sec         : longblob                     # frame timestamps in secs 1xnFrames
-    power_percent        : float                        # percentage of power used in this scan
-    channels             : blob                         # is this the channer number or total number of channels
-    cfg_filename         : varchar(255)                 # cfg file path
-    usr_filename         : varchar(255)                 # usr file path
-    fast_z_lag           : float                        # fast z lag
-    fast_z_flyback_time  : float                        # time it takes to fly back to fov
-    line_period          : float                        # scan time per line
-    scan_frame_period    : float
-    scan_volume_rate     : float
-    flyback_time_per_frame : float
-    flyto_time_per_scan_field : float
-    fov_corner_points    : blob                         # coordinates of the corners of the full 5mm FOV, in microns
-    nfovs                : int                          # number of field of view
-    nframes              : int                          # number of frames in the scan
-    nframes_good         : int                          # number of frames in the scan before acceptable sample bleaching threshold is crossed
-    last_good_file       : int                          # number of the file containing the last good frame because of bleaching
-    motion_correction_enabled=0 : tinyint               # 
-    motion_correction_mode='N/A': varchar(64)           # 
-    stacks_enabled=0            : tinyint               # 
-    stack_actuator='N/A'        : varchar(64)           # 
-    stack_definition='N/A'      : varchar(64)           # 
+    file_name_base              : varchar(255)
+    scan_width                  : int
+    scan_height                 : int
+    acq_time                    : datetime
+    n_depths                    : tinyint
+    scan_depths                 : blob
+    frame_rate                  : float
+    inter_fov_lag_sec           : float
+    frame_ts_sec                : longblob
+    power_percent               : float
+    channels                    : blob
+    cfg_filename                : varchar(255)
+    usr_filename                : varchar(255)
+    fast_z_lag                  : float
+    fast_z_flyback_time         : float
+    line_period                 : float
+    scan_frame_period           : float
+    scan_volume_rate            : float
+    flyback_time_per_frame      : float
+    flyto_time_per_scan_field   : float
+    fov_corner_points           : blob
+    nfovs                       : int
+    nframes                     : int
+    nframes_good                : int
+    last_good_file              : int
+    motion_correction_enabled=0 : tinyint
+    motion_correction_mode="N/A": varchar(64)
+    stacks_enabled=0            : tinyint
+    stack_actuator="N/A"        : varchar(64)
+    stack_definition="N/A"      : varchar(64)
     """
 
-    def make(self, key):
+    photon_micro_acq = ['2photon', '3photon']
+    mesoscope_acq = ['mesoscope']
+
+    def make(self, key, test_mode=False):
+
+        scan_info = (
+            ImagingPipelineSession
+            * recording.Recording
+            * lab.Location
+            & key
+        ).fetch1()
+
+        imaging_root = dj.config['custom']['imaging_root_data_dir'][0]
+        scan_directory = Path(imaging_root) / scan_info['recording_directory']
+        acq_type = scan_info['acquisition_type']
+
+        is_mesoscope = acq_type in self.mesoscope_acq
+        is_2photon = acq_type in self.photon_micro_acq
+
+        print(f'Preparing {scan_directory}')
+
+        if is_mesoscope:
+            original_stacks_dir = scan_directory / 'originalStacks'
+
+            tif_files = list(scan_directory.glob('*tif*'))
+
+            if not tif_files and original_stacks_dir.exists():
+                tif_dir = original_stacks_dir
+                skip_parsing = True
+            else:
+                tif_dir = scan_directory
+                original_stacks_dir.mkdir(exist_ok=True)
+                skip_parsing = False
+        else:
+            tif_dir = scan_directory
+
+        fl, basename, is_compressed = tu.check_tif_files(tif_dir)
+
+        fl = [Path(tif_dir,x).as_posix() for x in fl]
+
+        if is_mesoscope:
+            imheader, parsed_info = tu.get_parsed_info_mesoscope(fl)
+        else:
+            imheader, parsed_info = tu.get_parsed_info_2photon(fl)
+
+        rec_info, frames_per_file = tu.get_recording_info(
+            fl,
+            imheader,
+            parsed_info
+        )
+
+        rec_info['nfovs'] = tu.get_nfovs(rec_info, is_mesoscope)
+
+        last_good_file, cumulative_frames = tu.get_last_good_frame(
+            frames_per_file,
+            tif_dir
+        )
+
+        rec_info['nframes_good'] = cumulative_frames[last_good_file]
+        rec_info['last_good_file'] = last_good_file+1
+
+        rec_info['AcqTime'] = tu.check_acqtime(
+            rec_info['AcqTime'],
+            scan_directory
+        )
+
+        if is_compressed:
+            tu.remove_compressed_videos(fl, scan_directory)
+
+        scan_info_key = tu.create_scan_info_key(
+            key,
+            rec_info,
+            scan_info['recording_directory']
+        )
+        if not test_mode:
+            self.insert1(scan_info_key)
+
+        if is_mesoscope:
+            tiffsplit_mesoscope_keys,tiff_splitfiles_mesoscope_keys = tu.get_fov_mesoscope(
+                fl,
+                key,
+                skip_parsing,
+                imheader,
+                rec_info,
+                basename,
+                cumulative_frames,
+                scan_info
+            )
+            for i in range(len(tiffsplit_mesoscope_keys)):
+                if not test_mode:
+                    TiffSplit.insert(tiffsplit_mesoscope_keys[i])
+                    TiffSplit.File.insert(tiff_splitfiles_mesoscope_keys[i])
+
+            if test_mode:
+                return scan_info_key, tiffsplit_mesoscope_keys, tiff_splitfiles_mesoscope_keys
+
+        elif is_2photon:
+            tiffsplit_2photon_key = tu.get_fov_photonmicro(key, rec_info, scan_info)
+            tiffsplitfile_2photon_key = tu.get_fovfile_photonmicro(key, fl, imheader)
+            if not test_mode:
+                TiffSplit.insert(tiffsplit_2photon_key)
+                TiffSplit.File.insert(tiffsplitfile_2photon_key)
+
+            print('tiffsplit_2photon_key')
+            print(tiffsplit_2photon_key)
+
+            #print('tiffsplitfile_2photon_key')
+            #print(tiffsplitfile_2photon_key)
+
+            if test_mode:
+                return scan_info_key, tiffsplit_2photon_key, tiffsplitfile_2photon_key
+
+        else:
+            raise ValueError("Invalid acquisition type")
+        
+    def old_make(self, key):
 
         str_key = dj_short.get_string_key(key)
         command = [config.ingest_scaninfo_script, config.startup_pipeline_matlab_dir, str_key]
@@ -100,19 +220,6 @@ class TiffSplit(dj.Imported):
     fov_discrete_plane_mode : tinyint                   # true if FOV is only defined (acquired) at a single specifed depth in the volume. One for each FOV in scan should this be boolean?
     power_percent           :  float                    # percentage of power used for this field of view
     """
-
-    #def populate(self, key):
-
-    #    str_key = dj_short.get_string_key(key)
-    #    command = [config.ingest_scaninfo_script, config.startup_pipeline_matlab_dir, str_key]
-    #    print(command)
-    #    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #    p.wait()
-    #    print('aftercommand before comm')
-    #    stdout, stderr = p.communicate()
-    #    print('aftercommand after comm')
-    #    print(stdout.decode('UTF-8'))
-    #    print(stderr.decode('UTF-8'))
 
     class File(dj.Part):
         definition = """

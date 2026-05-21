@@ -10,5 +10,5 @@ matlab_command+=$2
 matlab_command+="');exit;"
 
 # Load module and execute string
-#module load matlab/R2020b
+module load matlab/R2024a
 matlab -singleCompThread -nodisplay -nosplash -r $matlab_command
