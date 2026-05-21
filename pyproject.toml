@@ -44,7 +44,7 @@ pipeline = [
     "paramiko",
     "psutil",
     "scp",
-    "scanreader @ git+https://github.com/BrainCOGS/scanreader.git,
+    "scanreader @ git+https://github.com/BrainCOGS/scanreader.git",
     "six",
     "suite2p",
     "tifffile",
@@ -73,3 +73,6 @@ dev = [
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
 ]
+
+[tool.uv]
+exclude-newer = "14 days"
