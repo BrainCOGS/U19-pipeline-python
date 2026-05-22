@@ -148,7 +148,7 @@ class AcquiredTiff(dj.Imported):
             scan_info['recording_directory']
         )
         if not test_mode:
-            self.insert1(scan_info_key)
+            self.insert1(scan_info_key,allow_direct_insert=True)
 
         if is_mesoscope:
             tiffsplit_mesoscope_keys,tiff_splitfiles_mesoscope_keys = tu.get_fov_mesoscope(
@@ -174,7 +174,7 @@ class AcquiredTiff(dj.Imported):
             tiffsplit_2photon_key = tu.get_fov_photonmicro(key, rec_info, scan_info)
             tiffsplitfile_2photon_key = tu.get_fovfile_photonmicro(key, fl, imheader)
             if not test_mode:
-                TiffSplit.insert(tiffsplit_2photon_key,allow_direct_insert=True)
+                TiffSplit.insert([tiffsplit_2photon_key],allow_direct_insert=True)
                 TiffSplit.File.insert(tiffsplitfile_2photon_key,allow_direct_insert=True)
 
             if test_mode:
