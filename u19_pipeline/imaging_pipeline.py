@@ -159,7 +159,8 @@ class AcquiredTiff(dj.Imported):
                 rec_info,
                 basename,
                 cumulative_frames,
-                scan_info
+                scan_info,
+                imaging_root
             )
             for i in range(len(tiffsplit_mesoscope_keys)):
                 if not test_mode:
@@ -175,12 +176,6 @@ class AcquiredTiff(dj.Imported):
             if not test_mode:
                 TiffSplit.insert(tiffsplit_2photon_key)
                 TiffSplit.File.insert(tiffsplitfile_2photon_key)
-
-            print('tiffsplit_2photon_key')
-            print(tiffsplit_2photon_key)
-
-            #print('tiffsplitfile_2photon_key')
-            #print(tiffsplitfile_2photon_key)
 
             if test_mode:
                 return scan_info_key, tiffsplit_2photon_key, tiffsplitfile_2photon_key

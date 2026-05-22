@@ -468,6 +468,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
 
                     new_fov_match = fov_match.group(1).replace(' ',',')
                     new_fov_match = new_fov_match.replace(';',',')
+
                     fov_points = np.array(ast.literal_eval(new_fov_match))
                     fov_points = fov_points.reshape(4,2)
 
@@ -910,12 +911,15 @@ def parse_tif_header_mesoscope(
 
             try:
 
+                new_fov_match = fov_match.group(0).replace(' ',',')
+                new_fov_match = new_fov_match.replace(';',',')
+
+                fov_points = np.array(ast.literal_eval(new_fov_match))
+                fov_points = fov_points.reshape(4,2)
+
                 parsed_info['Scope']['fovCornerPoints'] = (
-                    resolution_factor
-                    * np.array(
-                        ast.literal_eval(fov_match.group(0))
+                    resolution_factor * fov_points
                     )
-                )
 
             except Exception:
 

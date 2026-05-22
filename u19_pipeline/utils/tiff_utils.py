@@ -94,6 +94,7 @@ def get_recording_info(fl, imheader, parsed_info):
 
         if i == 0:
             rec_info = parsed_info[i]
+            rec_info['Timing']['BehavFrames'] = np.array(rec_info['Timing']['BehavFrames'], dtype=object)
 
         else:
 
@@ -109,10 +110,14 @@ def get_recording_info(fl, imheader, parsed_info):
                 parsed_info[i]['Timing']['Frame_ts_sec']
             ])
 
-            rec_info['Timing']['BehavFrames'] = np.concatenate([
-                rec_info['Timing']['BehavFrames'],
-                parsed_info[i]['Timing']['BehavFrames']
-            ])
+            aux = np.array(parsed_info[i]['Timing']['BehavFrames'], dtype=object)
+            aux = np.squeeze(aux)
+
+            if aux.size > 0:
+                rec_info['Timing']['BehavFrames'] = np.concatenate([
+                    rec_info['Timing']['BehavFrames'],
+                    aux
+                ])
 
         frames_per_file[i] = len(imheader[i])
 
@@ -126,11 +131,7 @@ def get_recording_info(fl, imheader, parsed_info):
 def get_nfovs(rec_info, is_mesoscope):
 
     if is_mesoscope:
-
-        return sum(
-            len(roi['Zs'])
-            for roi in rec_info['ROI']
-        )
+        return len(rec_info['ROI'])
 
     return 1
 
@@ -212,6 +213,21 @@ def create_scan_info_key(key, rec_info, bucket_dir):
     scan_info_key['nframes_good'] = rec_info['nframes_good']
     scan_info_key['last_good_file'] = rec_info['last_good_file']
 
+    if 'stacks_enabled' in scope:
+        scan_info_key['stacks_enabled'] = scope['stacks_enabled'];
+    
+    if 'stackActuator' in scope:
+        scan_info_key['stack_actuator'] = scope['stackActuator']
+    
+    if 'stackDefinition' in scope:
+        scan_info_key['stack_definition'] = scope['stackDefinition']
+    
+    if 'motionCorrection_enabled' in scope:
+        scan_info_key['motion_correction_enabled'] = scope['motionCorrection_enabled']
+    
+    if 'motionCorMode' in scope:
+        scan_info_key['motion_correction_mode'] = scope['motionCorMode']
+    
     return scan_info_key
 
 
@@ -304,7 +320,7 @@ def get_fov_mesoscope(
     basename,
     cumulative_frames,
     scan_dirs_db,
-    imaging_root=None
+    imaging_root
 ):
     """
     Python translation of MATLAB insert_fov_mesoscope.
@@ -533,15 +549,10 @@ def get_fov_mesoscope(
 
             roi_name = rec_info["ROI"][iroi]["name"]
 
-            print('roi_name', roi_name)
-
-
             if roi_name:
                 thisname = f"{roi_name}_z{iz+1}"
             else:
                 thisname = f"ROI{iroi+1:02d}_z{iz+1}"
-
-            print('this name', thisname)
 
             fov_key["tiff_split_name"] = thisname
 
@@ -571,6 +582,8 @@ def get_fov_mesoscope(
             fov_key["fov_discrete_plane_mode"] = (
                 rec_info["ROI"][iroi].get("discretePlaneMode", -1)
             )
+            if not fov_key["fov_discrete_plane_mode"]:
+                fov_key["fov_discrete_plane_mode"] = 0
 
             fov_key["power_percent"] = (
                 rec_info["ROI"][iroi].get(
@@ -578,9 +591,6 @@ def get_fov_mesoscope(
                     rec_info["Scope"]["Power_percent"]
                 )
             )
-
-            print("INSERT TIFF SPLIT:")
-            print(fov_key)
 
             fov_keys.append(fov_key)
 
@@ -610,12 +620,9 @@ def get_fov_mesoscope(
                     cumulative_frames[iF + 1]
                 ]
 
-            file_entries.append(entry)
-
-            #print("INSERT TIFF SPLIT FILES:")
-            #print(file_entries)
+                file_entries.append(entry)
             
-            tiff_files_entries.append(file_entries)
+            tiff_files_entries += file_entries
 
 
     return fov_keys, tiff_files_entries
@@ -648,8 +655,6 @@ def get_fov_photonmicro(key, rec_info, scan_dirs_db):
         rec_info["Scope"]["Power_percent"]
     )
 
-    print("INSERT TIFF SPLIT:")
-    print(fovkey)
     return fovkey
 
 
@@ -705,12 +710,9 @@ def get_fovfile_photonmicro(
 
                 entry["tiff_split"] = 1
                 entry["file_number"] = file_number
-                entry["tiff_split_filename"] = filename
+                entry["tiff_split_filename"] = Path(filename).name
                 entry["file_frame_range"] = frame_range
 
                 filekeys.append(entry)
-
-    #print("INSERT TIFF SPLIT FILES:")
-    #print(filekeys)
 
     return filekeys
