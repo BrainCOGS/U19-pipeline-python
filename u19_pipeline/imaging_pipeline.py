@@ -12,7 +12,7 @@ import u19_pipeline.utils.tiff_utils as tu
 
 import datajoint as dj
 
-#from element_calcium_imaging import scan as scan_element
+from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging_preprocess as imaging_element
 from element_interface.utils import find_full_path
 
