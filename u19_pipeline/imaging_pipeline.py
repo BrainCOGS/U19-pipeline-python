@@ -164,8 +164,8 @@ class AcquiredTiff(dj.Imported):
             )
             for i in range(len(tiffsplit_mesoscope_keys)):
                 if not test_mode:
-                    TiffSplit.insert(tiffsplit_mesoscope_keys[i])
-                    TiffSplit.File.insert(tiff_splitfiles_mesoscope_keys[i])
+                    TiffSplit.insert(tiffsplit_mesoscope_keys[i],allow_direct_insert=True)
+                    TiffSplit.File.insert(tiff_splitfiles_mesoscope_keys[i],allow_direct_insert=True)
 
             if test_mode:
                 return scan_info_key, tiffsplit_mesoscope_keys, tiff_splitfiles_mesoscope_keys
@@ -174,8 +174,8 @@ class AcquiredTiff(dj.Imported):
             tiffsplit_2photon_key = tu.get_fov_photonmicro(key, rec_info, scan_info)
             tiffsplitfile_2photon_key = tu.get_fovfile_photonmicro(key, fl, imheader)
             if not test_mode:
-                TiffSplit.insert(tiffsplit_2photon_key)
-                TiffSplit.File.insert(tiffsplitfile_2photon_key)
+                TiffSplit.insert(tiffsplit_2photon_key,allow_direct_insert=True)
+                TiffSplit.File.insert(tiffsplitfile_2photon_key,allow_direct_insert=True)
 
             if test_mode:
                 return scan_info_key, tiffsplit_2photon_key, tiffsplitfile_2photon_key
