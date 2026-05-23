@@ -696,6 +696,11 @@ def get_fovfile_photonmicro(
                 file_number = int(
                     number_string[0][1:-1]
                 )
+                acq_number = int(
+                    acq_string[0][1:-1]
+                )
+                if acq_number != 1:
+                    file_number = file_number-1+(acq_number-1)*100
 
                 nframes = len(imheader[iF])
 
