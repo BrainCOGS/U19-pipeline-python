@@ -684,7 +684,11 @@ def main_water_weigh_alert():
     subjects_not_weighted = subjects_not_weighted.reset_index(drop=True)
     # subjects_not_weighted = subjects_not_weighted.head()
 
-    subjects_not_trained = subject_data.loc[subject_data["training_status"] == 1, ["subject_fullname", "scheduled_rig"]]
+    subjects_not_trained = subject_data.loc[
+        (subject_data["training_status"] == 1)
+        & (subject_data["schedule_today"].str.lower() != "water"),
+        ["subject_fullname", "scheduled_rig"],
+    ]
     subjects_not_trained = subjects_not_trained.reset_index(drop=True)
     # subjects_not_trained = subjects_not_trained.head()
 
