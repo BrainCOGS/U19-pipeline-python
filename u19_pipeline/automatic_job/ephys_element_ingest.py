@@ -37,9 +37,7 @@ def process_session(sess_key):
 
     :param scan_key: a `KEY` of `acquisition.Session`
     """
-    sess_dir = pathlib.Path(
-        find_full_path(get_ephys_root_data_dir(), get_session_directory(sess_key))
-    )
+    sess_dir = pathlib.Path(find_full_path(get_ephys_root_data_dir(), get_session_directory(sess_key)))
     ephys_meta_filepaths = [fp for fp in sess_dir.rglob("*.ap.meta")]
 
     print("ephys_meta_filepaths", ephys_meta_filepaths)
@@ -57,10 +55,7 @@ def process_session(sess_key):
             "probe_type": spikeglx_meta.probe_model,
             "probe": spikeglx_meta.probe_SN,
         }
-        if (
-            probe_key["probe"] not in [p["probe"] for p in probe_list]
-            and probe_key not in probe_element.Probe()
-        ):
+        if probe_key["probe"] not in [p["probe"] for p in probe_list] and probe_key not in probe_element.Probe():
             probe_list.append(probe_key)
 
         probe_dir = meta_filepath.parent

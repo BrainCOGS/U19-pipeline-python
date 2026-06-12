@@ -129,9 +129,7 @@ fov_key = rec_process.copy()
 fov_key.pop("recording_process_id")
 
 # Recording process extra info
-recording_process_info = (
-    lab.Location * recording.RecordingProcess * recording.Recording & rec_process_key
-).fetch(
+recording_process_info = (lab.Location * recording.RecordingProcess * recording.Recording & rec_process_key).fetch(
     "acquisition_type", "preprocess_paramset_idx", "process_paramset_idx", as_dict=True
 )
 
@@ -148,12 +146,8 @@ scan_id = 0
 
 # Get preprocess params
 preprocess_params_key = dict()
-preprocess_params_key["preprocess_paramset_idx"] = recording_process_info[0][
-    "preprocess_paramset_idx"
-]
-preprocess_params = recording.PreprocessParamSet().get_preprocess_params(
-    preprocess_params_key
-)
+preprocess_params_key["preprocess_paramset_idx"] = recording_process_info[0]["preprocess_paramset_idx"]
+preprocess_params = recording.PreprocessParamSet().get_preprocess_params(preprocess_params_key)
 processing_method = preprocess_params["processing_method"]
 task_mode = preprocess_params["task_mode"]
 
@@ -279,9 +273,7 @@ if paramset_idx_key not in imaging_element.ProcessingParamSet():
     # Get all information from process params from recording.ProcessParamSet schema
     process_params_key = dict()
     process_params_key["process_paramset_idx"] = paramset_idx
-    process_params_info = (recording.ProcessParamSet() & process_params_key).fetch(
-        as_dict=True
-    )
+    process_params_info = (recording.ProcessParamSet() & process_params_key).fetch(as_dict=True)
     process_params = recording.ProcessParamSet().get_process_params(process_params_key)
 
     # print('process_params_info', process_params_info)

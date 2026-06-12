@@ -10,10 +10,8 @@ def main_live_session_stats_deletion():
     order_cols = "'subject_fullname', 'session_date', 'session_number', 'trial_idx'"
     connection = acquisition.LiveSessionStats.connection
     with connection.transaction:
-        old_session_stats = (
-            acquisition.LiveSessionStats & old_session_stats_query
-        ).fetch(as_dict=True, order_by=[order_cols])
-        (acquisition.HistoricSessionStats).insert(
-            old_session_stats, skip_duplicates=True
+        old_session_stats = (acquisition.LiveSessionStats & old_session_stats_query).fetch(
+            as_dict=True, order_by=[order_cols]
         )
+        (acquisition.HistoricSessionStats).insert(old_session_stats, skip_duplicates=True)
         (acquisition.LiveSessionStats & old_session_stats_query).delete(safemode=False)

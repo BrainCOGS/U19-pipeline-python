@@ -357,12 +357,8 @@ if __name__ == "__main__":
     key = {"mcorr_method": "LinearNormalized", "mc_parameter_set_id": 1}
 
     parameters = [
-        dict(
-            **key, mc_parameter_name="mc_max_shift", mc_parameter_value=np.array([15.0])
-        ),
-        dict(
-            **key, mc_parameter_name="mc_max_iter", mc_parameter_value=np.array([5.0])
-        ),
+        dict(**key, mc_parameter_name="mc_max_shift", mc_parameter_value=np.array([15.0])),
+        dict(**key, mc_parameter_name="mc_max_iter", mc_parameter_value=np.array([5.0])),
         dict(**key, mc_parameter_name="mc_stop_below_shift", mc_parameter_value=0.3),
         dict(**key, mc_parameter_name="mc_black_tolerance", mc_parameter_value=-1.0),
         dict(**key, mc_parameter_name="mc_median_rebin", mc_parameter_value=10.0),

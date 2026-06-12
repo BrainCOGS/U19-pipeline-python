@@ -105,22 +105,18 @@ class DefaultParams(dj.Manual):
             this_params_rec_process["job_id"] = i["job_id"]
             this_fragment = i["fragment_number"]
 
-            this_params_rec_process["preprocess_param_steps_id"] = (
-                DefaultParams.get_corresponding_param(
-                    default_params_record_df,
-                    this_fragment,
-                    "default_same_preparams_all",
-                    "preprocess_param_steps_id",
-                )
+            this_params_rec_process["preprocess_param_steps_id"] = DefaultParams.get_corresponding_param(
+                default_params_record_df,
+                this_fragment,
+                "default_same_preparams_all",
+                "preprocess_param_steps_id",
             )
 
-            this_params_rec_process["paramset_idx"] = (
-                DefaultParams.get_corresponding_param(
-                    default_params_record_df,
-                    this_fragment,
-                    "default_same_params_all",
-                    "paramset_idx",
-                )
+            this_params_rec_process["paramset_idx"] = DefaultParams.get_corresponding_param(
+                default_params_record_df,
+                this_fragment,
+                "default_same_params_all",
+                "paramset_idx",
             )
 
             params_rec_process.append(this_params_rec_process)
@@ -128,9 +124,7 @@ class DefaultParams(dj.Manual):
         return params_rec_process
 
     @staticmethod
-    def get_corresponding_param(
-        default_params_record_df, this_fragment, default_label, param_label
-    ):
+    def get_corresponding_param(default_params_record_df, this_fragment, default_label, param_label):
         "Get corresponding param (preprocess_param_steps_id or paramset_idx) for this fragment"
 
         "default_label = default_same_preparams_all / default_same_params_all "
@@ -143,9 +137,7 @@ class DefaultParams(dj.Manual):
 
         else:
             if default_params_record_df.loc[0, default_label] == 1:
-                this_fragment_preprocess_param_steps_id = default_params_record_df.loc[
-                    0, param_label
-                ]
+                this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
             else:
                 this_fragment_preprocess_param_steps_id = default_params_record_df.loc[
                     default_params_record_df["fragment_number"] == this_fragment,
@@ -153,12 +145,8 @@ class DefaultParams(dj.Manual):
                 ]
                 # If there is no list id for this specific fragment, get default one
                 if this_fragment_preprocess_param_steps_id.shape[0] == 0:
-                    this_fragment_preprocess_param_steps_id = (
-                        default_params_record_df.loc[0, param_label]
-                    )
+                    this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
                 else:
-                    this_fragment_preprocess_param_steps_id = (
-                        this_fragment_preprocess_param_steps_id.values[0]
-                    )
+                    this_fragment_preprocess_param_steps_id = this_fragment_preprocess_param_steps_id.values[0]
 
             return this_fragment_preprocess_param_steps_id

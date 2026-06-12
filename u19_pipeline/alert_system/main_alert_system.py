@@ -35,30 +35,15 @@ def main_alert_system():
                 webhooks_list = []
 
                 if "slack_notification_channel" in slack_dict:
-                    query_slack_webhooks = [
-                        {"webhook_name": x}
-                        for x in slack_dict["slack_notification_channel"]
-                    ]
-                    webhooks_list += (
-                        (lab.SlackWebhooks & query_slack_webhooks)
-                        .fetch("webhook_url")
-                        .tolist()
-                    )
+                    query_slack_webhooks = [{"webhook_name": x} for x in slack_dict["slack_notification_channel"]]
+                    webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
 
                 if "slack_users_channel" in slack_dict:
-                    query_slack_user_channels = [
-                        {"user_id": x} for x in slack_dict["slack_users_channel"]
-                    ]
-                    webhooks_list += (
-                        (lab.User & query_slack_user_channels)
-                        .fetch("slack_webhook")
-                        .tolist()
-                    )
+                    query_slack_user_channels = [{"user_id": x} for x in slack_dict["slack_users_channel"]]
+                    webhooks_list += (lab.User & query_slack_user_channels).fetch("slack_webhook").tolist()
 
                 for this_alert_record in alert_dict:
-                    slack_json_message = slack_alert_message_format(
-                        this_alert_record, this_alert_submodule.name
-                    )
+                    slack_json_message = slack_alert_message_format(this_alert_record, this_alert_submodule.name)
 
                     for this_webhook in webhooks_list:
                         su.send_slack_notification(this_webhook, slack_json_message)
@@ -66,20 +51,10 @@ def main_alert_system():
 
         except Exception as e:
             dict_error = dict()
-            dict_error["message"] = (
-                "error while executing " + this_alert_submodule.name + " alert code"
-            )
-            dict_error["error_exception"] = "".join(
-                traceback.format_exception(type(e), value=e, tb=e.__traceback__)
-            )
-            slack_json_message = slack_alert_message_format(
-                dict_error, this_alert_submodule.name
-            )
-            webhook_custom = (
-                (lab.SlackWebhooks & "webhook_name='custom_alerts'")
-                .fetch("webhook_url")
-                .tolist()
-            )
+            dict_error["message"] = "error while executing " + this_alert_submodule.name + " alert code"
+            dict_error["error_exception"] = "".join(traceback.format_exception(type(e), value=e, tb=e.__traceback__))
+            slack_json_message = slack_alert_message_format(dict_error, this_alert_submodule.name)
+            webhook_custom = (lab.SlackWebhooks & "webhook_name='custom_alerts'").fetch("webhook_url").tolist()
             if webhook_custom:
                 su.send_slack_notification(webhook_custom[0], slack_json_message)
 

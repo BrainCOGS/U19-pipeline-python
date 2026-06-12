@@ -17,12 +17,12 @@ pni_data_dir = ""
 
 # For tiger endpoint
 public_key_location = "~/.ssh/id_ed25519.pub"
-default_user = (
-    "u19prod"  # This will change to our automatic client for globus transfers
-)
+default_user = "u19prod"  # This will change to our automatic client for globus transfers
 tiger_gpu_host = "della.princeton.edu"
 # tiger_ep_dir  = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'  # tigress ep
-tiger_ep_dir = "8e1bbdfe-d234-4a7c-93a5-86086a249918"  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
+tiger_ep_dir = (
+    "8e1bbdfe-d234-4a7c-93a5-86086a249918"  # Endpoint of Della's /scratch/gpfs/. Our directory is ./BRAINCOGS/
+)
 
 tiger_home_dir_globus = "/BRAINCOGS/Data/"
 
@@ -82,8 +82,7 @@ cluster_vars = {
         "slurm_files_dir": tiger_home_dir + "/SlurmFiles",
         "params_files_dir": tiger_home_dir + "/ParameterFiles",
         "chanmap_files_dir": tiger_home_dir + "/ChanMapFiles",
-        "electrophysiology_process_dir": tiger_home_dir
-        + "/electrophysiology_processing",
+        "electrophysiology_process_dir": tiger_home_dir + "/electrophysiology_processing",
         "imaging_process_dir": tiger_home_dir + "/imaging_processing",
         "log_files_dir": tiger_home_dir + "/OutputLog",
         "error_files_dir": tiger_home_dir + "/ErrorLog",
@@ -102,8 +101,7 @@ cluster_vars = {
         "slurm_files_dir": spock_home_dir + "/SlurmFiles",
         "params_files_dir": spock_home_dir + "/ParameterFiles",
         "chanmap_files_dir": spock_home_dir + "/ChanMapFiles",
-        "electrophysiology_process_dir": spock_home_dir
-        + "/electrophysiology_processing",
+        "electrophysiology_process_dir": spock_home_dir + "/electrophysiology_processing",
         "imaging_process_dir": spock_home_dir + "/imaging_processing",
         "log_files_dir": spock_home_dir + "/u19_pipeline/automatic_job/OutputLog",
         "error_files_dir": spock_home_dir + "/u19_pipeline/automatic_job/ErrorLog",
@@ -149,9 +147,7 @@ def cp_file_transfer(source, dest):
     return transfer_status
 
 
-def request_globus_transfer(
-    job_id_str, source_ep, dest_ep, source_filepath, dest_filepath
-):
+def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath):
 
     source_fullpath = source_ep + ":" + source_filepath
     dest_fullpath = dest_ep + ":" + dest_filepath
@@ -216,16 +212,10 @@ def globus_transfer_to_tiger(job_id, raw_rel_path, modality):
     source_ep = pni_ep_id
     dest_ep = tiger_ep_dir
 
-    source_filepath = pathlib.Path(
-        cluster_vars["spock"]["root_data_dir_globus"], modality, raw_rel_path
-    ).as_posix()
-    dest_filepath = pathlib.Path(
-        cluster_vars["tiger"]["root_data_dir_globus"], modality, raw_rel_path
-    ).as_posix()
+    source_filepath = pathlib.Path(cluster_vars["spock"]["root_data_dir_globus"], modality, raw_rel_path).as_posix()
+    dest_filepath = pathlib.Path(cluster_vars["tiger"]["root_data_dir_globus"], modality, raw_rel_path).as_posix()
 
-    transfer_request = request_globus_transfer(
-        job_id_str, source_ep, dest_ep, source_filepath, dest_filepath
-    )
+    transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
 
     return transfer_request
 
@@ -243,9 +233,7 @@ def globus_transfer_to_pni(job_id, processed_rel_path, modality):
         cluster_vars["tiger"]["processed_data_dir_globus"], modality, processed_rel_path
     ).as_posix()
 
-    transfer_request = request_globus_transfer(
-        job_id_str, source_ep, dest_ep, source_filepath, dest_filepath
-    )
+    transfer_request = request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, dest_filepath)
 
     return transfer_request
 
@@ -264,9 +252,7 @@ def translate_globus_output(stdout_process):
     return d1
 
 
-def transfer_log_file(
-    recording_process_id, program_selection_params, user_host, log_type="ERROR"
-):
+def transfer_log_file(recording_process_id, program_selection_params, user_host, log_type="ERROR"):
     """
     Transfer and send parameter files for processing
     """
@@ -332,17 +318,11 @@ def check_directory_exists_cluster(directory, cluster, modality, type_dir="raw")
     this_cluster_vars = get_cluster_vars(cluster)
 
     if type_dir == "raw":
-        final_directory = pathlib.Path(
-            cluster_vars[cluster]["root_data_dir"], modality, directory
-        ).as_posix()
+        final_directory = pathlib.Path(cluster_vars[cluster]["root_data_dir"], modality, directory).as_posix()
     else:
-        final_directory = pathlib.Path(
-            cluster_vars[cluster]["processed_data_dir"], modality, directory
-        ).as_posix()
+        final_directory = pathlib.Path(cluster_vars[cluster]["processed_data_dir"], modality, directory).as_posix()
 
-    base_command = (
-        "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " "
-    )
+    base_command = "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " "
 
     command = "'if [ -d " + final_directory + " ]; "
     post_command = """then
@@ -366,15 +346,7 @@ def delete_directory_cluster(directory, cluster):
 
     this_cluster_vars = get_cluster_vars(cluster)
 
-    command = (
-        "ssh "
-        + this_cluster_vars["user"]
-        + "@"
-        + this_cluster_vars["hostname"]
-        + " 'rm -R "
-        + directory
-        + " '"
-    )
+    command = "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " 'rm -R " + directory + " '"
 
     p = subprocess.run(command, shell=True)
     output = p.returncode
@@ -391,9 +363,7 @@ def delete_directory_tiger_globus(modality, raw_rel_path):
     """
 
     source_ep = tiger_ep_dir
-    source_filepath = pathlib.Path(
-        cluster_vars["tiger"]["root_data_dir_globus"], modality, raw_rel_path
-    ).as_posix()
+    source_filepath = pathlib.Path(cluster_vars["tiger"]["root_data_dir_globus"], modality, raw_rel_path).as_posix()
 
     source_fullpath = source_ep + ":" + source_filepath
 
@@ -411,9 +381,7 @@ def delete_empty_data_directory_cluster(cluster, type="raw"):
 
     max_deletion = 10
     this_cluster_vars = get_cluster_vars(cluster)
-    base_command = (
-        "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " "
-    )
+    base_command = "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " "
 
     # Check base directory to delete
     if type == "raw":

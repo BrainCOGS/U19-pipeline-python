@@ -6,9 +6,7 @@ import pandas as pd
 import u19_pipeline.utils.dj_shortcuts as djs
 
 
-def get_acquisition_data_alert_system(
-    type="subject_fullname", data_days=60, min_sessions=20
-):
+def get_acquisition_data_alert_system(type="subject_fullname", data_days=60, min_sessions=20):
     """
     Get and filter data for alert system
     Inputs:
@@ -29,19 +27,13 @@ def get_acquisition_data_alert_system(
     query_sessions += 'and session_date < "' + today.strftime("%Y-%m-%d") + '"'
     query_sessions += ' and subject_fullname not like "testuser%"'
 
-    session_df = pd.DataFrame(
-        (acquisition.Session & query_sessions).fetch(as_dict=True)
-    )
+    session_df = pd.DataFrame((acquisition.Session & query_sessions).fetch(as_dict=True))
 
     # Filter subjects/rigs with >= min_sessions
-    num_sessions_df = session_df.groupby(type).agg(
-        {"session_date": [("total_sessions", "count")]}
-    )
+    num_sessions_df = session_df.groupby(type).agg({"session_date": [("total_sessions", "count")]})
     num_sessions_df.columns = num_sessions_df.columns.droplevel()
     num_sessions_df = num_sessions_df.reset_index()
-    num_sessions_df = num_sessions_df.loc[
-        num_sessions_df["total_sessions"] >= min_sessions, :
-    ]
+    num_sessions_df = num_sessions_df.loc[num_sessions_df["total_sessions"] >= min_sessions, :]
     session_df = session_df.merge(num_sessions_df, on=type)
 
     # Get key list of sessions for further (behavior) querying

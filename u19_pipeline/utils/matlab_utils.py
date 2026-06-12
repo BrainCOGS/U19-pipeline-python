@@ -67,9 +67,7 @@ def mat_obj_to_dict(mat_struct):
             dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], np.ndarray):
             try:
-                dict_from_struct[field_name] = mat_obj_to_array(
-                    dict_from_struct[field_name]
-                )
+                dict_from_struct[field_name] = mat_obj_to_array(dict_from_struct[field_name])
             except TypeError:
                 continue
     return dict_from_struct
@@ -79,9 +77,7 @@ def mat_obj_to_array(mat_struct_array):
     """Construct array from matlab cell arrays.
     Recursively converts array elements if they contain mat objects."""
     if has_struct(mat_struct_array):
-        array_from_cell = [
-            mat_obj_to_dict(mat_struct) for mat_struct in mat_struct_array
-        ]
+        array_from_cell = [mat_obj_to_dict(mat_struct) for mat_struct in mat_struct_array]
         array_from_cell = np.array(array_from_cell)
     else:
         array_from_cell = mat_struct_array
@@ -91,10 +87,7 @@ def mat_obj_to_array(mat_struct_array):
 
 def has_struct(mat_struct_array):
     """Determines if a matlab cell array contains any mat objects."""
-    return any(
-        isinstance(mat_struct, matlab.mio5_params.mat_struct)
-        for mat_struct in mat_struct_array
-    )
+    return any(isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
 
 
 def convert_mat_file_to_dict(mat_file_name):
@@ -289,9 +282,7 @@ def convert_function_handle_to_str(mat_file_path):
             os.remove("shaping_protocol.txt")
 
         except Exception as e:
-            print(
-                f"There was an error while trying to execute {convert_script_path}:\n{e}"
-            )
+            print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
     else:
         print(
             "A working matlab version was not found. "
@@ -328,9 +319,7 @@ def convert_towers_block_trial_2_df(current_block_trial, block_num):
 
     if valid_block:
         block_trial_df = pd.DataFrame(current_block_trial)
-        block_trial_df.insert(
-            loc=0, column="trial_idx", value=np.arange(len(block_trial_df)) + 1
-        )
+        block_trial_df.insert(loc=0, column="trial_idx", value=np.arange(len(block_trial_df)) + 1)
         block_trial_df.insert(loc=0, column="block", value=block_num)
     else:
         block_trial_df = pd.DataFrame()
@@ -410,18 +399,14 @@ def convert_behavior_file(mat_file):
             block = matin["log"]["block"][i]
 
         # Convert trial df and block df
-        valid_block, block_trial_df = convert_towers_block_trial_2_df(
-            block["trial"], i + 1
-        )
+        valid_block, block_trial_df = convert_towers_block_trial_2_df(block["trial"], i + 1)
         valid_blocks, block_df = convert_towers_block_2_df(block, i + 1)
         # Write string of block level Protocol  (from matlab obscured data)
         if metadata_read:
             block_df["shapingProtocol"] = converted_metadata["shaping_protocol"][i]
 
         if valid_block and valid_blocks:
-            session_current_block_trial_df = block_trial_df.merge(
-                block_df, on="block", suffixes=["_block", "_trial"]
-            )
+            session_current_block_trial_df = block_trial_df.merge(block_df, on="block", suffixes=["_block", "_trial"])
             if num_blocks_conv == 0:
                 session_block_trial_df = session_current_block_trial_df.copy()
             else:

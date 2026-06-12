@@ -83,9 +83,7 @@ def get_recording_info(fl, imheader, parsed_info):
     for i, file in enumerate(fl):
         if i == 0:
             rec_info = parsed_info[i]
-            rec_info["Timing"]["BehavFrames"] = np.array(
-                rec_info["Timing"]["BehavFrames"], dtype=object
-            )
+            rec_info["Timing"]["BehavFrames"] = np.array(rec_info["Timing"]["BehavFrames"], dtype=object)
 
         else:
             if parsed_info[i]["Timing"]["Frame_ts_sec"][0] == 0:
@@ -104,9 +102,7 @@ def get_recording_info(fl, imheader, parsed_info):
             aux = np.squeeze(aux)
 
             if aux.size > 0:
-                rec_info["Timing"]["BehavFrames"] = np.concatenate(
-                    [rec_info["Timing"]["BehavFrames"], aux]
-                )
+                rec_info["Timing"]["BehavFrames"] = np.concatenate([rec_info["Timing"]["BehavFrames"], aux])
 
         frames_per_file[i] = len(imheader[i])
 
@@ -268,9 +264,7 @@ def clean_software_string(software):
     if software is None:
         return ""
 
-    software = software.replace(
-        "hRoiManager.mroiEnable = 1", "hRoiManager.mroiEnable = 0"
-    )
+    software = software.replace("hRoiManager.mroiEnable = 1", "hRoiManager.mroiEnable = 0")
 
     idx = software.find("SI.hRoiManager.imagingFovUm")
     if idx != -1:
@@ -321,11 +315,7 @@ def get_fov_mesoscope(
         # ---------------------------------------------------------------------
 
         for idepth in range(depths):
-            which_roi = [
-                i
-                for i, roi in enumerate(rec_info["ROI"])
-                if roi["Zs"] == which_depths[idepth]
-            ]
+            which_roi = [i for i, roi in enumerate(rec_info["ROI"]) if roi["Zs"] == which_depths[idepth]]
 
             for iroi in which_roi:
                 dirname = f"ROI{iroi + 1:02d}_z{idepth + 1}"
@@ -347,9 +337,7 @@ def get_fov_mesoscope(
 
                 first_page = pages[0].asarray()
 
-                thisstack = np.zeros(
-                    (imheader[iF][0]["Height"], 512, len(imheader[iF])), dtype=np.uint16
-                )
+                thisstack = np.zeros((imheader[iF][0]["Height"], 512, len(imheader[iF])), dtype=np.uint16)
 
                 pixel2sum = 1
 
@@ -359,9 +347,7 @@ def get_fov_mesoscope(
                     if temp_stack.shape[1] != thisstack.shape[1]:
                         pixel2sum = imheader[iF][0]["Width"] // 512
 
-                        reshaped = temp_stack.reshape(
-                            temp_stack.shape[0], pixel2sum, 512
-                        )
+                        reshaped = temp_stack.reshape(temp_stack.shape[0], pixel2sum, 512)
 
                         temp_stack = reshaped.sum(axis=1)
 
@@ -380,18 +366,12 @@ def get_fov_mesoscope(
                     ilag = 0
                     rowct = 0
 
-                    which_roi = [
-                        i
-                        for i, roi in enumerate(rec_info["ROI"])
-                        if roi["Zs"] == which_depths[idepth]
-                    ]
+                    which_roi = [i for i, roi in enumerate(rec_info["ROI"]) if roi["Zs"] == which_depths[idepth]]
 
                     for iroi in which_roi:
                         zidx = list(range(idepth, thisstack.shape[2], depths))
 
-                        substack = thisstack[rowct : rowct + roi_nr[iroi], :nc, :][
-                            :, :, zidx
-                        ]
+                        substack = thisstack[rowct : rowct + roi_nr[iroi], :nc, :][:, :, zidx]
 
                         # -----------------------------------------------------
                         # Output filename
@@ -412,21 +392,13 @@ def get_fov_mesoscope(
 
                         first_desc = imheader[iF][zidx[0]]["ImageDescription"]
 
-                        first_desc = replace_frame_timestamp(
-                            first_desc, inter_roi_lag * ilag
-                        )
+                        first_desc = replace_frame_timestamp(first_desc, inter_roi_lag * ilag)
 
                         software = clean_software_string(
-                            current_header.get("Software", None).value
-                            if "Software" in current_header
-                            else ""
+                            current_header.get("Software", None).value if "Software" in current_header else ""
                         )
 
-                        artist = (
-                            current_header.get("Artist", None).value
-                            if "Artist" in current_header
-                            else ""
-                        )
+                        artist = current_header.get("Artist", None).value if "Artist" in current_header else ""
 
                         metadata = {
                             "ImageDescription": first_desc,
@@ -442,9 +414,7 @@ def get_fov_mesoscope(
                             for iz in range(substack.shape[2]):
                                 desc = imheader[iF][zidx[iz]]["ImageDescription"]
 
-                                desc = replace_frame_timestamp(
-                                    desc, inter_roi_lag * ilag
-                                )
+                                desc = replace_frame_timestamp(desc, inter_roi_lag * ilag)
 
                                 writer.write(
                                     substack[:, :, iz],
@@ -460,9 +430,7 @@ def get_fov_mesoscope(
                         # -----------------------------------------------------
 
                         if len(which_roi) > 1:
-                            padsize = (nr - sum([roi_nr[r] for r in which_roi])) / (
-                                len(which_roi) - 1
-                            )
+                            padsize = (nr - sum([roi_nr[r] for r in which_roi])) / (len(which_roi) - 1)
 
                             rowct += int(padsize + roi_nr[iroi])
 
@@ -487,9 +455,7 @@ def get_fov_mesoscope(
 
             fov_key["tiff_split"] = ct
 
-            fov_key["tiff_split_directory"] = (
-                f"{scan_dirs_db['recording_directory']}/ROI{iroi + 1:02d}_z{iz + 1}/"
-            )
+            fov_key["tiff_split_directory"] = f"{scan_dirs_db['recording_directory']}/ROI{iroi + 1:02d}_z{iz + 1}/"
 
             roi_name = rec_info["ROI"][iroi]["name"]
 
@@ -501,33 +467,21 @@ def get_fov_mesoscope(
             fov_key["tiff_split_name"] = thisname
 
             # Safe assignments
-            fov_key["fov_depth"] = (
-                rec_info["ROI"][iroi]["Zs"]
-                if rec_info["ROI"][iroi]["Zs"] is not None
-                else 0
-            )
+            fov_key["fov_depth"] = rec_info["ROI"][iroi]["Zs"] if rec_info["ROI"][iroi]["Zs"] is not None else 0
 
             fov_key["fov_center_xy"] = rec_info["ROI"][iroi].get("centerXY", -1)
 
             fov_key["fov_size_xy"] = rec_info["ROI"][iroi].get("sizeXY", -1)
 
-            fov_key["fov_rotation_degrees"] = rec_info["ROI"][iroi].get(
-                "rotationDegrees", -1
-            )
+            fov_key["fov_rotation_degrees"] = rec_info["ROI"][iroi].get("rotationDegrees", -1)
 
-            fov_key["fov_pixel_resolution_xy"] = rec_info["ROI"][iroi].get(
-                "pixelResolutionXY", -1
-            )
+            fov_key["fov_pixel_resolution_xy"] = rec_info["ROI"][iroi].get("pixelResolutionXY", -1)
 
-            fov_key["fov_discrete_plane_mode"] = rec_info["ROI"][iroi].get(
-                "discretePlaneMode", -1
-            )
+            fov_key["fov_discrete_plane_mode"] = rec_info["ROI"][iroi].get("discretePlaneMode", -1)
             if not fov_key["fov_discrete_plane_mode"]:
                 fov_key["fov_discrete_plane_mode"] = 0
 
-            fov_key["power_percent"] = rec_info["ROI"][iroi].get(
-                "Power_percent", rec_info["Scope"]["Power_percent"]
-            )
+            fov_key["power_percent"] = rec_info["ROI"][iroi].get("Power_percent", rec_info["Scope"]["Power_percent"])
 
             fov_keys.append(fov_key)
 
@@ -590,9 +544,7 @@ def get_fov_photonmicro(key, rec_info, scan_dirs_db):
 # -----------------------------------------------------------------------------
 
 
-def get_fovfile_photonmicro(
-    key, fl, imheader, patt_acq_number=r"_[0-9]{5}_", patt_file_number=r"_[0-9]{5}\."
-):
+def get_fovfile_photonmicro(key, fl, imheader, patt_acq_number=r"_[0-9]{5}_", patt_file_number=r"_[0-9]{5}\."):
     """
     Insert TIFF split file entries for 2-photon imaging.
     """

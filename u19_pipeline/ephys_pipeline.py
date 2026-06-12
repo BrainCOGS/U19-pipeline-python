@@ -84,18 +84,14 @@ def get_ephys_root_data_dir():
 def get_session_directory(session_key):
     # root_dir = get_ephys_root_data_dir()
 
-    session_dir = pathlib.Path(
-        (recording.Recording & session_key).fetch1("recording_directory")
-    ).as_posix()
+    session_dir = pathlib.Path((recording.Recording & session_key).fetch1("recording_directory")).as_posix()
     # session_dir = pathlib.Path(root_dir, session_dir).as_posix()
 
     return session_dir
 
 
 def get_full_session_directory(recording_key):
-    session_dir = find_full_path(
-        [get_ephys_root_data_dir()[0]], get_session_directory(recording_key)
-    )
+    session_dir = find_full_path([get_ephys_root_data_dir()[0]], get_session_directory(recording_key))
 
     print("ephys dir:", session_dir)
     nidq_session = list(session_dir.glob("*nidq.bin*"))
@@ -189,35 +185,26 @@ probe_element.create_neuropixels_probe_types()
 def get_spikeglx_meta_filepath(ephys_recording_key):
     # attempt to retrieve from EphysRecording.EphysFile
     spikeglx_meta_filepath = (
-        ephys_element.EphysRecording.EphysFile
-        & ephys_recording_key
-        & 'file_path LIKE "%.ap.meta"'
+        ephys_element.EphysRecording.EphysFile & ephys_recording_key & 'file_path LIKE "%.ap.meta"'
     ).fetch1("file_path")
 
     print("ephys_recording_key", ephys_recording_key)
     print("spikeglx_meta_filepath", spikeglx_meta_filepath)
 
     print("get_ephys_root_data_dir", get_ephys_root_data_dir())
-    spikeglx_meta_filepath = find_full_path(
-        get_ephys_root_data_dir(), spikeglx_meta_filepath
-    )
+    spikeglx_meta_filepath = find_full_path(get_ephys_root_data_dir(), spikeglx_meta_filepath)
     print("spikeglx_meta_filepath", spikeglx_meta_filepath)
 
     try:
-        spikeglx_meta_filepath = find_full_path(
-            get_ephys_root_data_dir(), spikeglx_meta_filepath
-        )
+        spikeglx_meta_filepath = find_full_path(get_ephys_root_data_dir(), spikeglx_meta_filepath)
 
         print("spikeglx_meta_filepath", spikeglx_meta_filepath)
     except FileNotFoundError:
         # if not found, search in session_dir again
         if not spikeglx_meta_filepath.exists():
-            session_dir = find_full_path(
-                get_ephys_root_data_dir(), get_session_directory(ephys_recording_key)
-            )
+            session_dir = find_full_path(get_ephys_root_data_dir(), get_session_directory(ephys_recording_key))
             inserted_probe_serial_number = (
-                ephys_element.ProbeInsertion * ephys_element.probe.Probe
-                & ephys_recording_key
+                ephys_element.ProbeInsertion * ephys_element.probe.Probe & ephys_recording_key
             ).fetch1("probe")
 
             spikeglx_meta_filepaths = [fp for fp in session_dir.rglob("*.ap.meta")]
@@ -227,9 +214,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
                     spikeglx_meta_filepath = meta_filepath
                     break
             else:
-                raise FileNotFoundError(
-                    f"No SpikeGLX data found for probe insertion: {ephys_recording_key}"
-                )
+                raise FileNotFoundError(f"No SpikeGLX data found for probe insertion: {ephys_recording_key}")
 
     return spikeglx_meta_filepath
 
@@ -266,9 +251,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
         return
 
     # Get sampling rate and calculate channels and samples
-    nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(
-        full_session_path
-    )
+    nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(full_session_path)
     nChan = int(nidq_meta["nSavedChans"])
     num_samples = int(int(nidq_meta["fileSizeBytes"]) / (2 * nChan))
 
@@ -279,12 +262,10 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
         print("No sync data was sound for this session")
         return
 
-    trial_index_nidq_virmen, iteration_index_nidq_virmen = (
-        ephys_utils.get_full_vector_samples(
-            sync_data["iteration_idx_vector_from_virmen"],
-            nidq_sampling_rate,
-            num_samples,
-        )
+    trial_index_nidq_virmen, iteration_index_nidq_virmen = ephys_utils.get_full_vector_samples(
+        sync_data["iteration_idx_vector_from_virmen"],
+        nidq_sampling_rate,
+        num_samples,
     )
 
     trial_index_nidq, iteration_index_nidq = ephys_utils.get_full_vector_samples(
@@ -298,10 +279,8 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
         sync_data["iteration_idx_vector"], nidq_sampling_rate
     )
 
-    trial_times_ind_virmen, trial_times_full_virmen = (
-        ephys_utils.get_time_vector_as_behavior(
-            sync_data["iteration_idx_vector_from_virmen"], nidq_sampling_rate
-        )
+    trial_times_ind_virmen, trial_times_full_virmen = ephys_utils.get_time_vector_as_behavior(
+        sync_data["iteration_idx_vector_from_virmen"], nidq_sampling_rate
     )
 
     # Store data
@@ -317,9 +296,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
         for this_key in all_vectors:
             print("this_key", this_key)
             print(all_vectors[this_key].shape)
-            all_vectors[this_key] = np.concatenate(
-                ([x for x in all_vectors[this_key]]), axis=0
-            )
+            all_vectors[this_key] = np.concatenate(([x for x in all_vectors[this_key]]), axis=0)
             print(all_vectors[this_key].shape)
 
     all_vectors["trial_index_nidq_virmen"] = trial_index_nidq_virmen
@@ -399,34 +376,26 @@ class BehaviorSync(dj.Imported):
             print("after reading behavior data")
 
             # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
-            nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(
-                ephys_session_fullpath
-            )
+            nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(ephys_session_fullpath)
 
-            trial_pulse_signal, iteration_pulse_signal = (
-                ephys_utils.load_trial_iteration_signals(
-                    ephys_session_fullpath, nidq_meta
-                )
+            trial_pulse_signal, iteration_pulse_signal = ephys_utils.load_trial_iteration_signals(
+                ephys_session_fullpath, nidq_meta
             )
 
             print("after reading spikeglx data")
 
             # Synchronize between pulses and get iteration # vector for each sample
-            recent_recording = behavior_key["session_date"] > datetime.date(
-                2021, 6, 1
-            )  # Everything past June 1 2021
+            recent_recording = behavior_key["session_date"] > datetime.date(2021, 6, 1)  # Everything past June 1 2021
             if recent_recording:
                 # New synchronization method: digital_array[1,2] contain pulses for trial and frame number.
                 mode = None
-                iteration_dict = (
-                    ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(
-                        trial_pulse_signal,
-                        iteration_pulse_signal,
-                        nidq_sampling_rate,
-                        behavior_time.shape[0],
-                        behavior_time,
-                        mode,
-                    )
+                iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(
+                    trial_pulse_signal,
+                    iteration_pulse_signal,
+                    nidq_sampling_rate,
+                    behavior_time.shape[0],
+                    behavior_time,
+                    mode,
                 )
             else:
                 # Old synchronization: digital_array[0:7] contain a digital word that counts the virmen frames.
@@ -435,9 +404,7 @@ class BehaviorSync(dj.Imported):
 
             # Check # of trials (from database record of behavior in `behavior_time`) and iterations (extracted from NIDAQ in `iter_start_idx`) match
             trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = (
-                ephys_utils.assert_iteration_samples_count(
-                    iteration_dict["iter_start_idx"], behavior_time
-                )
+                ephys_utils.assert_iteration_samples_count(iteration_dict["iter_start_idx"], behavior_time)
             )
 
             print("metrics to evaluate...")
@@ -456,10 +423,8 @@ class BehaviorSync(dj.Imported):
             )
 
             if status == 1:
-                iteration_dict["trial_start_idx"] = (
-                    ephys_utils.get_index_trial_vector_from_iteration(
-                        iteration_dict["iter_start_idx"]
-                    )
+                iteration_dict["trial_start_idx"] = ephys_utils.get_index_trial_vector_from_iteration(
+                    iteration_dict["iter_start_idx"]
                 )
 
             # Failed sync by a lot, error
@@ -480,12 +445,8 @@ class BehaviorSync(dj.Imported):
             print("after all main ehpys fix sync code", status_regular, status_fix)
 
             if status_regular > 0 or status_fix > 0:
-                dictionary_sync_data["trial_idx_vector"] = iteration_dict[
-                    "trial_start_idx"
-                ]
-                dictionary_sync_data["iteration_idx_vector"] = iteration_dict[
-                    "iter_start_idx"
-                ]
+                dictionary_sync_data["trial_idx_vector"] = iteration_dict["trial_start_idx"]
+                dictionary_sync_data["iteration_idx_vector"] = iteration_dict["iter_start_idx"]
             else:
                 dictionary_sync_data["trial_idx_vector"] = []
                 dictionary_sync_data["iteration_idx_vector"] = []
@@ -500,12 +461,8 @@ class BehaviorSync(dj.Imported):
                 behavior_time,
             )
 
-            dictionary_sync_data["trial_idx_vector_from_virmen"] = iteration_dict[
-                "trial_start_idx_virmen"
-            ]
-            dictionary_sync_data["iteration_idx_vector_from_virmen"] = iteration_dict[
-                "iter_start_idx_virmen"
-            ]
+            dictionary_sync_data["trial_idx_vector_from_virmen"] = iteration_dict["trial_start_idx_virmen"]
+            dictionary_sync_data["iteration_idx_vector_from_virmen"] = iteration_dict["iter_start_idx_virmen"]
 
             final_key = dict(
                 key,
@@ -537,19 +494,13 @@ class BehaviorSync(dj.Imported):
         here = ephys_element.ProbeInsertion & key
         for probe_insertion in here.fetch("KEY"):
             # imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
-            imec_bin_filepath = list(
-                session_dir.glob(
-                    "*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])
-                )
-            )
+            imec_bin_filepath = list(session_dir.glob("*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])))
 
             if len(imec_bin_filepath) == 1:  # find the binary file to get meta data
                 imec_bin_filepath = imec_bin_filepath[0]
             else:  # if this fails, get the ap.meta file.
                 imec_bin_filepath = list(
-                    session_dir.glob(
-                        "*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])
-                    )
+                    session_dir.glob("*imec{}/*.ap.meta".format(probe_insertion["insertion_number"]))
                 )
                 if len(imec_bin_filepath) == 1:
                     s = str(imec_bin_filepath[0])
@@ -558,6 +509,4 @@ class BehaviorSync(dj.Imported):
                     raise NameError("No imec meta file found.")
 
             imec_meta = readSGLX.readMeta(imec_bin_filepath)
-            self.ImecSamplingRate.insert1(
-                dict(probe_insertion, ephys_sampling_rate=imec_meta["imSampRate"])
-            )
+            self.ImecSamplingRate.insert1(dict(probe_insertion, ephys_sampling_rate=imec_meta["imSampRate"]))

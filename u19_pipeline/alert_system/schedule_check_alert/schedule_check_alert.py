@@ -21,9 +21,7 @@ def get_schedule_query():
     today = (datetime.date.today()).strftime("%Y-%m-%d")
     schedule_query = 'date >= "' + today + '" and date <= "' + tomorrow + '"'
     schedule_df = pd.DataFrame(
-        (scheduler.Schedule & schedule_query).fetch(
-            "date", "location", "subject_fullname", as_dict=True
-        )
+        (scheduler.Schedule & schedule_query).fetch("date", "location", "subject_fullname", as_dict=True)
     )
 
     return schedule_df
@@ -33,23 +31,17 @@ def main_schedule_check_alert():
 
     alert = 0
     schedule_df = get_schedule_query()
-    tomorrow_schedule = schedule_df.loc[
-        schedule_df["date"] == (datetime.date.today() + datetime.timedelta(days=1)), :
-    ]
+    tomorrow_schedule = schedule_df.loc[schedule_df["date"] == (datetime.date.today() + datetime.timedelta(days=1)), :]
 
     if tomorrow_schedule.shape[0] == 0:
         alert = 1
         slack_json_message = slack_alert_empty_schedule()
     else:
-        schedule_df = schedule_df.groupby(["date", "location"]).agg(
-            {"subject_fullname": [("#subj", "count")]}
-        )
+        schedule_df = schedule_df.groupby(["date", "location"]).agg({"subject_fullname": [("#subj", "count")]})
         schedule_df.columns = schedule_df.columns.droplevel()
         schedule_df = schedule_df.reset_index()
 
-        todays_summary_df = schedule_df.loc[
-            schedule_df["date"] == datetime.date.today(), ["location", "#subj"]
-        ].copy()
+        todays_summary_df = schedule_df.loc[schedule_df["date"] == datetime.date.today(), ["location", "#subj"]].copy()
         tomorrow_summary_df = schedule_df.loc[
             schedule_df["date"] == (datetime.date.today() + datetime.timedelta(days=1)),
             ["location", "#subj"],
@@ -63,9 +55,7 @@ def main_schedule_check_alert():
         )
         schedule_comp
 
-        schedule_comp["diff_subjects"] = (
-            schedule_comp["#subj_tomorrow"] - schedule_comp["#subj_today"]
-        )
+        schedule_comp["diff_subjects"] = schedule_comp["#subj_tomorrow"] - schedule_comp["#subj_today"]
         schedule_comp["rig_less_subjects"] = schedule_comp["diff_subjects"] < -2
 
         subjects_today = schedule_comp["#subj_today"].sum()
@@ -82,13 +72,9 @@ def main_schedule_check_alert():
 
         if alert == 1:
             schedule_comp["location"] = "*" + schedule_comp["location"] + "*~"
-            schedule_comp = schedule_comp.drop(
-                ["diff_subjects", "rig_less_subjects"], axis=1
-            )
+            schedule_comp = schedule_comp.drop(["diff_subjects", "rig_less_subjects"], axis=1)
             schedule_comp_df_string = su.format_df_for_slack_message(schedule_comp)
-            slack_json_message = slack_alert_message_format_schedule(
-                schedule_comp_df_string
-            )
+            slack_json_message = slack_alert_message_format_schedule(schedule_comp_df_string)
 
     if alert == 0:
         return
@@ -121,9 +107,7 @@ def slack_alert_message_format_schedule(schedule_df_string):
     m2_1 = dict()
     m2_1["type"] = "mrkdwn"
 
-    m2_1["text"] = (
-        "Significantly less subjects scheduled tomorrow\nSchedule per rig:" + "\n\n"
-    )
+    m2_1["text"] = "Significantly less subjects scheduled tomorrow\nSchedule per rig:" + "\n\n"
     m2_1["text"] += schedule_df_string
     m2["text"] = m2_1
 

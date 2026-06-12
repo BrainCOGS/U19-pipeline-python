@@ -67,9 +67,7 @@ class RecordingHandler:
             print("function to apply:", next_status_series["ProcessFunction"])
 
             # Get processing function
-            function_status_process = getattr(
-                RecordingHandler, next_status_series["ProcessFunction"]
-            )
+            function_status_process = getattr(RecordingHandler, next_status_series["ProcessFunction"])
 
             # Trigger process, if success update recording process record
             try:
@@ -85,16 +83,12 @@ class RecordingHandler:
                     field_update = next_status_series["UpdateField"]
 
                     # Update status in u19_recording.recording table (possibly other field as well)
-                    RecordingHandler.update_status_pipeline(
-                        key, next_status, field_update, value_update
-                    )
+                    RecordingHandler.update_status_pipeline(key, next_status, field_update, value_update)
 
                     # Send slack Message to webhook if slack message activated for status
                     if next_status_series["SlackMessage"]:
                         slack_utils.send_slack_update_notification(
-                            config.slack_webhooks_dict[
-                                "automation_pipeline_update_notification"
-                            ],
+                            config.slack_webhooks_dict["automation_pipeline_update_notification"],
                             next_status_series["SlackMessage"],
                             recording_series,
                         )
@@ -102,13 +96,9 @@ class RecordingHandler:
                 # An error occurred in process
                 if status == config.status_update_idx["ERROR_STATUS"]:
                     next_status = config.RECORDING_STATUS_ERROR_ID
-                    RecordingHandler.update_status_pipeline(
-                        key, next_status, None, None
-                    )
+                    RecordingHandler.update_status_pipeline(key, next_status, None, None)
                     slack_utils.send_slack_error_notification(
-                        config.slack_webhooks_dict[
-                            "automation_pipeline_error_notification"
-                        ],
+                        config.slack_webhooks_dict["automation_pipeline_error_notification"],
                         update_dict["error_info"],
                         recording_series,
                     )
@@ -201,9 +191,7 @@ class RecordingHandler:
                 status_update = config.status_update_idx["NEXT_STATUS"]
             else:
                 status_update = config.status_update_idx["ERROR_STATUS"]
-                update_value_dict["error_info"]["error_message"] = (
-                    "Return code scp not = 0"
-                )
+                update_value_dict["error_info"]["error_message"] = "Return code scp not = 0"
 
         print("is_finished", is_finished, "status_update", status_update)
 
@@ -228,14 +216,10 @@ class RecordingHandler:
         rec_series = in_rec_series.copy()
 
         if rec_series["recording_modality"] == "electrophysiology":
-            status_update, update_value_dict = (
-                RecordingHandler.electrophysiology_preingestion(rec_series)
-            )
+            status_update, update_value_dict = RecordingHandler.electrophysiology_preingestion(rec_series)
 
         if rec_series["recording_modality"] == "imaging":
-            status_update, update_value_dict = RecordingHandler.imaging_preingestion(
-                rec_series
-            )
+            status_update, update_value_dict = RecordingHandler.imaging_preingestion(rec_series)
 
         return (status_update, update_value_dict)
 
@@ -247,19 +231,13 @@ class RecordingHandler:
             df_recordings (pd.DataFrame): all recordings that are going to be processed in the pipeline
         """
 
-        status_query = "status_recording_id > " + str(
-            config.recording_status_df["Value"].min()
-        )
-        status_query += " and status_recording_id < " + str(
-            config.recording_status_df["Value"].max()
-        )
+        status_query = "status_recording_id > " + str(config.recording_status_df["Value"].min())
+        status_query += " and status_recording_id < " + str(config.recording_status_df["Value"].max())
 
         print(status_query)
 
         recordings_active = (
-            recording.Recording
-            * lab.Location.proj("ip_address", "system_user", "acquisition_type")
-            & status_query
+            recording.Recording * lab.Location.proj("ip_address", "system_user", "acquisition_type") & status_query
         )
 
         print(recordings_active)
@@ -268,16 +246,12 @@ class RecordingHandler:
 
         if df_recordings.shape[0] > 0:
             key_list = dj_short.get_primary_key_fields(recording.Recording)
-            df_recordings["query_key"] = df_recordings.loc[:, key_list].to_dict(
-                orient="records"
-            )
+            df_recordings["query_key"] = df_recordings.loc[:, key_list].to_dict(orient="records")
 
         return df_recordings
 
     @staticmethod
-    def update_status_pipeline(
-        recording_key_dict, status, update_field=None, update_value=None
-    ):
+    def update_status_pipeline(recording_key_dict, status, update_field=None, update_value=None):
         """
         Update recording.Recording table status and optional task field
         Args:
@@ -304,9 +278,7 @@ class RecordingHandler:
         recording.Recording.update1(update_status_dict)
 
     @staticmethod
-    def update_recording_log(
-        recording_id, current_status, next_status, error_info_dict
-    ):
+    def update_recording_log(recording_id, current_status, next_status, error_info_dict):
         """
         Update recording.RecordingLog table status and optional task field
         Args:
@@ -324,19 +296,11 @@ class RecordingHandler:
         key["status_recording_id_new"] = next_status
         key["recording_status_timestamp"] = date_time
 
-        if (
-            error_info_dict["error_message"] is not None
-            and len(error_info_dict["error_message"]) >= 256
-        ):
+        if error_info_dict["error_message"] is not None and len(error_info_dict["error_message"]) >= 256:
             error_info_dict["error_message"] = error_info_dict["error_message"][:255]
 
-        if (
-            error_info_dict["error_exception"] is not None
-            and len(error_info_dict["error_exception"]) >= 4096
-        ):
-            error_info_dict["error_exception"] = error_info_dict["error_exception"][
-                :4095
-            ]
+        if error_info_dict["error_exception"] is not None and len(error_info_dict["error_exception"]) >= 4096:
+            error_info_dict["error_exception"] = error_info_dict["error_exception"][:4095]
 
         key["recording_error_message"] = error_info_dict["error_message"]
         key["recording_error_exception"] = error_info_dict["error_exception"]
@@ -366,9 +330,9 @@ class RecordingHandler:
         ephys_element_ingest.process_session(rec_series["query_key"])
         ephys_pipeline.ephys_element.EphysRecording.populate(rec_series["query_key"])
 
-        ingested_recording = (
-            ephys_pipeline.ephys_element.EphysRecording & rec_series["query_key"]
-        ).fetch("KEY", as_dict=True)
+        ingested_recording = (ephys_pipeline.ephys_element.EphysRecording & rec_series["query_key"]).fetch(
+            "KEY", as_dict=True
+        )
 
         print("before BehaviorSync")
         print("rec_series['query_key']", rec_series["query_key"])
@@ -383,34 +347,25 @@ class RecordingHandler:
             return (status_update, update_value_dict)
 
         # Insert recording processes records
-        old_recording_process = (
-            recording_process.Processing() & rec_series["query_key"]
-        ).fetch("KEY", as_dict=True)
+        old_recording_process = (recording_process.Processing() & rec_series["query_key"]).fetch("KEY", as_dict=True)
         if len(old_recording_process) == 0:
             connection = recording.Recording.connection
             with connection.transaction:
-                probe_files = (
-                    ephys_pipeline.ephys_element.EphysRecording.EphysFile
-                    & rec_series["query_key"]
-                ).fetch(as_dict=True)
+                probe_files = (ephys_pipeline.ephys_element.EphysRecording.EphysFile & rec_series["query_key"]).fetch(
+                    as_dict=True
+                )
                 probe_files = [
                     dict(
                         item,
-                        recording_process_pre_path=pathlib.Path(item["file_path"])
-                        .parents[0]
-                        .as_posix(),
+                        recording_process_pre_path=pathlib.Path(item["file_path"]).parents[0].as_posix(),
                     )
                     for item in probe_files
                 ]
 
-                recording_process.Processing().insert_recording_process(
-                    probe_files, "insertion_number"
-                )
+                recording_process.Processing().insert_recording_process(probe_files, "insertion_number")
 
                 # Get parameters for recording processes
-                recording_processes = (
-                    recording_process.Processing() & rec_series["query_key"]
-                ).fetch(
+                recording_processes = (recording_process.Processing() & rec_series["query_key"]).fetch(
                     "job_id",
                     "recording_id",
                     "fragment_number",
@@ -418,14 +373,10 @@ class RecordingHandler:
                     as_dict=True,
                 )
                 default_params_record_df = pd.DataFrame(
-                    (recording.DefaultParams & rec_series["query_key"]).fetch(
-                        as_dict=True
-                    )
+                    (recording.DefaultParams & rec_series["query_key"]).fetch(as_dict=True)
                 )
-                params_rec_process = (
-                    recording.DefaultParams.get_default_params_rec_process(
-                        recording_processes, default_params_record_df
-                    )
+                params_rec_process = recording.DefaultParams.get_default_params_rec_process(
+                    recording_processes, default_params_record_df
                 )
 
                 # Rename preprocess_param_steps_id with the electrophysiology one
@@ -435,14 +386,10 @@ class RecordingHandler:
                 recording_process.Processing.EphysParams.insert(params_rec_process)
 
                 # Update recording_process_post_path
-                recording_process.Processing().set_recording_process_post_path(
-                    recording_processes
-                )
+                recording_process.Processing().set_recording_process_post_path(recording_processes)
 
                 # Create lfp trace if needed (neuropixel 2.0 probes)
-                recording_directory = (
-                    recording.Recording & rec_series["query_key"]
-                ).fetch1("recording_directory")
+                recording_directory = (recording.Recording & rec_series["query_key"]).fetch1("recording_directory")
                 recording_directory = pathlib.Path(
                     dj.config["custom"]["ephys_root_data_dir"][0], recording_directory
                 ).parent.as_posix()
@@ -451,9 +398,7 @@ class RecordingHandler:
                         dj.config["custom"]["ephys_root_data_dir"][0],
                         i["recording_process_pre_path"],
                     ).as_posix()
-                    ephys_pipeline.create_lfp_trace(
-                        config.catgt_script, recording_directory, probe_dir
-                    )
+                    ephys_pipeline.create_lfp_trace(config.catgt_script, recording_directory, probe_dir)
 
         status_update = config.status_update_idx["NEXT_STATUS"]
 
@@ -485,15 +430,11 @@ class RecordingHandler:
         imaging_pipeline.AcquiredTiff.populate(rec_series["query_key"])
 
         # Retrieve all fovs records ingested in matlab Script
-        fovs_ingested = (imaging_pipeline.TiffSplit & rec_series["query_key"]).fetch(
-            "KEY", as_dict=True
-        )
+        fovs_ingested = (imaging_pipeline.TiffSplit & rec_series["query_key"]).fetch("KEY", as_dict=True)
 
         if len(fovs_ingested) == 0:
             status_update = config.status_update_idx["ERROR_STATUS"]
-            update_value_dict["error_info"]["error_message"] = (
-                "Imaging TiffSplit process failed"
-            )
+            update_value_dict["error_info"]["error_message"] = "Imaging TiffSplit process failed"
             return (status_update, update_value_dict)
 
         # Ingest Scan for each fov from the TiffSplit process
@@ -517,61 +458,40 @@ class RecordingHandler:
             )
 
         # Populate ScanInfo for all fovs
-        imaging_pipeline.scan_element.ScanInfo.populate(
-            rec_series["query_key"], display_progress=True
-        )
+        imaging_pipeline.scan_element.ScanInfo.populate(rec_series["query_key"], display_progress=True)
 
         # ingested_recording = (imaging_pipeline.scan_element.Scan & rec_series['query_key']).fetch("KEY", as_dict=True)
 
         # Get fov directories for each recording process:
         fov_files_df = pd.DataFrame(
-            (
-                imaging_pipeline.scan_element.ScanInfo.ScanFile
-                & rec_series["query_key"]
-            ).fetch(as_dict=True)
+            (imaging_pipeline.scan_element.ScanInfo.ScanFile & rec_series["query_key"]).fetch(as_dict=True)
         )
 
         fov_files = fov_files_df.groupby("tiff_split").first().reset_index()
 
         # Insert recording processes records
-        old_recording_process = (
-            recording_process.Processing() & rec_series["query_key"]
-        ).fetch("KEY", as_dict=True)
+        old_recording_process = (recording_process.Processing() & rec_series["query_key"]).fetch("KEY", as_dict=True)
         if len(old_recording_process) == 0:
             connection = recording.Recording.connection
             with connection.transaction:
                 # Get fov directories for each recording process:
                 fov_files_df = pd.DataFrame(
-                    (
-                        imaging_pipeline.scan_element.ScanInfo.ScanFile
-                        & rec_series["query_key"]
-                    ).fetch(as_dict=True)
+                    (imaging_pipeline.scan_element.ScanInfo.ScanFile & rec_series["query_key"]).fetch(as_dict=True)
                 )
-                fov_files = (
-                    fov_files_df.groupby("tiff_split")
-                    .first()
-                    .reset_index()
-                    .to_dict("records")
-                )
+                fov_files = fov_files_df.groupby("tiff_split").first().reset_index().to_dict("records")
 
                 fov_files = [
                     dict(
                         item,
-                        recording_process_pre_path=pathlib.Path(
-                            item["file_path"]
-                        ).parent.as_posix(),
+                        recording_process_pre_path=pathlib.Path(item["file_path"]).parent.as_posix(),
                     )
                     for item in fov_files
                 ]
 
-                recording_process.Processing().insert_recording_process(
-                    fov_files, "tiff_split"
-                )
+                recording_process.Processing().insert_recording_process(fov_files, "tiff_split")
 
                 # Get parameters for recording processes
-                recording_processes = (
-                    recording_process.Processing() & rec_series["query_key"]
-                ).fetch(
+                recording_processes = (recording_process.Processing() & rec_series["query_key"]).fetch(
                     "job_id",
                     "recording_id",
                     "fragment_number",
@@ -579,24 +499,16 @@ class RecordingHandler:
                     as_dict=True,
                 )
                 default_params_record_df = pd.DataFrame(
-                    (recording.DefaultParams & rec_series["query_key"]).fetch(
-                        as_dict=True
-                    )
+                    (recording.DefaultParams & rec_series["query_key"]).fetch(as_dict=True)
                 )
-                params_rec_process = (
-                    recording.DefaultParams.get_default_params_rec_process(
-                        recording_processes, default_params_record_df
-                    )
+                params_rec_process = recording.DefaultParams.get_default_params_rec_process(
+                    recording_processes, default_params_record_df
                 )
 
-                recording_process.Processing.ImagingParams.insert(
-                    params_rec_process, skip_duplicates=True
-                )
+                recording_process.Processing.ImagingParams.insert(params_rec_process, skip_duplicates=True)
 
                 # Update recording_process_post_path
-                recording_process.Processing().set_recording_process_post_path(
-                    recording_processes
-                )
+                recording_process.Processing().set_recording_process_post_path(recording_processes)
 
         status_update = config.status_update_idx["NEXT_STATUS"]
 

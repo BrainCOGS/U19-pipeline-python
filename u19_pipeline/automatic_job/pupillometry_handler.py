@@ -46,9 +46,7 @@ def pupillometry_exception_handler(func):
 class PupillometryProcessingHandler:
     spock_home_dir = "/mnt/cup/braininit/Shared/repos/U19-pipeline_python/"
     spock_log_dir = spock_home_dir + "u19_pipeline/automatic_job/OutputLog/"
-    process_script_path = (
-        spock_home_dir + "u19_pipeline/automatic_job/pupillometry_handler.py"
-    )
+    process_script_path = spock_home_dir + "u19_pipeline/automatic_job/pupillometry_handler.py"
     spock_error_dir = spock_home_dir + "u19_pipeline/automatic_job/ErrorLog/"
     spock_slurm_filepath = spock_home_dir + "u19_pipeline/"
     spock_system_name = "spockmk2-loginvm.pni.princeton.edu"
@@ -71,11 +69,7 @@ class PupillometryProcessingHandler:
     def generate_slurm_pupillometry(slurm_dict):
 
         slurm_text = "#!/bin/bash\n"
-        slurm_text += (
-            PupillometryProcessingHandler.create_pupillometry_slurm_params_file(
-                slurm_dict
-            )
-        )
+        slurm_text += PupillometryProcessingHandler.create_pupillometry_slurm_params_file(slurm_dict)
         slurm_text += """
         echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
         echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
@@ -103,17 +97,9 @@ class PupillometryProcessingHandler:
         for slurm_param in slurm_dict.keys():
             if isinstance(slurm_dict[slurm_param], list):
                 for list_param in slurm_dict[slurm_param]:
-                    text_dict += (
-                        "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"
-                    )
+                    text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"
             else:
-                text_dict += (
-                    "#SBATCH --"
-                    + str(slurm_param)
-                    + "="
-                    + str(slurm_dict[slurm_param])
-                    + "\n"
-                )
+                text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(slurm_dict[slurm_param]) + "\n"
 
         return text_dict
 
@@ -126,27 +112,19 @@ class PupillometryProcessingHandler:
         # Get all associated directories given the selected processing cluster
 
         # Start with default values
-        slurm_dict = copy.deepcopy(
-            PupillometryProcessingHandler.slurm_dict_pupillometry_spock
-        )
+        slurm_dict = copy.deepcopy(PupillometryProcessingHandler.slurm_dict_pupillometry_spock)
         label_rec_process = "job_id_" + str(video_dir.stem)
         slurm_dict["job-name"] = label_rec_process
         print("PupillometryProcessingHandler.spock_log_dir")
         print(PupillometryProcessingHandler.spock_log_dir)
         print("label_rec_process", label_rec_process)
         print("video_dir", video_dir)
-        slurm_dict["output"] = (
-            PupillometryProcessingHandler.spock_log_dir + label_rec_process + ".log"
-        )
-        slurm_dict["error"] = (
-            PupillometryProcessingHandler.spock_error_dir + label_rec_process + ".log"
-        )
+        slurm_dict["output"] = PupillometryProcessingHandler.spock_log_dir + label_rec_process + ".log"
+        slurm_dict["error"] = PupillometryProcessingHandler.spock_error_dir + label_rec_process + ".log"
 
         print("slurm_dict", slurm_dict)
 
-        slurm_text = PupillometryProcessingHandler.generate_slurm_pupillometry(
-            slurm_dict
-        )
+        slurm_text = PupillometryProcessingHandler.generate_slurm_pupillometry(slurm_dict)
 
         slurm_file_local_path = str(
             pathlib.Path(
@@ -277,9 +255,7 @@ class PupillometryProcessingHandler:
         # Set a treshold for a valid zscore value (determined empirically)
         outlierFlags = np.abs(zscore) > 2
         # Get a boolean array where true correspond to the frame with an outlier diameter
-        outlierFlags = outlierFlags.rename(
-            columns={outlierFlags.columns[0]: "OutlierFlag"}
-        )
+        outlierFlags = outlierFlags.rename(columns={outlierFlags.columns[0]: "OutlierFlag"})
         # Concatenate outlier flags array to remove outliers from pupil diameter array
         temp = pd.concat([df, outlierFlags], axis=1)
         temp.loc[temp["OutlierFlag"] == True, "PupilDiameter"] = None
@@ -303,8 +279,7 @@ class PupillometryProcessingHandler:
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         sessions_missing_process = (
-            acquisition.SessionVideo * pupillometry.PupillometrySessionModelData
-            & "pupillometry_job_id is NULL"
+            acquisition.SessionVideo * pupillometry.PupillometrySessionModelData & "pupillometry_job_id is NULL"
         ).fetch(as_dict=True)
 
         print(sessions_missing_process)
@@ -324,31 +299,22 @@ class PupillometryProcessingHandler:
 
             # Get model location
             model_key = (
-                pupillometry.PupillometryModels
-                & "model_id = " + str(pupillometry_2_process["model_id"])
+                pupillometry.PupillometryModels & "model_id = " + str(pupillometry_2_process["model_id"])
             ).fetch(as_dict=True)[0]
             models_dir = dj.config.get("custom", {}).get("root_data_dir", None)
             if models_dir is None:
-                raise Exception(
-                    "root_data_dir in not found in config, , run initial_conf.py again"
-                )
+                raise Exception("root_data_dir in not found in config, , run initial_conf.py again")
             models_dir = models_dir[0]
             model_path = pathlib.Path(models_dir, model_key["model_path"])
 
             print("model path", model_path)
 
             # Get video location
-            pupillometry_dir = dj.config.get("custom", {}).get(
-                "pupillometry_root_data_dir", None
-            )
+            pupillometry_dir = dj.config.get("custom", {}).get("pupillometry_root_data_dir", None)
             if pupillometry_dir is None:
-                raise Exception(
-                    "pupillometry_root_data_dir not found in config, run initial_conf.py again"
-                )
+                raise Exception("pupillometry_root_data_dir not found in config, run initial_conf.py again")
             pupillometry_raw_dir = pupillometry_dir[0]
-            videoPath = pathlib.Path(
-                pupillometry_raw_dir, pupillometry_2_process["remote_path_video_file"]
-            )
+            videoPath = pathlib.Path(pupillometry_raw_dir, pupillometry_2_process["remote_path_video_file"])
 
             print("videoPath", videoPath)
 
@@ -362,9 +328,7 @@ class PupillometryProcessingHandler:
                 output_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate slurm file and transfer it to spock
-            status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(
-                videoPath
-            )
+            status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(videoPath)
             print("slurm_filepath", slurm_filepath)
 
             # Error handling (generating slurm file)
@@ -376,9 +340,7 @@ class PupillometryProcessingHandler:
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
                 slack_utils.send_slack_error_pupillometry_notification(
-                    config.slack_webhooks_dict[
-                        "automation_pipeline_error_notification"
-                    ],
+                    config.slack_webhooks_dict["automation_pipeline_error_notification"],
                     update_value_dict["error_info"],
                     pupillometry_2_process,
                 )
@@ -387,29 +349,23 @@ class PupillometryProcessingHandler:
                 continue
 
             # Queue slurm file in spock
-            status, slurm_jobid, error_message = (
-                PupillometryProcessingHandler.queue_pupillometry_slurm_file(
-                    videoPath,
-                    model_path,
-                    PupillometryProcessingHandler.spock_home_dir,
-                    output_dir,
-                    PupillometryProcessingHandler.process_script_path,
-                    slurm_filepath,
-                )
+            status, slurm_jobid, error_message = PupillometryProcessingHandler.queue_pupillometry_slurm_file(
+                videoPath,
+                model_path,
+                PupillometryProcessingHandler.spock_home_dir,
+                output_dir,
+                PupillometryProcessingHandler.process_script_path,
+                slurm_filepath,
             )
 
             # Error handling (queuing slurm file)
             if status != config.system_process["SUCCESS"]:
                 status_update = config.status_update_idx["ERROR_STATUS"]
-                update_value_dict["error_info"]["error_message"] = (
-                    "Error to queue pupillometry slurm file"
-                )
+                update_value_dict["error_info"]["error_message"] = "Error to queue pupillometry slurm file"
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
                 slack_utils.send_slack_error_pupillometry_notification(
-                    config.slack_webhooks_dict[
-                        "automation_pipeline_error_notification"
-                    ],
+                    config.slack_webhooks_dict["automation_pipeline_error_notification"],
                     update_value_dict["error_info"],
                     pupillometry_2_process,
                 )
@@ -459,17 +415,13 @@ class PupillometryProcessingHandler:
 
             # If job finished copy over output and/or error log
             if status_update == config.status_update_idx["ERROR_STATUS"]:
-                update_value_dict["error_info"]["error_message"] = (
-                    "An error occured in processing (check LOG)"
-                )
+                update_value_dict["error_info"]["error_message"] = "An error occured in processing (check LOG)"
                 update_value_dict["error_info"]["error_exception"] = message
 
                 key_update["pupillometry_job_id"] = -1
                 pupillometry.PupillometrySessionModelData.update1(key_update)
                 slack_utils.send_slack_error_pupillometry_notification(
-                    config.slack_webhooks_dict[
-                        "automation_pipeline_error_notification"
-                    ],
+                    config.slack_webhooks_dict["automation_pipeline_error_notification"],
                     update_value_dict["error_info"],
                     session_check,
                 )
@@ -477,13 +429,9 @@ class PupillometryProcessingHandler:
 
             # Get video location
             if status_update == config.status_update_idx["NEXT_STATUS"]:
-                pupillometry_dir = dj.config.get("custom", {}).get(
-                    "pupillometry_root_data_dir", None
-                )
+                pupillometry_dir = dj.config.get("custom", {}).get("pupillometry_root_data_dir", None)
                 if pupillometry_dir is None:
-                    raise Exception(
-                        "pupillometry_root_data_dir not found in config, run initial_conf.py again"
-                    )
+                    raise Exception("pupillometry_root_data_dir not found in config, run initial_conf.py again")
 
                 # Create output location
                 pupillometry_processed_dir = pupillometry_dir[1]
@@ -501,9 +449,7 @@ class PupillometryProcessingHandler:
                         "Didnt find any h5 files after deeplabcut analyze_video"
                     )
                     slack_utils.send_slack_error_pupillometry_notification(
-                        config.slack_webhooks_dict[
-                            "automation_pipeline_error_notification"
-                        ],
+                        config.slack_webhooks_dict["automation_pipeline_error_notification"],
                         update_value_dict["error_info"],
                         session_check,
                     )
@@ -514,17 +460,13 @@ class PupillometryProcessingHandler:
                     h5_files = h5_files[0]
 
                 try:
-                    pupil_data = PupillometryProcessingHandler.getPupilDiameter(
-                        h5_files
-                    )
+                    pupil_data = PupillometryProcessingHandler.getPupilDiameter(h5_files)
                 except Exception:
                     update_value_dict["error_info"]["error_message"] = (
                         "Could not get pupil diameter (check h5 or video file)"
                     )
                     slack_utils.send_slack_error_pupillometry_notification(
-                        config.slack_webhooks_dict[
-                            "automation_pipeline_error_notification"
-                        ],
+                        config.slack_webhooks_dict["automation_pipeline_error_notification"],
                         update_value_dict["error_info"],
                         session_check,
                     )
@@ -536,9 +478,7 @@ class PupillometryProcessingHandler:
                 print("key_update", key_update)
                 pupillometry.PupillometrySessionModelData.update1(key_update)
                 slack_utils.send_slack_pupillometry_update_notification(
-                    config.slack_webhooks_dict[
-                        "automation_pipeline_update_notification"
-                    ],
+                    config.slack_webhooks_dict["automation_pipeline_update_notification"],
                     "Pupillometry job finished",
                     session_check,
                 )

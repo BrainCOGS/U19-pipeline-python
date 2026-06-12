@@ -78,9 +78,7 @@ recording_status_dict = [
 
 recording_status_list = [[i["Value"], i["Label"]] for i in recording_status_dict]
 recording_status_df = pd.DataFrame(recording_status_dict)
-RECORDING_STATUS_ERROR_ID = recording_status_df.loc[
-    recording_status_df["Key"] == "ERROR", "Value"
-].values[0]
+RECORDING_STATUS_ERROR_ID = recording_status_df.loc[recording_status_df["Key"] == "ERROR", "Value"].values[0]
 
 # Dictionary with status configuration for recording process (units of each recording)
 recording_process_status_dict = [
@@ -185,15 +183,11 @@ recording_process_status_dict = [
     },
 ]
 
-recording_process_status_list = [
-    [i["Value"], i["Label"]] for i in recording_process_status_dict
-]
+recording_process_status_list = [[i["Value"], i["Label"]] for i in recording_process_status_dict]
 recording_process_status_df = pd.DataFrame(recording_process_status_dict)
 
 # All error and success status values
-JOB_STATUS_ERROR_ID = recording_process_status_df.loc[
-    recording_process_status_df["Key"] == "ERROR", "Value"
-].values[0]
+JOB_STATUS_ERROR_ID = recording_process_status_df.loc[recording_process_status_df["Key"] == "ERROR", "Value"].values[0]
 JOB_STATUS_PROCESSED = recording_process_status_df.loc[
     recording_process_status_df["Key"] == "JOB_FINISHED_ELEMENT_WORKFLOW", "Value"
 ].values[0]

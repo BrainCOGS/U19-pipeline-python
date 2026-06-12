@@ -13,10 +13,7 @@ def get_shift_vector(
 
     diff_size = np.abs(synced_time_vector.shape[0] - behavior_time_vector.shape[0])
 
-    baseline_diff = (
-        synced_time_vector[initial_sample:base_size]
-        - behavior_time_vector[initial_sample:base_size]
-    )
+    baseline_diff = synced_time_vector[initial_sample:base_size] - behavior_time_vector[initial_sample:base_size]
 
     """
     while(1):
@@ -80,9 +77,7 @@ def get_shift_vector(
                     new_sign = -1
 
                 if new_sign != sign:
-                    if np.abs(median_ori - median_diff) < np.abs(
-                        median_now - median_diff
-                    ):
+                    if np.abs(median_ori - median_diff) < np.abs(median_now - median_diff):
                         vec_shift[i] = 0
                     else:
                         vec_shift[i] = j * sign
@@ -95,9 +90,7 @@ def get_shift_vector(
     new_synced_time_vector = synced_time_vector.copy()
     mid_point = int(initial_sample + base_size / 2)
     for i in range(vec_shift.shape[0]):
-        new_synced_time_vector[mid_point + i] = synced_time_vector[
-            mid_point + i + vec_shift[i]
-        ]
+        new_synced_time_vector[mid_point + i] = synced_time_vector[mid_point + i + vec_shift[i]]
 
     idx_end = mid_point + vec_shift.shape[0] - 1
     for i in range(idx_end, new_synced_time_vector.shape[0]):
@@ -116,9 +109,7 @@ def get_shift_vector(
     return new_synced_time_vector, vec_shift, [min_diff, median_diff, max_diff]
 
 
-def fix_shifted_sync_vector(
-    synced_time_vector, behavior_time_vector, vec_shift, initial_sample=0, base_size=40
-):
+def fix_shifted_sync_vector(synced_time_vector, behavior_time_vector, vec_shift, initial_sample=0, base_size=40):
 
     mid_point = int(initial_sample + base_size / 2)
     new_synced_time_vector = synced_time_vector.copy()
@@ -145,9 +136,7 @@ def fix_shifted_sync_vector(
                     consecutive_zeros[stable_parts[0]],
                 ]
             )
-            next_borrow_start = np.where(
-                where_insert_iteration > consecutive_zeros[stable_parts[0]]
-            )
+            next_borrow_start = np.where(where_insert_iteration > consecutive_zeros[stable_parts[0]])
             next_borrow_start = next_borrow_start[0]
             if next_borrow_start.shape[0] > 0:
                 index_shift = next_borrow_start[0]
@@ -156,9 +145,7 @@ def fix_shifted_sync_vector(
         else:
             print("Extreme case diff vec shift")
 
-            index_borrow_virmen.append(
-                [where_insert_iteration[index_shift], diff_vec_shift.shape[0]]
-            )
+            index_borrow_virmen.append([where_insert_iteration[index_shift], diff_vec_shift.shape[0]])
             print("index_borrow_virmen", index_borrow_virmen)
             break
 
@@ -186,10 +173,7 @@ def fix_shifted_sync_vector(
             # print('behavior_time_vector', behavior_time_vector[index_diff_s-1:index_diff_e+2])
             # print('new_synced_time_vector2', new_synced_time_vector2[index_diff_s-1:index_diff_e+2])
 
-            time_iteration = (
-                behavior_time_vector[index_diff_s : index_diff_e + 1]
-                - behavior_time_vector[index_diff_s]
-            )
+            time_iteration = behavior_time_vector[index_diff_s : index_diff_e + 1] - behavior_time_vector[index_diff_s]
             # print('time_iteration', time_iteration)
 
             new_synced_time_vector[index_diff_s : index_diff_e + 1] = (
@@ -200,9 +184,7 @@ def fix_shifted_sync_vector(
                 + time_iteration
             )
 
-            check_diff = np.diff(
-                new_synced_time_vector[index_diff_s : index_diff_e + 2]
-            )
+            check_diff = np.diff(new_synced_time_vector[index_diff_s : index_diff_e + 2])
             idx_back_time = np.where(check_diff <= 0.0005)
             idx_back_time = idx_back_time[0]
             if idx_back_time.shape[0] == 0:
@@ -220,9 +202,7 @@ def fix_sync_vector_greater(sync_time_vector, behavior_time_vector):
 
     new_sync_time_vector = sync_time_vector.copy()
 
-    diff_vecs = (
-        new_sync_time_vector - behavior_time_vector[: new_sync_time_vector.shape[0]]
-    )
+    diff_vecs = new_sync_time_vector - behavior_time_vector[: new_sync_time_vector.shape[0]]
 
     idx_plus = np.where(diff_vecs > 0)
     idx_plus = idx_plus[0]
@@ -236,13 +216,9 @@ def fix_sync_vector_greater(sync_time_vector, behavior_time_vector):
             idx_start = grouped_sections[i][0] - 1
             idx_end = grouped_sections[i][-1]
 
-            time_vector = (
-                behavior_time_vector[idx_start : idx_end + 1]
-                - behavior_time_vector[idx_start]
-            )
+            time_vector = behavior_time_vector[idx_start : idx_end + 1] - behavior_time_vector[idx_start]
             new_sync_time_vector[idx_start : idx_end + 1] = (
-                np.repeat(new_sync_time_vector[idx_start], idx_end - idx_start + 1)
-                + time_vector
+                np.repeat(new_sync_time_vector[idx_start], idx_end - idx_start + 1) + time_vector
             )
 
             borrowed_indexes.append([idx_start, idx_end])
@@ -260,9 +236,7 @@ def complete_last_part_sync_vec(sync_time_vector, behavior_time_vector):
     if diff_size > 0:
         diff_size = diff_size + 1
 
-        last_part_bt = (
-            behavior_time_vector[-diff_size:] - behavior_time_vector[-diff_size]
-        )
+        last_part_bt = behavior_time_vector[-diff_size:] - behavior_time_vector[-diff_size]
         insert_part = np.repeat(new_sync_time_vector[-1], diff_size) + last_part_bt
         # print('last_part_bt',last_part_bt)
 
@@ -295,17 +269,11 @@ def fix_iter_vector(
     first_iter = synced_iteration_vector[0]
     for i in range(diff_iter_times_idx.shape[0]):
         if diff_iter_times_idx[i] != 0:
-            new_synced_iteration_vector[i] = first_iter + int(
-                synced_time_vector[i] * nidq_sampling_rate
-            )
+            new_synced_iteration_vector[i] = first_iter + int(synced_time_vector[i] * nidq_sampling_rate)
 
     if ori_shape != new_shape:
-        last_iterations = np.round(
-            first_iter + synced_time_vector[ori_shape:] * nidq_sampling_rate
-        )
-        new_synced_iteration_vector = np.append(
-            new_synced_iteration_vector, last_iterations.astype(np.int64)
-        )
+        last_iterations = np.round(first_iter + synced_time_vector[ori_shape:] * nidq_sampling_rate)
+        new_synced_iteration_vector = np.append(new_synced_iteration_vector, last_iterations.astype(np.int64))
 
     return new_synced_iteration_vector
 
@@ -313,9 +281,7 @@ def fix_iter_vector(
 def sync_evaluation_process2(synced_time_vector, behavior_time_vector):
 
     status = 1
-    diff_vector = (
-        synced_time_vector - behavior_time_vector[: synced_time_vector.shape[0]]
-    )
+    diff_vector = synced_time_vector - behavior_time_vector[: synced_time_vector.shape[0]]
     num_iter = diff_vector.shape[0]
 
     # max_diff = max(diff_vector)
@@ -327,14 +293,8 @@ def sync_evaluation_process2(synced_time_vector, behavior_time_vector):
     for j in range(num_div):
         start_iter = int(j * num_iter / num_div)
         end_iter = int((j + 1) * num_iter / num_div)
-        median_diff_percent[j] = (
-            (np.median(diff_vector[start_iter:end_iter]) - median_general)
-            * 100
-            / median_general
-        )
-        median_diff_abs[j] = (
-            np.median(diff_vector[start_iter:end_iter]) - median_general
-        )
+        median_diff_percent[j] = (np.median(diff_vector[start_iter:end_iter]) - median_general) * 100 / median_general
+        median_diff_abs[j] = np.median(diff_vector[start_iter:end_iter]) - median_general
 
     if np.max(np.abs(median_diff_abs)) < 0.005:
         pass
@@ -345,9 +305,7 @@ def sync_evaluation_process2(synced_time_vector, behavior_time_vector):
     return status
 
 
-def main_ephys_fix_sync_code(
-    iter_start_idx, iter_times_idx, behavior_time, nidq_sampling_rate
-):
+def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq_sampling_rate):
 
     iteration_dict = dict()
     iteration_dict["iter_start_idx"] = list()
@@ -357,19 +315,13 @@ def main_ephys_fix_sync_code(
         # print('fixing trial ',i)
         behavior_time_vector = behavior_time[i].flatten()
 
-        synced_time_vector, shift_vec, median_vec = get_shift_vector(
-            iter_times_idx[i], behavior_time_vector
-        )
+        synced_time_vector, shift_vec, median_vec = get_shift_vector(iter_times_idx[i], behavior_time_vector)
 
-        synced_time_vector, _ = fix_shifted_sync_vector(
-            synced_time_vector, behavior_time_vector, shift_vec
-        )
+        synced_time_vector, _ = fix_shifted_sync_vector(synced_time_vector, behavior_time_vector, shift_vec)
 
         # synced_time_vector, trial_stats_dict['borrow_step3'] =\
         #    fix_sync_vector_greater(synced_time_vector, behavior_time_vector)
-        synced_time_vector, _ = complete_last_part_sync_vec(
-            synced_time_vector, behavior_time_vector
-        )
+        synced_time_vector, _ = complete_last_part_sync_vec(synced_time_vector, behavior_time_vector)
 
         synced_iteration_vector = fix_iter_vector(
             iter_start_idx[i], synced_time_vector, iter_times_idx[i], nidq_sampling_rate
@@ -380,20 +332,14 @@ def main_ephys_fix_sync_code(
 
     print("end fix sync code 1")
 
-    iteration_dict["iter_start_idx"] = np.asarray(
-        iteration_dict["iter_start_idx"].copy(), dtype=object
-    )
-    iteration_dict["iter_times_idx"] = np.asarray(
-        iteration_dict["iter_times_idx"].copy(), dtype=object
-    )
+    iteration_dict["iter_start_idx"] = np.asarray(iteration_dict["iter_start_idx"].copy(), dtype=object)
+    iteration_dict["iter_times_idx"] = np.asarray(iteration_dict["iter_times_idx"].copy(), dtype=object)
 
     print("end fix sync code")
 
     # Check # of trials and iterations match
     trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = (
-        ephys_utils.assert_iteration_samples_count(
-            iteration_dict["iter_start_idx"], behavior_time
-        )
+        ephys_utils.assert_iteration_samples_count(iteration_dict["iter_start_idx"], behavior_time)
     )
 
     print("after assert_iteration_samples_count fix sync code")
@@ -425,10 +371,8 @@ def main_ephys_fix_sync_code(
     print("after sync_evaluation_process2", status)
 
     if status == 1:
-        iteration_dict["trial_start_idx"] = (
-            ephys_utils.get_index_trial_vector_from_iteration(
-                iteration_dict["iter_start_idx"]
-            )
+        iteration_dict["trial_start_idx"] = ephys_utils.get_index_trial_vector_from_iteration(
+            iteration_dict["iter_start_idx"]
         )
 
     print("after get_index_trial_vector_from_iteration")

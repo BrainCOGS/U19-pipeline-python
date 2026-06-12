@@ -44,10 +44,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     host = "datajoint00.pni.princeton.edu"
 
     user_already = False
-    if (
-        "database.user" in dj.config
-        and dj.config.instance._conf["database.user"] is not None
-    ):
+    if "database.user" in dj.config and dj.config.instance._conf["database.user"] is not None:
         user_already = True
 
     if replace_user or not user_already:
@@ -76,9 +73,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
 
     # Transform variables to list and path if applicable
     for custom_var in custom_vars_names:
-        this_var = custom_vars.loc[
-            custom_vars["custom_variable"] == custom_var, "value"
-        ].tolist()
+        this_var = custom_vars.loc[custom_vars["custom_variable"] == custom_var, "value"].tolist()
 
         # If custom variables are directories, get local path for this system
         if "dir" in custom_var:
@@ -100,9 +95,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     for i in dj_stores:
         store_name = i.pop("store_name")
         dj_stores_dict[store_name] = i
-        dj_stores_dict[store_name]["location"] = (
-            lab.Path().get_local_path2(i["location"]).as_posix()
-        )
+        dj_stores_dict[store_name]["location"] = lab.Path().get_local_path2(i["location"]).as_posix()
 
     dj.config["stores"] = dj_stores_dict
 
@@ -123,9 +116,7 @@ if __name__ == "__main__":
         help="prevent to save user into conf file",
         action="store_true",
     )
-    parser.add_argument(
-        "--replace_user", "-r", help="replace user in conf file", action="store_true"
-    )
+    parser.add_argument("--replace_user", "-r", help="replace user in conf file", action="store_true")
     parser.add_argument(
         "--not_global_config",
         "-ng",

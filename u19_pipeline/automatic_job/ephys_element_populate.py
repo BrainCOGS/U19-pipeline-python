@@ -3,9 +3,7 @@ from u19_pipeline import recording, recording_process
 from u19_pipeline.ephys_pipeline import ephys_element, probe_element
 
 
-def populate_element_data(
-    job_id, display_progress=True, reserve_jobs=False, suppress_errors=False
-):
+def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {
         "display_progress": display_progress,
@@ -14,28 +12,22 @@ def populate_element_data(
     }
 
     process_key = (
-        recording_process.Processing * recording.Recording
-        & dict(recording_modality="electrophysiology", job_id=job_id)
+        recording_process.Processing * recording.Recording & dict(recording_modality="electrophysiology", job_id=job_id)
     ).fetch1("KEY")
 
     fragment_number, recording_process_pre_path, recording_process_post_path = (
         recording_process.Processing & process_key
-    ).fetch1(
-        "fragment_number", "recording_process_pre_path", "recording_process_post_path"
+    ).fetch1("fragment_number", "recording_process_pre_path", "recording_process_post_path")
+
+    precluster_param_steps_id, paramset_idx = (recording_process.Processing.EphysParams & process_key).fetch1(
+        "precluster_param_steps_id", "paramset_idx"
     )
 
-    precluster_param_steps_id, paramset_idx = (
-        recording_process.Processing.EphysParams & process_key
-    ).fetch1("precluster_param_steps_id", "paramset_idx")
-
     precluster_paramsets = (
-        ephys_element.PreClusterParamSteps.Step()
-        & dict(precluster_param_steps_id=precluster_param_steps_id)
+        ephys_element.PreClusterParamSteps.Step() & dict(precluster_param_steps_id=precluster_param_steps_id)
     ).fetch("paramset_idx")
 
-    clustering_method = (
-        ephys_element.ClusteringParamSet & dict(paramset_idx=paramset_idx)
-    ).fetch1("clustering_method")
+    clustering_method = (ephys_element.ClusteringParamSet & dict(paramset_idx=paramset_idx)).fetch1("clustering_method")
 
     if len(precluster_paramsets) == 0:
         task_mode = "none"
@@ -59,9 +51,7 @@ def populate_element_data(
 
     ephys_element.PreCluster.populate(precluster_key, **populate_settings)
 
-    if "1.0" in (
-        ephys_element.ProbeInsertion * probe_element.Probe & precluster_key
-    ).fetch1("probe_type"):
+    if "1.0" in (ephys_element.ProbeInsertion * probe_element.Probe & precluster_key).fetch1("probe_type"):
         ephys_element.LFP.populate(precluster_key, **populate_settings)
 
     cluster_key = dict(**precluster_key, paramset_idx=paramset_idx)

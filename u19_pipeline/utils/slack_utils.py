@@ -12,20 +12,12 @@ def get_webhook_list(slack_dict, lab):
     webhooks_list = []
 
     if "slack_notification_channel" in slack_dict:
-        query_slack_webhooks = [
-            {"webhook_name": x} for x in slack_dict["slack_notification_channel"]
-        ]
-        webhooks_list += (
-            (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
-        )
+        query_slack_webhooks = [{"webhook_name": x} for x in slack_dict["slack_notification_channel"]]
+        webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
 
     if "slack_users_channel" in slack_dict:
-        query_slack_user_channels = [
-            {"user_id": x} for x in slack_dict["slack_users_channel"]
-        ]
-        webhooks_list += (
-            (lab.User & query_slack_user_channels).fetch("slack_webhook").tolist()
-        )
+        query_slack_user_channels = [{"user_id": x} for x in slack_dict["slack_users_channel"]]
+        webhooks_list += (lab.User & query_slack_user_channels).fetch("slack_webhook").tolist()
 
     return webhooks_list
 
@@ -51,9 +43,7 @@ def format_df_for_slack_message(df):
 def send_slack_notification(webhook_url, slack_json_message):
     byte_length = str(sys.getsizeof(slack_json_message))
     headers = {"Content-Type": "application/json", "Content-Length": byte_length}
-    response = requests.post(
-        webhook_url, data=json.dumps(slack_json_message), headers=headers
-    )
+    response = requests.post(webhook_url, data=json.dumps(slack_json_message), headers=headers)
     response.raise_for_status()
 
 
@@ -69,9 +59,7 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
     m1["type"] = "section"
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = (
-        ":white_check_mark: *Automation pipeline update* on " + datestr + "\n\n"
-    )
+    m1_1["text"] = ":white_check_mark: *Automation pipeline update* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #
@@ -102,9 +90,7 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
 
     message = dict()
     message["blocks"] = [m1, msep, m2]
-    message["text"] = "Automation pipeline update recording:" + str(
-        session_info["recording_id"]
-    )
+    message["text"] = "Automation pipeline update recording:" + str(session_info["recording_id"])
 
     logging.info("Slack payload: %s", json.dumps(message, default=str))
 
@@ -170,9 +156,7 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
 
     message = dict()
     message["blocks"] = [m1, msep, m2, msep, m3]
-    message["text"] = "Automation pipeline error in recording:" + str(
-        session_info["recording_id"]
-    )
+    message["text"] = "Automation pipeline error in recording:" + str(session_info["recording_id"])
 
     logging.info("Slack payload: %s", json.dumps(message, default=str))
 
@@ -242,9 +226,7 @@ def send_slack_error_pupillometry_notification(webhook_url, error_info, session_
     send_slack_notification(webhook_url, message)
 
 
-def send_slack_pupillometry_update_notification(
-    webhook_url, base_message, session_info
-):
+def send_slack_pupillometry_update_notification(webhook_url, base_message, session_info):
     now = datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
 
@@ -256,9 +238,7 @@ def send_slack_pupillometry_update_notification(
     m1["type"] = "section"
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
-    m1_1["text"] = (
-        ":white_check_mark: *Pupillometry pipeline update* on " + datestr + "\n\n"
-    )
+    m1_1["text"] = ":white_check_mark: *Pupillometry pipeline update* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #

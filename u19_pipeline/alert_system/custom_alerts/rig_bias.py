@@ -18,31 +18,21 @@ def main():
     Main function for subject "num trials & bias" alert
     """
     # Get sessions
-    _, rig_session_key_list = asu.get_acquisition_data_alert_system(
-        type="session_location"
-    )
+    _, rig_session_key_list = asu.get_acquisition_data_alert_system(type="session_location")
 
     # Get trials
-    behavior = dj.create_virtual_module(
-        "behavior", dj.config["custom"]["database.prefix"] + "behavior"
-    )
-    acquisition = dj.create_virtual_module(
-        "acquisition", dj.config["custom"]["database.prefix"] + "acquisition"
-    )
+    behavior = dj.create_virtual_module("behavior", dj.config["custom"]["database.prefix"] + "behavior")
+    acquisition = dj.create_virtual_module("acquisition", dj.config["custom"]["database.prefix"] + "acquisition")
 
     rig_trial_df = pd.DataFrame(
-        (
-            behavior.TowersBlock.Trial
-            * acquisition.SessionStarted.proj("session_location")
-            & rig_session_key_list
-        ).fetch("KEY", "trial_type", "choice", "session_location", as_dict=True)
+        (behavior.TowersBlock.Trial * acquisition.SessionStarted.proj("session_location") & rig_session_key_list).fetch(
+            "KEY", "trial_type", "choice", "session_location", as_dict=True
+        )
     )
 
     # Get zscores for bias
     bias_df = bm.BehaviorMetrics.get_bias_from_trial_df(rig_trial_df)
-    bias_df = bm.BehaviorMetrics.get_zscore_metric_session_df(
-        bias_df, "bias", "subject_fullname"
-    )
+    bias_df = bm.BehaviorMetrics.get_zscore_metric_session_df(bias_df, "bias", "subject_fullname")
 
     # Filter df for today
     today = datetime.date.today() - datetime.timedelta(days=1)
@@ -68,9 +58,7 @@ def main():
     bias_location = bias_location.reset_index()
 
     # Filter if there were subjects biased to different sides
-    bias_location2 = bias_location.groupby(["session_location"]).agg(
-        {"session_location": [("num_bias_sides", "size")]}
-    )
+    bias_location2 = bias_location.groupby(["session_location"]).agg({"session_location": [("num_bias_sides", "size")]})
     bias_location2.columns = bias_location2.columns.droplevel()
     bias_location2 = bias_location2.reset_index()
     bias_location2 = bias_location2.loc[bias_location2["num_bias_sides"] == 1, :]

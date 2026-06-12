@@ -110,11 +110,7 @@ def setup_transfer_client(transfer_tokens):
         r = transfer_client.endpoint_autoactivate(DESTINATION_ENDPOINT)
     except GlobusAPIError as ex:
         if ex.http_status == 401:
-            sys.exit(
-                "Refresh token has expired. "
-                "Please delete the `tokens` object from "
-                f"{DATA_FILE} and try again."
-            )
+            sys.exit(f"Refresh token has expired. Please delete the `tokens` object from {DATA_FILE} and try again.")
         else:
             raise ex
     return transfer_client
@@ -170,11 +166,7 @@ def main():
             task_data = data["task"]
             task = transfer.get_task(task_data["task_id"])
             if task["status"] not in PREVIOUS_TASK_RUN_CASES:
-                print(
-                    "The last transfer status is {}, skipping run...".format(
-                        task["status"]
-                    )
-                )
+                print("The last transfer status is {}, skipping run...".format(task["status"]))
                 sys.exit(1)
     except KeyError:
         # Ignore if there is no previous task

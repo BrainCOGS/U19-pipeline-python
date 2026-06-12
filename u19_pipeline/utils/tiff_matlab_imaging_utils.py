@@ -198,18 +198,12 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
         parsed_info["Zs"] = -1
 
         # Frame rate
-        frame_rate_match = re.search(
-            r"SI\.hRoiManager\.scanVolumeRate = ([0-9]+\.[0-9]+)", scope_str
-        )
+        frame_rate_match = re.search(r"SI\.hRoiManager\.scanVolumeRate = ([0-9]+\.[0-9]+)", scope_str)
 
-        parsed_info["frameRate"] = (
-            float(frame_rate_match.group(1)) if frame_rate_match else 0
-        )
+        parsed_info["frameRate"] = float(frame_rate_match.group(1)) if frame_rate_match else 0
 
         # ROI lag
-        lag_match = re.search(
-            r"SI\.hScan2D\.flytoTimePerScanfield = ([0-9]+\.[0-9]+)", scope_str
-        )
+        lag_match = re.search(r"SI\.hScan2D\.flytoTimePerScanfield = ([0-9]+\.[0-9]+)", scope_str)
 
         parsed_info["interROIlag_sec"] = float(lag_match.group(1)) if lag_match else 0
 
@@ -259,9 +253,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
         # Resolution scaling
         if "objectiveResolution" in scope_str:
             try:
-                res_match = re.search(
-                    r"SI\.objectiveResolution = ([0-9]+\.[0-9]+)", scope_str
-                )
+                res_match = re.search(r"SI\.objectiveResolution = ([0-9]+\.[0-9]+)", scope_str)
 
                 resolution_factor = xySizeFactor * float(res_match.group(1))
 
@@ -279,9 +271,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
 
         power_match = re.search(r"SI\.hBeams\.powers = (\d+)", scope_str)
 
-        parsed_info["Scope"]["Power_percent"] = (
-            float(power_match.group(1)) if power_match else 0
-        )
+        parsed_info["Scope"]["Power_percent"] = float(power_match.group(1)) if power_match else 0
 
         # -----------------------------------------------------
         # Channels
@@ -289,29 +279,19 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
 
         channel_match = re.search(r"SI\.hChannels\.channelSave = (\d+)", scope_str)
 
-        parsed_info["Scope"]["Channels"] = (
-            int(channel_match.group(1)) if channel_match else 0
-        )
+        parsed_info["Scope"]["Channels"] = int(channel_match.group(1)) if channel_match else 0
 
         # -----------------------------------------------------
         # Config / user filenames
         # -----------------------------------------------------
 
-        cfg_match = re.search(
-            r"SI\.hConfigurationSaver\.cfgFilename = (.+cfg)", scope_str
-        )
+        cfg_match = re.search(r"SI\.hConfigurationSaver\.cfgFilename = (.+cfg)", scope_str)
 
-        parsed_info["Scope"]["cfgFilename"] = (
-            cfg_match.group(1).strip() if cfg_match else ""
-        )
+        parsed_info["Scope"]["cfgFilename"] = cfg_match.group(1).strip() if cfg_match else ""
 
-        usr_match = re.search(
-            r"SI\.hConfigurationSaver\.usrFilename = (.+usr)", scope_str
-        )
+        usr_match = re.search(r"SI\.hConfigurationSaver\.usrFilename = (.+usr)", scope_str)
 
-        parsed_info["Scope"]["usrFilename"] = (
-            usr_match.group(1).strip() if usr_match else ""
-        )
+        parsed_info["Scope"]["usrFilename"] = usr_match.group(1).strip() if usr_match else ""
 
         # -----------------------------------------------------
         # Fast-Z lag
@@ -319,21 +299,15 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
 
         lag_match = re.search(r"SI\.hFastZ\.actuatorLag = ([0-9eE\.\-]+)", scope_str)
 
-        parsed_info["Scope"]["fastZ_lag"] = (
-            float(lag_match.group(1)) if lag_match else 0
-        )
+        parsed_info["Scope"]["fastZ_lag"] = float(lag_match.group(1)) if lag_match else 0
 
         # -----------------------------------------------------
         # Fast-Z flyback
         # -----------------------------------------------------
 
-        flyback_match = re.search(
-            r"SI\.hFastZ\.flybackTime = ([0-9]+\.[0-9]+)", scope_str
-        )
+        flyback_match = re.search(r"SI\.hFastZ\.flybackTime = ([0-9]+\.[0-9]+)", scope_str)
 
-        parsed_info["Scope"]["fastZ_flybackTime"] = (
-            float(flyback_match.group(1)) if flyback_match else 0
-        )
+        parsed_info["Scope"]["fastZ_flybackTime"] = float(flyback_match.group(1)) if flyback_match else 0
 
         # -----------------------------------------------------
         # Timing-related ScanImage parameters
@@ -345,25 +319,15 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
 
             return float(match.group(1)) if match else default
 
-        parsed_info["Scope"]["linePeriod"] = extract_float(
-            r"SI\.hRoiManager\.linePeriod = ([0-9.eE\-]+)"
-        )
+        parsed_info["Scope"]["linePeriod"] = extract_float(r"SI\.hRoiManager\.linePeriod = ([0-9.eE\-]+)")
 
-        parsed_info["Scope"]["scanFramePeriod"] = extract_float(
-            r"SI\.hRoiManager\.scanFramePeriod = ([0-9.eE\-]+)"
-        )
+        parsed_info["Scope"]["scanFramePeriod"] = extract_float(r"SI\.hRoiManager\.scanFramePeriod = ([0-9.eE\-]+)")
 
-        parsed_info["Scope"]["scanFrameRate"] = extract_float(
-            r"SI\.hRoiManager\.scanFrameRate = ([0-9.eE\-]+)"
-        )
+        parsed_info["Scope"]["scanFrameRate"] = extract_float(r"SI\.hRoiManager\.scanFrameRate = ([0-9.eE\-]+)")
 
-        parsed_info["Scope"]["scanVolumeRate"] = extract_float(
-            r"SI\.hRoiManager\.scanVolumeRate = ([0-9.eE\-]+)"
-        )
+        parsed_info["Scope"]["scanVolumeRate"] = extract_float(r"SI\.hRoiManager\.scanVolumeRate = ([0-9.eE\-]+)")
 
-        parsed_info["Scope"]["flybackTimePerFrame"] = extract_float(
-            r"SI\.hScan2D\.flybackTimePerFrame = ([0-9.eE\-]+)"
-        )
+        parsed_info["Scope"]["flybackTimePerFrame"] = extract_float(r"SI\.hScan2D\.flybackTimePerFrame = ([0-9.eE\-]+)")
 
         parsed_info["Scope"]["flytoTimePerScanfield"] = extract_float(
             r"SI\.hScan2D\.flytoTimePerScanfield = ([0-9.eE\-]+)"
@@ -374,9 +338,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
         # -----------------------------------------------------
 
         if "fovCornerPoints" in scope_str:
-            fov_match = re.search(
-                r"SI\.hScan2D\.fovCornerPoints = (\[.+?\])", scope_str, re.DOTALL
-            )
+            fov_match = re.search(r"SI\.hScan2D\.fovCornerPoints = (\[.+?\])", scope_str, re.DOTALL)
 
             if fov_match:
                 try:
@@ -386,9 +348,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
                     fov_points = np.array(ast.literal_eval(new_fov_match))
                     fov_points = fov_points.reshape(4, 2)
 
-                    parsed_info["Scope"]["fovCornerPoints"] = (
-                        resolution_factor * fov_points
-                    )
+                    parsed_info["Scope"]["fovCornerPoints"] = resolution_factor * fov_points
 
                 except Exception:
                     parsed_info["Scope"]["fovCornerPoints"] = 0
@@ -442,9 +402,7 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
 
         artist_tag = first_page.tags.get("Artist")
 
-        scope_str = (
-            str(software_tag.value) if software_tag is not None else image_description
-        )
+        scope_str = str(software_tag.value) if software_tag is not None else image_description
 
         roi_info = str(artist_tag.value) if artist_tag is not None else ""
 
@@ -470,13 +428,9 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
 
             return float(match.group(0)) if match else default
 
-        parsed_info["frameRate"] = extract_float(
-            r"(?<=SI\.hRoiManager\.scanVolumeRate = )\d+\.\d+", scope_str
-        )
+        parsed_info["frameRate"] = extract_float(r"(?<=SI\.hRoiManager\.scanVolumeRate = )\d+\.\d+", scope_str)
 
-        parsed_info["interROIlag_sec"] = extract_float(
-            r"(?<=SI\.hScan2D\.flytoTimePerScanfield = )\d+\.\d+", scope_str
-        )
+        parsed_info["interROIlag_sec"] = extract_float(r"(?<=SI\.hScan2D\.flytoTimePerScanfield = )\d+\.\d+", scope_str)
 
         # -----------------------------------------------------
         # Timing / behavior sync
@@ -516,18 +470,14 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         # ROI parsing
         # -----------------------------------------------------
 
-        roi_marks = [
-            m.start() for m in re.finditer(r'"scanimage\.mroi\.Roi"', roi_info)
-        ]
+        roi_marks = [m.start() for m in re.finditer(r'"scanimage\.mroi\.Roi"', roi_info)]
 
         parsed_info["nROIs"] = len(roi_marks)
 
         parsed_info["ROI"] = []
 
         # Resolution scaling
-        resolution_match = re.search(
-            r"(?<=SI\.objectiveResolution = )\d+\.\d+", scope_str
-        )
+        resolution_match = re.search(r"(?<=SI\.objectiveResolution = )\d+\.\d+", scope_str)
 
         if resolution_match:
             resolution_factor = xySizeFactor * float(resolution_match.group(0))
@@ -581,31 +531,19 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
             # ROI geometry
             # -------------------------------------------------
 
-            roi_dict["centerXY"] = resolution_factor * parse_array(
-                r'(?<="centerXY": )\[.+?]', this_roi
-            )
+            roi_dict["centerXY"] = resolution_factor * parse_array(r'(?<="centerXY": )\[.+?]', this_roi)
 
-            roi_dict["sizeXY"] = resolution_factor * parse_array(
-                r'(?<="sizeXY": )\[.+?]', this_roi
-            )
+            roi_dict["sizeXY"] = resolution_factor * parse_array(r'(?<="sizeXY": )\[.+?]', this_roi)
 
-            rotation_match = re.search(
-                r'(?<="rotationDegrees":) (\d+|\d+\.\d+)', this_roi
-            )
+            rotation_match = re.search(r'(?<="rotationDegrees":) (\d+|\d+\.\d+)', this_roi)
 
-            roi_dict["rotationDegrees"] = (
-                float(rotation_match.group(0)) if rotation_match else 0
-            )
+            roi_dict["rotationDegrees"] = float(rotation_match.group(0)) if rotation_match else 0
 
-            roi_dict["pixelResolutionXY"] = parse_array(
-                r'(?<="pixelResolutionXY": )\[.+?]', this_roi
-            )
+            roi_dict["pixelResolutionXY"] = parse_array(r'(?<="pixelResolutionXY": )\[.+?]', this_roi)
 
             discrete_match = re.search(r'(?<="discretePlaneMode":) \d', this_roi)
 
-            roi_dict["discretePlaneMode"] = (
-                bool(int(discrete_match.group(0))) if discrete_match else False
-            )
+            roi_dict["discretePlaneMode"] = bool(int(discrete_match.group(0))) if discrete_match else False
 
             power_match = re.search(r'(?<="powers":) \d+', this_roi)
 
@@ -623,9 +561,7 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         if not re.search(r'(?<="powers":) \d+', roi_info):
             power_match = re.search(r"(?<=SI\.hBeams\.powers = )\d+", scope_str)
 
-            parsed_info["Scope"]["Power_percent"] = (
-                float(power_match.group(0)) if power_match else 0
-            )
+            parsed_info["Scope"]["Power_percent"] = float(power_match.group(0)) if power_match else 0
 
         else:
             parsed_info["Scope"]["Power_percent"] = "discrete powers per ROI"
@@ -633,20 +569,14 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         # Channels
         channel_match = re.search(r"(?<=SI\.hChannels\.channelSave = )\d+", scope_str)
 
-        parsed_info["Scope"]["Channels"] = (
-            int(channel_match.group(0)) if channel_match else 0
-        )
+        parsed_info["Scope"]["Channels"] = int(channel_match.group(0)) if channel_match else 0
 
         # Config filenames
-        cfg_match = re.search(
-            r"(?<=SI\.hConfigurationSaver\.cfgFilename = ').+cfg", scope_str
-        )
+        cfg_match = re.search(r"(?<=SI\.hConfigurationSaver\.cfgFilename = ').+cfg", scope_str)
 
         parsed_info["Scope"]["cfgFilename"] = cfg_match.group(0) if cfg_match else ""
 
-        usr_match = re.search(
-            r"(?<=SI\.hConfigurationSaver\.usrFilename = ').+usr", scope_str
-        )
+        usr_match = re.search(r"(?<=SI\.hConfigurationSaver\.usrFilename = ').+usr", scope_str)
 
         parsed_info["Scope"]["usrFilename"] = usr_match.group(0) if usr_match else ""
 
@@ -701,21 +631,13 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         parsed_info["Scope"]["stacks_enabled"] = 1 if stacks_enabled == "true" else 0
 
         if stacks_enabled == "true":
-            actuator_match = re.search(
-                r"(?<=SI\.hStackManager\.stackActuator = ')\w+", scope_str
-            )
+            actuator_match = re.search(r"(?<=SI\.hStackManager\.stackActuator = ')\w+", scope_str)
 
-            definition_match = re.search(
-                r"(?<=SI\.hStackManager\.stackDefinition = ')\w+", scope_str
-            )
+            definition_match = re.search(r"(?<=SI\.hStackManager\.stackDefinition = ')\w+", scope_str)
 
-            parsed_info["Scope"]["stackActuator"] = (
-                actuator_match.group(0) if actuator_match else ""
-            )
+            parsed_info["Scope"]["stackActuator"] = actuator_match.group(0) if actuator_match else ""
 
-            parsed_info["Scope"]["stackDefinition"] = (
-                definition_match.group(0) if definition_match else ""
-            )
+            parsed_info["Scope"]["stackDefinition"] = definition_match.group(0) if definition_match else ""
 
         # -----------------------------------------------------
         # Motion correction
@@ -725,14 +647,10 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
 
         motion_enabled = motion_match.group(0) if motion_match else "false"
 
-        parsed_info["Scope"]["motionCorrection_enabled"] = (
-            1 if motion_enabled == "true" else 0
-        )
+        parsed_info["Scope"]["motionCorrection_enabled"] = 1 if motion_enabled == "true" else 0
 
         if motion_enabled == "true":
-            correction_z_match = re.search(
-                r"(?<=SI\.hMotionManager\.correctionEnableZ = )\w+", scope_str
-            )
+            correction_z_match = re.search(r"(?<=SI\.hMotionManager\.correctionEnableZ = )\w+", scope_str)
 
             if correction_z_match and correction_z_match.group(0) == "true":
                 parsed_info["Scope"]["motionCorMode"] = "automated"
@@ -747,19 +665,13 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         depth_match = re.search(r"SI\.hFastZ\.numFramesPerVolume = \d+", scope_str)
 
         if depth_match:
-            parsed_info["nDepths"] = int(
-                re.search(r"\d+", depth_match.group(0)).group(0)
-            )
+            parsed_info["nDepths"] = int(re.search(r"\d+", depth_match.group(0)).group(0))
 
         else:
             if stacks_enabled == "true":
-                slices_match = re.search(
-                    r"(?<=SI\.hStackManager\.actualNumSlices = )\d+", scope_str
-                )
+                slices_match = re.search(r"(?<=SI\.hStackManager\.actualNumSlices = )\d+", scope_str)
 
-                parsed_info["nDepths"] = (
-                    int(slices_match.group(0)) if slices_match else 1
-                )
+                parsed_info["nDepths"] = int(slices_match.group(0)) if slices_match else 1
 
             else:
                 parsed_info["nDepths"] = 1

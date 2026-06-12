@@ -36,9 +36,7 @@ all_recs = pd.DataFrame(
     )
 )
 
-not_sync_recs = pd.DataFrame(
-    (recording.Recording * ep.BehaviorSync).fetch("KEY", as_dict=True)
-)
+not_sync_recs = pd.DataFrame((recording.Recording * ep.BehaviorSync).fetch("KEY", as_dict=True))
 
 not_sync_recs2 = pd.merge(all_recs, not_sync_recs, how="left", indicator=True)
 not_sync_recs2 = not_sync_recs2.loc[not_sync_recs2["_merge"] == "left_only", :]

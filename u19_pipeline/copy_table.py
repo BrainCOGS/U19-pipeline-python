@@ -6,17 +6,13 @@ from tqdm import tqdm
 from u19_pipeline import subject
 from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
 
-acquisition_original = dj.create_virtual_module(
-    "acquisition_original", "u19_acquisition"
-)
+acquisition_original = dj.create_virtual_module("acquisition_original", "u19_acquisition")
 
 behavior_original = dj.create_virtual_module("behavior_original", "u19_behavior")
 
 meso_original = dj.create_virtual_module("meso_original", "u19_meso")
 
-meso_analysis_original = dj.create_virtual_module(
-    "meso_analysis_original", "u19_meso_analysis"
-)
+meso_analysis_original = dj.create_virtual_module("meso_analysis_original", "u19_meso_analysis")
 
 imaging_original = dj.create_virtual_module("imaging_original", "u19_imaging")
 
@@ -56,14 +52,12 @@ def copy_table(target_schema, src_schema, table_name, **kwargs):
 def copy_acquisition_tables():
 
     acquisition.SessionTemp.insert(
-        (acquisition_original.Session - acquisition.SessionTemp.proj())
-        & acquisition.SessionStarted.proj(),
+        (acquisition_original.Session - acquisition.SessionTemp.proj()) & acquisition.SessionStarted.proj(),
         skip_duplicates=True,
     )
 
     acquisition.DataDirectoryTemp.insert(
-        (acquisition_original.DataDirectory - acquisition.DataDirectoryTemp.proj())
-        & acquisition.SessionStarted.proj(),
+        (acquisition_original.DataDirectory - acquisition.DataDirectoryTemp.proj()) & acquisition.SessionStarted.proj(),
         allow_direct_insert=True,
     )
 
@@ -85,18 +79,12 @@ def copy_behavior_tables():
         if "." in table:
             if table == "TowersBlock.Trial":
                 for subj in tqdm((subject.Subject & behavior.TowersBlock).fetch("KEY")):
-                    behavior.TowersBlock.Trial.insert(
-                        behavior_original.TowersBlock.Trial & subj, skip_duplicates=True
-                    )
+                    behavior.TowersBlock.Trial.insert(behavior_original.TowersBlock.Trial & subj, skip_duplicates=True)
             else:
                 if table == "TowersBlockVideo":
-                    for subj in tqdm(
-                        (subject.Subject & behavior.TowersBlock).fetch("KEY")
-                    ):
+                    for subj in tqdm((subject.Subject & behavior.TowersBlock).fetch("KEY")):
                         behavior.TowersBlockTrialVideo.insert(
-                            behavior_original.TowersBlockTrialVideo
-                            & subj
-                            & behavior.TowersBlock,
+                            behavior_original.TowersBlockTrialVideo & subj & behavior.TowersBlock,
                             skip_duplicates=True,
                         )
                 else:

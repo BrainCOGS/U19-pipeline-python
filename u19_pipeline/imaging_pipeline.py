@@ -72,9 +72,7 @@ class AcquiredTiff(dj.Imported):
 
     def make(self, key, test_mode=False):
 
-        scan_info = (
-            ImagingPipelineSession * recording.Recording * lab.Location & key
-        ).fetch1()
+        scan_info = (ImagingPipelineSession * recording.Recording * lab.Location & key).fetch1()
 
         imaging_root = dj.config["custom"]["imaging_root_data_dir"][0]
         scan_directory = Path(imaging_root) / scan_info["recording_directory"]
@@ -113,9 +111,7 @@ class AcquiredTiff(dj.Imported):
 
         rec_info["nfovs"] = tu.get_nfovs(rec_info, is_mesoscope)
 
-        last_good_file, cumulative_frames = tu.get_last_good_frame(
-            frames_per_file, tif_dir
-        )
+        last_good_file, cumulative_frames = tu.get_last_good_frame(frames_per_file, tif_dir)
 
         rec_info["nframes_good"] = cumulative_frames[last_good_file]
         rec_info["last_good_file"] = last_good_file + 1
@@ -125,34 +121,26 @@ class AcquiredTiff(dj.Imported):
         if is_compressed:
             tu.remove_compressed_videos(fl, scan_directory)
 
-        scan_info_key = tu.create_scan_info_key(
-            key, rec_info, scan_info["recording_directory"]
-        )
+        scan_info_key = tu.create_scan_info_key(key, rec_info, scan_info["recording_directory"])
         if not test_mode:
             self.insert1(scan_info_key, allow_direct_insert=True)
 
         if is_mesoscope:
-            tiffsplit_mesoscope_keys, tiff_splitfiles_mesoscope_keys = (
-                tu.get_fov_mesoscope(
-                    fl,
-                    key,
-                    skip_parsing,
-                    imheader,
-                    rec_info,
-                    basename,
-                    cumulative_frames,
-                    scan_info,
-                    imaging_root,
-                )
+            tiffsplit_mesoscope_keys, tiff_splitfiles_mesoscope_keys = tu.get_fov_mesoscope(
+                fl,
+                key,
+                skip_parsing,
+                imheader,
+                rec_info,
+                basename,
+                cumulative_frames,
+                scan_info,
+                imaging_root,
             )
             for i in range(len(tiffsplit_mesoscope_keys)):
                 if not test_mode:
-                    TiffSplit.insert(
-                        tiffsplit_mesoscope_keys[i], allow_direct_insert=True
-                    )
-                    TiffSplit.File.insert(
-                        tiff_splitfiles_mesoscope_keys[i], allow_direct_insert=True
-                    )
+                    TiffSplit.insert(tiffsplit_mesoscope_keys[i], allow_direct_insert=True)
+                    TiffSplit.File.insert(tiff_splitfiles_mesoscope_keys[i], allow_direct_insert=True)
 
             if test_mode:
                 return (
@@ -166,9 +154,7 @@ class AcquiredTiff(dj.Imported):
             tiffsplitfile_2photon_key = tu.get_fovfile_photonmicro(key, fl, imheader)
             if not test_mode:
                 TiffSplit.insert([tiffsplit_2photon_key], allow_direct_insert=True)
-                TiffSplit.File.insert(
-                    tiffsplitfile_2photon_key, allow_direct_insert=True
-                )
+                TiffSplit.File.insert(tiffsplitfile_2photon_key, allow_direct_insert=True)
 
             if test_mode:
                 return scan_info_key, tiffsplit_2photon_key, tiffsplitfile_2photon_key
@@ -249,9 +235,7 @@ For more detail, check the docstring of the element:
 
 # 1. Schema names ----------------------------------------------------------------------
 scan_schema_name = dj.config["custom"]["database.prefix"] + "pipeline_scan_element"
-imaging_schema_name = (
-    dj.config["custom"]["database.prefix"] + "pipeline_imaging_element"
-)
+imaging_schema_name = dj.config["custom"]["database.prefix"] + "pipeline_imaging_element"
 
 # 2. Upstream tables -------------------------------------------------------------------
 
@@ -331,9 +315,9 @@ def get_calcium_imaging_files(scan_key, acq_software):
 
 def get_processed_dir(processing_task_key, process_method):
     sess_key = (ImagingPipelineSession & processing_task_key).fetch1("KEY")
-    bucket_scan_dir = (
-        TiffSplit & sess_key & {"tiff_split": processing_task_key["scan_id"]}
-    ).fetch1("tiff_split_directory")
+    bucket_scan_dir = (TiffSplit & sess_key & {"tiff_split": processing_task_key["scan_id"]}).fetch1(
+        "tiff_split_directory"
+    )
     user_id = (subject.Subject & processing_task_key).fetch1("user_id")
 
     sess_dir = find_full_path(get_imaging_root_data_dir(), bucket_scan_dir)

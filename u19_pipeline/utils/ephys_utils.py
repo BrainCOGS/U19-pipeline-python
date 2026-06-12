@@ -25,13 +25,9 @@ class spice_glx_utility:
             list_start_end_chan = nidq_meta["niXDChans1"].split(sep=":")
             print(list_start_end_chan)
             if len(list_start_end_chan) == 2:
-                d_line_list = list(
-                    range(int(list_start_end_chan[0]), int(list_start_end_chan[1]) + 1)
-                )
+                d_line_list = list(range(int(list_start_end_chan[0]), int(list_start_end_chan[1]) + 1))
             else:
-                raise ValueError(
-                    'Could not infer channel list from nidq_meta["niXDChans1"] '
-                )
+                raise ValueError('Could not infer channel list from nidq_meta["niXDChans1"] ')
 
         nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
 
@@ -43,9 +39,7 @@ class spice_glx_utility:
         last_sample_index = int(nidq_sampling_rate * t_end) - 1
 
         # Read binary and digital
-        nidq_raw_data = readSGLX.makeMemMapRaw(
-            file_path, nidq_meta
-        )  # Pull raw bin data
+        nidq_raw_data = readSGLX.makeMemMapRaw(file_path, nidq_meta)  # Pull raw bin data
         digital_array = readSGLX.ExtractDigital(  # extract interation index
             nidq_raw_data,
             first_sample_index,
@@ -74,9 +68,7 @@ def load_trial_iteration_signals(ephys_session_fullpath, nidq_meta):
     new_iteration_channel = 2
     # If PXIe card (nidq) card use for recording deduce digital channels
     if nidq_meta["typeThis"] == "nidq":
-        digital_array = spice_glx_utility.load_spice_glx_digital_file(
-            ephys_session_fullpath, nidq_meta
-        )
+        digital_array = spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
     # If onebox card (obx) card use for recording digital channels are 0-2
     else:
         digital_array = spice_glx_utility.load_spice_glx_digital_file(
@@ -233,9 +225,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(
         ms_after_trial_start_pulse = -4
         ms_before_trial_end = 4
 
-    samples_after_pulse_start = int(
-        nidq_sampling_rate * (ms_after_trial_start_pulse / 1000)
-    )
+    samples_after_pulse_start = int(nidq_sampling_rate * (ms_after_trial_start_pulse / 1000))
     samples_before_pulse_end = int(nidq_sampling_rate * (ms_before_trial_end / 1000))
 
     # num Trials to sync (if behavior stopped before last trial was saved)
@@ -286,12 +276,8 @@ def get_iteration_sample_vector_from_digital_lines_pulses(
         #    iteration_vector_output['trialnumber_vector_samples'][trial_start_idx[i]:iter_samples[-1]+int(nidq_sampling_rate)] = i+1
         #    iteration_vector_output['framenumber_vector_samples'][iter_samples[-1]:iter_samples[-1]+int(nidq_sampling_rate)] = iter_samples.shape[0]
 
-    iteration_vector_output["iter_start_idx"] = np.asarray(
-        iter_start_idx.copy(), dtype=object
-    )
-    iteration_vector_output["iter_times_idx"] = np.asarray(
-        iter_times_idx.copy(), dtype=object
-    )
+    iteration_vector_output["iter_start_idx"] = np.asarray(iter_start_idx.copy(), dtype=object)
+    iteration_vector_output["iter_times_idx"] = np.asarray(iter_times_idx.copy(), dtype=object)
 
     return iteration_vector_output
 
@@ -302,13 +288,9 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
     #      ... and also get start and end time
     framenumber = np.zeros(digital_array.shape[1])
     for i in range(digital_array.shape[1]):
-        a = BitArray(
-            np.flip(digital_array[1:, i])
-        )  # ignore 0-bit, as this is the NPX sync puls, and not virmen.
+        a = BitArray(np.flip(digital_array[1:, i]))  # ignore 0-bit, as this is the NPX sync puls, and not virmen.
         framenumber[i] = a.uint
-    iterations_raw = np.array(
-        framenumber, dtype=np.int32
-    )  # Transform frames into integer
+    iterations_raw = np.array(framenumber, dtype=np.int32)  # Transform frames into integer
     recording_start = np.min(np.where(iterations_raw > 0))  # first chane of testlist
     recording_end = (
         np.where(np.abs(np.diff(iterations_raw)) > 0)[0][-1] + 200
@@ -322,9 +304,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
     iter_start_idx = []
     for idx, frame_number in enumerate(iterations_raw):
         if (idx > recording_start) & (idx < recording_end):
-            if (frame_number == 0) & (
-                iterations_raw[idx - 1] == 127
-            ):  # At the reset, add 128
+            if (frame_number == 0) & (iterations_raw[idx - 1] == 127):  # At the reset, add 128
                 overflow = overflow + 1
             if (
                 (frame_number == 0)
@@ -337,9 +317,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
                     frame_number + overflow * 128 - 1
                 )  # In case this happened, the previous sample has to be corrected
             # Keep track of trial number
-            endflag = framenumber_in_trial[idx - 1] == (
-                len(time[current_trial])
-            )  # Trial end has been reached.
+            endflag = framenumber_in_trial[idx - 1] == (len(time[current_trial]))  # Trial end has been reached.
             transitionflag = frame_number < 3  # Next trial should start at zero again
             if endflag & transitionflag:  # Only at the transitions
                 current_trial = current_trial + 1  # Increases trial count
@@ -347,9 +325,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
                 iter_start_idx.append(idx)  # Make a note when this happened
             framenumber_in_trial[idx] = frame_number + overflow * 128 - 1
             trialnumber[idx] = current_trial
-    trial_list = np.array(
-        np.unique(trialnumber[np.isfinite(trialnumber)]), dtype=np.int32
-    )
+    trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype=np.int32)
 
     # Fourth, find and remove the nidaq glitches
     # These are single samples where the iteration number is corrupted
@@ -360,9 +336,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
     din = np.diff(framenumber_in_trial)
     trial_transitions = np.where(np.diff(trialnumber))
     glitches = []
-    for candidate in np.where(np.logical_or(din > 1, din < 0))[
-        0
-    ]:  # skipped frames or counting down
+    for candidate in np.where(np.logical_or(din > 1, din < 0))[0]:  # skipped frames or counting down
         if np.sum(candidate == trial_transitions) == 0:
             glitches = np.append(glitches, candidate)
     glitches = np.array(glitches, dtype=np.int32)
@@ -371,9 +345,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
     skipped_frames = 0
     for g in glitches:
         if framenumber_in_trial[g] < framenumber_in_trial[g + 2]:
-            if (
-                framenumber_in_trial[g + 2] - framenumber_in_trial[g] == 2
-            ):  # skipped frame, should be very rare
+            if framenumber_in_trial[g + 2] - framenumber_in_trial[g] == 2:  # skipped frame, should be very rare
                 framenumber_in_trial[g + 1] = framenumber_in_trial[g] + 1
                 skipped_frames = skipped_frames + 1
             else:  # If random number, nidaq sample in the middle of update.
@@ -387,12 +359,8 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
 
     iter_start_idx = []
     for t in trial_list:
-        iter_start_idx.append(
-            np.arange(0, framenumber_in_trial[trialnumber == t][-1], 1)
-        )
-    iteration_vector_output["iter_start_idx"] = np.asarray(
-        iter_start_idx.copy(), dtype=object
-    )
+        iter_start_idx.append(np.arange(0, framenumber_in_trial[trialnumber == t][-1], 1))
+    iteration_vector_output["iter_start_idx"] = np.asarray(iter_start_idx.copy(), dtype=object)
 
     return iteration_vector_output
 
@@ -401,9 +369,7 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     # Assert that vector sync pulses match behavior time vector
 
     # Count trial count differences
-    trial_count_diff = np.abs(
-        iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0])
-    )
+    trial_count_diff = np.abs(iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0]))
 
     count = 0
     trials_diff_iteration_small = list()
@@ -424,10 +390,7 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
         count += 1
         # For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
-            if (
-                np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0])
-                < 6
-            ):
+            if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 6:
                 trials_diff_iteration_small.append(idx_trial)
             else:
                 trials_diff_iteration_big.append(idx_trial)
@@ -455,10 +418,7 @@ def evaluate_sync_process(
         status = -1
         return status
 
-    if (
-        len(trials_diff_iteration_big) == 1
-        and trials_diff_iteration_big[0] == total_trials - 1
-    ):
+    if len(trials_diff_iteration_big) == 1 and trials_diff_iteration_big[0] == total_trials - 1:
         print(
             "Missed by a lot last trial: (Assume recording stopped earlier) ",
             trials_diff_iteration_big,
@@ -480,9 +440,7 @@ def evaluate_sync_process(
 
     # Iterations differ in more than two trials
     if len(trials_diff_iteration_small) > 2:
-        print(
-            "Missed iteration count on many trials: ", len(trials_diff_iteration_small)
-        )
+        print("Missed iteration count on many trials: ", len(trials_diff_iteration_small))
         status = -1
         return status
 
@@ -502,9 +460,7 @@ def evaluate_sync_process(
         return status
 
 
-def fix_missing_iteration_trials(
-    trials_diff_iteration_small, iteration_dict, behavior_times, nidq_sampling_rate
-):
+def fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_times, nidq_sampling_rate):
     # Fix and insert missing synced iteration vectors
 
     print("trials_diff_iteration_small", trials_diff_iteration_small)
@@ -547,9 +503,7 @@ def fix_missing_iteration_trials(
         return iteration_dict
 
 
-def insert_missing_synced_iteration(
-    synced_iteration_vector, synced_time_vector, behavior_time_vector
-):
+def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector, behavior_time_vector):
     # Check where is more likely we miss an iteration pulse and insert it to iteration_vector
 
     status = 1
@@ -559,15 +513,11 @@ def insert_missing_synced_iteration(
 
     # Get in which indexes we get a "peak" of non matching times...
     if synced_time_vector.shape[0] >= behavior_time_vector.shape[0]:
-        print(
-            "More pulses than behavior iterations, check other method"
-        )  # Christian: What is the other method?
+        print("More pulses than behavior iterations, check other method")  # Christian: What is the other method?
         status = -1
         return status, np.empty(0)
     else:
-        diff_vector = np.diff(
-            synced_time_vector - behavior_time_vector[: synced_time_vector.shape[0]]
-        )
+        diff_vector = np.diff(synced_time_vector - behavior_time_vector[: synced_time_vector.shape[0]])
         # In case last peak is at the end of trial (append 0 to detect it)
         diff_vector = np.append(diff_vector, np.array([0]))
 
@@ -579,12 +529,8 @@ def insert_missing_synced_iteration(
     # Insert extra iterations as a new "iteration" start to match behavior iterations
     new_synced_iteration_vector = synced_iteration_vector.copy()
     for i in range(peaks.shape[0]):
-        value_insert = (
-            synced_iteration_vector[peaks[i]] + synced_iteration_vector[peaks[i] + 1]
-        ) / 2
-        new_synced_iteration_vector = np.insert(
-            new_synced_iteration_vector, peaks[i], value_insert
-        )
+        value_insert = (synced_iteration_vector[peaks[i]] + synced_iteration_vector[peaks[i] + 1]) / 2
+        new_synced_iteration_vector = np.insert(new_synced_iteration_vector, peaks[i], value_insert)
 
     if new_synced_iteration_vector.shape[0] != behavior_time_vector.shape[0]:
         print("with peak strategy, could not find correct missing iterations")
@@ -614,16 +560,10 @@ def behavior_sync_frame_counter_method(
             np.flip(digital_array[bit_start:, i])
         )  # ignore 0-bit, as this is the NPX sync puls, and not virmen.
         framenumber[i] = a.uint
-    iterations_raw = np.array(
-        framenumber, dtype=np.int
-    )  # Transform frames into integer
-    recording_start = np.min(
-        np.where(iterations_raw > 0)
-    )  # Get start of recording: first change of testlist
+    iterations_raw = np.array(framenumber, dtype=np.int)  # Transform frames into integer
+    recording_start = np.min(np.where(iterations_raw > 0))  # Get start of recording: first change of testlist
     dt = np.int(0.04 * nidq_sampling_rate)
-    recording_end = (
-        np.where(np.abs(np.diff(iterations_raw)) > 0)[0][-1] + dt
-    )  # Get end of recording
+    recording_end = np.where(np.abs(np.diff(iterations_raw)) > 0)[0][-1] + dt  # Get end of recording
 
     # 3: transform `iterations_raw` into `framenumber_in_trial` and `trialnumber`
     # iterations_raw is just a number between 0 and max_count+1. Some math has to be done to obtain:
@@ -634,15 +574,11 @@ def behavior_sync_frame_counter_method(
     framenumber_in_trial = np.zeros(len(iterations_raw)) * np.nan
     trialnumber = np.zeros(len(iterations_raw)) * np.nan
     current_trial = 0
-    overflow = (
-        0  # This variable keep track whenever the reset from max_count to 0 happens.
-    )
+    overflow = 0  # This variable keep track whenever the reset from max_count to 0 happens.
     for idx, frame_number in enumerate(iterations_raw):
         if (idx > recording_start) & (idx < recording_end):
             # print(iterations_raw2[idx], frame_number)
-            if (frame_number == 0) & (
-                iterations_raw[idx - 1] == max_count
-            ):  # At the reset, add max_count+1
+            if (frame_number == 0) & (iterations_raw[idx - 1] == max_count):  # At the reset, add max_count+1
                 overflow = overflow + 1
             if (
                 (frame_number == 0)
@@ -659,9 +595,7 @@ def behavior_sync_frame_counter_method(
                 len(behavior_time_vector[current_trial])
             )  # Trial end has been reached.
 
-            transitionflag = (
-                frame_number == 2
-            )  # Next trial should start at zero again (it starts with two ??)
+            transitionflag = frame_number == 2  # Next trial should start at zero again (it starts with two ??)
             if endflag & transitionflag:  # Only at the transitions
                 current_trial = current_trial + 1  # Increases trial count
                 overflow = 0  # Reset the 7 bit counter for the next trial
@@ -669,14 +603,10 @@ def behavior_sync_frame_counter_method(
             if overflow == 0:
                 framenumber_in_trial[idx] = frame_number
             else:
-                framenumber_in_trial[idx] = (
-                    frame_number + overflow * (max_count + 1) - 1
-                )
+                framenumber_in_trial[idx] = frame_number + overflow * (max_count + 1) - 1
 
             trialnumber[idx] = current_trial
-    trial_list = np.array(
-        np.unique(trialnumber[np.isfinite(trialnumber)]), dtype=np.int64
-    )
+    trial_list = np.array(np.unique(trialnumber[np.isfinite(trialnumber)]), dtype=np.int64)
 
     # 4: find and remove additional NIDAQ glitches of two types:
     # a) single samples where the iteration number is corrupted because sampling happened faster than output of the behevior PC.
@@ -685,9 +615,7 @@ def behavior_sync_frame_counter_method(
     din = np.diff(framenumber_in_trial)
     trial_transitions = np.where(np.diff(trialnumber))
     glitches = []
-    for candidate in np.where(np.logical_or(din > 1, din < 0))[
-        0
-    ]:  # skipped frames or counting down
+    for candidate in np.where(np.logical_or(din > 1, din < 0))[0]:  # skipped frames or counting down
         if np.sum(candidate == trial_transitions) == 0:
             glitches = np.append(glitches, candidate)
     glitches = np.array(glitches, dtype=np.int)
@@ -695,9 +623,7 @@ def behavior_sync_frame_counter_method(
     skipped_frames = 0
     for g in glitches:
         if framenumber_in_trial[g] < framenumber_in_trial[g + 2]:
-            if (
-                framenumber_in_trial[g + 2] - framenumber_in_trial[g] == 2
-            ):  # skipped frame, should be very rare
+            if framenumber_in_trial[g + 2] - framenumber_in_trial[g] == 2:  # skipped frame, should be very rare
                 pass
                 framenumber_in_trial[g + 1] = framenumber_in_trial[g] + 1
                 skipped_frames = skipped_frames + 1
@@ -705,26 +631,20 @@ def behavior_sync_frame_counter_method(
                 framenumber_in_trial[g + 1] = framenumber_in_trial[g]
 
     # A set of final asserts, making sure that the code worked as intended
-    assert len(trial_list) == len(
-        session_trial_keys
-    )  # Make sure the trial number is correct.
+    assert len(trial_list) == len(session_trial_keys)  # Make sure the trial number is correct.
     assert np.sum(np.diff(framenumber_in_trial) > 1) == 0  # No frames should be skipped
-    assert np.sum(np.diff(framenumber_in_trial) < 0) < len(
-        trial_list
-    )  # Negative iterations only at trial transitions
+    assert np.sum(np.diff(framenumber_in_trial) < 0) < len(trial_list)  # Negative iterations only at trial transitions
     iterations_test = 0
     for t in trial_list:
-        iterations_test = (
-            iterations_test + framenumber_in_trial[trialnumber == t][-1]
-        )  # Integrate number of iterations
+        iterations_test = iterations_test + framenumber_in_trial[trialnumber == t][-1]  # Integrate number of iterations
         assert framenumber_in_trial[trialnumber == t][-1] == len(
             behavior_time_vector[t]
         )  # Make sure number of nidaq-frames in each trial is identical to dj record:
         nidaqtime = np.sum(trialnumber == t) / nidq_sampling_rate
         matlabtime = np.max(behavior_time_vector[t])
         assert (
-            ((nidaqtime - matlabtime) / matlabtime) < 0.1
-        )  # # Make sure the nidaq-trial-duration and dj records are consistent; 10% arbitrarily chosen
+            (nidaqtime - matlabtime) / matlabtime
+        ) < 0.1  # # Make sure the nidaq-trial-duration and dj records are consistent; 10% arbitrarily chosen
     nidaq_duration = iterations_test + skipped_frames
     # dj_duration = iterstart[-1] + len(behavior_time_vector[-1])
     # assert np.abs(nidaq_duration - dj_duration) < 3 # at most two frames off - sometimes this happens at the beginning/end of the recording
@@ -781,9 +701,7 @@ def get_iteration_intertrial_from_virmen_time(
 
     iter_start_idx = []
     for i in range(num_behavior_trials):
-        new_synced_iteration_vector = trial_start_idx[i] + np.int64(
-            behavior_time_vector[i] * nidq_sampling_rate
-        )
+        new_synced_iteration_vector = trial_start_idx[i] + np.int64(behavior_time_vector[i] * nidq_sampling_rate)
         iter_start_idx.append(new_synced_iteration_vector.squeeze())
 
     iter_start_idx = np.asarray(iter_start_idx.copy(), dtype=object)
@@ -803,18 +721,14 @@ def get_full_vector_samples(iter_start_idx_vectors, nidq_sampling_rate, total_sa
 
         # Fill vector samples
         for j in range(this_trial_iter_vector.shape[0] - 1):
-            framenumber_vector_samples[
-                this_trial_iter_vector[j] : this_trial_iter_vector[j + 1]
-            ] = j + 1
+            framenumber_vector_samples[this_trial_iter_vector[j] : this_trial_iter_vector[j + 1]] = j + 1
 
         # Last iteration # is from start of iteration to end of trial
         if i < len(iter_start_idx_vectors) - 1:
-            trialnumber_vector_samples[
-                this_trial_iter_vector[0] : next_trial_iter_vector[0]
-            ] = i + 1
-            framenumber_vector_samples[
-                this_trial_iter_vector[-1] : next_trial_iter_vector[0]
-            ] = this_trial_iter_vector.shape[0]
+            trialnumber_vector_samples[this_trial_iter_vector[0] : next_trial_iter_vector[0]] = i + 1
+            framenumber_vector_samples[this_trial_iter_vector[-1] : next_trial_iter_vector[0]] = (
+                this_trial_iter_vector.shape[0]
+            )
         # For last trial, lets finish it 1s after last iteration detected
         else:
             # print('total_samples', total_samples)
@@ -822,12 +736,10 @@ def get_full_vector_samples(iter_start_idx_vectors, nidq_sampling_rate, total_sa
             # print('this_trial_iter_vector[0]', this_trial_iter_vector[0])
             # print('this_trial_iter_vector[-1]+int(nidq_sampling_rate)', this_trial_iter_vector[-1]+int(nidq_sampling_rate))
             trialnumber_vector_samples[
-                this_trial_iter_vector[0] : this_trial_iter_vector[-1]
-                + int(nidq_sampling_rate)
+                this_trial_iter_vector[0] : this_trial_iter_vector[-1] + int(nidq_sampling_rate)
             ] = i + 1
             framenumber_vector_samples[
-                this_trial_iter_vector[-1] : this_trial_iter_vector[-1]
-                + int(nidq_sampling_rate)
+                this_trial_iter_vector[-1] : this_trial_iter_vector[-1] + int(nidq_sampling_rate)
             ] = this_trial_iter_vector.shape[0]
 
     return trialnumber_vector_samples, framenumber_vector_samples
@@ -885,9 +797,7 @@ def get_index_type_vectors(trial_index_nidq, iteration_index_nidq, nidq_sampling
     idx_iteration_final = []
     for i in range(idx_trial.shape[0]):
         if i < idx_trial.shape[0] - 1:
-            iterations_this_trial = idx_iteration[
-                (idx_iteration > idx_trial[i]) & (idx_iteration < idx_trial[i + 1])
-            ]
+            iterations_this_trial = idx_iteration[(idx_iteration > idx_trial[i]) & (idx_iteration < idx_trial[i + 1])]
         else:
             iterations_this_trial = idx_iteration[(idx_iteration > idx_trial[i])]
         idx_this_trial_iterations = np.insert(iterations_this_trial, 0, idx_trial[i])
@@ -901,9 +811,7 @@ def get_index_type_vectors(trial_index_nidq, iteration_index_nidq, nidq_sampling
         idx_iteration_final, nidq_sampling_rate, trial_index_nidq.shape[0]
     )
 
-    iteration_equal = np.allclose(
-        iteration_index_nidq, iteration_index_nidq2, equal_nan=True
-    )
+    iteration_equal = np.allclose(iteration_index_nidq, iteration_index_nidq2, equal_nan=True)
     trial_equal = np.allclose(trial_index_nidq, trial_index_nidq2, equal_nan=True)
 
     print("iteration_equal", iteration_equal)
@@ -940,9 +848,7 @@ class xyz_pick_file_creator:
     """
 
     @staticmethod
-    def main_xyz_pick_file_function(
-        recording_id, fragment_number, chanmap_file, processed_data_directory
-    ):
+    def main_xyz_pick_file_function(recording_id, fragment_number, chanmap_file, processed_data_directory):
         """
         Stores xyz_pick_files on ibl_postprocess directory for ibl_atlas_gui
         Input:
@@ -962,9 +868,7 @@ class xyz_pick_file_creator:
             pathlib.Path.mkdir(ibl_output_dir)
 
         # Get recording id
-        probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(
-            recording_id, fragment_number
-        )
+        probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(recording_id, fragment_number)
         print(probe_location)
 
         # Load channelmap and check how many probes there are
@@ -974,12 +878,8 @@ class xyz_pick_file_creator:
         # Calculate probe coordinates and store files
         all_shanks = list()
         for i in range(max_shank):
-            probe_track = xyz_pick_file_creator.get_probetrack(
-                chanmap, shank=i + 1, **probe_location
-            )
-            xyz_pick_file_creator.save_xyz_pick_file(
-                ibl_output_dir, probe_track, shank=i
-            )
+            probe_track = xyz_pick_file_creator.get_probetrack(chanmap, shank=i + 1, **probe_location)
+            xyz_pick_file_creator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
             all_shanks.append(probe_track)
 
         return all_shanks
@@ -1009,9 +909,7 @@ class xyz_pick_file_creator:
 
         # Query subject of recording
         query = {"recording_id": recording_id}
-        subject_recording = (recording_db.Recording.BehaviorSession & query).fetch(
-            "subject_fullname"
-        )
+        subject_recording = (recording_db.Recording.BehaviorSession & query).fetch("subject_fullname")
 
         if subject_recording.shape[0] != 0:
             # Query probe insertion table
@@ -1019,9 +917,7 @@ class xyz_pick_file_creator:
                 "subject_fullname": subject_recording[0],
                 "device_idx": probe_num,
             }
-            probe_location = (action_db.SurgeryLocation & query_surgery).fetch(
-                *coordinates_columns, as_dict=True
-            )
+            probe_location = (action_db.SurgeryLocation & query_surgery).fetch(*coordinates_columns, as_dict=True)
             if len(probe_location) == 0:
                 probes_not_found = True
             else:
@@ -1080,9 +976,7 @@ class xyz_pick_file_creator:
         probe_x0 = np.array(
             [np.cos(roll) * avx, -np.sin(roll) * avx]
         )  # coordinates of the shank after "roll" around probe axis
-        probe_length = np.max(y[k == shank]) - np.min(
-            y[k == shank]
-        )  # Length off the probe per chanmap
+        probe_length = np.max(y[k == shank]) - np.min(y[k == shank])  # Length off the probe per chanmap
         probe_unitVec = np.array(
             [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)]
         )  # Unit vector point along insertion direction
@@ -1096,9 +990,7 @@ class xyz_pick_file_creator:
         # Step 3: Produce the 3D coordinates along the probe track
         probe_track = np.zeros((len(probe_length), 3))
         for i in range(len(probe_length)):
-            probe_track[i, :] = probe_length[i] * probe_unitVec + np.array(
-                [probe_x0[0], probe_x0[1], 0]
-            )
+            probe_track[i, :] = probe_length[i] * probe_unitVec + np.array([probe_x0[0], probe_x0[1], 0])
 
         # Step 4: Shift probe my ML|AP insertion coordinates
         probe_track_shifted = np.zeros(probe_track.shape)

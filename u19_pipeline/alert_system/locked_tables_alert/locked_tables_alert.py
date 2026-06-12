@@ -15,9 +15,7 @@ def main_locked_tables_alert():
 
     locked_tables_query = "show open tables where in_use > 0"
     conn = dj.conn()
-    locked_tables_df = pd.DataFrame(
-        conn.query(locked_tables_query, as_dict=True).fetchall()
-    )
+    locked_tables_df = pd.DataFrame(conn.query(locked_tables_query, as_dict=True).fetchall())
 
     if locked_tables_df.shape[0] == 0:
         return

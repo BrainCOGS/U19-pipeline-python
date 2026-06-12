@@ -77,13 +77,9 @@ class Processing(dj.Manual):
         for idx, fragment_key in enumerate(fragment_keys):
             this_recprocess_key.append(dict())
             this_recprocess_key[idx]["recording_id"] = fragment_key["recording_id"]
-            this_recprocess_key[idx]["fragment_number"] = fragment_key[
-                fragment_fieldname
-            ]
+            this_recprocess_key[idx]["fragment_number"] = fragment_key[fragment_fieldname]
             this_recprocess_key[idx]["status_processing_id"] = 0
-            this_recprocess_key[idx]["recording_process_pre_path"] = fragment_key[
-                "recording_process_pre_path"
-            ]
+            this_recprocess_key[idx]["recording_process_pre_path"] = fragment_key["recording_process_pre_path"]
 
         self.insert(this_recprocess_key)
 

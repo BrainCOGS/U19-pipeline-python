@@ -32,12 +32,8 @@ def generate_slurm_file(job_id, program_selection_params):
     label_rec_process = "job_id_" + str(job_id)
     slurm_dict["job-name"] = label_rec_process
 
-    slurm_dict["output"] = str(
-        pathlib.Path(cluster_vars["log_files_dir"], label_rec_process + ".log")
-    )
-    slurm_dict["error"] = str(
-        pathlib.Path(cluster_vars["error_files_dir"], label_rec_process + ".log")
-    )
+    slurm_dict["output"] = str(pathlib.Path(cluster_vars["log_files_dir"], label_rec_process + ".log"))
+    slurm_dict["error"] = str(pathlib.Path(cluster_vars["error_files_dir"], label_rec_process + ".log"))
 
     print("slurm_dict", slurm_dict)
 
@@ -59,12 +55,8 @@ def generate_slurm_file(job_id, program_selection_params):
         status = config.system_process["SUCCESS"]
         slurm_destination = slurm_file_local_path
     else:
-        slurm_destination = pathlib.Path(
-            cluster_vars["slurm_files_dir"], slurm_file_name
-        ).as_posix()
-        status = transfer_slurm_file(
-            slurm_file_local_path, slurm_destination, cluster_vars
-        )
+        slurm_destination = pathlib.Path(cluster_vars["slurm_files_dir"], slurm_file_name).as_posix()
+        status = transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars)
 
     print(status)
     print(slurm_destination)
@@ -91,9 +83,7 @@ def queue_slurm_file(
     print("queue_slurm_file **********************************")
 
     processing_repository = program_selection_params["process_repository"]
-    repository_dir = pathlib.Path(
-        cluster_vars[modality + "_process_dir"], processing_repository
-    ).as_posix()
+    repository_dir = pathlib.Path(cluster_vars[modality + "_process_dir"], processing_repository).as_posix()
 
     command = [
         "ssh",
@@ -193,17 +183,9 @@ def create_slurm_params_file(slurm_dict):
     for slurm_param in slurm_dict.keys():
         if isinstance(slurm_dict[slurm_param], list):
             for list_param in slurm_dict[slurm_param]:
-                text_dict += (
-                    "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"
-                )
+                text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"
         else:
-            text_dict += (
-                "#SBATCH --"
-                + str(slurm_param)
-                + "="
-                + str(slurm_dict[slurm_param])
-                + "\n"
-            )
+            text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(slurm_dict[slurm_param]) + "\n"
 
     return text_dict
 

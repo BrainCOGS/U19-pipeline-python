@@ -32,12 +32,8 @@ DAY_SCHEDULE_FILENAME = "ScheduleDay.csv"
 PAST_SESSION_PERFORMANCE_FILENAME = "PastSessions.csv"
 SUBJECT_MOTOR_POSITION_FILENAME = "SubjectMotorPosition.csv"
 
-WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME_TEMPLATE = (
-    "Weighing_GUI_Replacement_SpreadSheet_Template.xlsx"
-)
-WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME = (
-    "Weighing_GUI_Replacement_SpreadSheet.xlsx"
-)
+WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME_TEMPLATE = "Weighing_GUI_Replacement_SpreadSheet_Template.xlsx"
+WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME = "Weighing_GUI_Replacement_SpreadSheet.xlsx"
 
 conf = dj.config
 nodb_virmen_backup_dir = pathlib.Path(
@@ -83,11 +79,7 @@ def write_slack_webhooks_file():
 
 def write_user_data_file():
 
-    user_data = pd.DataFrame(
-        lab.User.fetch(
-            "user_id", "slack", "tech_responsibility", "slack_webhook", as_dict=True
-        )
-    )
+    user_data = pd.DataFrame(lab.User.fetch("user_id", "slack", "tech_responsibility", "slack_webhook", as_dict=True))
     user_data["slack_webhook"] = user_data["slack_webhook"].astype(str)
     user_data["slack_webhook"] = user_data["slack_webhook"].fillna("")
 
@@ -102,9 +94,7 @@ def write_rig_status_file():
     file_write = pathlib.Path(nodb_virmen_backup_dir, RIG_STATUS_FILENAME)
 
     df_rig_status = pd.DataFrame(
-        scheduler.RigStatus.fetch(
-            "location", "input_output_name", "current_status", as_dict=True
-        )
+        scheduler.RigStatus.fetch("location", "input_output_name", "current_status", as_dict=True)
     )
     df_rig_status.to_csv(file_write, index=False)
 
@@ -118,9 +108,7 @@ def write_schedule_file():
 
     day_schedule = pd.DataFrame(
         (
-            scheduler.Schedule
-            * scheduler.TrainingProfile
-            * subject.Subject.proj(subject_user_id="user_id")
+            scheduler.Schedule * scheduler.TrainingProfile * subject.Subject.proj(subject_user_id="user_id")
             & schedule_query
             & subject_query
         ).fetch(as_dict=True)
@@ -147,32 +135,20 @@ def write_past_sessions_file(day_schedule):
         )
     )
     ss["session_date"] = ss["session_date"].astype(str)
-    ss["num_sessions"] = ss.groupby(["subject_fullname"])["subject_fullname"].rank(
-        method="first"
-    )
+    ss["num_sessions"] = ss.groupby(["subject_fullname"])["subject_fullname"].rank(method="first")
     ss["num_sessions"] = ss["num_sessions"].astype(int)
     ss = ss.loc[ss["num_sessions"] <= MAX_SESSIONS_HISTORY, :]
 
     max_value_indices = ss.groupby("subject_fullname")["num_sessions"].idxmax()
     ss = ss.loc[max_value_indices]
     ss = ss.reset_index(drop=True)
-    ss["query"] = (
-        "(subject_fullname='"
-        + ss["subject_fullname"]
-        + "' and session_date >= '"
-        + ss["session_date"]
-        + "')"
-    )
+    ss["query"] = "(subject_fullname='" + ss["subject_fullname"] + "' and session_date >= '" + ss["session_date"] + "')"
 
     block_query = " OR ".join(ss["query"])
 
-    sstable = acquisition.SessionStarted.proj(
-        "local_path_behavior_file", "session_location"
-    )
+    sstable = acquisition.SessionStarted.proj("local_path_behavior_file", "session_location")
     stable = (acquisition.Session).proj(stimulusBank="stimulus_bank")
-    tstable = behavior.TowersSession.proj(
-        trialType="rewarded_side", choice="chosen_side", stimulusSet="stimulus_set"
-    )
+    tstable = behavior.TowersSession.proj(trialType="rewarded_side", choice="chosen_side", stimulusSet="stimulus_set")
     tbtable = behavior.TowersBlock.proj(
         "first_trial",
         "n_trials",
@@ -209,9 +185,7 @@ def write_subject_motor_position(day_schedule):
     all_subjects_schedule = "', '".join(day_schedule["subject_fullname"])
     all_subjects_schedule = "subject_fullname in ('" + all_subjects_schedule + "')"
 
-    sp = pd.DataFrame(
-        (subject.HeadMotorPosition & all_subjects_schedule).fetch(as_dict=True)
-    )
+    sp = pd.DataFrame((subject.HeadMotorPosition & all_subjects_schedule).fetch(as_dict=True))
 
     file_write = pathlib.Path(nodb_virmen_backup_dir, SUBJECT_MOTOR_POSITION_FILENAME)
     sp.to_csv(file_write, index=False)
@@ -257,20 +231,14 @@ def write_weighinig_gui_ss_file():
     subject_data["today water"] = ""
 
     # Copy the source file to the destination, replacing if it exists
-    template_ss_file = pathlib.Path(
-        nodb_virmen_backup_dir, WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME_TEMPLATE
-    )
-    ss_file = pathlib.Path(
-        nodb_virmen_backup_dir, WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME
-    )
+    template_ss_file = pathlib.Path(nodb_virmen_backup_dir, WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME_TEMPLATE)
+    ss_file = pathlib.Path(nodb_virmen_backup_dir, WEIGHING_GUI_REPLACEMENT_SPREADHSHEET_FILENAME)
     shutil.copy2(template_ss_file, ss_file)
 
     book = openpyxl.load_workbook(ss_file)
     sheet = book["Sheet1"]
 
-    for r_idx, row in enumerate(
-        dataframe_to_rows(subject_data, index=False, header=False), start=3
-    ):
+    for r_idx, row in enumerate(dataframe_to_rows(subject_data, index=False, header=False), start=3):
         for c_idx, value in enumerate(row, start=1):
             sheet.cell(row=r_idx, column=c_idx, value=value)
 

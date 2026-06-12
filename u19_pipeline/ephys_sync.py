@@ -43,9 +43,7 @@ class BehaviorSync(dj.Imported):
         nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
 
         if nidq_meta["typeThis"] == "nidq":
-            digital_array = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(
-                nidq_bin_full_path, nidq_meta
-            )
+            digital_array = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
         else:
             digital_array = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(
                 nidq_bin_full_path, nidq_meta, d_line_list=[1, 2]
@@ -53,26 +51,20 @@ class BehaviorSync(dj.Imported):
 
         # Synchronize between pulses and get iteration # vector for each sample
         mode = "counter_bit0"
-        iteration_dict = (
-            ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(
-                digital_array[1, :],
-                digital_array[2, :],
-                nidq_sampling_rate,
-                behavior_time.shape[0],
-                mode,
-            )
+        iteration_dict = ephys_utils.get_iteration_sample_vector_from_digital_lines_pulses(
+            digital_array[1, :],
+            digital_array[2, :],
+            nidq_sampling_rate,
+            behavior_time.shape[0],
+            mode,
         )
         # Check # of trials and iterations match
-        status = ephys_utils.assert_iteration_samples_count(
-            iteration_dict["iter_start_idx"], behavior_time
-        )
+        status = ephys_utils.assert_iteration_samples_count(iteration_dict["iter_start_idx"], behavior_time)
 
         # They didn't match, try counter method (if available)
         if (not status) and (digital_array.shape[0] > 3):
-            [framenumber_in_trial, trialnumber] = (
-                ephys_utils.behavior_sync_frame_counter_method(
-                    digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5
-                )
+            [framenumber_in_trial, trialnumber] = ephys_utils.behavior_sync_frame_counter_method(
+                digital_array, behavior_time, thissession, nidq_sampling_rate, 3, 5
             )
             iteration_dict["framenumber_vector_samples"] = framenumber_in_trial
             iteration_dict["trialnumber_vector_samples"] = trialnumber
@@ -96,19 +88,13 @@ class BehaviorSync(dj.Imported):
         here = ephys_element.ProbeInsertion & key
         for probe_insertion in here.fetch("KEY"):
             # imec_bin_filepath = list(session_dir.glob('*imec{}/*.ap.bin'.format(probe_insertion['insertion_number'])))
-            imec_bin_filepath = list(
-                session_dir.glob(
-                    "*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])
-                )
-            )
+            imec_bin_filepath = list(session_dir.glob("*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])))
 
             if len(imec_bin_filepath) == 1:  # find the binary file to get meta data
                 imec_bin_filepath = imec_bin_filepath[0]
             else:  # if this fails, get the ap.meta file.
                 imec_bin_filepath = list(
-                    session_dir.glob(
-                        "*imec{}/*.ap.meta".format(probe_insertion["insertion_number"])
-                    )
+                    session_dir.glob("*imec{}/*.ap.meta".format(probe_insertion["insertion_number"]))
                 )
                 if len(imec_bin_filepath) == 1:
                     s = str(imec_bin_filepath[0])
@@ -117,9 +103,7 @@ class BehaviorSync(dj.Imported):
                     raise NameError("No imec meta file found.")
 
             imec_meta = readSGLX.readMeta(imec_bin_filepath)
-            self.ImecSamplingRate.insert1(
-                dict(probe_insertion, ephys_sampling_rate=imec_meta["imSampRate"])
-            )
+            self.ImecSamplingRate.insert1(dict(probe_insertion, ephys_sampling_rate=imec_meta["imSampRate"]))
 
 
 @schema
@@ -143,9 +127,9 @@ class CuratedClustersIteration(dj.Computed):
 
         self.insert1(key)
 
-        nidq_sampling_rate, iteration_index_nidq = (
-            BehaviorSync * BehaviorSync.ImecSamplingRate & key
-        ).fetch1("nidq_sampling_rate", "iteration_index_nidq")
+        nidq_sampling_rate, iteration_index_nidq = (BehaviorSync * BehaviorSync.ImecSamplingRate & key).fetch1(
+            "nidq_sampling_rate", "iteration_index_nidq"
+        )
 
         key_session = key.copy()
         del key_session["insertion_number"]
@@ -183,20 +167,12 @@ class CuratedClustersIteration(dj.Computed):
         unit_spike_counts = []
 
         for unit_key in (ephys_element.CuratedClustering.Unit & key).fetch("KEY"):
-            spike_times = (ephys_element.CuratedClustering.Unit & unit_key).fetch1(
-                "spike_times"
-            )
+            spike_times = (ephys_element.CuratedClustering.Unit & unit_key).fetch1("spike_times")
             # vector with length n_iterations + 1
-            spike_counts_iteration = np.bincount(
-                np.digitize(spike_times, iteration_times)
-            )
+            spike_counts_iteration = np.bincount(np.digitize(spike_times, iteration_times))
 
-            firing_rate_before_first_iteration = (
-                spike_counts_iteration[0] / iteration_times[0]
-            )
-            firing_rate_after_last_iteration = spike_counts_iteration[-1] / (
-                t_end - iteration_times[-1]
-            )
+            firing_rate_before_first_iteration = spike_counts_iteration[0] / iteration_times[0]
+            firing_rate_after_last_iteration = spike_counts_iteration[-1] / (t_end - iteration_times[-1])
 
             # remove the first and last entries
             spike_counts_iteration = np.delete(spike_counts_iteration, [0, -1])

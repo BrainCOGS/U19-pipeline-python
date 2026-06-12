@@ -295,9 +295,7 @@ class Path(dj.Lookup):
         for iglob, glob in enumerate(globs.fetch("KEY")):
             mapping[iglob].append(glob["global_path"])
             for system in systems:
-                mapping[iglob].append(
-                    (self & glob & {"system": system}).fetch1("local_path")
-                )
+                mapping[iglob].append((self & glob & {"system": system}).fetch1("local_path"))
 
         mapping = np.asarray(mapping)
 
@@ -332,13 +330,9 @@ class Path(dj.Lookup):
         path_df = path_df[path_df["system"] == system]
 
         # Search in path which of the main buckets we are referring from
-        path_df["idx_global_path"] = path_df["global_path"].apply(
-            lambda x: bucket_path.find(x)
-        )
+        path_df["idx_global_path"] = path_df["global_path"].apply(lambda x: bucket_path.find(x))
         path_df = path_df[path_df["idx_global_path"] != -1]
-        path_df = path_df[
-            path_df["idx_global_path"] == path_df["idx_global_path"].min()
-        ].squeeze()
+        path_df = path_df[path_df["idx_global_path"] == path_df["idx_global_path"].min()].squeeze()
         path_df = path_df.to_dict()
 
         # Remove bucket "base" dir from path

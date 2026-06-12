@@ -25,9 +25,7 @@ class VirusSource(dj.Lookup):
     definition = """
     virus_source         : varchar(32)
     """
-    contents = zip(
-        ["UNC", "UPenn", "Addgene", "MIT", "Stanford", "Princeton", "custom"]
-    )
+    contents = zip(["UNC", "UPenn", "Addgene", "MIT", "Stanford", "Princeton", "custom"])
 
 
 @schema

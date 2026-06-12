@@ -45,9 +45,7 @@ def basic_dj_configuration(dj):
     elif sys.platform == "linux" or sys.platform == "linux2":
         ext_storage_location = "/mnt/u19_dj/external_dj_blobs"
 
-    dj.config["stores"] = {
-        "extstorage": {"location": ext_storage_location, "protocol": "file"}
-    }
+    dj.config["stores"] = {"extstorage": {"location": ext_storage_location, "protocol": "file"}}
 
 
 def get_network_path(path_name):
@@ -78,9 +76,7 @@ def get_network_path(path_name):
     else:
         key["system"] = "linux"
 
-    lab = dj.create_virtual_module(
-        "lab", dj.config["custom"]["database.prefix"] + "lab"
-    )
+    lab = dj.create_virtual_module("lab", dj.config["custom"]["database.prefix"] + "lab")
     network_path = (lab.Path & key).fetch1(*field_get)
     return network_path
 
@@ -152,9 +148,7 @@ def psychFit(deltaBins, numR, numL, choices):
         if choices[iTrial] == 2:
             numRight[trialBin[iTrial]] = numRight[trialBin[iTrial]] + 1
 
-        trialDelta[trialBin[iTrial]] = (
-            trialDelta[trialBin[iTrial]] + nCues_RminusL[iTrial]
-        )
+        trialDelta[trialBin[iTrial]] = trialDelta[trialBin[iTrial]] + nCues_RminusL[iTrial]
 
     with np.errstate(divide="ignore", invalid="ignore"):
         trialDelta = np.true_divide(trialDelta, numTrials)
@@ -165,12 +159,8 @@ def psychFit(deltaBins, numR, numL, choices):
     numRight_nz = numRight[~idx_zero]
 
     # (Binomial proportion confidence interval given k successes, n trials)
-    phat_nz = binom_conf_interval(
-        numRight_nz, numTrials_nz, confidence_level=0, interval="jeffreys"
-    )
-    pci_nz = binom_conf_interval(
-        numRight_nz, numTrials_nz, confidence_level=1 - 0.1587, interval="jeffreys"
-    )
+    phat_nz = binom_conf_interval(numRight_nz, numTrials_nz, confidence_level=0, interval="jeffreys")
+    pci_nz = binom_conf_interval(numRight_nz, numTrials_nz, confidence_level=1 - 0.1587, interval="jeffreys")
 
     # Correct confidence intervals and expected outcomes for bins with no trials (ci = [0 1], hat = 0.5)
     phat_nz = phat_nz[0]
@@ -250,12 +240,8 @@ def translate_choice_trials_cues(session_df):
 
     # If we are translating towers task cues
     if "cue_presence_left" in session_df.columns:
-        session_df["cue_presence_left"] = session_df["cue_presence_left"].apply(
-            lambda x: np.count_nonzero(x)
-        )
-        session_df["cue_presence_right"] = session_df["cue_presence_right"].apply(
-            lambda x: np.count_nonzero(x)
-        )
+        session_df["cue_presence_left"] = session_df["cue_presence_left"].apply(lambda x: np.count_nonzero(x))
+        session_df["cue_presence_right"] = session_df["cue_presence_right"].apply(lambda x: np.count_nonzero(x))
     # If we are translating puff task cues
     elif "num_puffs_received_r" in session_df.columns:
         session_df["cue_presence_left"] = session_df["num_puffs_received_l"]
@@ -313,9 +299,7 @@ def numpy_array_to_dict(np_array, as_int=True):
     # Get not empty columns to extract fist value of only those columns
     s = out_dict.applymap(lambda x: x.shape[0])
     not_empty_columns = s.loc[:, ~(s == 0).any()].columns.to_list()
-    out_dict = out_dict.apply(
-        lambda x: x[0].flatten() if x.name in not_empty_columns else x
-    )
+    out_dict = out_dict.apply(lambda x: x[0].flatten() if x.name in not_empty_columns else x)
 
     if not isinstance(out_dict, pd.DataFrame):
         out_dict = out_dict.to_frame()
@@ -323,9 +307,7 @@ def numpy_array_to_dict(np_array, as_int=True):
         s = out_dict.applymap(lambda x: x.size).T
         real_array_columns = s.loc[:, (s > 1).any()].columns.to_list()
         out_dict = out_dict.T
-        out_dict = out_dict.apply(
-            lambda x: x[0] if x.name not in real_array_columns else x, axis=0
-        )
+        out_dict = out_dict.apply(lambda x: x[0] if x.name not in real_array_columns else x, axis=0)
 
     columns = out_dict.columns.copy()
     out_dict = out_dict.squeeze()

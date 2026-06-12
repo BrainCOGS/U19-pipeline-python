@@ -9,22 +9,14 @@ import datajoint as dj
 
 dj.conn()
 
-ephys_element = dj.create_virtual_module(
-    "u19_pipeline_ephys_element", "u19_pipeline_ephys_element"
-)
-imaging_element = dj.create_virtual_module(
-    "u19_pipeline_imaging_element", "u19_pipeline_imaging_element"
-)
+ephys_element = dj.create_virtual_module("u19_pipeline_ephys_element", "u19_pipeline_ephys_element")
+imaging_element = dj.create_virtual_module("u19_pipeline_imaging_element", "u19_pipeline_imaging_element")
 
 modalities = ["electrophysiology", "imaging"]
 
 params_tables = [ephys_element.ClusteringParamSet, imaging_element.ProcessingParamSet]
 preparams_steps_tables = [
-    (
-        ephys_element.PreClusterParamSteps
-        * ephys_element.PreClusterParamSteps.Step
-        * ephys_element.PreClusterParamSet
-    )
+    (ephys_element.PreClusterParamSteps * ephys_element.PreClusterParamSteps.Step * ephys_element.PreClusterParamSet)
 ]
 preparams_tables = [ephys_element.PreClusterParamSet]
 
@@ -67,13 +59,9 @@ for idx, preparam_modality_list in enumerate(preparams_steps):
         if "precluster_method" in dict:
             dict["preprocess_method"] = dict.pop("precluster_method")
         if "precluster_param_steps_name" in dict:
-            dict["preprocess_param_steps_name"] = dict.pop(
-                "precluster_param_steps_name"
-            )
+            dict["preprocess_param_steps_name"] = dict.pop("precluster_param_steps_name")
         if "precluster_param_steps_desc" in dict:
-            dict["preprocess_param_steps_desc"] = dict.pop(
-                "precluster_param_steps_desc"
-            )
+            dict["preprocess_param_steps_desc"] = dict.pop("precluster_param_steps_desc")
 
         preparams_steps_dict_dict["param_" + str(num_preparams_steps)] = dict
         num_preparams_steps += 1

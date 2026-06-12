@@ -14,9 +14,7 @@ class BehaviorMetrics:
             "trial_idx",
         ]
         session_columns = ["subject_fullname", "session_date", "session_number"]
-        trials_df = trials_df.sort_values(
-            by=sort_columns, ascending=[True, False, False, True, True]
-        )
+        trials_df = trials_df.sort_values(by=sort_columns, ascending=[True, False, False, True, True])
         trials_df = trials_df.reset_index(drop=True)
 
         # Left & right trials as integers
@@ -25,46 +23,28 @@ class BehaviorMetrics:
         trials_df["trial"] = 1
 
         # Cumulative sum of Left & right trials as integers per session
-        trials_df["cum_left_trials"] = trials_df.groupby(session_columns)[
-            "left_trial"
-        ].cumsum()
-        trials_df["cum_right_trials"] = trials_df.groupby(session_columns)[
-            "right_trial"
-        ].cumsum()
+        trials_df["cum_left_trials"] = trials_df.groupby(session_columns)["left_trial"].cumsum()
+        trials_df["cum_right_trials"] = trials_df.groupby(session_columns)["right_trial"].cumsum()
         trials_df["cum_trials"] = trials_df.groupby(session_columns)["trial"].cumsum()
 
         # Correct trials per side as integers
-        trials_df["correct_trial"] = (
-            trials_df["trial_type"] == trials_df["choice"]
-        ).astype(int)
-        trials_df["correct_left"] = (
-            (trials_df["correct_trial"] == 1) & (trials_df["trial_type"] == "L")
-        ).astype(int)
-        trials_df["correct_right"] = (
-            (trials_df["correct_trial"] == 1) & (trials_df["trial_type"] == "R")
-        ).astype(int)
+        trials_df["correct_trial"] = (trials_df["trial_type"] == trials_df["choice"]).astype(int)
+        trials_df["correct_left"] = ((trials_df["correct_trial"] == 1) & (trials_df["trial_type"] == "L")).astype(int)
+        trials_df["correct_right"] = ((trials_df["correct_trial"] == 1) & (trials_df["trial_type"] == "R")).astype(int)
 
         # Cumulative sum of per side correct trials
-        trials_df["cum_correct_left_trials"] = trials_df.groupby(session_columns)[
-            "correct_left"
-        ].cumsum()
-        trials_df["cum_correct_right_trials"] = trials_df.groupby(session_columns)[
-            "correct_right"
-        ].cumsum()
-        trials_df["cum_correct_trials"] = trials_df.groupby(session_columns)[
-            "correct_trial"
-        ].cumsum()
+        trials_df["cum_correct_left_trials"] = trials_df.groupby(session_columns)["correct_left"].cumsum()
+        trials_df["cum_correct_right_trials"] = trials_df.groupby(session_columns)["correct_right"].cumsum()
+        trials_df["cum_correct_trials"] = trials_df.groupby(session_columns)["correct_trial"].cumsum()
 
         # Get only last trial count
-        trials_df = trials_df.loc[
-            ~trials_df.duplicated(subset=session_columns, keep="last"), :
-        ]
+        trials_df = trials_df.loc[~trials_df.duplicated(subset=session_columns, keep="last"), :]
         trials_df = trials_df.reset_index(drop=True)
 
         # Calculate bias
-        trials_df["bias"] = (
-            trials_df["cum_correct_right_trials"] / trials_df["cum_right_trials"]
-        ) - (trials_df["cum_correct_left_trials"] / trials_df["cum_left_trials"])
+        trials_df["bias"] = (trials_df["cum_correct_right_trials"] / trials_df["cum_right_trials"]) - (
+            trials_df["cum_correct_left_trials"] / trials_df["cum_left_trials"]
+        )
 
         if return_all_metrics:
             bias_df = trials_df
@@ -92,9 +72,7 @@ class BehaviorMetrics:
         z_score_metric_l = "z_score_" + metric
 
         # Get mean and std for the selected metric
-        avg_df = session_df.groupby(groupby_column).agg(
-            {metric: [(avg_metric_l, "mean"), (std_metric_l, "std")]}
-        )
+        avg_df = session_df.groupby(groupby_column).agg({metric: [(avg_metric_l, "mean"), (std_metric_l, "std")]})
         avg_df.columns = avg_df.columns.droplevel()
         avg_df = avg_df.reset_index()
 
@@ -102,8 +80,6 @@ class BehaviorMetrics:
         session_df = session_df.merge(avg_df)
 
         # Calculate proper zscore
-        session_df[z_score_metric_l] = (
-            session_df[metric] - session_df[avg_metric_l]
-        ) / session_df[std_metric_l]
+        session_df[z_score_metric_l] = (session_df[metric] - session_df[avg_metric_l]) / session_df[std_metric_l]
 
         return session_df

@@ -6,9 +6,7 @@ from u19_pipeline import recording, recording_process
 from u19_pipeline.imaging_pipeline import imaging_element
 
 
-def populate_element_data(
-    job_id, display_progress=True, reserve_jobs=False, suppress_errors=False
-):
+def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 
     populate_settings = {
         "display_progress": display_progress,
@@ -16,9 +14,7 @@ def populate_element_data(
         "suppress_errors": suppress_errors,
     }
 
-    process_key = (
-        recording_process.Processing * recording.Recording & dict(job_id=job_id)
-    ).fetch1("KEY")
+    process_key = (recording_process.Processing * recording.Recording & dict(job_id=job_id)).fetch1("KEY")
 
     if (recording.Recording & process_key).fetch1("recording_modality") != "imaging":
         warnings.warn(f"Recording modality is not `imaging` for job_id: {job_id}")
@@ -26,22 +22,19 @@ def populate_element_data(
 
     fragment_number, recording_process_pre_path, recording_process_post_path = (
         recording_process.Processing & process_key
-    ).fetch1(
-        "fragment_number", "recording_process_pre_path", "recording_process_post_path"
+    ).fetch1("fragment_number", "recording_process_pre_path", "recording_process_post_path")
+
+    preprocess_param_steps_id, paramset_idx = (recording_process.Processing.ImagingParams & process_key).fetch1(
+        "preprocess_param_steps_id", "paramset_idx"
     )
 
-    preprocess_param_steps_id, paramset_idx = (
-        recording_process.Processing.ImagingParams & process_key
-    ).fetch1("preprocess_param_steps_id", "paramset_idx")
-
     preprocess_paramsets = (
-        imaging_element.PreprocessParamSteps.Step()
-        & dict(preprocess_param_steps_id=preprocess_param_steps_id)
+        imaging_element.PreprocessParamSteps.Step() & dict(preprocess_param_steps_id=preprocess_param_steps_id)
     ).fetch("paramset_idx")
 
-    processing_method = (
-        imaging_element.ProcessingParamSet & dict(paramset_idx=paramset_idx)
-    ).fetch1("processing_method")
+    processing_method = (imaging_element.ProcessingParamSet & dict(paramset_idx=paramset_idx)).fetch1(
+        "processing_method"
+    )
 
     if len(preprocess_paramsets) == 0:
         preprocess_task_mode = "none"

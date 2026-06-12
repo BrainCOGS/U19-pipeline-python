@@ -34,9 +34,7 @@ u19_puffs = dj.create_virtual_module("u19_puffs", "u19_puffs")
 # Currently a hardcoded data folder to one of Marlies' cohorts for this example,
 # but in the future will loop over folders starting from
 # The root folder: /jukebox/braininit/puffs/
-data_folder = (
-    "/jukebox/braininit/puffs/oostland/Tsc1_evidence_accumulation/cohort_10/rig0/"
-)
+data_folder = "/jukebox/braininit/puffs/oostland/Tsc1_evidence_accumulation/cohort_10/rig0/"
 h5_files = glob.glob(data_folder + "/data*.h5")
 mouse_info_file = os.path.join(
     "/jukebox/braininit/puffs/oostland/Tsc1_evidence_accumulation",
@@ -201,9 +199,7 @@ u19_subject.Subject.insert(subject_insert_list, skip_duplicates=True)
 
 # first find list of h5 files that are already processed so we do not
 # repeat the ingestion on those
-already_processed_filenames = (u19_puffs.PuffsFileAcquisition() & "ingested=1").fetch(
-    "h5_filename"
-)
+already_processed_filenames = (u19_puffs.PuffsFileAcquisition() & "ingested=1").fetch("h5_filename")
 
 # Loop over h5 files in this cohort/rig folder
 for h5_file in h5_files:
@@ -249,26 +245,17 @@ for h5_file in h5_files:
         bad_outcome_mask = df_trials["outcome"] > 1
         df_trials.loc[bad_outcome_mask, "choice"] = -1
         """ Map choice to string values: L,R and nil """
-        df_trials["choice"] = df_trials["choice"].apply(
-            lambda x: "L" if x == 0 else ("R" if x == 1 else "nil")
-        )
+        df_trials["choice"] = df_trials["choice"].apply(lambda x: "L" if x == 0 else ("R" if x == 1 else "nil"))
 
         """ Make an answered correct column from outcome column """
         df_trials["answered_correct"] = (df_trials["outcome"] == 1).astype("int")
 
         """ Turn side column into string type """
-        df_trials["side"] = df_trials["side"].apply(
-            lambda x: "L" if x == 0 else ("R" if x == 1 else "nil")
-        )
+        df_trials["side"] = df_trials["side"].apply(lambda x: "L" if x == 0 else ("R" if x == 1 else "nil"))
 
         """ Make a new dataframe for unique sessions, i.e. where subj and session are unique
         in trials """
-        df_sessions = (
-            df_trials.groupby(["subj", "session"])
-            .max()
-            .reset_index()
-            .sort_values(["subj", "session"])
-        )
+        df_sessions = df_trials.groupby(["subj", "session"]).max().reset_index().sort_values(["subj", "session"])
         sessions = df_sessions["session"]
         last_levels = df_sessions["level"]
         session_ends_rel = df_sessions["end"]
@@ -288,12 +275,9 @@ for h5_file in h5_files:
             {"answered_correct": "sum", "side": "count"}
         )
         fraction_trials_correct_df["fraction_correct"] = (
-            fraction_trials_correct_df["answered_correct"]
-            / fraction_trials_correct_df["side"]
+            fraction_trials_correct_df["answered_correct"] / fraction_trials_correct_df["side"]
         )
-        fraction_trials_correct_df = fraction_trials_correct_df.sort_values(
-            ["subj", "session"]
-        ).reset_index()
+        fraction_trials_correct_df = fraction_trials_correct_df.sort_values(["subj", "session"]).reset_index()
         df_sessions["fraction_correct"] = fraction_trials_correct_df["fraction_correct"]
         fractions_correct = df_sessions["fraction_correct"]
 
@@ -322,9 +306,7 @@ for h5_file in h5_files:
             elif rig == 1:
                 location = "wang-behavior"
             else:
-                sys.exit(
-                    f"Rig: {rig} is not one of the rigs. Check data type (needs to be integer)"
-                )
+                sys.exit(f"Rig: {rig} is not one of the rigs. Check data type (needs to be integer)")
             session_compressed_str = session_datetime.strftime("%Y%m%d%H%M%S")
 
             """ Check to see if the session metadata dataframes exist """
@@ -399,9 +381,7 @@ for h5_file in h5_files:
                 "sync": session_sync_dict,
             }
             # Trial() table
-            df_trials_this_session = df_trials[
-                df_trials["session"] == session_datetime
-            ][
+            df_trials_this_session = df_trials[df_trials["session"] == session_datetime][
                 [
                     "idx",
                     "level",
@@ -428,9 +408,7 @@ for h5_file in h5_files:
             df_trials_this_session["session_number"] = session_number
             df_trials_this_session["task"] = "AirPuffs"
             df_trials_this_session["set_id"] = 1
-            df_trials_this_session["trial_duration"] = (
-                df_trials_this_session["end"] - df_trials_this_session["start"]
-            )
+            df_trials_this_session["trial_duration"] = df_trials_this_session["end"] - df_trials_this_session["start"]
             df_trials_this_session.rename(
                 columns={
                     "idx": "trial_idx",
@@ -451,15 +429,11 @@ for h5_file in h5_files:
             trials_insert_list = df_trials_this_session.to_dict("records")
 
             # Puff() table
-            df_puffs_this_session = df_puffs[
-                df_puffs["session"] == session_datetime
-            ].copy()
+            df_puffs_this_session = df_puffs[df_puffs["session"] == session_datetime].copy()
             df_puffs_this_session["subject_fullname"] = subject_fullname
             df_puffs_this_session["session_date"] = date
             df_puffs_this_session["session_number"] = session_number
-            df_puffs_this_session["puff_idx"] = df_puffs_this_session.groupby(
-                "trial"
-            ).cumcount()
+            df_puffs_this_session["puff_idx"] = df_puffs_this_session.groupby("trial").cumcount()
             df_puffs_this_session.rename(
                 columns={
                     "time": "puff_rel_time",
@@ -483,9 +457,7 @@ for h5_file in h5_files:
             puffs_insert_list = df_puffs_this_session.to_dict("records")
 
             # TrialPhase() table
-            df_phases_this_session = df_phases[
-                df_phases["session"] == session_datetime
-            ].copy()
+            df_phases_this_session = df_phases[df_phases["session"] == session_datetime].copy()
             df_phases_this_session["subject_fullname"] = subject_fullname
             df_phases_this_session["session_date"] = date
             df_phases_this_session["session_number"] = session_number
@@ -511,24 +483,16 @@ for h5_file in h5_files:
             """ Some phases seem to reference trials that do not exist
             restrict phase rows to trials that exist """
             trial_idxs = df_trials_this_session["trial_idx"]
-            phase_trial_mask = df_phases_this_session["trial_idx"].isin(
-                trial_idxs.values
-            )
+            phase_trial_mask = df_phases_this_session["trial_idx"].isin(trial_idxs.values)
             df_phases_this_session_goodtrials = df_phases_this_session[phase_trial_mask]
             phases_insert_list = df_phases_this_session_goodtrials.to_dict("records")
             """ Start a transaction and do the inserts for this session """
             connection = u19_acq.SessionStarted.connection
             with connection.transaction:
-                u19_acq.SessionStarted().insert1(
-                    session_started_insert_dict, skip_duplicates=True
-                )
+                u19_acq.SessionStarted().insert1(session_started_insert_dict, skip_duplicates=True)
                 u19_acq.Session().insert1(session_insert_dict, skip_duplicates=True)
-                u19_puffs.PuffsSession().insert1(
-                    puffs_session_insert_dict, skip_duplicates=True
-                )
-                u19_puffs.PuffsSession.Trial().insert(
-                    trials_insert_list, skip_duplicates=True
-                )
+                u19_puffs.PuffsSession().insert1(puffs_session_insert_dict, skip_duplicates=True)
+                u19_puffs.PuffsSession.Trial().insert(trials_insert_list, skip_duplicates=True)
                 # u19_puffs.PuffsSession.Puff().insert(puffs_insert_list,skip_duplicates=True)
                 # u19_puffs.PuffsSession.TrialPhase().insert(phases_insert_list,skip_duplicates=True)
     """ If the inserts for all sessions in this hdf5 file were successful,
