@@ -269,8 +269,12 @@ def submit_nwb_export_job(
 
     NwbExportJob.insert1(job_record)
 
-    # Get auto-generated job ID
-    job_id = (NwbExportJob & session_key).fetch1("nwb_job_id")
+    # Get auto-generated job ID. A session can have multiple jobs, so filtering
+    # by session_key alone is not unique. Filter by the (session_key, job_name)
+    # we just inserted and take the most recent nwb_job_id deterministically.
+    job_id = (NwbExportJob & {**session_key, "job_name": job_name}).fetch(
+        "nwb_job_id", order_by="nwb_job_id DESC", limit=1
+    )[0]
 
     # Add modality associations
     for modality_name, modality_type, numbers in modalities:
