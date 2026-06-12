@@ -1,9 +1,7 @@
 
-import pathlib
-import os
 import glob
+import os
 import subprocess
-import sys
 
 file_patterns_acq = {
     "raw_imaging": ['/*.tiff', '/*.tif'],

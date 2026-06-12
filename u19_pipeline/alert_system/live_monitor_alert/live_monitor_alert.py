@@ -1,9 +1,9 @@
-import datajoint as dj
-import numpy as np
-import pandas as pd
 import time
-from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import datajoint as dj
+import pandas as pd
 
 import u19_pipeline.utils.slack_utils as su
 

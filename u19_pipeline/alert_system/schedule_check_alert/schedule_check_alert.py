@@ -4,9 +4,8 @@ import time
 import datajoint as dj
 import pandas as pd
 
-import u19_pipeline.utils.slack_utils as su
 import u19_pipeline.lab as lab
-
+import u19_pipeline.utils.slack_utils as su
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {

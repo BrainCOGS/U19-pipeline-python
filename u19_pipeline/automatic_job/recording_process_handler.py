@@ -1,31 +1,33 @@
 
-import time
-import traceback
-import pandas as pd
-import datajoint as dj
 import copy
 import pathlib
-import numpy as np
-
-from u19_pipeline.automatic_job import recording_handler
-
-import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.utils.slack_utils as slack_utils
-import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
-import u19_pipeline.automatic_job.slurm_creator as slurmlib
-import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.automatic_job.ephys_element_populate as ep
-import u19_pipeline.automatic_job.imaging_element_populate as ip
-
+import time
+import traceback
 from datetime import datetime
-from u19_pipeline import recording, recording_process, ephys_pipeline, imaging_pipeline, utility
-from u19_pipeline.utility import create_str_from_dict, is_this_spock
-from u19_pipeline.utils import ephys_utils
 
+import pandas as pd
 from ecephys_spike_sorting.common.SGLXMetaToCoords import MetaToCoords
 
-class RecProcessHandler():
+import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+import u19_pipeline.automatic_job.ephys_element_populate as ep
+import u19_pipeline.automatic_job.imaging_element_populate as ip
+import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
+import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.automatic_job.slurm_creator as slurmlib
+import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.slack_utils as slack_utils
+from u19_pipeline import (
+    ephys_pipeline,
+    imaging_pipeline,
+    recording,
+    recording_process,
+    utility,
+)
+from u19_pipeline.automatic_job import recording_handler
+from u19_pipeline.utility import is_this_spock
+
+
+class RecProcessHandler:
 
     @staticmethod
     def pipeline_handler_main():

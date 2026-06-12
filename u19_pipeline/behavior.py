@@ -1,5 +1,4 @@
 import datajoint as dj
-from . import acquisition, task, subject
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'behavior')
 

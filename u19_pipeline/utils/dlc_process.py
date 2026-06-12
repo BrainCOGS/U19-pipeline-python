@@ -1,15 +1,14 @@
 
 import os
-import deeplabcut
-import pandas as pd
-import numpy as np
-import pickle
 import pathlib
+import pickle
 import sys
 
+import deeplabcut
+import numpy as np
+import pandas as pd
 from scipy import stats
 from skimage.measure import EllipseModel
-from skimage.draw import ellipse_perimeter
 
 import u19_pipeline.utils.path_utils as pu
 

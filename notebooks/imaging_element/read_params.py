@@ -1,11 +1,13 @@
 
 import os
+
 from scipy.io import savemat
 
 this_dir = os.path.dirname(__file__)
 os.chdir(this_dir)
 
 import datajoint as dj
+
 dj.conn()
 
 ephys_element =dj.create_virtual_module('u19_pipeline_ephys_element','u19_pipeline_ephys_element')

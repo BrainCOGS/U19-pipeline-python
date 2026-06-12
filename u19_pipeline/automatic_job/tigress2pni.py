@@ -14,16 +14,19 @@ previous transfers, so if this script is run twice in quick succession,
 the second run won't queue a duplicate transfer."""
 
 import json
-import sys
 import os
-import six
+import sys
 
-from globus_sdk import (NativeAppAuthClient, TransferClient,
-                        RefreshTokenAuthorizer, TransferData)
+import six
+from fair_research_login import NativeClient
+from globus_sdk import (
+    NativeAppAuthClient,
+    RefreshTokenAuthorizer,
+    TransferClient,
+    TransferData,
+)
 from globus_sdk.exc import GlobusAPIError
 from globus_sdk.services.transfer.errors import TransferAPIError
-
-from fair_research_login import NativeClient
 
 # Princeton TIGRESS
 SOURCE_ENDPOINT = 'a9df83d2-42f0-11e6-80cf-22000b1701d1'
@@ -74,7 +77,7 @@ def load_data_from_file(filepath):
     """Load a set of saved tokens."""
     if not os.path.exists(filepath):
         return []
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         tokens = json.load(f)
 
     return tokens
@@ -109,7 +112,7 @@ def setup_transfer_client(transfer_tokens):
         if ex.http_status == 401:
             sys.exit('Refresh token has expired. '
                      'Please delete the `tokens` object from '
-                     '{} and try again.'.format(DATA_FILE))
+                     f'{DATA_FILE} and try again.')
         else:
             raise ex
     return transfer_client
@@ -120,10 +123,7 @@ def check_endpoint_path(transfer_client, endpoint, path):
     try:
         transfer_client.operation_ls(endpoint, path=path)
     except TransferAPIError as tapie:
-        print('Failed to query endpoint "{}": {}'.format(
-            endpoint,
-            tapie.message
-        ))
+        print(f'Failed to query endpoint "{endpoint}": {tapie.message}')
         sys.exit(1)
 
 
@@ -134,9 +134,9 @@ def create_destination_directory(transfer_client, dest_ep, dest_path):
     except TransferAPIError:
         try:
             transfer_client.operation_mkdir(dest_ep, dest_path)
-            print('Created directory: {}'.format(dest_path))
+            print(f'Created directory: {dest_path}')
         except TransferAPIError as tapie:
-            print('Failed to start transfer: {}'.format(tapie.message))
+            print(f'Failed to start transfer: {tapie.message}')
             sys.exit(1)
 
 
@@ -177,9 +177,7 @@ def main():
         pass
 
     if len(sys.argv) < 2:
-        print('Usage: {} tigress_dir pni_dir'.format(
-           sys.argv[0]
-        ))
+        print(f'Usage: {sys.argv[0]} tigress_dir pni_dir')
         sys.exit(1)
 
     SOURCE_PATH = sys.argv[1]
@@ -202,12 +200,7 @@ def main():
 
     task = transfer.submit_transfer(tdata)
     save_data_to_file(DATA_FILE, 'task', task.data)
-    print('Transfer has been started from\n  {}:{}\nto\n  {}:{}'.format(
-        SOURCE_ENDPOINT,
-        SOURCE_PATH,
-        DESTINATION_ENDPOINT,
-        DESTINATION_PATH
-    ))
+    print(f'Transfer has been started from\n  {SOURCE_ENDPOINT}:{SOURCE_PATH}\nto\n  {DESTINATION_ENDPOINT}:{DESTINATION_PATH}')
     url_string = 'https://globus.org/app/transfer?' + \
         six.moves.urllib.parse.urlencode({
             'origin_id': SOURCE_ENDPOINT,
@@ -215,7 +208,7 @@ def main():
             'destination_id': DESTINATION_ENDPOINT,
             'destination_path': DESTINATION_PATH
         })
-    print('Visit the link below to see the changes:\n{}'.format(url_string))
+    print(f'Visit the link below to see the changes:\n{url_string}')
 
 
 if __name__ == '__main__':

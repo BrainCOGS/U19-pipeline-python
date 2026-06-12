@@ -1,7 +1,7 @@
-from u19_pipeline.ephys_pipeline import probe_element, ephys_element
-from u19_pipeline import recording, recording_process
-
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import recording, recording_process
+from u19_pipeline.ephys_pipeline import ephys_element, probe_element
+
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 

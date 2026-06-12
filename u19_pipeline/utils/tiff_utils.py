@@ -1,17 +1,15 @@
-import numpy as np
 import gzip
-import shutil
-import re
 import os
-import tifffile
-
-from pathlib import Path
+import re
+import shutil
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
+from pathlib import Path
 
+import numpy as np
+import tifffile
 
 import u19_pipeline.utils.tiff_matlab_imaging_utils as tmiu
-
 
 tif_number_fmt = r'_[0-9]{5}\.tif'
 tif_gz_number_fmt = r'_[0-9]{5}\.tif\.gz'
@@ -214,7 +212,7 @@ def create_scan_info_key(key, rec_info, bucket_dir):
     scan_info_key['last_good_file'] = rec_info['last_good_file']
 
     if 'stacks_enabled' in scope:
-        scan_info_key['stacks_enabled'] = scope['stacks_enabled'];
+        scan_info_key['stacks_enabled'] = scope['stacks_enabled']
     
     if 'stackActuator' in scope:
         scan_info_key['stack_actuator'] = scope['stackActuator']

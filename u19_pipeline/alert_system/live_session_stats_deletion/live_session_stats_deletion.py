@@ -1,6 +1,7 @@
 
 import datajoint as dj
 
+
 def main_live_session_stats_deletion():
 
     acquisition = dj.create_virtual_module('acquisition', 'u19_acquisition')

@@ -1,14 +1,14 @@
+import ast
+import re
+import time
 from pathlib import Path
+
 import numpy as np
 import tifffile as tiff
 from sklearn.linear_model import HuberRegressor
-import time
-import re
-import ast
 
-
-xySizeFactor          = 1.05; # images are this much larger than nominal size
-zFactor               = 1.45; # actual displacement in z vs command
+xySizeFactor          = 1.05 # images are this much larger than nominal size
+zFactor               = 1.45 # actual displacement in z vs command
 
 
 def select_files_from_mean_f(
@@ -491,11 +491,6 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
     return header, parsed_info
 
 
-from pathlib import Path
-import re
-import ast
-import numpy as np
-import tifffile as tiff
 
 
 def parse_tif_header_mesoscope(

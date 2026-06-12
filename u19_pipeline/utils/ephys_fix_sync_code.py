@@ -1,6 +1,4 @@
 
-import datetime
-import pathlib
 import numpy as np
 
 import u19_pipeline.utils.ephys_utils as ephys_utils

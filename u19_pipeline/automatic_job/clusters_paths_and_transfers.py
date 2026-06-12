@@ -1,15 +1,13 @@
-import datajoint as dj
+import json
+import os
 import pathlib
 import subprocess
-import json
-import re
-import os
 import time
 
-from datetime import datetime
-from element_interface.utils import dict_to_uuid
+import datajoint as dj
 
 import u19_pipeline.automatic_job.params_config as config
+
 #Functions to transfer files (globus, scp, smbclient)
 
 #FOR PNI endpoint
@@ -166,7 +164,7 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
                 dict_output = json.loads(p.stdout.decode('UTF-8'))
                 transfer_request['status'] = config.system_process['SUCCESS']
                 transfer_request['task_id'] = dict_output['task_id']
-            except Exception as e:
+            except Exception:
                 print('stdout is not a valid json, probably an error')
                 transfer_request['status'] = config.system_process['ERROR']
                 transfer_request['error_info'] = p.stdout.decode('UTF-8')
@@ -271,7 +269,7 @@ def get_error_log_str(recording_process_id):
     log_file_local_path = pathlib.Path(local_log_file_dir,log_filename).as_posix()
 
     if os.path.exists(log_file_local_path):
-        with open(log_file_local_path, 'r') as error_log_file:
+        with open(log_file_local_path) as error_log_file:
             error_log_data = ' '.join(error_log_file.readlines())
 
         error_log_data = error_log_data.replace("activate the default environment with 'conda activate' or create a new environment to customize with 'conda create'.\n",'')

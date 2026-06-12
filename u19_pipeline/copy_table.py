@@ -1,9 +1,10 @@
-import datajoint as dj
 import traceback
-from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
-from u19_pipeline import subject
+
+import datajoint as dj
 from tqdm import tqdm
 
+from u19_pipeline import subject
+from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
 
 acquisition_original = dj.create_virtual_module(
     'acquisition_original', 'u19_acquisition'
@@ -54,7 +55,7 @@ def copy_table(target_schema, src_schema, table_name, **kwargs):
             try:
                 target_table.insert1(t, skip_duplicates=True, **kwargs)
             except Exception:
-                print("Error when inserting {}".format(t))
+                print(f"Error when inserting {t}")
                 traceback.print_exc()
 
 

@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def get_primary_key_fields(t):
     """
     Get list of all fields that compose primary key

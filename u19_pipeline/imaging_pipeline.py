@@ -1,21 +1,16 @@
 
-import datajoint as dj
 import pathlib
 import subprocess
 from pathlib import Path
 
-from u19_pipeline import lab, subject, recording
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.utils.dj_shortcuts as dj_short
-import u19_pipeline.utils.tiff_utils as tu
-
-
 import datajoint as dj
-
-from element_calcium_imaging import scan as scan_element
 from element_calcium_imaging import imaging_preprocess as imaging_element
 from element_interface.utils import find_full_path
 
+import u19_pipeline.automatic_job.params_config as config
+import u19_pipeline.utils.dj_shortcuts as dj_short
+import u19_pipeline.utils.tiff_utils as tu
+from u19_pipeline import lab, recording, subject
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'imaging_pipeline')
 
@@ -255,7 +250,6 @@ scan_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_scan_eleme
 imaging_schema_name = dj.config['custom']['database.prefix'] + 'pipeline_imaging_element'
 
 # 2. Upstream tables -------------------------------------------------------------------
-from u19_pipeline.reference import BrainArea as Location
 
 Session = TiffSplit
 
@@ -269,7 +263,6 @@ class Equipment(dj.Manual):
     """
 
 # 3. Utility functions -----------------------------------------------------------------
-from u19_pipeline import recording_process
 
 def get_imaging_root_data_dir():
     return dj.config.get('custom', {}).get('imaging_root_data_dir', None)

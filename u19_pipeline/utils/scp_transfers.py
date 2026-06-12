@@ -1,13 +1,16 @@
 
 import os
-import psutil
 import subprocess
 import sys
-from paramiko import SSHClient, AutoAddPolicy, RSAKey
-from paramiko.auth_handler import AuthenticationException, SSHException
-from scp import SCPClient, SCPException
 
-from u19_pipeline.automatic_job.clusters_paths_and_transfers import public_key_location as public_key_location
+import psutil
+from paramiko import AutoAddPolicy, RSAKey, SSHClient
+from paramiko.auth_handler import AuthenticationException, SSHException
+from scp import SCPClient
+
+from u19_pipeline.automatic_job.clusters_paths_and_transfers import (
+    public_key_location as public_key_location,
+)
 
 #Steps on windows machine
 #   https://thesysadminchannel.com/solved-add-windowscapability-failed-error-code-0x800f0954-rsat-fix/

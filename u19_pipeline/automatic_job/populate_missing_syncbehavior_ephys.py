@@ -1,16 +1,18 @@
 
 import time
+
 from scripts.conf_file_finding import try_find_conf_file
+
 try_find_conf_file()
 
 time.sleep(1)
 
-import numpy as np
+import datetime
+
+import pandas as pd
+
 import u19_pipeline.ephys_pipeline as ep
 import u19_pipeline.recording as recording
-import datajoint as dj
-import pandas as pd
-import datetime
 
 
 def get_rec_key_dict(recording_id):

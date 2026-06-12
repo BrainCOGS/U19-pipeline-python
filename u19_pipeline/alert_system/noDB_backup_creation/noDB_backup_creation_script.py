@@ -1,30 +1,29 @@
 
 from scripts.conf_file_finding import try_find_conf_file
+
 try_find_conf_file()
 
-import datajoint as dj
-import pandas as pd
-import time
-from zoneinfo import ZoneInfo
+import base64
 import datetime
 import pathlib
-import numpy as np
-import time
-import base64
 import shutil
+import time
+
+import datajoint as dj
+import numpy as np
 import openpyxl
-from openpyxl.utils.dataframe import dataframe_to_rows
+import pandas as pd
 from openpyxl.drawing.image import Image
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 time.sleep(1)
 
-import u19_pipeline.alert_system.water_weigh_alert.water_weigh_alert as wwa
-import u19_pipeline.scheduler as scheduler
 import u19_pipeline.acquisition as acquisition
+import u19_pipeline.alert_system.water_weigh_alert.water_weigh_alert as wwa
 import u19_pipeline.behavior as behavior
-import u19_pipeline.subject as subject
 import u19_pipeline.lab as lab
-
+import u19_pipeline.scheduler as scheduler
+import u19_pipeline.subject as subject
 
 DJ_CUSTOM_VARIABLES_FILENAME = 'DJCustomVariables.csv'
 SLACK_WEBHOOK_FILENAME = 'SlackChannels.csv'

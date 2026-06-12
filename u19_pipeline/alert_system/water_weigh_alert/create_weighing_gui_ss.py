@@ -14,7 +14,9 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
-from u19_pipeline.utils.subject_metadata import fetch_slack_handles_for_lab_managers_by_subject
+from u19_pipeline.utils.subject_metadata import (
+    fetch_slack_handles_for_lab_managers_by_subject,
+)
 
 slack_configuration_dictionary = {
     "slack_notification_channel": ["subject_health"],
@@ -25,7 +27,7 @@ QUERY_FILE = pathlib.Path(pathlib.Path(__file__).resolve().parent, "get_subject_
 
 
 def get_subject_data():
-    with open(QUERY_FILE, "r", encoding="utf-8") as file:
+    with open(QUERY_FILE, encoding="utf-8") as file:
         subject_query = file.read()
 
     conn = dj.conn()

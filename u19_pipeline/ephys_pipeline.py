@@ -214,7 +214,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
                     spikeglx_meta_filepath = meta_filepath
                     break
             else:
-                raise FileNotFoundError("No SpikeGLX data found for probe insertion: {}".format(ephys_recording_key))
+                raise FileNotFoundError(f"No SpikeGLX data found for probe insertion: {ephys_recording_key}")
 
     return spikeglx_meta_filepath
 
@@ -289,7 +289,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     all_vectors['time_as_behavior_fullsession_virmen'] = trial_times_full_virmen
 
     if single_vec_mode:
-        for this_key in all_vectors.keys():
+        for this_key in all_vectors:
             print('this_key', this_key)
             print(all_vectors[this_key].shape)
             all_vectors[this_key] = np.concatenate(([x for x in all_vectors[this_key]]), axis=0) 

@@ -1,16 +1,13 @@
 
-import numpy as np
-import datajoint as dj
+import json
 import pathlib
 import warnings
-import json
 
+import datajoint as dj
+import numpy as np
+from bitstring import BitArray
 from scipy import signal as sp
 from scipy.io import loadmat
-from scipy.spatial.transform import Rotation as R
-
-from bitstring import BitArray
-from element_array_ephys import ephys as ephys_element
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 
@@ -762,7 +759,7 @@ def get_index_trial_vector_from_iteration(iteration_start_idx):
     return trial_start_idx
 
 
-class xyz_pick_file_creator():
+class xyz_pick_file_creator:
     '''
     Class that handles probe coordinates locations given initial isertion coordinates & shank coordinates
     '''
@@ -859,9 +856,9 @@ class xyz_pick_file_creator():
         phi   = phi_angle*np.pi/180
         theta = theta_angle*np.pi/180
         roll  = rho_angle*np.pi/180
-        x = np.array([i[0] for i in chanmap['xcoords']]);
-        y = np.array([i[0] for i in chanmap['ycoords']]);
-        k = np.array([i[0] for i in chanmap['kcoords']]);
+        x = np.array([i[0] for i in chanmap['xcoords']])
+        y = np.array([i[0] for i in chanmap['ycoords']])
+        k = np.array([i[0] for i in chanmap['kcoords']])
 
         # Step 2: Transform them into 3D, assuming the Probe is perpendicular to x|y plane
         avx           = np.mean(x[k==shank])                                  # Center "X" on middle of probe
@@ -877,7 +874,7 @@ class xyz_pick_file_creator():
             probe_track[i,:] = probe_length[i]*probe_unitVec + np.array([probe_x0[0], probe_x0[1], 0])
 
         # Step 4: Shift probe my ML|AP insertion coordinates
-        probe_track_shifted = np.zeros((probe_track.shape))
+        probe_track_shifted = np.zeros(probe_track.shape)
         for i in range(len(probe_track_shifted)):
             probe_track_shifted[i,:] = probe_track[i,:] + np.array([real_ml_coordinates*1000, real_ap_coordinates*1000, 0])
 

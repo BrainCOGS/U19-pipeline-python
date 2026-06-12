@@ -4,17 +4,20 @@
 # Folder structure for hdf5 files on bucket will be:
 # /jukebox/braininit/puffs/{netid}/{project_name}/{cohort}/{rig}/{hdf5_filename}
 
+import glob
+import json
+import os
+import sys
+from datetime import timedelta
+
 import datajoint as dj
-import os, sys, glob, json
-import pandas as pd
 import numpy as np
-import time
-from datetime import datetime, timedelta
+import pandas as pd
 
 dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
 # load dj creds from file
 credfile = '/jukebox/wang/ahoag/.djenv'
-with open(credfile,'r') as infile:
+with open(credfile) as infile:
     cred_dict = json.load(infile)
 
 dj.config['database.user'] = cred_dict.get('DJ_DB_USER')

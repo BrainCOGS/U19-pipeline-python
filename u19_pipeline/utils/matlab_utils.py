@@ -1,21 +1,22 @@
 """Authors: Ben Dichter, Cody Baker."""
 import os
 import sys
+from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from shutil import which
-import pandas as pd
 
 import numpy as np
-from datetime import datetime
+import pandas as pd
 from scipy.io import loadmat, matlab
-from collections.abc import Iterable
-
 
 try:
     from typing import ArrayLike
 except ImportError:
+    from collections.abc import Sequence
+    from typing import Union
+
     from numpy import ndarray
-    from typing import Union, Sequence
 
     # adapted from numpy typing
     ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
@@ -257,15 +258,15 @@ def convert_function_handle_to_str(mat_file_path):
         try:
             os.system(matlab_cmd)
         
-            with open("trial_choice.txt", "r") as f:
+            with open("trial_choice.txt") as f:
                 trial_choice = f.read().splitlines()
-            with open("trial_type.txt", "r") as f:
+            with open("trial_type.txt") as f:
                 trial_type = f.read().splitlines()
-            with open("shaping_protocol.txt", "r") as f:
+            with open("shaping_protocol.txt") as f:
                 shaping_protocol = f.read().splitlines()
-            with open("code_version.txt", "r") as f:
+            with open("code_version.txt") as f:
                 version = f.readline()
-            with open("protocol.txt", "r") as f:
+            with open("protocol.txt") as f:
                 protocol = f.readline()
 
             metadata['experiment_name'] = version

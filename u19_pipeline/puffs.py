@@ -1,7 +1,6 @@
 """This module defines tables in the schema ahoag_puffs_lab_demo"""
 
 import datajoint as dj
-from . import lab, acquisition, task
 
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'puffs')
 

@@ -200,7 +200,7 @@ def check_overdue_maintenance():
     unique_locations = sorted(set(locations))
 
     # Get all maintenance types and their intervals
-    maintenance_fetch = getattr(rig_maintenance.MaintenanceType, "fetch")
+    maintenance_fetch = rig_maintenance.MaintenanceType.fetch
     maintenance_types = maintenance_fetch(as_dict=True)
 
     # Separate maintenance types by system type
@@ -219,7 +219,7 @@ def check_overdue_maintenance():
 
     rig_loc_query = lab.Location & merged_rig_queries
 
-    rig_loc_fetch = getattr(rig_loc_query, "fetch")
+    rig_loc_fetch = rig_loc_query.fetch
     rig_locations = rig_loc_fetch(as_dict=True)
 
     logger.info(f"🔍 Checking maintenance status as of {current_date}")
@@ -252,7 +252,7 @@ def check_overdue_maintenance():
                 "location": location_name,
                 "maintenance_type": maintenance_type,
             }
-            recent_fetch = getattr(recent_q, "fetch")
+            recent_fetch = recent_q.fetch
             recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
 
             if len(recent_maintenance) == 0:
@@ -330,7 +330,7 @@ def check_overdue_maintenance():
 
     hosting_loc_query = lab.Location & merged_hosting_queries
 
-    hosting_loc_fetch = getattr(hosting_loc_query, "fetch")
+    hosting_loc_fetch = hosting_loc_query.fetch
     hosting_locations = hosting_loc_fetch(as_dict=True)
 
     # Check hosting VMs
@@ -350,7 +350,7 @@ def check_overdue_maintenance():
                 "location": location_name,
                 "maintenance_type": maintenance_type,
             }
-            recent_fetch = getattr(recent_q, "fetch")
+            recent_fetch = recent_q.fetch
             recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
 
             if len(recent_maintenance) == 0:

@@ -1,9 +1,10 @@
-from u19_pipeline import recording, recording_process
-from u19_pipeline.imaging_pipeline import imaging_element
 import pathlib
 import warnings
 
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import recording, recording_process
+from u19_pipeline.imaging_pipeline import imaging_element
+
 
 def populate_element_data(job_id, display_progress=True, reserve_jobs=False, suppress_errors=False):
 

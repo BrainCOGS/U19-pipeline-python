@@ -1,8 +1,9 @@
 
-import pandas as pd
+import datetime
 import pathlib
 import re
-import datetime
+
+import pandas as pd
 
 
 def extract_filename(x):

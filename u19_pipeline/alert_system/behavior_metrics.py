@@ -1,9 +1,7 @@
 
-import pandas as pd
-import datajoint as dj
 
 
-class BehaviorMetrics():
+class BehaviorMetrics:
 
     @staticmethod
     def get_bias_from_trial_df(trials_df, return_all_metrics=False):

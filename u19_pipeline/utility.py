@@ -1,14 +1,14 @@
 
 
-import sys
 import os
-import pandas as pd
-from pandas.api.types import is_numeric_dtype
-import numpy as np
-from scipy.optimize import curve_fit
-from astropy.stats import binom_conf_interval
-import datajoint as dj
 import subprocess
+import sys
+
+import datajoint as dj
+import numpy as np
+import pandas as pd
+from astropy.stats import binom_conf_interval
+from scipy.optimize import curve_fit
 
 
 def is_this_spock():
@@ -147,7 +147,7 @@ def psychFit(deltaBins, numR, numL, choices):
     # Correct deltaBin & trialBin to produce same result as Matlab psychFit
     deltaBins_search = deltaBins.astype(float) - 1.5
     trialBin = np.searchsorted(deltaBins_search, nCues_RminusL, side='right')
-    trialBin -= 1;
+    trialBin -= 1
 
     # Put into evidence bins all Trials with corresponding choices
     for iTrial in range(len(choices)):
@@ -158,7 +158,7 @@ def psychFit(deltaBins, numR, numL, choices):
         trialDelta[trialBin[iTrial]] = trialDelta[trialBin[iTrial]] + nCues_RminusL[iTrial]
 
     with np.errstate(divide='ignore', invalid='ignore'):
-        trialDelta = np.true_divide(trialDelta, numTrials);
+        trialDelta = np.true_divide(trialDelta, numTrials)
 
     # Select only bins with trials
     idx_zero = numTrials == 0
@@ -203,7 +203,7 @@ def psychFit(deltaBins, numR, numL, choices):
     delta = np.linspace(deltaBins[0] - 2, deltaBins[-1] + 2, num=50)
 
     # Repeat trialDelta 3 times for errorX why ??
-    errorX = np.tile(trialDelta[~idx_zero], 3);
+    errorX = np.tile(trialDelta[~idx_zero], 3)
 
     # Confidence intervals are errorY, as a vector
     errorY = np.stack(pci[:, ~idx_zero])
@@ -212,10 +212,10 @@ def psychFit(deltaBins, numR, numL, choices):
     # Fill  dictionary of results
     fit_results = dict()
     fit_results['delta_bins'] = deltaBins[~idx_zero]
-    fit_results['delta_data'] = trialDelta[~idx_zero];
-    fit_results['pright_data'] = 100 * phat[~idx_zero];
-    fit_results['delta_error'] = errorX;
-    fit_results['pright_error'] = 100 * errorY;
+    fit_results['delta_data'] = trialDelta[~idx_zero]
+    fit_results['pright_data'] = 100 * phat[~idx_zero]
+    fit_results['delta_error'] = errorX
+    fit_results['pright_error'] = 100 * errorY
 
     if is_there_psychometric:
         fit_results['delta_fit'] = delta

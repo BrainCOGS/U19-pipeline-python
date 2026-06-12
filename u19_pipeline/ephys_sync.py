@@ -1,14 +1,12 @@
-import datajoint as dj
 import pathlib
-import numpy as np
 
-from u19_pipeline import behavior
-from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
+import datajoint as dj
+import numpy as np
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
-import u19_pipeline.utils.path_utils as pu
-import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline import behavior
+from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
 
 # Tables downstream from `ephys_pipeline` module ---------------------------------------
 schema = dj.schema(dj.config['custom']['database.prefix'] + 'ephys_sync')

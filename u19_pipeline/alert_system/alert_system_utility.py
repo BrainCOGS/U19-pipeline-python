@@ -1,10 +1,12 @@
 
 
-import pandas as pd
-import datajoint as dj
 import datetime
 
+import datajoint as dj
+import pandas as pd
+
 import u19_pipeline.utils.dj_shortcuts as djs
+
 
 def get_acquisition_data_alert_system(type='subject_fullname', data_days=60, min_sessions=20):
     '''

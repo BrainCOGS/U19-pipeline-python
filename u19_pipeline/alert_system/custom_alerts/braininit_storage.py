@@ -1,13 +1,8 @@
 
-import pandas as pd
-import datajoint as dj
-
-import u19_pipeline.lab as lab
-
-import u19_pipeline.alert_system.behavior_metrics as bm
-import u19_pipeline.alert_system.alert_system_utility as asu
-import os
 import subprocess
+
+import datajoint as dj
+import pandas as pd
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
