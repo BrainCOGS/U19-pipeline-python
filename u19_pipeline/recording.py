@@ -99,9 +99,9 @@ class DefaultParams(dj.Manual):
     def get_default_params_rec_process(recording_processes, default_params_record_df):
         "Get associated params from DefaultParams record and recording processes (jobs) of recording"
 
-        params_rec_process = list()
+        params_rec_process = []
         for i in recording_processes:
-            this_params_rec_process = dict()
+            this_params_rec_process = {}
             this_params_rec_process["job_id"] = i["job_id"]
             this_fragment = i["fragment_number"]
 

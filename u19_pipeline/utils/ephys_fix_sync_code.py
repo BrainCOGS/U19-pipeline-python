@@ -124,8 +124,8 @@ def fix_shifted_sync_vector(synced_time_vector, behavior_time_vector, vec_shift,
     consecutive_zeros = np.flatnonzero(correlation_result == 4)
 
     index_shift = 0
-    index_borrow_virmen = list()
-    for i in range(len(where_insert_iteration)):
+    index_borrow_virmen = []
+    for _i in range(len(where_insert_iteration)):
         stable_parts = np.where(consecutive_zeros > where_insert_iteration[index_shift])
         stable_parts = stable_parts[0]
 
@@ -153,7 +153,7 @@ def fix_shifted_sync_vector(synced_time_vector, behavior_time_vector, vec_shift,
 
     # for i in range(where_insert_iteration.shape[0]):
     index_diff_e = -1
-    borrowed_indexes = list()
+    borrowed_indexes = []
     for i in range(len(index_borrow_virmen)):
         if index_diff_e > index_borrow_virmen[i][0] + mid_point:
             continue
@@ -307,9 +307,9 @@ def sync_evaluation_process2(synced_time_vector, behavior_time_vector):
 
 def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq_sampling_rate):
 
-    iteration_dict = dict()
-    iteration_dict["iter_start_idx"] = list()
-    iteration_dict["iter_times_idx"] = list()
+    iteration_dict = {}
+    iteration_dict["iter_start_idx"] = []
+    iteration_dict["iter_times_idx"] = []
 
     for i in range(len(iter_start_idx)):
         # print('fixing trial ',i)

@@ -50,7 +50,7 @@ def main_alert_system():
                         time.sleep(1)
 
         except Exception as e:
-            dict_error = dict()
+            dict_error = {}
             dict_error["message"] = "error while executing " + this_alert_submodule.name + " alert code"
             dict_error["error_exception"] = "".join(traceback.format_exception(type(e), value=e, tb=e.__traceback__))
             slack_json_message = slack_alert_message_format(dict_error, this_alert_submodule.name)
@@ -66,29 +66,29 @@ def slack_alert_message_format(alert_dictionaty, alert_module_name):
     now = datetime.datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":rotating_light: *" + alert_module_name + "* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info#
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     m2_1["text"] = ""
-    for key in alert_dictionaty.keys():
+    for key in alert_dictionaty:
         m2_1["text"] += "*" + key + "* : " + str(alert_dictionaty[key]) + "\n"
     m2["text"] = m2_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep, msep]
     message["text"] = alert_module_name + " alert"
 

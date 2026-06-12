@@ -8,7 +8,7 @@ from u19_pipeline import ephys_pipeline, recording, recording_process
 
 
 def main(recording_id):
-    rec_query = dict()
+    rec_query = {}
     rec_query["recording_id"] = recording_id
 
     recording_processes = (recording_process.Processing() & rec_query).fetch(

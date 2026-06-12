@@ -78,14 +78,13 @@ def getPupilDiameter(destinationFolder=None):
     outlierFlags = outlierFlags.rename(columns={outlierFlags.columns[0]: "OutlierFlag"})
     # Concatenate outlier flags array to remove outliers from pupil diameter array
     temp = pd.concat([df, outlierFlags], axis=1)
-    temp.loc[temp["OutlierFlag"] == True, "PupilDiameter"] = None
+    temp.loc[temp["OutlierFlag"], "PupilDiameter"] = None
     pupilDiameter = temp["PupilDiameter"].to_numpy()
 
     filename = pathlib.Path(destinationFolder, "pupil_diameter.pickle").as_posix()
 
-    file_to_store = open(filename, "wb")
-    pickle.dump(pupilDiameter, file_to_store)
-    file_to_store.close()
+    with open(filename, "wb") as file_to_store:
+        pickle.dump(pupilDiameter, file_to_store)
 
 
 if __name__ == "__main__":

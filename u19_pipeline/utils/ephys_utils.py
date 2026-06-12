@@ -11,7 +11,7 @@ from scipy.io import loadmat
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 
 
-class spice_glx_utility:
+class SpiceGlxUtility:
     @staticmethod
     def load_spice_glx_digital_file(file_path, nidq_meta, d_line_list=None):
         # Read NIDAQ digital file.
@@ -68,10 +68,10 @@ def load_trial_iteration_signals(ephys_session_fullpath, nidq_meta):
     new_iteration_channel = 2
     # If PXIe card (nidq) card use for recording deduce digital channels
     if nidq_meta["typeThis"] == "nidq":
-        digital_array = spice_glx_utility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
+        digital_array = SpiceGlxUtility.load_spice_glx_digital_file(ephys_session_fullpath, nidq_meta)
     # If onebox card (obx) card use for recording digital channels are 0-2
     else:
-        digital_array = spice_glx_utility.load_spice_glx_digital_file(
+        digital_array = SpiceGlxUtility.load_spice_glx_digital_file(
             ephys_session_fullpath, nidq_meta, d_line_list=[0, 1]
         )
         # If no sync pulse found trial and iteration signals are 0 & 1 respectively
@@ -180,10 +180,7 @@ def get_trial_signal_mode(iteration_pulse_signal_trial, behavior_time_vector_tri
     # If iterations in trial are less than the ones in behavior, the mode was the counterbit
     iter_samples = np.where(np.diff(iteration_pulse_signal_trial) == 1)
 
-    if iter_samples[0].shape[0] < (behavior_time_vector_trial.shape[0] * 3 / 4):
-        mode = "counter_bit0"
-    else:
-        mode = "pulse_signal"
+    mode = "counter_bit0" if iter_samples[0].shape[0] < behavior_time_vector_trial.shape[0] * 3 / 4 else "pulse_signal"
 
     print("mode deduction: ", mode)
 
@@ -200,7 +197,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(
 ) -> dict:
 
     # Output as a dictionary
-    iteration_vector_output = dict()
+    iteration_vector_output = {}
 
     # Vectors that will contain trial # and iter # for each sample on file
     # iteration_vector_output['framenumber_vector_samples'] = np.zeros(trial_pulse_signal.shape[0])*np.nan
@@ -352,7 +349,7 @@ def get_iteration_sample_vector_from_digital_lines_word(digital_array, time, ite
                 framenumber_in_trial[g + 1] = framenumber_in_trial[g]
 
     # This point we have framenumber_in_trial and trialnumber. Now just some refactoring to fit into the usual data structure
-    iteration_vector_output = dict()
+    iteration_vector_output = {}
 
     iteration_vector_output["trialnumber_vector_samples"] = trialnumber
     iteration_vector_output["framenumber_vector_samples"] = framenumber_in_trial
@@ -371,29 +368,27 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     # Count trial count differences
     trial_count_diff = np.abs(iteration_sample_idx_output.shape[0] - (behavior_time_vector.shape[0]))
 
-    count = 0
-    trials_diff_iteration_small = list()
-    trials_diff_iteration_big = list()
-    for idx_trial, iter_trials in enumerate(iteration_sample_idx_output):
-        if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
+    trials_diff_iteration_small = []
+    trials_diff_iteration_big = []
+    for count, iter_trials in enumerate(iteration_sample_idx_output):
+        if iter_trials.shape[0] != behavior_time_vector[count].shape[0]:
             print(
                 "trial#",
                 count,
                 "iterPulses:",
                 iter_trials.shape[0],
                 "IterBeh:",
-                behavior_time_vector[idx_trial].shape[0],
+                behavior_time_vector[count].shape[0],
                 "Difference (",
-                behavior_time_vector[idx_trial].shape[0] - iter_trials.shape[0],
+                behavior_time_vector[count].shape[0] - iter_trials.shape[0],
                 ")",
             )
-        count += 1
         # For each trial iteration # should be equal to the behavioral file iterations
-        if iter_trials.shape[0] != behavior_time_vector[idx_trial].shape[0]:
-            if np.abs(iter_trials.shape[0] - behavior_time_vector[idx_trial].shape[0]) < 6:
-                trials_diff_iteration_small.append(idx_trial)
+        if iter_trials.shape[0] != behavior_time_vector[count].shape[0]:
+            if np.abs(iter_trials.shape[0] - behavior_time_vector[count].shape[0]) < 6:
+                trials_diff_iteration_small.append(count)
             else:
-                trials_diff_iteration_big.append(idx_trial)
+                trials_diff_iteration_big.append(count)
 
     return trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small
 
@@ -645,7 +640,7 @@ def behavior_sync_frame_counter_method(
         assert (
             (nidaqtime - matlabtime) / matlabtime
         ) < 0.1  # # Make sure the nidaq-trial-duration and dj records are consistent; 10% arbitrarily chosen
-    nidaq_duration = iterations_test + skipped_frames
+    iterations_test + skipped_frames
     # dj_duration = iterstart[-1] + len(behavior_time_vector[-1])
     # assert np.abs(nidaq_duration - dj_duration) < 3 # at most two frames off - sometimes this happens at the beginning/end of the recording
 
@@ -842,7 +837,7 @@ def get_index_trial_vector_from_iteration(iteration_start_idx):
     return trial_start_idx
 
 
-class xyz_pick_file_creator:
+class XyzPickFileCreator:
     """
     Class that handles probe coordinates locations given initial isertion coordinates & shank coordinates
     """
@@ -868,7 +863,7 @@ class xyz_pick_file_creator:
             pathlib.Path.mkdir(ibl_output_dir)
 
         # Get recording id
-        probe_location = xyz_pick_file_creator.get_probe_insertion_coordinates(recording_id, fragment_number)
+        probe_location = XyzPickFileCreator.get_probe_insertion_coordinates(recording_id, fragment_number)
         print(probe_location)
 
         # Load channelmap and check how many probes there are
@@ -876,10 +871,10 @@ class xyz_pick_file_creator:
         max_shank = int(np.max(chanmap["kcoords"]))
 
         # Calculate probe coordinates and store files
-        all_shanks = list()
+        all_shanks = []
         for i in range(max_shank):
-            probe_track = xyz_pick_file_creator.get_probetrack(chanmap, shank=i + 1, **probe_location)
-            xyz_pick_file_creator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
+            probe_track = XyzPickFileCreator.get_probetrack(chanmap, shank=i + 1, **probe_location)
+            XyzPickFileCreator.save_xyz_pick_file(ibl_output_dir, probe_track, shank=i)
             all_shanks.append(probe_track)
 
         return all_shanks
@@ -933,7 +928,7 @@ class xyz_pick_file_creator:
                 "Warning probe location was not found on DB for recording_id: "
                 + str(recording_id)
                 + " & probe# "
-                + str(probe_num)
+                + str(probe_num), stacklevel=2
             )
             probe_location = dict.fromkeys(coordinates_columns, 0)
 
@@ -1018,7 +1013,7 @@ class xyz_pick_file_creator:
         ]
         final_filename = pathlib.Path(save_directory, filenames[shank]).as_posix()
 
-        dict_coord = dict()
+        dict_coord = {}
         dict_coord["xyz_picks"] = probe_coord_data
 
         with open(final_filename, "w") as fp:

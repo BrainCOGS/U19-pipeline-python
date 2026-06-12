@@ -306,11 +306,7 @@ class Path(dj.Lookup):
                     path = os.path.join(mapping[i, local], path[n + 1 :])
                     break
 
-        if os.path.sep == "\\" and local_os.lower() != "glo":
-            path = path.replace("/", "\\")
-
-        else:
-            path = path.replace("\\", "/")
+        path = path.replace("/", "\\") if os.path.sep == "\\" and local_os.lower() != "glo" else path.replace("\\", "/")
 
         return path
 

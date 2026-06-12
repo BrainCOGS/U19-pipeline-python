@@ -180,7 +180,7 @@ def transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars):
 def create_slurm_params_file(slurm_dict):
 
     text_dict = ""
-    for slurm_param in slurm_dict.keys():
+    for slurm_param in slurm_dict:
         if isinstance(slurm_dict[slurm_param], list):
             for list_param in slurm_dict[slurm_param]:
                 text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"

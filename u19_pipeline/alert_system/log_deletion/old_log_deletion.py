@@ -23,7 +23,7 @@ def main_old_log_deletion():
     files_df["exctract_date"] = pd.to_datetime(files_df["exctract_date"], format="%Y%m%d")
     files_df["before_ref_date"] = files_df["exctract_date"] <= pd.Timestamp(reference_date)
 
-    files_for_deletion = files_df.loc[files_df["before_ref_date"] == True, "filepaths"].to_list()
+    files_for_deletion = files_df.loc[files_df["before_ref_date"], "filepaths"].to_list()
 
     for file_path in files_for_deletion:
         if file_path.is_file():  # Check if it's actually a file before attempting to delete

@@ -290,7 +290,7 @@ class RecordingHandler:
 
         print("error_info_dict", error_info_dict)
 
-        key = dict()
+        key = {}
         key["recording_id"] = recording_id
         key["status_recording_id_old"] = current_status
         key["status_recording_id_new"] = next_status
@@ -440,7 +440,6 @@ class RecordingHandler:
         # Ingest Scan for each fov from the TiffSplit process
         for this_fov in fovs_ingested:
             # Scan_id always zero because TIFF splitted (FOVs) already on imaging_pipeline schema
-            scan_id = 0
             # Acquisition type will have Mesoscope or 2Photon
             scanner = rec_series["acquisition_type"]
             # Hardcoded acquisition software

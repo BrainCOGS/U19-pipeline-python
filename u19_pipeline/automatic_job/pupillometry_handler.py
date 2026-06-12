@@ -94,7 +94,7 @@ class PupillometryProcessingHandler:
     def create_pupillometry_slurm_params_file(slurm_dict):
 
         text_dict = ""
-        for slurm_param in slurm_dict.keys():
+        for slurm_param in slurm_dict:
             if isinstance(slurm_dict[slurm_param], list):
                 for list_param in slurm_dict[slurm_param]:
                     text_dict += "#SBATCH --" + str(slurm_param) + "=" + str(list_param) + "\n"
@@ -258,7 +258,7 @@ class PupillometryProcessingHandler:
         outlierFlags = outlierFlags.rename(columns={outlierFlags.columns[0]: "OutlierFlag"})
         # Concatenate outlier flags array to remove outliers from pupil diameter array
         temp = pd.concat([df, outlierFlags], axis=1)
-        temp.loc[temp["OutlierFlag"] == True, "PupilDiameter"] = None
+        temp.loc[temp["OutlierFlag"], "PupilDiameter"] = None
         pupilDiameter = temp["PupilDiameter"]
 
         return pupilDiameter.to_numpy()
@@ -275,7 +275,7 @@ class PupillometryProcessingHandler:
     @pupillometry_exception_handler
     def check_pupillometry_sessions_queue():
 
-        status_update = config.status_update_idx["NO_CHANGE"]
+        config.status_update_idx["NO_CHANGE"]
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
         sessions_missing_process = (
@@ -286,15 +286,15 @@ class PupillometryProcessingHandler:
 
         for pupillometry_2_process in sessions_missing_process:
             # If error, job id = -1
-            key_insert = dict(
-                (k, pupillometry_2_process[k])
+            key_insert = {
+                k: pupillometry_2_process[k]
                 for k in (
                     "subject_fullname",
                     "session_date",
                     "session_number",
                     "model_id",
                 )
-            )
+            }
             key_insert["pupillometry_job_id"] = -1
 
             # Get model location
@@ -333,7 +333,7 @@ class PupillometryProcessingHandler:
 
             # Error handling (generating slurm file)
             if status != config.system_process["SUCCESS"]:
-                status_update = config.status_update_idx["ERROR_STATUS"]
+                config.status_update_idx["ERROR_STATUS"]
                 update_value_dict["error_info"]["error_message"] = (
                     "Error while generating/transfering pupillometry slurm file"
                 )
@@ -360,7 +360,7 @@ class PupillometryProcessingHandler:
 
             # Error handling (queuing slurm file)
             if status != config.system_process["SUCCESS"]:
-                status_update = config.status_update_idx["ERROR_STATUS"]
+                config.status_update_idx["ERROR_STATUS"]
                 update_value_dict["error_info"]["error_message"] = "Error to queue pupillometry slurm file"
                 pupillometry.PupillometrySessionModelData.update1(key_insert)
 
@@ -395,15 +395,15 @@ class PupillometryProcessingHandler:
         ).fetch(as_dict=True)
 
         for session_check in sessions_to_check:
-            key_update = dict(
-                (k, session_check[k])
+            key_update = {
+                k: session_check[k]
                 for k in (
                     "subject_fullname",
                     "session_date",
                     "session_number",
                     "model_id",
                 )
-            )
+            }
             print("key_update1", key_update)
 
             status_update, message = slurmlib.check_slurm_job(

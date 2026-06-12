@@ -38,7 +38,7 @@ def process_session(sess_key):
     :param scan_key: a `KEY` of `acquisition.Session`
     """
     sess_dir = pathlib.Path(find_full_path(get_ephys_root_data_dir(), get_session_directory(sess_key)))
-    ephys_meta_filepaths = [fp for fp in sess_dir.rglob("*.ap.meta")]
+    ephys_meta_filepaths = list(sess_dir.rglob("*.ap.meta"))
 
     print("ephys_meta_filepaths", ephys_meta_filepaths)
 

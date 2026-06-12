@@ -101,7 +101,7 @@ def write_rig_status_file():
 
 def write_schedule_file():
 
-    schedule_query = dict()
+    schedule_query = {}
     schedule_query["date"] = datetime.date.today()
 
     subject_query = "subject_fullname is not null"

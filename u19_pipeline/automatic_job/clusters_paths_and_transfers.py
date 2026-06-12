@@ -119,7 +119,7 @@ def get_cluster_vars(cluster):
     if cluster in cluster_vars:
         return cluster_vars[cluster]
     else:
-        raise ("Non existing cluster")
+        raise ValueError("Non existing cluster")
 
 
 def scp_file_transfer(source, dest):
@@ -168,7 +168,7 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
     print("**********************************")
     p = subprocess.run(globus_command, capture_output=True)
     print(p)
-    transfer_request = dict()
+    transfer_request = {}
     print("p.stderr", p.stderr)
     print("p.stdout", p.stdout)
 
@@ -195,7 +195,7 @@ def request_globus_transfer_status(job_id):
     s = subprocess.run(globus_command, capture_output=True)
     task_output = json.loads(s.stdout.decode("UTF-8"))
 
-    transfer_request = dict()
+    transfer_request = {}
     if task_output["status"] == "SUCCEEDED":
         transfer_request["status"] = config.system_process["COMPLETED"]
     elif task_output["status"] in ["PENDING", "RETRYING", "ACTIVE"]:
@@ -245,10 +245,10 @@ def translate_globus_output(stdout_process):
     n = u.split(sep="\n")
     n2 = [x.split(sep=":", maxsplit=1) for x in n]
 
-    flat_list = [item for l in n2 for item in l]
+    flat_list = [item for sublist in n2 for item in sublist]
     flat_list2 = [x.strip() for x in flat_list]
 
-    d1 = dict(zip(flat_list2[::2], flat_list2[1::2]))
+    d1 = dict(zip(flat_list2[::2], flat_list2[1::2], strict=False))
     return d1
 
 
@@ -384,10 +384,7 @@ def delete_empty_data_directory_cluster(cluster, type="raw"):
     base_command = "ssh " + this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"] + " "
 
     # Check base directory to delete
-    if type == "raw":
-        filepath = this_cluster_vars["root_data_dir"]
-    else:
-        filepath = this_cluster_vars["processed_data_dir"]
+    filepath = this_cluster_vars["root_data_dir"] if type == "raw" else this_cluster_vars["processed_data_dir"]
 
     # Repeat always if we find a directory to delete
     total_deletion = 0
@@ -405,9 +402,9 @@ def delete_empty_data_directory_cluster(cluster, type="raw"):
         if "" in list_dir:
             list_dir.remove("")
 
-        for dir in list_dir:
+        for directory in list_dir:
             # Check if directory has no files in it (empty)
-            command = base_command + "find " + dir + " -type f | wc -l"
+            command = base_command + "find " + directory + " -type f | wc -l"
             num_files = subprocess.check_output(command, shell=True)
             num_files = int(num_files.decode().strip())
 

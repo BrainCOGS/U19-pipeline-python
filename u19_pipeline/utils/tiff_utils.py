@@ -33,9 +33,8 @@ def check_tif_files(tif_dir):
             is_compressed = True
 
             for gz_file in gz_files:
-                with gzip.open(gz_file, "rb") as f_in:
-                    with open(gz_file.with_suffix(""), "wb") as f_out:
-                        shutil.copyfileobj(f_in, f_out)
+                with gzip.open(gz_file, "rb") as f_in, open(gz_file.with_suffix(""), "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
 
             fl = sorted(tif_dir.glob("*.tif"))
 
@@ -80,7 +79,7 @@ def get_recording_info(fl, imheader, parsed_info):
 
     frames_per_file = np.zeros(len(fl), dtype=int)
 
-    for i, file in enumerate(fl):
+    for i, _file in enumerate(fl):
         if i == 0:
             rec_info = parsed_info[i]
             rec_info["Timing"]["BehavFrames"] = np.array(rec_info["Timing"]["BehavFrames"], dtype=object)
@@ -303,12 +302,12 @@ def get_fov_mesoscope(
         print("\tparsing ROIs...")
 
         roi_nr = [roi["pixelResolutionXY"][1] for roi in rec_info["ROI"]]
-        roi_nc = [roi["pixelResolutionXY"][0] for roi in rec_info["ROI"]]
+        [roi["pixelResolutionXY"][0] for roi in rec_info["ROI"]]
 
         inter_roi_lag = rec_info["interROIlag_sec"]
         depths = rec_info["nDepths"]
 
-        which_depths = sorted(list(set([roi["Zs"] for roi in rec_info["ROI"]])))
+        which_depths = sorted({roi["Zs"] for roi in rec_info["ROI"]})
 
         # ---------------------------------------------------------------------
         # Create directories
@@ -335,7 +334,7 @@ def get_fov_mesoscope(
                 # Read stack
                 # -------------------------------------------------------------
 
-                first_page = pages[0].asarray()
+                pages[0].asarray()
 
                 thisstack = np.zeros((imheader[iF][0]["Height"], 512, len(imheader[iF])), dtype=np.uint16)
 
@@ -363,12 +362,11 @@ def get_fov_mesoscope(
                 # -------------------------------------------------------------
 
                 for idepth in range(depths):
-                    ilag = 0
                     rowct = 0
 
                     which_roi = [i for i, roi in enumerate(rec_info["ROI"]) if roi["Zs"] == which_depths[idepth]]
 
-                    for iroi in which_roi:
+                    for ilag, iroi in enumerate(which_roi):
                         zidx = list(range(idepth, thisstack.shape[2], depths))
 
                         substack = thisstack[rowct : rowct + roi_nr[iroi], :nc, :][:, :, zidx]
@@ -394,17 +392,12 @@ def get_fov_mesoscope(
 
                         first_desc = replace_frame_timestamp(first_desc, inter_roi_lag * ilag)
 
-                        software = clean_software_string(
+                        clean_software_string(
                             current_header.get("Software", None).value if "Software" in current_header else ""
                         )
 
-                        artist = current_header.get("Artist", None).value if "Artist" in current_header else ""
+                        current_header.get("Artist", None).value if "Artist" in current_header else ""
 
-                        metadata = {
-                            "ImageDescription": first_desc,
-                            "Software": software,
-                            "Artist": artist,
-                        }
 
                         # -----------------------------------------------------
                         # Write TIFF
@@ -422,8 +415,6 @@ def get_fov_mesoscope(
                                     metadata=None,
                                     extratags=[],
                                 )
-
-                        ilag += 1
 
                         # -----------------------------------------------------
                         # Update row counter
@@ -459,10 +450,7 @@ def get_fov_mesoscope(
 
             roi_name = rec_info["ROI"][iroi]["name"]
 
-            if roi_name:
-                thisname = f"{roi_name}_z{iz + 1}"
-            else:
-                thisname = f"ROI{iroi + 1:02d}_z{iz + 1}"
+            thisname = f"{roi_name}_z{iz + 1}" if roi_name else f"ROI{iroi + 1:02d}_z{iz + 1}"
 
             fov_key["tiff_split_name"] = thisname
 

@@ -43,9 +43,9 @@ class BehaviorSync(dj.Imported):
         nidq_sampling_rate = readSGLX.SampRate(nidq_meta)
 
         if nidq_meta["typeThis"] == "nidq":
-            digital_array = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
+            digital_array = ephys_utils.SpiceGlxUtility.load_spice_glx_digital_file(nidq_bin_full_path, nidq_meta)
         else:
-            digital_array = ephys_utils.spice_glx_utility.load_spice_glx_digital_file(
+            digital_array = ephys_utils.SpiceGlxUtility.load_spice_glx_digital_file(
                 nidq_bin_full_path, nidq_meta, d_line_list=[1, 2]
             )
 
@@ -137,7 +137,7 @@ class CuratedClustersIteration(dj.Computed):
         thissession = behavior.TowersBlock().Trial() & key
         iterstart = thissession.fetch("vi_start")
 
-        first_vr_iteration = iterstart[0]
+        iterstart[0]
 
         # Obtain the precise times when the frames transition.
         # This is obtained from iteration_index_nidq
@@ -146,7 +146,7 @@ class CuratedClustersIteration(dj.Computed):
             1  # These are the trial transitions (see definition above). To get total number of frames, we define this as a transition like all others.
         )
         ls[np.isnan(ls)] = 0
-        iteration_transition_indexes = np.where(ls)[0]
+        np.where(ls)[0]
 
         # First iterations captured not in virmen because vr was not started yet
         # for i in range(first_vr_iteration):

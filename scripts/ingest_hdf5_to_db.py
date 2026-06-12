@@ -318,18 +318,9 @@ for h5_file in h5_files:
             this_session_notes_key = f"sessions/{session_compressed_str}/notes"
             if this_session_notes_key in stored_session_keys:
                 session_notes_dict = json.loads(data[this_session_notes_key].iloc[0])
-                if "notes" in session_notes_dict:
-                    session_notes = session_notes_dict["notes"]
-                else:
-                    session_notes = None
-                if "stdout" in session_notes_dict:
-                    session_stdout = session_notes_dict["stdout"]
-                else:
-                    session_stdout = None
-                if "stderr" in session_notes_dict:
-                    session_stderr = session_notes_dict["stderr"]
-                else:
-                    session_stderr = None
+                session_notes = session_notes_dict.get("notes", None)
+                session_stdout = session_notes_dict.get("stdout", None)
+                session_stderr = session_notes_dict.get("stderr", None)
             else:
                 session_notes = None
                 session_stdout = None

@@ -73,9 +73,9 @@ class Processing(dj.Manual):
         # Get directory fieldname for specific modality (probe_directory, fov_directory, etc.)
 
         # Append data for the unit to insert
-        this_recprocess_key = list()
+        this_recprocess_key = []
         for idx, fragment_key in enumerate(fragment_keys):
-            this_recprocess_key.append(dict())
+            this_recprocess_key.append({})
             this_recprocess_key[idx]["recording_id"] = fragment_key["recording_id"]
             this_recprocess_key[idx]["fragment_number"] = fragment_key[fragment_fieldname]
             this_recprocess_key[idx]["status_processing_id"] = 0
@@ -91,7 +91,7 @@ class Processing(dj.Manual):
         """
 
         for rec_process in recprocess_keys:
-            this_key_dict = dict()
+            this_key_dict = {}
             this_key_dict["job_id"] = rec_process["job_id"]
             this_key_dict["recording_process_post_path"] = pathlib.Path(
                 rec_process["recording_process_pre_path"],

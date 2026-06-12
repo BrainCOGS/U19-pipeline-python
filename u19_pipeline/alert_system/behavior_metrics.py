@@ -46,10 +46,7 @@ class BehaviorMetrics:
             trials_df["cum_correct_left_trials"] / trials_df["cum_left_trials"]
         )
 
-        if return_all_metrics:
-            bias_df = trials_df
-        else:
-            bias_df = trials_df[original_columns + ["bias"]]
+        bias_df = trials_df if return_all_metrics else trials_df[original_columns + ["bias"]]
 
         return bias_df
 

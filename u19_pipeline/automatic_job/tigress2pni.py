@@ -13,6 +13,7 @@ Authorization only needs to happen once, afterwards tokens are saved to disk
 previous transfers, so if this script is run twice in quick succession,
 the second run won't queue a duplicate transfer."""
 
+import contextlib
 import json
 import os
 import sys
@@ -86,7 +87,7 @@ def save_data_to_file(filepath, key, data):
     """Save data to a file"""
     try:
         store = load_data_from_file(filepath)
-    except:
+    except Exception:
         store = {}
     if len(store) > 0:
         store[key] = data
@@ -107,7 +108,7 @@ def setup_transfer_client(transfer_tokens):
 
     try:
         transfer_client.endpoint_autoactivate(SOURCE_ENDPOINT)
-        r = transfer_client.endpoint_autoactivate(DESTINATION_ENDPOINT)
+        transfer_client.endpoint_autoactivate(DESTINATION_ENDPOINT)
     except GlobusAPIError as ex:
         if ex.http_status == 401:
             sys.exit(f"Refresh token has expired. Please delete the `tokens` object from {DATA_FILE} and try again.")
@@ -145,7 +146,7 @@ def main():
         # if we already have tokens, load and use the
         tokens = client.load_tokens(requested_scopes=SCOPES)
         print(tokens)
-    except:
+    except Exception:
         pass
 
     if not tokens:
@@ -153,10 +154,8 @@ def main():
         # need to specify that we want refresh tokens
         print("login in")
         tokens = client.login(requested_scopes=SCOPES, refresh_tokens=True)
-        try:
+        with contextlib.suppress(Exception):
             client.save_tokens(tokens)
-        except:
-            pass
 
     transfer = setup_transfer_client(tokens["transfer.api.globus.org"])
 

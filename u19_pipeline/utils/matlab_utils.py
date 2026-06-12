@@ -2,25 +2,17 @@
 
 import os
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
 from shutil import which
 
 import numpy as np
 import pandas as pd
+from numpy import ndarray
 from scipy.io import loadmat, matlab
 
-try:
-    from typing import ArrayLike
-except ImportError:
-    from collections.abc import Sequence
-    from typing import Union
-
-    from numpy import ndarray
-
-    # adapted from numpy typing
-    ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
+ArrayLike = bool | int | float | complex | list | ndarray | Sequence
 
 
 def check_module(nwbfile, name, description=None):
@@ -50,7 +42,7 @@ def find_discontinuities(tt, factor=10000):
 
     if len(before_jumps):
         out = np.array([tt[0], tt[before_jumps[0]]])
-        for i, j in zip(before_jumps, before_jumps[1:]):
+        for i, j in zip(before_jumps, before_jumps[1:], strict=False):
             out = np.vstack((out, [tt[i + 1], tt[j]]))
         out = np.vstack((out, [tt[before_jumps[-1] + 1], tt[-1]]))
         return out
@@ -134,7 +126,7 @@ def flatten_nested_dict(nested_dict):
         if isinstance(v, dict):
             if v:
                 flatten_sub_dict = flatten_nested_dict(v).items()
-                flatten_dict.update({k2: v2 for k2, v2 in flatten_sub_dict})
+                flatten_dict.update(dict(flatten_sub_dict))
             else:
                 flatten_dict[k] = np.array([])
         else:
@@ -341,7 +333,7 @@ def convert_towers_block_2_df(current_block, num_block):
     valid_block = 0
 
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-    if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
+    if isinstance(current_block, np.ndarray) and current_block.shape[0] > 0:
         current_block = current_block.tolist()
         valid_block = 1
     # One trial blocks are stored as dictionaries
@@ -372,10 +364,7 @@ def convert_behavior_file(mat_file):
 
     matin = convert_mat_file_to_dict(mat_file)
     converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
-    if bool(converted_metadata):
-        metadata_read = True
-    else:
-        metadata_read = False
+    metadata_read = bool(bool(converted_metadata))
 
     session_block_trial_df = pd.DataFrame()
 
@@ -393,10 +382,7 @@ def convert_behavior_file(mat_file):
     # Convert all blocks of the session
     num_blocks_conv = 0
     for i in range(length_blocks):
-        if dict_block:
-            block = matin["log"]["block"]
-        else:
-            block = matin["log"]["block"][i]
+        block = matin["log"]["block"] if dict_block else matin["log"]["block"][i]
 
         # Convert trial df and block df
         valid_block, block_trial_df = convert_towers_block_trial_2_df(block["trial"], i + 1)

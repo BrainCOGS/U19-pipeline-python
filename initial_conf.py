@@ -62,7 +62,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     dj.config["database.host"] = host
 
     if "custom" not in dj.config:
-        dj.config["custom"] = dict()
+        dj.config["custom"] = {}
         dj.config["custom"]["database.prefix"] = "u19_"
 
     import u19_pipeline.lab as lab
@@ -87,11 +87,11 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
 
     # Get store info
     if "stores" not in dj.config:
-        dj.config["stores"] = dict()
+        dj.config["stores"] = {}
 
     dj_stores = lab.DjStores.fetch(as_dict=True)
 
-    dj_stores_dict = dict()
+    dj_stores_dict = {}
     for i in dj_stores:
         store_name = i.pop("store_name")
         dj_stores_dict[store_name] = i
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-    default_args = dict()
+    default_args = {}
     default_args["save_user"] = True
     default_args["replace_user"] = False
     default_args["global_config"] = False

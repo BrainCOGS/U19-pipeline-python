@@ -269,7 +269,7 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
 
     def resolve_responsible_slack(row):
         schedule_today = row.get("schedule_today")
-        lab_name = row.get("lab")
+        row.get("lab")
 
         token = str(schedule_today).strip() if schedule_today is not None else None
         use_coowners = (token is None) or (token.lower() == "transport") or (token.lower() == "nothing")
@@ -355,22 +355,22 @@ def slack_alert_message_format_weight_water(
             " " + slack_handles_formatted + ", please be advised that your labs' subjects are listed below."
         )
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
 
     m1_1["text"] = ":rotating_light: *Subjects Status Alert *" + lab_manager_text
     m1["text"] = m1_1
 
     # Info for subjects missing water
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     if subjects_not_watered.empty:
@@ -400,9 +400,9 @@ def slack_alert_message_format_weight_water(
     m2["text"] = m2_1
 
     # Info for subjects missing weighing
-    m4 = dict()
+    m4 = {}
     m4["type"] = "section"
-    m4_1 = dict()
+    m4_1 = {}
     m4_1["type"] = "mrkdwn"
 
     if subjects_not_weighted.empty:
@@ -433,9 +433,9 @@ def slack_alert_message_format_weight_water(
     m4["text"] = m4_1
 
     # Info for subjects missing training
-    m5 = dict()
+    m5 = {}
     m5["type"] = "section"
-    m5_1 = dict()
+    m5_1 = {}
     m5_1["type"] = "mrkdwn"
 
     if subjects_not_trained.empty:
@@ -453,9 +453,9 @@ def slack_alert_message_format_weight_water(
     m5["text"] = m5_1
 
     # Info for missing transport
-    m6 = dict()
+    m6 = {}
     m6["type"] = "section"
-    m6_1 = dict()
+    m6_1 = {}
     m6_1["type"] = "mrkdwn"
 
     if missing_transport.empty:
@@ -484,7 +484,7 @@ def slack_alert_message_format_weight_water(
             m6_1["text"] += line + "\n"
     m6["text"] = m6_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep, m4, msep, m5, msep, m6, msep]
     # msg_groups = [m1, m2, m4, m5, m6]
     msg_groups = [m2]

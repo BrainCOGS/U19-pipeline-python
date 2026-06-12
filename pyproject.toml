@@ -89,7 +89,7 @@ select = [
 # if you're feeling confident you can do:
 # select = ["ALL"]
 # and then manually ignore annoying ones:
-ignore = ["N815", "A002", "N806", "E501", "SIM108"]
+ignore = ["N815", "A002", "N802", "N803", "N806", "E402", "E501", "SIM108"]
 
 [dependency-groups]
 dev = [

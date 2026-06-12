@@ -36,25 +36,25 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
     # Divider #
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = "🗓 *Today's Tech Schedule:*"
     m1["text"] = m1_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep]
     message["text"] = "🗓 *Today's Tech Schedule:*"
 
     # Info#
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     # If there are shifts today, list them; otherwise provide a short fallback
@@ -116,9 +116,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
     if alerts:
         alert_text = "\n".join(alerts)
-        m3 = dict()
+        m3 = {}
         m3["type"] = "section"
-        m3_1 = dict()
+        m3_1 = {}
         m3_1["type"] = "mrkdwn"
         m3_1["text"] = f"*:rotating_light: Upcoming Shifts: :rotating_light:*\n{alert_text}"
         m3["text"] = m3_1
@@ -287,7 +287,7 @@ def fetch_and_parse_icalevents(weburl: str):
         event for event in vr_events if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     if lab_clean_up_events:
-        unique_days = sorted(set(event.start.date() for event in lab_clean_up_events))
+        unique_days = sorted({event.start.date() for event in lab_clean_up_events})
         for day in unique_days:
             filtered_events.append(
                 {

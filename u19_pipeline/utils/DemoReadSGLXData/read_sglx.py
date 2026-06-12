@@ -41,10 +41,7 @@ def readMeta(binFullPath):
             # convert the list entries into key value pairs
             for m in mdatList:
                 csList = m.split(sep="=")
-                if csList[0][0] == "~":
-                    currKey = csList[0][1 : len(csList[0])]
-                else:
-                    currKey = csList[0]
+                currKey = csList[0][1:len(csList[0])] if csList[0][0] == "~" else csList[0]
                 metaDict.update({currKey: csList[1]})
     else:
         print("no meta file")
@@ -77,10 +74,7 @@ def SampRate(meta):
 #
 def Int2Volts(meta):
     if meta["typeThis"] == "imec":
-        if "imMaxInt" in meta:
-            maxInt = int(meta["imMaxInt"])
-        else:
-            maxInt = 512
+        maxInt = int(meta["imMaxInt"]) if "imMaxInt" in meta else 512
         fI2V = float(meta["imAiRangeMax"]) / maxInt
     elif meta["typeThis"] == "nidq":
         maxInt = int(meta["niMaxInt"])
@@ -183,10 +177,7 @@ def ChanGainsIM(meta):
     APgain = np.zeros(int(acqCountList[0]))  # default type = float64
     LFgain = np.zeros(int(acqCountList[1]))  # empty array for 2.0
 
-    if "imDatPrb_type" in meta:
-        probeType = int(meta["imDatPrb_type"])
-    else:
-        probeType = 0
+    probeType = int(meta["imDatPrb_type"]) if "imDatPrb_type" in meta else 0
 
     if sum(np.isin(np1_imro, probeType)):
         # imro + probe allows setting gain independently for each channel
@@ -222,10 +213,7 @@ def ChanGainsIM(meta):
             APgain = APgain + 1
     fI2V = Int2Volts(meta)
     APChan0_to_uV = 1e6 * fI2V / APgain[0]
-    if LFgain.size > 0:
-        LFChan0_to_uV = 1e6 * fI2V / LFgain[0]
-    else:
-        LFChan0_to_uV = 0
+    LFChan0_to_uV = 1000000.0 * fI2V / LFgain[0] if LFgain.size > 0 else 0
     return (APgain, LFgain, APChan0_to_uV, LFChan0_to_uV)
 
 
@@ -318,7 +306,7 @@ def GainCorrectIM(dataArray, chanList, meta):
 def makeMemMapRaw(binFullPath, meta):
     nChan = int(meta["nSavedChans"])
     nFileSamp = int(int(meta["fileSizeBytes"]) / (2 * nChan))
-    print("nChan: %d, nFileSamp: %d" % (nChan, nFileSamp))
+    print(f"nChan: {nChan:d}, nFileSamp: {nFileSamp:d}")
     rawData = np.memmap(
         binFullPath,
         dtype="int16",
@@ -351,7 +339,7 @@ def ExtractDigital(rawData, firstSamp, lastSamp, dwReq, dLineList, meta):
     elif meta["typeThis"] == "nidq":
         MN, MA, XA, DW = ChannelCountsNI(meta)
         if dwReq > DW - 1:
-            print("Maximum digital word in file = %d" % (DW - 1))
+            print(f"Maximum digital word in file = {DW - 1:d}")
             digArray = np.zeros((0), "uint8")
             return digArray
         else:
@@ -359,7 +347,7 @@ def ExtractDigital(rawData, firstSamp, lastSamp, dwReq, dLineList, meta):
     elif meta["typeThis"] == "obx":
         XA, DW, SY = ChannelCountsOBX(meta)
         if dwReq > DW - 1:
-            print("Maximum digital word in file = %d" % (DW - 1))
+            print(f"Maximum digital word in file = {DW - 1:d}")
             digArray = np.zeros((0), "uint8")
             return digArray
         else:

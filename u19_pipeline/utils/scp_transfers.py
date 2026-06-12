@@ -92,7 +92,7 @@ def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
     print(remote_path)
     print(local_path)
     rc._get_ssh_key()
-    rc.scp
+    print(rc.scp)
     rc.download_folder(remote_path=remote_path, local_path=local_path)
     rc.disconnect()
 

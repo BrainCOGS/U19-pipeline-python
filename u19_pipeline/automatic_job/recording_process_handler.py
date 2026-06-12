@@ -44,7 +44,7 @@ class RecProcessHandler:
 
             # Filter current status info
             current_status = rec_process_series["status_processing_id"]
-            current_status_series = config.recording_process_status_df.loc[
+            config.recording_process_status_df.loc[
                 config.recording_process_status_df["Value"] == current_status, :
             ].squeeze()
             next_status_series = config.recording_process_status_df.loc[
@@ -135,7 +135,7 @@ class RecProcessHandler:
                             update_dict["error_info"],
                             rec_process_series,
                         )
-                    except:
+                    except Exception:
                         update_dict["error_info"]["error_exception"] = (
                             "Error exception not accepted in slack, check log file for error"
                         )
@@ -293,7 +293,7 @@ class RecProcessHandler:
 
             chanmap_filename = config.default_chanmap_filename % (rec_series["job_id"])
             chanmap_file_local_path = pathlib.Path(config.chanmap_files_filepath, chanmap_filename).as_posix()
-            raw_directory_for_chanmap = rec_series["recording_process_pre_path"]
+            rec_series["recording_process_pre_path"]
 
             spikeglx_meta_filepath = ephys_pipeline.get_spikeglx_meta_filepath(recording_key)
             # Chanmap mat file generation
@@ -459,7 +459,7 @@ class RecProcessHandler:
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict("records")
-        this_modality_program_selection_params_dict
+        print(this_modality_program_selection_params_dict)
 
         # Get two columns, (recording_modality & "packed" program_selection_params)
         this_modality_program_selection_params = (
@@ -467,7 +467,7 @@ class RecProcessHandler:
         )
         this_modality_program_selection_params["program_selection_params"] = this_modality_program_selection_params_dict
 
-        this_modality_program_selection_params
+        print(this_modality_program_selection_params)
 
         return this_modality_program_selection_params
 
@@ -500,7 +500,7 @@ class RecProcessHandler:
             # Get parameters for all modalities
             all_modalities = df_process_jobs["recording_modality"].unique()
 
-            all_mods_df = list()
+            all_mods_df = []
             # Get process df for each modality
             for this_modality in all_modalities:
                 this_mod_df = df_process_jobs.loc[df_process_jobs["recording_modality"] == this_modality, :].copy()
@@ -680,7 +680,7 @@ class RecProcessHandler:
 
         print("error_info_dict", error_info_dict)
 
-        key = dict()
+        key = {}
         key["job_id"] = job_id
         key["status_processing_id_old"] = current_status
         key["status_processing_id_new"] = next_status

@@ -34,30 +34,30 @@ def main_locked_tables_alert():
 
 def slack_alert_message_format_locked_tables(locked_tables_df):
     now = datetime.datetime.now()
-    datestr = now.strftime("%d-%b-%Y %H:%M:%S")
+    now.strftime("%d-%b-%Y %H:%M:%S")
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":rotating_light: *Locked Tables Alert *"
     m1["text"] = m1_1
 
     # Info for subjects missing water
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     m2_1["text"] = "*Locked tables:*" + "\n"
     m2_1["text"] += locked_tables_df
     m2["text"] = m2_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep]
     message["text"] = "Locked Tables Alert"
 

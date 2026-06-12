@@ -127,7 +127,7 @@ def copy_imaging_tables():
 
         else:
             temp_table = getattr(imaging, table)
-            if isinstance(temp_table, dj.Lookup) or isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(imaging, imaging_original, table, skip_duplicates=True)
             else:
                 copy_table(
@@ -174,7 +174,7 @@ def copy_meso_tables():
 
         else:
             temp_table = getattr(meso, table)
-            if isinstance(temp_table, dj.Lookup) or isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(meso, meso_original, table)
             else:
                 copy_table(meso, meso_original, table, allow_direct_insert=True)
@@ -200,7 +200,7 @@ def copy_meso_analysis_tables():
 
         else:
             temp_table = getattr(meso_analysis, table)
-            if isinstance(temp_table, dj.Lookup) or isinstance(temp_table, dj.Manual):
+            if isinstance(temp_table, (dj.Lookup, dj.Manual)):
                 copy_table(meso_analysis, meso_analysis_original, table)
             else:
                 copy_table(

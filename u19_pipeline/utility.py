@@ -57,7 +57,7 @@ def get_network_path(path_name):
         network_path: (str): String with network path as mounted by the corresponding os
     """
 
-    key = dict()
+    key = {}
     # Check if path name to search starts with needed / at start
     if path_name[0] != "/":
         key["global_path"] = "/" + path_name
@@ -93,15 +93,15 @@ def smart_dj_join(t1, t2):
     fields_t2 = pd.DataFrame.from_dict(t2.heading.attributes, orient="index")
 
     # Get only secondary fields and check matches
-    fields_t1_list = set(fields_t1.loc[fields_t1["in_key"] == False].index.to_list())
-    fields_t2_list = set(fields_t2.loc[fields_t2["in_key"] == False].index.to_list())
+    fields_t1_list = set(fields_t1.loc[not fields_t1["in_key"]].index.to_list())
+    fields_t2_list = set(fields_t2.loc[not fields_t2["in_key"]].index.to_list())
     intersected_fields = fields_t2_list.intersection(fields_t1_list)
 
     # If there are:
     if len(intersected_fields) > 0:
         # Create a dictionary to rename matching ones
         suffix = t2.table_name
-        new_name_attr_dict = dict()
+        new_name_attr_dict = {}
         for i in intersected_fields:
             new_name_attr_dict[suffix + "_" + i] = i
 
@@ -117,11 +117,11 @@ def smart_dj_join(t1, t2):
     return t
 
 
-def psychometrics_function(x, O, A, lambd, x0):
+def psychometrics_function(x, offset, A, lambd, x0):
     """
     Standard sigmoid function
     """
-    return O + A / (1 + np.exp(-(x - x0) / lambd))
+    return offset + A / (1 + np.exp(-(x - x0) / lambd))
 
 
 def psychFit(deltaBins, numR, numL, choices):
@@ -209,7 +209,7 @@ def psychFit(deltaBins, numR, numL, choices):
     errorY = errorY.flatten()
 
     # Fill  dictionary of results
-    fit_results = dict()
+    fit_results = {}
     fit_results["delta_bins"] = deltaBins[~idx_zero]
     fit_results["delta_data"] = trialDelta[~idx_zero]
     fit_results["pright_data"] = 100 * phat[~idx_zero]
@@ -279,7 +279,7 @@ def get_cols_rows_plot(num_plots, fig_size):
 def create_str_from_dict(key_dict):
 
     slurm_file_name = ""
-    for i in key_dict.keys():
+    for i in key_dict:
         slurm_file_name += str(i) + "_" + str(key_dict[i])
     return slurm_file_name
 

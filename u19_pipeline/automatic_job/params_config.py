@@ -265,6 +265,6 @@ default_chanmap_filename = "chanmap_%s.mat"
 # Slack notification channels
 slack_webhooks = lab.SlackWebhooks.fetch()
 
-slack_webhooks_dict = dict()
+slack_webhooks_dict = {}
 for i in range(slack_webhooks.shape[0]):
     slack_webhooks_dict[slack_webhooks[i][0]] = slack_webhooks[i][1]

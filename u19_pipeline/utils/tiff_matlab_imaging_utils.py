@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import re
 import time
 from pathlib import Path
@@ -7,8 +8,8 @@ import numpy as np
 import tifffile as tiff
 from sklearn.linear_model import HuberRegressor
 
-xySizeFactor = 1.05  # images are this much larger than nominal size
-zFactor = 1.45  # actual displacement in z vs command
+xy_size_factor = 1.05  # images are this much larger than nominal size
+z_factor = 1.45  # actual displacement in z vs command
 
 
 def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
@@ -102,10 +103,7 @@ def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
 
         valid_idx = np.where(yhat > threshold_value)[0]
 
-        if len(valid_idx) > 0:
-            last_good_file = valid_idx[-1]
-        else:
-            last_good_file = n_files - 1
+        last_good_file = valid_idx[-1] if len(valid_idx) > 0 else n_files - 1
 
     else:
         last_good_file = 0
@@ -116,7 +114,7 @@ def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
 
     cumulative_frames = np.cumsum(frame_id)
 
-    last_good_frame = cumulative_frames[last_good_file]
+    cumulative_frames[last_good_file]
 
     elapsed_minutes = (time.time() - start_time) / 60
 
@@ -165,10 +163,7 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
         # Some ScanImage versions also use Software tag
         software = first_page.tags.get("Software")
 
-        if software is not None:
-            scope_str = str(software.value)
-        else:
-            scope_str = image_description
+        scope_str = str(software.value) if software is not None else image_description
 
         parsed_info = {}
 
@@ -255,12 +250,12 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
             try:
                 res_match = re.search(r"SI\.objectiveResolution = ([0-9]+\.[0-9]+)", scope_str)
 
-                resolution_factor = xySizeFactor * float(res_match.group(1))
+                resolution_factor = xy_size_factor * float(res_match.group(1))
 
             except Exception:
                 res_match = re.search(r"SI\.objectiveResolution = (\d+)", scope_str)
 
-                resolution_factor = xySizeFactor * float(res_match.group(1))
+                resolution_factor = xy_size_factor * float(res_match.group(1))
 
         else:
             resolution_factor = 1
@@ -479,11 +474,7 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
         # Resolution scaling
         resolution_match = re.search(r"(?<=SI\.objectiveResolution = )\d+\.\d+", scope_str)
 
-        if resolution_match:
-            resolution_factor = xySizeFactor * float(resolution_match.group(0))
-
-        else:
-            resolution_factor = 1
+        resolution_factor = xy_size_factor * float(resolution_match.group(0)) if resolution_match else 1
 
         for i_roi in range(len(roi_marks)):
             if i_roi != len(roi_marks) - 1:
@@ -695,14 +686,12 @@ def parse_tif_header_mesoscope(tif_fn, skip_behav_sync=False):
                 try:
                     z_val = ast.literal_eval(z_match.group(0))
 
-                    parsed_info["Zs"] = zFactor * np.array(z_val)
+                    parsed_info["Zs"] = z_factor * np.array(z_val)
 
                 except Exception:
-                    try:
+                    with contextlib.suppress(Exception):
                         parsed_info["Zs"] = float(z_match.group(0))
 
-                    except Exception:
-                        pass
 
                 break
 

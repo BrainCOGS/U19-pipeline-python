@@ -8,7 +8,7 @@ import numpy as np
 def add_researcher_user_table(user_id, full_name, email, phone):
 
     # Values sent by function caller
-    new_key = dict()
+    new_key = {}
     new_key["user_id"] = user_id
     new_key["user_nickname"] = user_id
     new_key["full_name"] = full_name

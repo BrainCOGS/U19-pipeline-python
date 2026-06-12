@@ -12,6 +12,7 @@ Features:
 - Uses the rigs_issues_and_troubleshooting webhook for notifications
 """
 
+import contextlib
 import json
 import logging
 import os
@@ -43,18 +44,12 @@ def setup_logging():
     # Create logs directory in the user's home directory (allow override via env var)
     # Default: ~/.u19_pipeline/logs
     env_log_dir = os.getenv("U19_PIPELINE_LOG_DIR")
-    if env_log_dir:
-        log_dir = Path(env_log_dir)
-    else:
-        log_dir = Path.home() / "u19_pipeline_logs"
+    log_dir = Path(env_log_dir) if env_log_dir else Path.home() / "u19_pipeline_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create log file with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"rig_maintenance_check_{timestamp}.log"
-
-    # Open log file handle
-    log_file_handle = open(log_file, "a", encoding="utf-8")
 
     # Configure standard logging: StreamHandler (console) + FileHandler (file)
     logger = logging.getLogger("rig_maintenance")
@@ -76,7 +71,7 @@ def setup_logging():
     # Prevent messages from also being handled by the root logger
     logger.propagate = False
 
-    return logger, log_file, log_file_handle
+    return logger, log_file
 
 
 def get_slack_webhook():
@@ -529,10 +524,9 @@ def dataframe_to_slack_table_blocks(df: pd.DataFrame, chunk_size: int = 15, **kw
 
 def main():
     """Main function to run the maintenance check."""
-    log_file_handle = None
     try:
         # Set up logging
-        _, log_file, log_file_handle = setup_logging()
+        _, log_file = setup_logging()
 
         logger.info("🔧 Rig Maintenance Status Checker")
         logger.info("=" * 60)
@@ -606,12 +600,10 @@ def main():
         logger.exception(f"❌ Error during maintenance check: {e}")
         sys.exit(1)
     finally:
-        # Close the log file handle
-        if log_file_handle:
-            try:
-                log_file_handle.close()
-            except Exception:
-                pass
+        # Close any file handlers to flush logs
+        for handler in logging.getLogger("rig_maintenance").handlers[:]:
+            with contextlib.suppress(Exception):
+                handler.close()
 
 
 if __name__ == "__main__":

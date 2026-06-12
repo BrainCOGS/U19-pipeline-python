@@ -24,7 +24,7 @@ from u19_pipeline.imaging_element import (
 
 acq_software = "ScanImage"
 # recording_id = os.environ['recording_id']
-recording_process_id = os.environ["recording_process_id"]
+recording_process_id = os.environ["RECORDING_PROCESS_ID"]
 # process_method = os.environ['process_method']
 # paramset_idx = os.environ['paramset_idx']
 
@@ -120,7 +120,7 @@ recording_process_id = os.environ["recording_process_id"]
 # scan_key = (imaging_rec.Scan & dict(recording_id=recording_id)).fetch1('KEY')
 
 # Recording process key
-rec_process_key = dict(recording_process_id=recording_process_id)
+rec_process_key = {"recording_process_id": recording_process_id}
 rec_process_str_key = "recording_process_id_" + str(recording_process_id)
 
 # Get fov key
@@ -136,7 +136,7 @@ recording_process_info = (lab.Location * recording.RecordingProcess * recording.
 
 # Paramset idx and key
 paramset_idx = recording_process_info[0]["process_paramset_idx"]
-paramset_idx_key = dict()
+paramset_idx_key = {}
 paramset_idx_key["paramset_idx"] = paramset_idx
 scanner = recording_process_info[0]["acquisition_type"]
 
@@ -145,7 +145,7 @@ scanner = recording_process_info[0]["acquisition_type"]
 scan_id = 0
 
 # Get preprocess params
-preprocess_params_key = dict()
+preprocess_params_key = {}
 preprocess_params_key["preprocess_paramset_idx"] = recording_process_info[0]["preprocess_paramset_idx"]
 preprocess_params = recording.PreprocessParamSet().get_preprocess_params(preprocess_params_key)
 processing_method = preprocess_params["processing_method"]
@@ -174,7 +174,7 @@ if rec_process_key not in scan_element.Scan():
         scan_filepaths = scan_filepaths  # TODO load all TIFF files from session possibly using TIFFSequence
         loaded_scan = tifffile.imread(scan_filepaths)
         # scanner = 'mesoscope'
-    except:  # TODO: Use except instead of else)
+    except BaseException:  # TODO: Use except instead of else)
         print("ScanImage loading error")  # TODO: Modify the error message
 
     # Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
@@ -271,7 +271,7 @@ if task_mode == "load":
 
 if paramset_idx_key not in imaging_element.ProcessingParamSet():
     # Get all information from process params from recording.ProcessParamSet schema
-    process_params_key = dict()
+    process_params_key = {}
     process_params_key["process_paramset_idx"] = paramset_idx
     process_params_info = (recording.ProcessParamSet() & process_params_key).fetch(as_dict=True)
     process_params = recording.ProcessParamSet().get_process_params(process_params_key)

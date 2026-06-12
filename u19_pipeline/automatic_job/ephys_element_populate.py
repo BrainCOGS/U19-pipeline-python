@@ -12,7 +12,7 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     }
 
     process_key = (
-        recording_process.Processing * recording.Recording & dict(recording_modality="electrophysiology", job_id=job_id)
+        recording_process.Processing * recording.Recording & {"recording_modality": "electrophysiology", "job_id": job_id}
     ).fetch1("KEY")
 
     fragment_number, recording_process_pre_path, recording_process_post_path = (
@@ -24,21 +24,18 @@ def populate_element_data(job_id, display_progress=True, reserve_jobs=False, sup
     )
 
     precluster_paramsets = (
-        ephys_element.PreClusterParamSteps.Step() & dict(precluster_param_steps_id=precluster_param_steps_id)
+        ephys_element.PreClusterParamSteps.Step() & {"precluster_param_steps_id": precluster_param_steps_id}
     ).fetch("paramset_idx")
 
-    clustering_method = (ephys_element.ClusteringParamSet & dict(paramset_idx=paramset_idx)).fetch1("clustering_method")
+    clustering_method = (ephys_element.ClusteringParamSet & {"paramset_idx": paramset_idx}).fetch1("clustering_method")
 
-    if len(precluster_paramsets) == 0:
-        task_mode = "none"
-    else:
-        task_mode = "load"
+    task_mode = "none" if len(precluster_paramsets) == 0 else "load"
 
-    precluster_key = dict(
-        recording_id=process_key["recording_id"],
-        insertion_number=fragment_number,
-        precluster_param_steps_id=precluster_param_steps_id,
-    )
+    precluster_key = {
+        "recording_id": process_key["recording_id"],
+        "insertion_number": fragment_number,
+        "precluster_param_steps_id": precluster_param_steps_id,
+    }
 
     ephys_element.PreClusterTask.insert1(
         dict(

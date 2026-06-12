@@ -109,7 +109,7 @@ def get_full_session_directory(recording_key):
 
 
 def append_cat_gt_params_from_probedir(probe_dirname):
-    extra_cat_gt_params = dict()
+    extra_cat_gt_params = {}
 
     probe_match = re.search("_imec[0-9]$", probe_dirname)
     if probe_match:
@@ -207,7 +207,7 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
                 ephys_element.ProbeInsertion * ephys_element.probe.Probe & ephys_recording_key
             ).fetch1("probe")
 
-            spikeglx_meta_filepaths = [fp for fp in session_dir.rglob("*.ap.meta")]
+            spikeglx_meta_filepaths = list(session_dir.rglob("*.ap.meta"))
             for meta_filepath in spikeglx_meta_filepaths:
                 spikeglx_meta = spikeglx.SpikeGLXMeta(meta_filepath)
                 if str(spikeglx_meta.probe_SN) == inserted_probe_serial_number:
@@ -258,7 +258,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     # Read behavior sync record
     try:
         sync_data = (BehaviorSync & rec_key).fetch1("sync_data")
-    except:
+    except Exception:
         print("No sync data was sound for this session")
         return
 
@@ -284,7 +284,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     )
 
     # Store data
-    all_vectors = dict()
+    all_vectors = {}
 
     all_vectors["time_as_behavior_trial_ind"] = trial_times_ind
     all_vectors["time_as_behavior_fullsession"] = trial_times_full
@@ -296,7 +296,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
         for this_key in all_vectors:
             print("this_key", this_key)
             print(all_vectors[this_key].shape)
-            all_vectors[this_key] = np.concatenate(([x for x in all_vectors[this_key]]), axis=0)
+            all_vectors[this_key] = np.concatenate((list(all_vectors[this_key])), axis=0)
             print(all_vectors[this_key].shape)
 
     all_vectors["trial_index_nidq_virmen"] = trial_index_nidq_virmen
@@ -440,7 +440,7 @@ class BehaviorSync(dj.Imported):
                     nidq_sampling_rate,
                 )
 
-            dictionary_sync_data = dict()
+            dictionary_sync_data = {}
 
             print("after all main ehpys fix sync code", status_regular, status_fix)
 
@@ -480,7 +480,7 @@ class BehaviorSync(dj.Imported):
 
             print(kwargs)
 
-            if "populate" not in kwargs or kwargs["populate"] == True:
+            if "populate" not in kwargs or kwargs["populate"]:
                 BehaviorSync.insert1(final_key, allow_direct_insert=True)
                 self.insert_imec_sampling_rate(key, ephys_session_fullpath.parent)
             else:

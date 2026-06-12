@@ -33,13 +33,13 @@ for table in params_tables:
 params_dict_dict = {}
 num_params = 0
 for idx, param_modality_list in enumerate(params_dict_list):
-    for dict in param_modality_list:
-        dict["recording_modality"] = modalities[idx]
-        dict["param_set_hash"] = str(dict["param_set_hash"])
-        if "clustering_method" in dict:
-            dict["processing_method"] = dict.pop("clustering_method")
+    for entry in param_modality_list:
+        entry["recording_modality"] = modalities[idx]
+        entry["param_set_hash"] = str(entry["param_set_hash"])
+        if "clustering_method" in entry:
+            entry["processing_method"] = entry.pop("clustering_method")
 
-        params_dict_dict["param_" + str(num_params)] = dict
+        params_dict_dict["param_" + str(num_params)] = entry
         num_params += 1
 
 #################################################Fetch all preparamsStepList from all modalities
@@ -51,19 +51,19 @@ for table in preparams_steps_tables:
 preparams_steps_dict_dict = {}
 num_preparams_steps = 0
 for idx, preparam_modality_list in enumerate(preparams_steps):
-    for dict in preparam_modality_list:
-        dict["param_set_hash"] = str(dict["param_set_hash"])
-        dict["recording_modality"] = modalities[idx]
-        if "precluster_param_steps_id" in dict:
-            dict["preprocess_param_steps_id"] = dict.pop("precluster_param_steps_id")
-        if "precluster_method" in dict:
-            dict["preprocess_method"] = dict.pop("precluster_method")
-        if "precluster_param_steps_name" in dict:
-            dict["preprocess_param_steps_name"] = dict.pop("precluster_param_steps_name")
-        if "precluster_param_steps_desc" in dict:
-            dict["preprocess_param_steps_desc"] = dict.pop("precluster_param_steps_desc")
+    for entry in preparam_modality_list:
+        entry["param_set_hash"] = str(entry["param_set_hash"])
+        entry["recording_modality"] = modalities[idx]
+        if "precluster_param_steps_id" in entry:
+            entry["preprocess_param_steps_id"] = entry.pop("precluster_param_steps_id")
+        if "precluster_method" in entry:
+            entry["preprocess_method"] = entry.pop("precluster_method")
+        if "precluster_param_steps_name" in entry:
+            entry["preprocess_param_steps_name"] = entry.pop("precluster_param_steps_name")
+        if "precluster_param_steps_desc" in entry:
+            entry["preprocess_param_steps_desc"] = entry.pop("precluster_param_steps_desc")
 
-        preparams_steps_dict_dict["param_" + str(num_preparams_steps)] = dict
+        preparams_steps_dict_dict["param_" + str(num_preparams_steps)] = entry
         num_preparams_steps += 1
 
 #################################################Fetch all preparams from all modalities
@@ -76,13 +76,13 @@ for table in preparams_tables:
 preparams_dict_dict = {}
 num_preparams = 0
 for idx, preparam_modality_list in enumerate(preparams_dict_list):
-    for dict in preparam_modality_list:
-        dict["recording_modality"] = modalities[idx]
-        dict["param_set_hash"] = str(dict["param_set_hash"])
-        if "precluster_method" in dict:
-            dict["preprocess_method"] = dict.pop("precluster_method")
+    for entry in preparam_modality_list:
+        entry["recording_modality"] = modalities[idx]
+        entry["param_set_hash"] = str(entry["param_set_hash"])
+        if "precluster_method" in entry:
+            entry["preprocess_method"] = entry.pop("precluster_method")
 
-        preparams_dict_dict["param_" + str(num_preparams)] = dict
+        preparams_dict_dict["param_" + str(num_preparams)] = entry
         num_preparams += 1
 
 """
