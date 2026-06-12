@@ -4,6 +4,35 @@ Resource estimation utilities for NWB export jobs.
 Provides functions to estimate file sizes and validate data availability.
 """
 
+import logging
+
+log = logging.getLogger(__name__)
+
+
+def recording_ids_for_session(session_key: dict) -> list:
+    """
+    Return the recording_id(s) linked to an acquisition.Session.
+
+    The NwbExportJob record only carries the acquisition.Session primary key
+    (subject_fullname, session_date, session_number); it does NOT carry
+    recording_id. The link lives in recording.Recording.BehaviorSession, a Part
+    table whose secondary attribute is ``-> acquisition.Session``. This helper
+    resolves the session key to the set of recording_ids for that session.
+
+    Args:
+        session_key: Dictionary with acquisition.Session identifiers.
+
+    Returns:
+        List of recording_id ints (empty if none linked).
+    """
+    from u19_pipeline import recording  # noqa: PLC0415
+
+    return (
+        (recording.Recording.BehaviorSession & session_key)
+        .fetch("recording_id")
+        .tolist()
+    )
+
 
 def estimate_behavior_size_gb(session_key: dict) -> float:
     """
@@ -101,30 +130,46 @@ def estimate_total_size(nwb_job_key: dict) -> float:
     Returns:
         Total estimated size in GB
     """
-    from u19_pipeline import acquisition, nwb_production, recording
-    from u19_pipeline.imaging_pipeline import imaging_element
+    from u19_pipeline import acquisition, nwb_production
 
     total_gb = 0.0
 
     job = (nwb_production.NwbExportJob & nwb_job_key).fetch1()
+    session_key = {k: job[k] for k in acquisition.Session.primary_key if k in job}
     modalities = (nwb_production.NwbExportModality & nwb_job_key).fetch(as_dict=True)
 
     for modality in modalities:
         modality_name = modality["modality_name"]
 
         if modality_name == "behavior":
-            session_key = {k: job[k] for k in acquisition.Session.primary_key if k in job}
             total_gb += estimate_behavior_size_gb(session_key)
 
         elif modality_name == "ephys":
-            recording_key = {k: job[k] for k in recording.Recording.primary_key if k in job}
+            # The job carries the session key, not recording_id. Resolve the
+            # recording_id(s) for the session via the BehaviorSession Part table.
+            recording_ids = recording_ids_for_session(session_key)
             probe_numbers = _parse_number_list(modality.get("probe_numbers"))
-            total_gb += estimate_ephys_size_gb(recording_key, probe_numbers)
+            if not recording_ids:
+                log.warning(
+                    "estimate_total_size: no recording linked to session %s; "
+                    "skipping ephys estimate.",
+                    session_key,
+                )
+                continue
+            for rid in recording_ids:
+                total_gb += estimate_ephys_size_gb({"recording_id": rid}, probe_numbers)
 
         elif modality_name == "imaging":
-            scan_key = {k: job[k] for k in imaging_element.Scan.primary_key if k in job}
-            fov_numbers = _parse_number_list(modality.get("fov_numbers"))
-            total_gb += estimate_imaging_size_gb(scan_key, fov_numbers)
+            # TODO: the imaging_element.Scan <-> acquisition.Session linkage is
+            # not reliably known. Until it is confirmed we cannot build a real
+            # scan_key; estimating against an empty restriction would be vacuous,
+            # so skip with a logged warning rather than fabricate a key.
+            log.warning(
+                "estimate_total_size: imaging Scan<->session linkage not yet wired "
+                "for session %s; skipping imaging estimate.",
+                session_key,
+            )
+            continue
 
     return total_gb
 
@@ -156,7 +201,9 @@ def validate_behavior_data_exists(session_key: dict) -> tuple[bool, str]:
         return False, f"Error validating behavior data: {str(e)}"
 
 
-def validate_ephys_data_exists(recording_key: dict, probe_numbers: list) -> tuple[bool, str]:
+def validate_ephys_data_exists(
+    recording_key: dict, probe_numbers: list
+) -> tuple[bool, str]:
     """
     Validate that ephys data exists for specified probes.
 
