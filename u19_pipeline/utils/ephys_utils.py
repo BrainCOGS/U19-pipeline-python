@@ -9,6 +9,9 @@ from scipy import signal as sp
 from scipy.io import loadmat
 
 import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class SpiceGlxUtility:
@@ -23,7 +26,7 @@ class SpiceGlxUtility:
         # Get all digitial channels if not provided
         if d_line_list is None:
             list_start_end_chan = nidq_meta["niXDChans1"].split(sep=":")
-            print(list_start_end_chan)
+            logger.debug("list_start_end_chan: %s", list_start_end_chan)
             if len(list_start_end_chan) == 2:
                 d_line_list = list(range(int(list_start_end_chan[0]), int(list_start_end_chan[1]) + 1))
             else:
@@ -182,7 +185,7 @@ def get_trial_signal_mode(iteration_pulse_signal_trial, behavior_time_vector_tri
 
     mode = "counter_bit0" if iter_samples[0].shape[0] < behavior_time_vector_trial.shape[0] * 3 / 4 else "pulse_signal"
 
-    print("mode deduction: ", mode)
+    logger.debug("mode deduction: %s", mode)
 
     return mode
 
@@ -206,7 +209,7 @@ def get_iteration_sample_vector_from_digital_lines_pulses(
     # Get idx samples trial starts
     trial_start_idx, trial_end_pulse_idx = get_idx_trial_start(trial_pulse_signal)
 
-    print("len trial_start_idx", trial_start_idx.shape)
+    logger.debug("len trial_start_idx: %s", trial_start_idx.shape)
 
     if mode is None:
         mode = get_trial_signal_mode(
@@ -372,16 +375,12 @@ def assert_iteration_samples_count(iteration_sample_idx_output, behavior_time_ve
     trials_diff_iteration_big = []
     for count, iter_trials in enumerate(iteration_sample_idx_output):
         if iter_trials.shape[0] != behavior_time_vector[count].shape[0]:
-            print(
-                "trial#",
+            logger.debug(
+                "trial# %d iterPulses: %d IterBeh: %d Difference (%d)",
                 count,
-                "iterPulses:",
                 iter_trials.shape[0],
-                "IterBeh:",
                 behavior_time_vector[count].shape[0],
-                "Difference (",
                 behavior_time_vector[count].shape[0] - iter_trials.shape[0],
-                ")",
             )
         # For each trial iteration # should be equal to the behavioral file iterations
         if iter_trials.shape[0] != behavior_time_vector[count].shape[0]:
@@ -409,13 +408,13 @@ def evaluate_sync_process(
     """
 
     if len(trials_diff_iteration_big) > 1:
-        print("Missed by a lot some trials: ", trials_diff_iteration_big)
+        logger.warning("Missed by a lot some trials: %s", trials_diff_iteration_big)
         status = -1
         return status
 
     if len(trials_diff_iteration_big) == 1 and trials_diff_iteration_big[0] == total_trials - 1:
-        print(
-            "Missed by a lot last trial: (Assume recording stopped earlier) ",
+        logger.warning(
+            "Missed by a lot last trial: (Assume recording stopped earlier) %s",
             trials_diff_iteration_big,
         )
         status = 1
@@ -423,43 +422,39 @@ def evaluate_sync_process(
 
     # All trials synced perfectly
     if trial_count_diff == 0 and len(trials_diff_iteration_small) == 0:
-        print("Synced perfectly xxxxxxxxxxxxxx")
+        logger.info("Synced perfectly")
         status = 1
         return status
 
     # We miss last trial (surely recording was stop before behavior)
     if trial_count_diff < 2 and len(trials_diff_iteration_small) == 0:
-        print("Missed one trial signal xxxxxxxxxxxxxx")
+        logger.warning("Missed one trial signal")
         status = -1
         return status
 
     # Iterations differ in more than two trials
     if len(trials_diff_iteration_small) > 2:
-        print("Missed iteration count on many trials: ", len(trials_diff_iteration_small))
+        logger.warning("Missed iteration count on many trials: %d", len(trials_diff_iteration_small))
         status = -1
         return status
 
     if trial_count_diff < 2 and len(trials_diff_iteration_small) <= 2:
-        print("Missed num trials: ", trial_count_diff)
-        print(
-            "Missed iteration count in how many trials: ",
-            len(trials_diff_iteration_small),
-        )
-        print("Trying to fix trials")
+        logger.warning("Missed num trials: %d", trial_count_diff)
+        logger.warning("Missed iteration count in how many trials: %d", len(trials_diff_iteration_small))
+        logger.info("Trying to fix trials")
         status = 0
         return status
 
     else:
         status = -1
-        print("Missed by a lot of trials, everything different or missing")
+        logger.warning("Missed by a lot of trials, everything different or missing")
         return status
 
 
 def fix_missing_iteration_trials(trials_diff_iteration_small, iteration_dict, behavior_times, nidq_sampling_rate):
     # Fix and insert missing synced iteration vectors
 
-    print("trials_diff_iteration_small", trials_diff_iteration_small)
-    print(type(trials_diff_iteration_small))
+    logger.debug("trials_diff_iteration_small: %s (type: %s)", trials_diff_iteration_small, type(trials_diff_iteration_small))
 
     # For each bad synced trial (Should be only a few)
     for i in range(len(trials_diff_iteration_small)):
@@ -502,13 +497,13 @@ def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector,
     # Check where is more likely we miss an iteration pulse and insert it to iteration_vector
 
     status = 1
-    print("synced_iteration_vector", synced_iteration_vector.shape[0])
-    print("synced_time_vector", synced_time_vector.shape[0])
-    print("behavior_time_vector", behavior_time_vector.shape[0])
+    logger.debug("synced_iteration_vector: %d", synced_iteration_vector.shape[0])
+    logger.debug("synced_time_vector: %d", synced_time_vector.shape[0])
+    logger.debug("behavior_time_vector: %d", behavior_time_vector.shape[0])
 
     # Get in which indexes we get a "peak" of non matching times...
     if synced_time_vector.shape[0] >= behavior_time_vector.shape[0]:
-        print("More pulses than behavior iterations, check other method")  # Christian: What is the other method?
+        logger.warning("More pulses than behavior iterations, check other method")
         status = -1
         return status, np.empty(0)
     else:
@@ -518,8 +513,7 @@ def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector,
 
     peaks, _ = sp.find_peaks(diff_vector, height=0.05, distance=20)
 
-    print("peaks here .............", peaks)
-    print(peaks.shape)
+    logger.debug("peaks: %s (shape: %s)", peaks, peaks.shape)
 
     # Insert extra iterations as a new "iteration" start to match behavior iterations
     new_synced_iteration_vector = synced_iteration_vector.copy()
@@ -528,7 +522,7 @@ def insert_missing_synced_iteration(synced_iteration_vector, synced_time_vector,
         new_synced_iteration_vector = np.insert(new_synced_iteration_vector, peaks[i], value_insert)
 
     if new_synced_iteration_vector.shape[0] != behavior_time_vector.shape[0]:
-        print("with peak strategy, could not find correct missing iterations")
+        logger.warning("with peak strategy, could not find correct missing iterations")
         status = -1
         return status, np.empty(0)
 
@@ -678,7 +672,7 @@ def future_counter_get_signal():
 
         framenumber_in_trial[idx] = frame_number + overflow*(max_count+1)
 
-    print(np.max(framenumber_in_trial))
+    logger.debug("max framenumber_in_trial: %s", np.max(framenumber_in_trial))
 """
 
 
@@ -809,15 +803,15 @@ def get_index_type_vectors(trial_index_nidq, iteration_index_nidq, nidq_sampling
     iteration_equal = np.allclose(iteration_index_nidq, iteration_index_nidq2, equal_nan=True)
     trial_equal = np.allclose(trial_index_nidq, trial_index_nidq2, equal_nan=True)
 
-    print("iteration_equal", iteration_equal)
-    print("trial_equal", trial_equal)
+    logger.debug("iteration_equal: %s", iteration_equal)
+    logger.debug("trial_equal: %s", trial_equal)
 
-    print(
-        "np.where(np.isnan(iteration_index_nidq))[0].shape",
+    logger.debug(
+        "np.where(np.isnan(iteration_index_nidq))[0].shape: %s",
         np.where(np.isnan(iteration_index_nidq))[0].shape,
     )
-    print(
-        "np.where(np.isnan(iteration_index_nidq2))[0].shape",
+    logger.debug(
+        "np.where(np.isnan(iteration_index_nidq2))[0].shape: %s",
         np.where(np.isnan(iteration_index_nidq2))[0].shape,
     )
 
@@ -864,7 +858,7 @@ class XyzPickFileCreator:
 
         # Get recording id
         probe_location = XyzPickFileCreator.get_probe_insertion_coordinates(recording_id, fragment_number)
-        print(probe_location)
+        logger.debug("probe_location: %s", probe_location)
 
         # Load channelmap and check how many probes there are
         chanmap = loadmat(chanmap_file)

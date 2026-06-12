@@ -7,6 +7,9 @@ import time
 import datajoint as dj
 
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Functions to transfer files (globus, scp, smbclient)
 
@@ -124,9 +127,8 @@ def get_cluster_vars(cluster):
 
 def scp_file_transfer(source, dest):
 
-    print("scp", source, dest)
-
-    print(["scp", "-i", public_key_location, source, dest])
+    logger.debug("scp %s %s", source, dest)
+    logger.debug("scp command %s", ["scp", "-i", public_key_location, source, dest])
 
     p = subprocess.Popen(["scp", "-i", public_key_location, source, dest])
     transfer_status = p.wait()
@@ -135,13 +137,13 @@ def scp_file_transfer(source, dest):
 
 def scp_file_transfer_big_files(source, dest, source_filepath, dest_filepath):
 
-    print("scp", source, dest)
+    logger.debug("scp big files %s %s", source, dest)
     # IMPLEMENT HERE
 
 
 def cp_file_transfer(source, dest):
 
-    print("cp", source, dest)
+    logger.debug("cp %s %s", source, dest)
     p = subprocess.Popen(["cp", source, dest])
     transfer_status = p.wait()
     return transfer_status
@@ -163,14 +165,14 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
         "--format",
         "json",
     ]
-    print("**********************************")
-    print(globus_command)
-    print("**********************************")
+    logger.debug("**********************************")
+    logger.debug("globus_command %s", globus_command)
+    logger.debug("**********************************")
     p = subprocess.run(globus_command, capture_output=True)
-    print(p)
+    logger.debug("globus run result %s", p)
     transfer_request = {}
-    print("p.stderr", p.stderr)
-    print("p.stdout", p.stdout)
+    logger.debug("p.stderr %s", p.stderr)
+    logger.debug("p.stdout %s", p.stdout)
 
     if len(p.stderr) == 0:
         try:
@@ -178,7 +180,7 @@ def request_globus_transfer(job_id_str, source_ep, dest_ep, source_filepath, des
             transfer_request["status"] = config.system_process["SUCCESS"]
             transfer_request["task_id"] = dict_output["task_id"]
         except Exception:
-            print("stdout is not a valid json, probably an error")
+            logger.warning("stdout is not a valid json, probably an error")
             transfer_request["status"] = config.system_process["ERROR"]
             transfer_request["error_info"] = p.stdout.decode("UTF-8")
     # dict_output = translate_globus_output(p.stdout)
@@ -296,14 +298,10 @@ def get_error_log_str(recording_process_id):
             "",
         )
 
-    print("error_log_data   xxxxxxxxxx")
-    print("type(error_log_data)", type(error_log_data))
-    print("len(error_log_data)", len(error_log_data))
-    # if len(error_log_data) > 400:
-    #    print(error_log_data[-400:])
-    # else:
-    #    print(error_log_data)
-    print("error_log_data   xxxxxxxxxx")
+    logger.debug("error_log_data   xxxxxxxxxx")
+    logger.debug("type(error_log_data) %s", type(error_log_data))
+    logger.debug("len(error_log_data) %s", len(error_log_data))
+    logger.debug("error_log_data   xxxxxxxxxx")
 
     return error_log_data
 

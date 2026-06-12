@@ -8,6 +8,9 @@ from scipy.io import savemat
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utils.file_utils import write_file
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Functions to create parameter files and send them
 
@@ -80,7 +83,7 @@ def transfer_parameter_file(recording_process_id, default_param_filename, cluste
     params_file_cluster_path = str(pathlib.Path(cluster_param_dir, param_filename))
     param_file_full_path = user_host + ":" + params_file_cluster_path
 
-    print("transfer_parameter_file", params_file_local_path, param_file_full_path)
+    logger.debug("transfer_parameter_file %s %s", params_file_local_path, param_file_full_path)
 
     status = ft.scp_file_transfer(params_file_local_path, param_file_full_path)
 

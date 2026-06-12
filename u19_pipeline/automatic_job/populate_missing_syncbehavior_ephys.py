@@ -12,6 +12,9 @@ import pandas as pd
 
 import u19_pipeline.ephys_pipeline as ep
 import u19_pipeline.recording as recording
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_rec_key_dict(recording_id):
@@ -48,4 +51,4 @@ for i in range(not_sync_recs2.shape[0]):
     try:
         ep.BehaviorSync.populate(not_sync_recs2.loc[i, "rec_key"])
     except Exception as e:
-        print(e)
+        logger.exception("Error populating BehaviorSync: %s", e)

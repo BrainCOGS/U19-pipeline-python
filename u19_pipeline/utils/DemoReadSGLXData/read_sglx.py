@@ -21,6 +21,10 @@ from tkinter import Tk, filedialog
 import matplotlib.pyplot as plt
 import numpy as np
 
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 # Parse ini file returning a dictionary whose keys are the metadata
 # left-hand-side-tags, and values are string versions of the right-hand-side
@@ -44,7 +48,7 @@ def readMeta(binFullPath):
                 currKey = csList[0][1:len(csList[0])] if csList[0][0] == "~" else csList[0]
                 metaDict.update({currKey: csList[1]})
     else:
-        print("no meta file")
+        logger.error("no meta file")
     return metaDict
 
 
@@ -60,7 +64,7 @@ def SampRate(meta):
     elif meta["typeThis"] == "obx":
         srate = float(meta["obSampRate"])
     else:
-        print("Error: unknown stream type")
+        logger.error("Error: unknown stream type")
         srate = 1
 
     return srate
@@ -83,7 +87,7 @@ def Int2Volts(meta):
         maxInt = int(meta["obMaxInt"])
         fI2V = float(meta["obAiRangeMax"]) / maxInt
     else:
-        print("Error: unknown stream type")
+        logger.error("Error: unknown stream type")
         fI2V = 1
 
     return fI2V
@@ -209,7 +213,7 @@ def ChanGainsIM(meta):
             # commercial NP 2.0; APGain = 100 for all AP
             APgain = APgain + 100
         else:
-            print("unknown gain, setting APgain to 1")
+            logger.warning("unknown gain, setting APgain to 1")
             APgain = APgain + 1
     fI2V = Int2Volts(meta)
     APChan0_to_uV = 1e6 * fI2V / APgain[0]
@@ -306,7 +310,7 @@ def GainCorrectIM(dataArray, chanList, meta):
 def makeMemMapRaw(binFullPath, meta):
     nChan = int(meta["nSavedChans"])
     nFileSamp = int(int(meta["fileSizeBytes"]) / (2 * nChan))
-    print(f"nChan: {nChan:d}, nFileSamp: {nFileSamp:d}")
+    logger.info("nChan: %d, nFileSamp: %d", nChan, nFileSamp)
     rawData = np.memmap(
         binFullPath,
         dtype="int16",
@@ -331,7 +335,7 @@ def ExtractDigital(rawData, firstSamp, lastSamp, dwReq, dLineList, meta):
     if meta["typeThis"] == "imec":
         AP, LF, SY = ChannelCountsIM(meta)
         if SY == 0:
-            print("No imec sync channel saved.")
+            logger.warning("No imec sync channel saved.")
             digArray = np.zeros((0), "uint8")
             return digArray
         else:
@@ -339,7 +343,7 @@ def ExtractDigital(rawData, firstSamp, lastSamp, dwReq, dLineList, meta):
     elif meta["typeThis"] == "nidq":
         MN, MA, XA, DW = ChannelCountsNI(meta)
         if dwReq > DW - 1:
-            print(f"Maximum digital word in file = {DW - 1:d}")
+            logger.info("Maximum digital word in file = %d", DW - 1)
             digArray = np.zeros((0), "uint8")
             return digArray
         else:
@@ -347,13 +351,13 @@ def ExtractDigital(rawData, firstSamp, lastSamp, dwReq, dLineList, meta):
     elif meta["typeThis"] == "obx":
         XA, DW, SY = ChannelCountsOBX(meta)
         if dwReq > DW - 1:
-            print(f"Maximum digital word in file = {DW - 1:d}")
+            logger.info("Maximum digital word in file = %d", DW - 1)
             digArray = np.zeros((0), "uint8")
             return digArray
         else:
             digCh = XA + dwReq
     else:
-        print("unknown data stream")
+        logger.error("unknown data stream")
 
     selectData = np.ascontiguousarray(rawData[digCh, firstSamp : lastSamp + 1], "int16")
     nSamp = lastSamp - firstSamp + 1

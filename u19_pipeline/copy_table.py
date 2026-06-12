@@ -5,6 +5,9 @@ from tqdm import tqdm
 
 from u19_pipeline import subject
 from u19_pipeline.temp import acquisition, behavior, imaging, meso, meso_analysis
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 acquisition_original = dj.create_virtual_module("acquisition_original", "u19_acquisition")
 
@@ -45,7 +48,7 @@ def copy_table(target_schema, src_schema, table_name, **kwargs):
             try:
                 target_table.insert1(t, skip_duplicates=True, **kwargs)
             except Exception:
-                print(f"Error when inserting {t}")
+                logger.error(f"Error when inserting {t}")
                 traceback.print_exc()
 
 
@@ -75,7 +78,7 @@ def copy_behavior_tables():
     ]
 
     for table in BEHAVIOR_TABLES:
-        print(f"Copying table {table}")
+        logger.info(f"Copying table {table}")
         if "." in table:
             if table == "TowersBlock.Trial":
                 for subj in tqdm((subject.Subject & behavior.TowersBlock).fetch("KEY")):
@@ -120,7 +123,7 @@ def copy_imaging_tables():
     ]
 
     for table in IMAGING_TABLES:
-        print(f"Copying table {table}...")
+        logger.info(f"Copying table {table}...")
 
         if "." in table:
             copy_table(imaging, imaging_original, table)
@@ -167,7 +170,7 @@ def copy_meso_tables():
     ]
 
     for table in MESO_TABLES:
-        print(f"Copying table {table}...")
+        logger.info(f"Copying table {table}...")
 
         if "." in table:
             copy_table(meso, meso_original, table)
@@ -193,7 +196,7 @@ def copy_meso_analysis_tables():
     ]
 
     for table in MESO_ANALYSIS_TABLES:
-        print(f"Copying table {table}...")
+        logger.info(f"Copying table {table}...")
 
         if "." in table:
             copy_table(meso_analysis, meso_analysis_original, table)

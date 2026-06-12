@@ -23,6 +23,9 @@ from u19_pipeline import (
     utility,
 )
 from u19_pipeline.automatic_job import recording_handler
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 from u19_pipeline.utility import is_this_spock
 
 
@@ -62,8 +65,7 @@ class RecProcessHandler:
                 # Get dictionary of record process
                 key = rec_process_series["query_key"]
 
-                print("rec_process_series")
-                print(rec_process_series)
+                logger.debug("rec_process_series %s", rec_process_series)
 
                 if status == config.status_update_idx["NEXT_STATUS"]:
                     # Get values to update
@@ -71,10 +73,10 @@ class RecProcessHandler:
                     value_update = update_dict["value_update"]
                     field_update = next_status_series["UpdateField"]
 
-                    print("key to update", key)
-                    print("old status", current_status, "new status", next_status)
-                    print("value_update", value_update, "field_update", field_update)
-                    print("function executed:", next_status_series["ProcessFunction"])
+                    logger.info("key to update %s", key)
+                    logger.info("old status %s new status %s", current_status, next_status)
+                    logger.info("value_update %s field_update %s", value_update, field_update)
+                    logger.info("function executed: %s", next_status_series["ProcessFunction"])
 
                     RecProcessHandler.update_status_pipeline(key, next_status, field_update, value_update)
 
@@ -92,7 +94,7 @@ class RecProcessHandler:
 
                         # Crop error messages to fit in DB
                         if len(update_dict["error_info"]["error_message"]) > 255:
-                            print("Cropping error message")
+                            logger.warning("Cropping error message")
                             update_dict["error_info"]["error_message"] = update_dict["error_info"]["error_message"][
                                 -255:
                             ]
@@ -101,7 +103,7 @@ class RecProcessHandler:
                             isinstance(update_dict["error_info"]["error_exception"], str)
                             and len(update_dict["error_info"]["error_exception"]) > 4095
                         ):
-                            print("Cropping error error_exception")
+                            logger.warning("Cropping error error_exception")
                             update_dict["error_info"]["error_exception"] = update_dict["error_info"]["error_exception"][
                                 -4095:
                             ]
@@ -123,7 +125,7 @@ class RecProcessHandler:
                         isinstance(update_dict["error_info"]["error_exception"], str)
                         and len(update_dict["error_info"]["error_exception"]) > 1024
                     ):
-                        print("Cropping error error_exception for slack")
+                        logger.warning("Cropping error error_exception for slack")
                         update_dict["error_info"]["error_exception"] = update_dict["error_info"]["error_exception"][
                             -1023:
                         ]
@@ -147,7 +149,7 @@ class RecProcessHandler:
 
             except Exception as err:
                 raise (err)
-                print(traceback.format_exc())
+                logger.exception("Unhandled exception: %s", traceback.format_exc())
                 ## Send notification error, update recording to error
 
             time.sleep(2)
@@ -258,7 +260,7 @@ class RecProcessHandler:
         status_update = config.status_update_idx["NO_CHANGE"]
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        print(rec_series["program_selection_params"])
+        logger.debug("program_selection_params %s", rec_series["program_selection_params"])
 
         # Create and transfer parameter file
         status = paramfilelib.generate_parameter_file(
@@ -268,7 +270,7 @@ class RecProcessHandler:
             rec_series["program_selection_params"],
         )
 
-        print(status)
+        logger.debug("status %s", status)
 
         # Create and transfer preparameter file
         if status == config.system_process["SUCCESS"]:
@@ -306,7 +308,7 @@ class RecProcessHandler:
 
         # Only queue if processing in tiger
         if rec_series["program_selection_params"]["local_or_cluster"] == "cluster":
-            print("lets transfer slum file ..............xxxxxxxx............")
+            logger.info("lets transfer slum file ..............xxxxxxxx............")
 
             # Create and transfer slurm file
             if status == config.system_process["SUCCESS"]:
@@ -459,7 +461,7 @@ class RecProcessHandler:
 
         # Pack all features in a dictionary
         this_modality_program_selection_params_dict = this_modality_program_selection_params.to_dict("records")
-        print(this_modality_program_selection_params_dict)
+        logger.debug("program_selection_params_dict %s", this_modality_program_selection_params_dict)
 
         # Get two columns, (recording_modality & "packed" program_selection_params)
         this_modality_program_selection_params = (
@@ -467,7 +469,7 @@ class RecProcessHandler:
         )
         this_modality_program_selection_params["program_selection_params"] = this_modality_program_selection_params_dict
 
-        print(this_modality_program_selection_params)
+        logger.debug("program_selection_params %s", this_modality_program_selection_params)
 
         return this_modality_program_selection_params
 
@@ -531,7 +533,7 @@ class RecProcessHandler:
 
             df_process_jobs = df_process_jobs.reset_index(drop=True)
 
-        print(df_process_jobs)
+        logger.debug("df_process_jobs %s", df_process_jobs)
 
         return df_process_jobs
 
@@ -678,7 +680,7 @@ class RecProcessHandler:
         now = datetime.now()
         date_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-        print("error_info_dict", error_info_dict)
+        logger.debug("error_info_dict %s", error_info_dict)
 
         key = {}
         key["job_id"] = job_id

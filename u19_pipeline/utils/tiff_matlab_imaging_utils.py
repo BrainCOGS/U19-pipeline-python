@@ -8,6 +8,10 @@ import numpy as np
 import tifffile as tiff
 from sklearn.linear_model import HuberRegressor
 
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 xy_size_factor = 1.05  # images are this much larger than nominal size
 z_factor = 1.45  # actual displacement in z vs command
 
@@ -36,7 +40,7 @@ def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
 
     start_time = time.time()
 
-    print("Estimating bleaching...", end="", flush=True)
+    logger.info("Estimating bleaching...")
 
     scan_directory = Path(scan_directory)
 
@@ -58,7 +62,7 @@ def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
     # ---------------------------------------------------------
 
     for i, tif_path in enumerate(tif_files):
-        print(".", end="", flush=True)
+        logger.debug("processing file %d/%d", i + 1, n_files)
 
         with tiff.TiffFile(tif_path) as tif_obj:
             n_frames = len(tif_obj.pages)
@@ -118,7 +122,7 @@ def select_files_from_mean_f(scan_directory, f_decrease_threshold=15):
 
     elapsed_minutes = (time.time() - start_time) / 60
 
-    print(f" done after {elapsed_minutes:.1f} min")
+    logger.info("done after %.1f min", elapsed_minutes)
 
     return last_good_file
 

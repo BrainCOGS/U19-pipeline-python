@@ -10,6 +10,9 @@ from scipy import stats
 from skimage.measure import EllipseModel
 
 import u19_pipeline.utils.path_utils as pu
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Pupil diameter pipeline functions
 
@@ -41,7 +44,7 @@ def getPupilDiameter(destinationFolder=None):
     # Read the analyzed video data h5 file
     h5_file = pu.get_filepattern_paths(destinationFolder, "/*.h5")
 
-    print(h5_file)
+    logger.debug("h5_file: %s", h5_file)
 
     if len(h5_file) == 0:
         raise Exception("No h5 file in directory: " + destinationFolder)
@@ -89,6 +92,6 @@ def getPupilDiameter(destinationFolder=None):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    print(args)
+    logger.debug("args: %s", args)
     analyzeVideo(videoPath=args[0], modelPath=args[1], destinationFolder=args[2])
     getPupilDiameter(destinationFolder=args[2])

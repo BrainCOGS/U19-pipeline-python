@@ -10,6 +10,9 @@ import numpy as np
 import tifffile
 
 import u19_pipeline.utils.tiff_matlab_imaging_utils as tmiu
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 tif_number_fmt = r"_[0-9]{5}\.tif"
 tif_gz_number_fmt = r"_[0-9]{5}\.tif\.gz"
@@ -228,12 +231,12 @@ def remove_compressed_videos(fl, directory):
         gz_file = Path(str(file_base) + ".gz")
 
         if gz_file.exists() and file_base.exists():
-            print(f"Removing {gz_file}")
+            logger.info("Removing %s", gz_file)
 
             gz_file.unlink()
 
         else:
-            print(f"Could not find compressed pair {file_base}")
+            logger.warning("Could not find compressed pair %s", file_base)
 
 
 # -----------------------------------------------------------------------------
@@ -299,7 +302,7 @@ def get_fov_mesoscope(
     n_roi = rec_info["nROIs"]
 
     if not skip_parsing:
-        print("\tparsing ROIs...")
+        logger.debug("parsing ROIs...")
 
         roi_nr = [roi["pixelResolutionXY"][1] for roi in rec_info["ROI"]]
         [roi["pixelResolutionXY"][0] for roi in rec_info["ROI"]]

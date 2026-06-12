@@ -11,6 +11,9 @@ from u19_pipeline.ephys_pipeline import (
     get_session_directory,
     probe_element,
 )
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 """
 The ingestion routine for imaging element includes:
@@ -40,15 +43,15 @@ def process_session(sess_key):
     sess_dir = pathlib.Path(find_full_path(get_ephys_root_data_dir(), get_session_directory(sess_key)))
     ephys_meta_filepaths = list(sess_dir.rglob("*.ap.meta"))
 
-    print("ephys_meta_filepaths", ephys_meta_filepaths)
+    logger.debug("ephys_meta_filepaths %s", ephys_meta_filepaths)
 
     if not len(ephys_meta_filepaths):
-        print(f"No SpikeGLX data found for session:{sess_key} - at {sess_dir}")
+        logger.warning("No SpikeGLX data found for session:%s - at %s", sess_key, sess_dir)
         return
 
     probe_list, probe_insertion_list = [], []
     for meta_filepath in ephys_meta_filepaths:
-        print("meta_filepath", meta_filepath)
+        logger.debug("meta_filepath %s", meta_filepath)
         spikeglx_meta = spikeglx.SpikeGLXMeta(meta_filepath)
 
         probe_key = {
@@ -70,7 +73,7 @@ def process_session(sess_key):
             }
         )
 
-    print(f"{probe_list =}")
+    logger.debug("probe_list %s", probe_list)
     probe_element.Probe.insert(probe_list, skip_duplicates=True)
     ephys_element.ProbeInsertion.insert(probe_insertion_list, skip_duplicates=True)
 

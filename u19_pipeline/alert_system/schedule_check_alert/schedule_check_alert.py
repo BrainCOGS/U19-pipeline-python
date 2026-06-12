@@ -6,6 +6,9 @@ import pandas as pd
 
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
@@ -53,7 +56,7 @@ def main_schedule_check_alert():
             on=["location"],
             suffixes=["_today", "_tomorrow"],
         )
-        print(schedule_comp)
+        logger.debug("schedule_comp %s", schedule_comp)
 
         schedule_comp["diff_subjects"] = schedule_comp["#subj_tomorrow"] - schedule_comp["#subj_today"]
         schedule_comp["rig_less_subjects"] = schedule_comp["diff_subjects"] < -2
@@ -62,7 +65,7 @@ def main_schedule_check_alert():
         subjects_tomorrow = schedule_comp["#subj_tomorrow"].sum()
         total_rigs_less_subjects = schedule_comp["rig_less_subjects"].sum()
 
-        print(schedule_comp)
+        logger.debug("schedule_comp %s", schedule_comp)
 
         if subjects_tomorrow / subjects_today < 0.7:
             alert = 1

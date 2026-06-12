@@ -8,6 +8,9 @@ import datajoint as dj
 from icalevents.icalevents import events
 
 from u19_pipeline.utils import slack_utils as su
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def tech_schedule():
@@ -260,7 +263,7 @@ def fetch_and_parse_icalevents(weburl: str):
     try:
         vr_events = events(url=weburl, start=start_date, end=end_date)
     except Exception as e:
-        print(f"Error fetching events from WhenIWork: {e}")
+        logger.error("Error fetching events from WhenIWork: %s", e)
         return []
 
     # Define mapping of substrings to event types and their corresponding colors
@@ -325,7 +328,7 @@ def fetch_and_parse_icalevents(weburl: str):
 
 
 if __name__ == "__main__":
-    print("Command-line arguments:", sys.argv)
+    logger.info("Command-line arguments: %s", sys.argv)
     if len(sys.argv) < 2:
         main_loop()
     else:

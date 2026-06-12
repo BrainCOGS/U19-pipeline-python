@@ -19,6 +19,9 @@ import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.pupillometry as pupillometry
 import u19_pipeline.utils.slack_utils as slack_utils
 from u19_pipeline.utils.file_utils import write_file
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def pupillometry_exception_handler(func):
@@ -27,7 +30,7 @@ def pupillometry_exception_handler(func):
             argout = func(*args, **kwargs)
             return argout
         except Exception as e:
-            print("Exception HERE ................")
+            logger.exception("Exception HERE ................")
 
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
             update_value_dict["error_info"]["error_message"] = str(e)
@@ -35,8 +38,8 @@ def pupillometry_exception_handler(func):
                 traceback.format_exception(type(e), value=e, tb=e.__traceback__)
             )
 
-            print(update_value_dict["error_info"]["error_message"])
-            print(update_value_dict["error_info"]["error_exception"])
+            logger.error("error_message %s", update_value_dict["error_info"]["error_message"])
+            logger.error("error_exception %s", update_value_dict["error_info"]["error_exception"])
 
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
 
@@ -115,14 +118,13 @@ class PupillometryProcessingHandler:
         slurm_dict = copy.deepcopy(PupillometryProcessingHandler.slurm_dict_pupillometry_spock)
         label_rec_process = "job_id_" + str(video_dir.stem)
         slurm_dict["job-name"] = label_rec_process
-        print("PupillometryProcessingHandler.spock_log_dir")
-        print(PupillometryProcessingHandler.spock_log_dir)
-        print("label_rec_process", label_rec_process)
-        print("video_dir", video_dir)
+        logger.debug("PupillometryProcessingHandler.spock_log_dir %s", PupillometryProcessingHandler.spock_log_dir)
+        logger.debug("label_rec_process %s", label_rec_process)
+        logger.debug("video_dir %s", video_dir)
         slurm_dict["output"] = PupillometryProcessingHandler.spock_log_dir + label_rec_process + ".log"
         slurm_dict["error"] = PupillometryProcessingHandler.spock_error_dir + label_rec_process + ".log"
 
-        print("slurm_dict", slurm_dict)
+        logger.debug("slurm_dict %s", slurm_dict)
 
         slurm_text = PupillometryProcessingHandler.generate_slurm_pupillometry(slurm_dict)
 
@@ -133,9 +135,8 @@ class PupillometryProcessingHandler:
             )
         )
 
-        print(slurm_file_local_path)
-
-        print("slurm text", slurm_text)
+        logger.debug("slurm_file_local_path %s", slurm_file_local_path)
+        logger.debug("slurm text %s", slurm_text)
 
         write_file(slurm_file_local_path, slurm_text)
 
@@ -148,8 +149,8 @@ class PupillometryProcessingHandler:
             slurm_file_local_path, slurm_destination
         )
 
-        print(status)
-        print(slurm_destination)
+        logger.debug("status %s", status)
+        logger.debug("slurm_destination %s", slurm_destination)
 
         return status, slurm_destination
 
@@ -184,20 +185,20 @@ class PupillometryProcessingHandler:
             slurm_location,
         ]
 
-        print(command)
+        logger.debug("command %s", command)
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # p = os.popen(command_new).read()
         p.wait()
         stdout, stderr = p.communicate()
 
-        print(p.returncode)
-        print(stderr)
-        print(stdout)
+        logger.debug("returncode %s", p.returncode)
+        logger.debug("stderr %s", stderr)
+        logger.debug("stdout %s", stdout)
 
         if p.returncode == 0:
             error_message = ""
             batch_job_sentence = stdout.decode("UTF-8")
-            print("batch_job_sentence", batch_job_sentence)
+            logger.debug("batch_job_sentence %s", batch_job_sentence)
             id_slurm_job = batch_job_sentence.replace("Submitted batch job ", "")
             id_slurm_job = re.sub(r"[\n\t\s]*", "", id_slurm_job)
         else:
@@ -211,9 +212,8 @@ class PupillometryProcessingHandler:
         Create scp command from cluster directories and local slurm file
         """
 
-        print("cp", slurm_file_local_path, slurm_destination)
-
-        print(["cp", slurm_file_local_path, slurm_destination])
+        logger.debug("cp %s %s", slurm_file_local_path, slurm_destination)
+        logger.debug("cp command %s", ["cp", slurm_file_local_path, slurm_destination])
 
         p = subprocess.Popen(["cp", slurm_file_local_path, slurm_destination])
         transfer_status = p.wait()
@@ -282,7 +282,7 @@ class PupillometryProcessingHandler:
             acquisition.SessionVideo * pupillometry.PupillometrySessionModelData & "pupillometry_job_id is NULL"
         ).fetch(as_dict=True)
 
-        print(sessions_missing_process)
+        logger.debug("sessions_missing_process %s", sessions_missing_process)
 
         for pupillometry_2_process in sessions_missing_process:
             # If error, job id = -1
@@ -307,7 +307,7 @@ class PupillometryProcessingHandler:
             models_dir = models_dir[0]
             model_path = pathlib.Path(models_dir, model_key["model_path"])
 
-            print("model path", model_path)
+            logger.debug("model path %s", model_path)
 
             # Get video location
             pupillometry_dir = dj.config.get("custom", {}).get("pupillometry_root_data_dir", None)
@@ -316,7 +316,7 @@ class PupillometryProcessingHandler:
             pupillometry_raw_dir = pupillometry_dir[0]
             videoPath = pathlib.Path(pupillometry_raw_dir, pupillometry_2_process["remote_path_video_file"])
 
-            print("videoPath", videoPath)
+            logger.debug("videoPath %s", videoPath)
 
             # Create output location
             pupillometry_processed_dir = pupillometry_dir[1]
@@ -329,7 +329,7 @@ class PupillometryProcessingHandler:
 
             # Generate slurm file and transfer it to spock
             status, slurm_filepath = PupillometryProcessingHandler.generate_slurm_file(videoPath)
-            print("slurm_filepath", slurm_filepath)
+            logger.debug("slurm_filepath %s", slurm_filepath)
 
             # Error handling (generating slurm file)
             if status != config.system_process["SUCCESS"]:
@@ -404,7 +404,7 @@ class PupillometryProcessingHandler:
                     "model_id",
                 )
             }
-            print("key_update1", key_update)
+            logger.debug("key_update1 %s", key_update)
 
             status_update, message = slurmlib.check_slurm_job(
                 "u19prod",
@@ -440,7 +440,7 @@ class PupillometryProcessingHandler:
                     pathlib.Path(session_check["remote_path_video_file"]).parent,
                 )
 
-                print(output_dir)
+                logger.debug("output_dir %s", output_dir)
 
                 # Find h5 files
                 h5_files = glob.glob(str(output_dir) + "/*.h5")
@@ -475,7 +475,7 @@ class PupillometryProcessingHandler:
                     continue
 
                 key_update["pupil_diameter"] = pupil_data
-                print("key_update", key_update)
+                logger.debug("key_update %s", key_update)
                 pupillometry.PupillometrySessionModelData.update1(key_update)
                 slack_utils.send_slack_pupillometry_update_notification(
                     config.slack_webhooks_dict["automation_pipeline_update_notification"],
@@ -494,7 +494,6 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
     args[1] = args[1] + "/config.yaml"
-    print(args)
-    #
+    logger.debug("args %s", args)
 
     PupillometryProcessingHandler.analyze_videos_pupillometry(args[1], args[0], args[2])

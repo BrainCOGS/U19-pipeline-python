@@ -14,6 +14,9 @@ from u19_pipeline.imaging_element import (
     imaging_element,
     scan_element,
 )
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # subject_fullname = 'koay_K65'
 # session_date = '2018-02-02'
@@ -151,31 +154,31 @@ preprocess_params = recording.PreprocessParamSet().get_preprocess_params(preproc
 processing_method = preprocess_params["processing_method"]
 task_mode = preprocess_params["task_mode"]
 
-print("got processing_method", processing_method)
-print("got task_mode", task_mode)
+logger.info("got processing_method %s", processing_method)
+logger.info("got task_mode %s", task_mode)
 
-print("got paramset_idx", paramset_idx)
+logger.info("got paramset_idx %s", paramset_idx)
 
 
 # Get directories for kov
 scan_filepaths = get_scan_image_files(fov_key)
 scan_filepaths = scan_filepaths[:1]
-print(scan_filepaths)
+logger.debug("scan_filepaths %s", scan_filepaths)
 
 if rec_process_key not in scan_element.Scan():
     try:
         # TODO: Can use tiffile function to loads
-        print("LOADED Scan using Scanreader")
+        logger.info("LOADED Scan using Scanreader")
         loaded_scan = scanreader.read_scan(scan_filepaths)
         header = parse_scanimage_header(loaded_scan)
         # scanner = header['SI_imagingSystem'].strip('\'') #TODO: If using tiffile, hardcode it to `mesoscope`
     except Exception:
-        print("LOADED Scan using Tifffile")
+        logger.info("LOADED Scan using Tifffile")
         scan_filepaths = scan_filepaths  # TODO load all TIFF files from session possibly using TIFFSequence
         loaded_scan = tifffile.imread(scan_filepaths)
         # scanner = 'mesoscope'
     except BaseException:  # TODO: Use except instead of else)
-        print("ScanImage loading error")  # TODO: Modify the error message
+        logger.error("ScanImage loading error")  # TODO: Modify the error message
 
     # Equipment.insert1({'scanner': scanner}, skip_duplicates=True)
     scan_element.Scan.insert1(
@@ -215,7 +218,7 @@ if task_mode == "load" and not generic_process_folder_found:
 
 # Results from this specific recording_process_id already triggered
 if task_mode == "trigger" and recording_process_id_folder_found:
-    print("Overwritting process output from original processing folder", output_dir)
+    logger.warning("Overwritting process output from original processing folder %s", output_dir)
 
 # If trigger and not recording_process_id_folder_found make it
 if task_mode == "trigger":
@@ -224,15 +227,15 @@ if task_mode == "trigger":
     output_dir.mkdir(parents=True, exist_ok=True)
 
 
-print("RELATIVE OUTPUT DIR")
-print(relative_output_dir)
-print(output_dir)
+logger.info("RELATIVE OUTPUT DIR")
+logger.info("relative_output_dir %s", relative_output_dir)
+logger.info("output_dir %s", output_dir)
 # output_dir.mkdir(parents=True,exist_ok=True)
 
 # Check if found output dir is correct
 if task_mode == "load":
     if processing_method == "suite2p":
-        print("SUITE2P METHOD SELECTED")
+        logger.info("SUITE2P METHOD SELECTED")
         # output_dir = get_suite2p_dir(scan_key)
         p = pathlib.Path(output_dir).glob("**/*")
         plane_filepaths = [x for x in p if x.is_dir()]
@@ -277,8 +280,8 @@ if paramset_idx_key not in imaging_element.ProcessingParamSet():
     process_params = recording.ProcessParamSet().get_process_params(process_params_key)
 
     # print('process_params_info', process_params_info)
-    print("process_params", process_params)
-    print("description", process_params_info[0]["process_paramset_desc"])
+    logger.info("process_params %s", process_params)
+    logger.info("description %s", process_params_info[0]["process_paramset_desc"])
 
     # Insert in imaging element equivalent ProcessParamSet
     imaging_element.ProcessingParamSet.insert_new_params(

@@ -8,6 +8,10 @@ from pathlib import Path
 from shutil import which
 
 import numpy as np
+
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 import pandas as pd
 from numpy import ndarray
 from scipy.io import loadmat, matlab
@@ -274,9 +278,9 @@ def convert_function_handle_to_str(mat_file_path):
             os.remove("shaping_protocol.txt")
 
         except Exception as e:
-            print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
+            logger.error("There was an error while trying to execute %s: %s", convert_script_path, e)
     else:
-        print(
+        logger.warning(
             "A working matlab version was not found. "
             "Code version, animal protocol, type of trial, and choice could not be saved to NWB."
         )

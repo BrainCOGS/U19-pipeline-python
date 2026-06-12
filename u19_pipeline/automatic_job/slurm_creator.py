@@ -7,6 +7,9 @@ import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utility import is_this_spock
 from u19_pipeline.utils.file_utils import write_file
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Functions to create slurm jobs
 
@@ -35,7 +38,7 @@ def generate_slurm_file(job_id, program_selection_params):
     slurm_dict["output"] = str(pathlib.Path(cluster_vars["log_files_dir"], label_rec_process + ".log"))
     slurm_dict["error"] = str(pathlib.Path(cluster_vars["error_files_dir"], label_rec_process + ".log"))
 
-    print("slurm_dict", slurm_dict)
+    logger.debug("slurm_dict %s", slurm_dict)
 
     if program_selection_params["process_cluster"] == "spock":
         slurm_text = generate_slurm_spock(slurm_dict)
@@ -45,9 +48,9 @@ def generate_slurm_file(job_id, program_selection_params):
     slurm_file_name = default_slurm_filename
     slurm_file_local_path = str(pathlib.Path(slurms_filepath, slurm_file_name))
 
-    print(slurm_file_local_path)
-    print(cluster_vars["slurm_files_dir"])
-    print(slurm_file_name)
+    logger.debug("slurm_file_local_path %s", slurm_file_local_path)
+    logger.debug("slurm_files_dir %s", cluster_vars["slurm_files_dir"])
+    logger.debug("slurm_file_name %s", slurm_file_name)
 
     write_file(slurm_file_local_path, slurm_text)
 
@@ -58,9 +61,9 @@ def generate_slurm_file(job_id, program_selection_params):
         slurm_destination = pathlib.Path(cluster_vars["slurm_files_dir"], slurm_file_name).as_posix()
         status = transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars)
 
-    print(status)
-    print(slurm_destination)
-    print(cluster_vars)
+    logger.debug("status %s", status)
+    logger.debug("slurm_destination %s", slurm_destination)
+    logger.debug("cluster_vars %s", cluster_vars)
 
     return status, slurm_destination
 
@@ -80,7 +83,7 @@ def queue_slurm_file(
     # Get all associated variables given the selected processing cluster
     cluster_vars = ft.get_cluster_vars(program_selection_params["process_cluster"])
 
-    print("queue_slurm_file **********************************")
+    logger.debug("queue_slurm_file **********************************")
 
     processing_repository = program_selection_params["process_repository"]
     repository_dir = pathlib.Path(cluster_vars[modality + "_process_dir"], processing_repository).as_posix()
@@ -106,19 +109,19 @@ def queue_slurm_file(
     if program_selection_params["process_cluster"] == "spock" and is_this_spock():
         command = command[2:]
 
-    print(command)
+    logger.debug("command %s", command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # p = os.popen(command_new).read()
     p.wait()
     stdout, stderr = p.communicate()
 
-    print(stdout)
-    print(stderr)
+    logger.debug("stdout %s", stdout)
+    logger.debug("stderr %s", stderr)
 
     if p.returncode == config.system_process["SUCCESS"]:
         error_message = ""
         batch_job_sentence = stdout.decode("UTF-8")
-        print("batch_job_sentence", batch_job_sentence)
+        logger.debug("batch_job_sentence %s", batch_job_sentence)
         id_slurm_job = batch_job_sentence.replace("Submitted batch job ", "")
         id_slurm_job = re.sub(r"[\n\t\s]*", "", id_slurm_job)
     else:
@@ -146,8 +149,8 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
     stdout, stderr = p.communicate()
     stdout = stdout.decode("UTF-8")
 
-    print("p.returncode !!!!!!!!!!!!", p.returncode)
-    print("config.system_process['SUCCESS']", config.system_process["SUCCESS"])
+    logger.debug("p.returncode %s", p.returncode)
+    logger.debug("config.system_process['SUCCESS'] %s", config.system_process["SUCCESS"])
 
     if p.returncode == config.system_process["SUCCESS"]:
         state_slurm_job = stdout.split("\n")[2].strip()
@@ -155,8 +158,8 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
         state_pipeline = config.slurm_states[state_slurm_job]["pipeline_status"]
         error_message = config.slurm_states[state_slurm_job]["message"]
 
-        print("state_pipeline ....", state_pipeline)
-        print("error_message", error_message)
+        logger.debug("state_pipeline %s", state_pipeline)
+        logger.debug("error_message %s", error_message)
 
     else:
         state_pipeline = config.status_update_idx["ERROR_STATUS"]

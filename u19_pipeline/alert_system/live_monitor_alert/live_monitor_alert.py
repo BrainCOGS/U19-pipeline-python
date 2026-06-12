@@ -6,6 +6,9 @@ import datajoint as dj
 import pandas as pd
 
 import u19_pipeline.utils.slack_utils as su
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 MINUTES_ALERT = 20
 SECONDS_ALERT = MINUTES_ALERT * 60
@@ -105,7 +108,7 @@ def main_live_monitor_alert():
         sessions = sessions.drop(columns=["session_location"])
         sessions = sessions.reset_index(drop=True)
 
-        print("Last session started on rig\n", sessions)
+        logger.info("Last session started on rig\n%s", sessions)
 
         # Only analyze sessions that have not been reported
         query_reported = {}
@@ -196,7 +199,7 @@ def main_live_monitor_alert():
             live_stats["alert_vio"] = live_stats["alert_vio"] & (pd.isna(live_stats["last_non_violation_trial"]))
             live_stats["alert_vio"] = live_stats["alert_vio"] & (~pd.isna(live_stats["last_violation_trial"]))
 
-            print(live_stats.T)
+            logger.debug("live_stats %s", live_stats.T)
 
             live_stats = live_stats.loc[
                 (live_stats["alert_nvio"]) | (live_stats["alert_vio"]),

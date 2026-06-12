@@ -16,6 +16,9 @@ import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_fix_sync_code as efsc
 import u19_pipeline.utils.ephys_utils as ephys_utils
 from u19_pipeline import recording
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 schema = dj.schema(dj.config["custom"]["database.prefix"] + "ephys_pipeline")
 
@@ -93,12 +96,12 @@ def get_session_directory(session_key):
 def get_full_session_directory(recording_key):
     session_dir = find_full_path([get_ephys_root_data_dir()[0]], get_session_directory(recording_key))
 
-    print("ephys dir:", session_dir)
+    logger.info("ephys dir: %s", session_dir)
     nidq_session = list(session_dir.glob("*nidq.bin*"))
     obx_session = list(session_dir.glob("*obx.bin*"))
 
     if len(nidq_session) == 0 and len(obx_session) == 0:
-        print("No ephys session found")
+        logger.warning("No ephys session found")
         ephys_session_fullpath = ""
     elif len(nidq_session) > 0:
         ephys_session_fullpath = nidq_session[0]
@@ -160,13 +163,13 @@ def create_lfp_trace(cat_gt_script, recording_directory, probe_directory):
         "-lffilter=" + lfp_filter_params,
     ]
 
-    print(cat_gt_command)
+    logger.debug("cat_gt_command: %s", cat_gt_command)
     p = subprocess.Popen(cat_gt_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
     stdout, stderr = p.communicate()
 
-    print("stdout", stdout)
-    print("stderr", stderr.decode("UTF-8"))
+    logger.debug("stdout: %s", stdout)
+    logger.debug("stderr: %s", stderr.decode("UTF-8"))
 
     if stderr:
         error = json.loads(stderr.decode("UTF-8"))
@@ -188,17 +191,17 @@ def get_spikeglx_meta_filepath(ephys_recording_key):
         ephys_element.EphysRecording.EphysFile & ephys_recording_key & 'file_path LIKE "%.ap.meta"'
     ).fetch1("file_path")
 
-    print("ephys_recording_key", ephys_recording_key)
-    print("spikeglx_meta_filepath", spikeglx_meta_filepath)
+    logger.debug("ephys_recording_key: %s", ephys_recording_key)
+    logger.debug("spikeglx_meta_filepath: %s", spikeglx_meta_filepath)
 
-    print("get_ephys_root_data_dir", get_ephys_root_data_dir())
+    logger.debug("get_ephys_root_data_dir: %s", get_ephys_root_data_dir())
     spikeglx_meta_filepath = find_full_path(get_ephys_root_data_dir(), spikeglx_meta_filepath)
-    print("spikeglx_meta_filepath", spikeglx_meta_filepath)
+    logger.debug("spikeglx_meta_filepath: %s", spikeglx_meta_filepath)
 
     try:
         spikeglx_meta_filepath = find_full_path(get_ephys_root_data_dir(), spikeglx_meta_filepath)
 
-        print("spikeglx_meta_filepath", spikeglx_meta_filepath)
+        logger.debug("spikeglx_meta_filepath: %s", spikeglx_meta_filepath)
     except FileNotFoundError:
         # if not found, search in session_dir again
         if not spikeglx_meta_filepath.exists():
@@ -247,7 +250,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     full_session_path = get_full_session_directory(rec_key)
 
     if isinstance(full_session_path, str) and len(full_session_path) == 0:
-        print("No session found for this key")
+        logger.warning("No session found for this key")
         return
 
     # Get sampling rate and calculate channels and samples
@@ -259,7 +262,7 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
     try:
         sync_data = (BehaviorSync & rec_key).fetch1("sync_data")
     except Exception:
-        print("No sync data was sound for this session")
+        logger.warning("No sync data was found for this session")
         return
 
     trial_index_nidq_virmen, iteration_index_nidq_virmen = ephys_utils.get_full_vector_samples(
@@ -294,10 +297,10 @@ def get_full_vectors_from_key(rec_key, single_vec_mode=False):
 
     if single_vec_mode:
         for this_key in all_vectors:
-            print("this_key", this_key)
-            print(all_vectors[this_key].shape)
+            logger.debug("this_key: %s", this_key)
+            logger.debug(all_vectors[this_key].shape)
             all_vectors[this_key] = np.concatenate((list(all_vectors[this_key])), axis=0)
-            print(all_vectors[this_key].shape)
+            logger.debug(all_vectors[this_key].shape)
 
     all_vectors["trial_index_nidq_virmen"] = trial_index_nidq_virmen
     all_vectors["iteration_index_nidq_virmen"] = iteration_index_nidq_virmen
@@ -339,7 +342,7 @@ class BehaviorSync(dj.Imported):
 
     def make(self, key, **kwargs):
         # Pull the Nidaq file/record
-        print(key)
+        logger.debug("key: %s", key)
         try:
             ephys_session_fullpath = get_full_session_directory(key)
 
@@ -353,10 +356,10 @@ class BehaviorSync(dj.Imported):
             # If a specific block is requested, add that to our behavior_key. It should be an int referring to virmen block number.
             # This is useful for sessions in which the nidaq stream was interrupted due to restarting virmen
             if "block" in kwargs:
-                print("block: ", kwargs["block"])
+                logger.debug("block: %s", kwargs["block"])
                 behavior_key["block"] = kwargs["block"]
 
-            print(behavior_key)
+            logger.debug("behavior_key: %s", behavior_key)
 
             # And get the datajoint record
             behavior = dj.create_virtual_module("behavior", "u19_behavior")
@@ -364,16 +367,16 @@ class BehaviorSync(dj.Imported):
             behavior_time, iterstart = thissession.fetch("trial_time", "vi_start")
 
             if key["recording_id"] == 530:
-                print(type(behavior_time))
-                print(len(behavior_time))
+                logger.debug("behavior_time type: %s", type(behavior_time))
+                logger.debug("behavior_time len: %d", len(behavior_time))
                 behavior_time = behavior_time[:-2]
 
-            print("len iterstart", len(iterstart))
+            logger.debug("len iterstart: %d", len(iterstart))
 
             if len(iterstart) == 0:
                 raise ValueError("No behavior found")
 
-            print("after reading behavior data")
+            logger.debug("after reading behavior data")
 
             # 1: load meta data, and the content of the NIDAQ file. Its content is digital.
             nidq_meta, nidq_sampling_rate = ephys_utils.read_nidq_meta_samp_rate(ephys_session_fullpath)
@@ -382,7 +385,7 @@ class BehaviorSync(dj.Imported):
                 ephys_session_fullpath, nidq_meta
             )
 
-            print("after reading spikeglx data")
+            logger.debug("after reading spikeglx data")
 
             # Synchronize between pulses and get iteration # vector for each sample
             recent_recording = behavior_key["session_date"] > datetime.date(2021, 6, 1)  # Everything past June 1 2021
@@ -407,8 +410,8 @@ class BehaviorSync(dj.Imported):
                 ephys_utils.assert_iteration_samples_count(iteration_dict["iter_start_idx"], behavior_time)
             )
 
-            print("metrics to evaluate...")
-            print(
+            logger.debug(
+                "metrics to evaluate: trial_count_diff=%s, trials_diff_iteration_big=%s, trials_diff_iteration_small=%s, n_trials=%d",
                 trial_count_diff,
                 trials_diff_iteration_big,
                 trials_diff_iteration_small,
@@ -432,7 +435,7 @@ class BehaviorSync(dj.Imported):
             status_fix = 0
             if status < 1:
                 status_regular = 0
-                print("Regular ephys sync failed")
+                logger.warning("Regular ephys sync failed")
                 status_fix, iteration_dict = efsc.main_ephys_fix_sync_code(
                     iteration_dict["iter_start_idx"],
                     iteration_dict["iter_times_idx"],
@@ -442,7 +445,7 @@ class BehaviorSync(dj.Imported):
 
             dictionary_sync_data = {}
 
-            print("after all main ehpys fix sync code", status_regular, status_fix)
+            logger.debug("after all main ephys fix sync code: status_regular=%s, status_fix=%s", status_regular, status_fix)
 
             if status_regular > 0 or status_fix > 0:
                 dictionary_sync_data["trial_idx_vector"] = iteration_dict["trial_start_idx"]
@@ -475,10 +478,10 @@ class BehaviorSync(dj.Imported):
                 virmen_sync_status=1,
             )
 
-            print("ephys_session_fullpath", ephys_session_fullpath)
-            print("sync code executed sucessfully !!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            logger.info("ephys_session_fullpath: %s", ephys_session_fullpath)
+            logger.info("sync code executed successfully")
 
-            print(kwargs)
+            logger.debug("kwargs: %s", kwargs)
 
             if "populate" not in kwargs or kwargs["populate"]:
                 BehaviorSync.insert1(final_key, allow_direct_insert=True)
@@ -487,7 +490,7 @@ class BehaviorSync(dj.Imported):
                 return final_key
 
         except Exception as e:
-            print(e)
+            logger.exception("Error in BehaviorSync.make: %s", e)
 
     def insert_imec_sampling_rate(self, key, session_dir):
         # get the imec sampling rate for a particular probe

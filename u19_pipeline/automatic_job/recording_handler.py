@@ -19,6 +19,9 @@ from u19_pipeline import (
     recording_process,
 )
 from u19_pipeline.automatic_job import ephys_element_ingest
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def exception_handler(func):
@@ -31,7 +34,7 @@ def exception_handler(func):
             argout = func(*args, **kwargs)
             return argout
         except Exception as e:
-            print("Exception HERE ................")
+            logger.exception("Exception HERE ................")
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
             update_value_dict["error_info"]["error_message"] = str(e)
             update_value_dict["error_info"]["error_exception"] = "".join(
@@ -64,7 +67,7 @@ class RecordingHandler:
                 config.recording_status_df["Value"] == current_status + 1, :
             ].squeeze()
 
-            print("function to apply:", next_status_series["ProcessFunction"])
+            logger.info("function to apply: %s", next_status_series["ProcessFunction"])
 
             # Get processing function
             function_status_process = getattr(RecordingHandler, next_status_series["ProcessFunction"])
@@ -193,7 +196,7 @@ class RecordingHandler:
                 status_update = config.status_update_idx["ERROR_STATUS"]
                 update_value_dict["error_info"]["error_message"] = "Return code scp not = 0"
 
-        print("is_finished", is_finished, "status_update", status_update)
+        logger.debug("is_finished %s status_update %s", is_finished, status_update)
 
         return (status_update, update_value_dict)
 
@@ -234,13 +237,13 @@ class RecordingHandler:
         status_query = "status_recording_id > " + str(config.recording_status_df["Value"].min())
         status_query += " and status_recording_id < " + str(config.recording_status_df["Value"].max())
 
-        print(status_query)
+        logger.debug("status_query %s", status_query)
 
         recordings_active = (
             recording.Recording * lab.Location.proj("ip_address", "system_user", "acquisition_type") & status_query
         )
 
-        print(recordings_active)
+        logger.debug("recordings_active %s", recordings_active)
 
         df_recordings = pd.DataFrame(recordings_active.fetch(as_dict=True))
 
@@ -261,20 +264,20 @@ class RecordingHandler:
             update_value             (str|int):  field value to be inserted on in task_field
         """
 
-        print("recording_key_dict", recording_key_dict)
-        print("status", status)
-        print("update_field", update_field)
-        print("update_value", update_value)
+        logger.debug("recording_key_dict %s", recording_key_dict)
+        logger.debug("status %s", status)
+        logger.debug("update_field %s", update_field)
+        logger.debug("update_value %s", update_value)
 
         if update_field is not None:
             update_task_id_dict = recording_key_dict.copy()
             update_task_id_dict[update_field] = update_value
-            print("update_task_id_dict", update_task_id_dict)
+            logger.debug("update_task_id_dict %s", update_task_id_dict)
             recording.Recording.update1(update_task_id_dict)
 
         update_status_dict = recording_key_dict.copy()
         update_status_dict["status_recording_id"] = status
-        print("update_status_dict", update_status_dict)
+        logger.debug("update_status_dict %s", update_status_dict)
         recording.Recording.update1(update_status_dict)
 
     @staticmethod
@@ -288,7 +291,7 @@ class RecordingHandler:
         now = datetime.now()
         date_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-        print("error_info_dict", error_info_dict)
+        logger.debug("error_info_dict %s", error_info_dict)
 
         key = {}
         key["recording_id"] = recording_id
@@ -334,8 +337,8 @@ class RecordingHandler:
             "KEY", as_dict=True
         )
 
-        print("before BehaviorSync")
-        print("rec_series['query_key']", rec_series["query_key"])
+        logger.debug("before BehaviorSync")
+        logger.debug("rec_series['query_key'] %s", rec_series["query_key"])
 
         ephys_pipeline.BehaviorSync.populate(rec_series["query_key"])
 
@@ -422,8 +425,7 @@ class RecordingHandler:
         status_update = config.status_update_idx["NO_CHANGE"]
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
-        print("rec_series['query_key']")
-        print(rec_series["query_key"])
+        logger.debug("rec_series['query_key'] %s", rec_series["query_key"])
 
         # Populate ImagingPipelineSession and call matlab script that handles TiffSplits
         imaging_pipeline.ImagingPipelineSession.populate(rec_series["query_key"])

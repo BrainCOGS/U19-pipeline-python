@@ -1,6 +1,9 @@
 import numpy as np
 
 import u19_pipeline.utils.ephys_utils as ephys_utils
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_shift_vector(
@@ -143,10 +146,10 @@ def fix_shifted_sync_vector(synced_time_vector, behavior_time_vector, vec_shift,
             else:
                 break
         else:
-            print("Extreme case diff vec shift")
+            logger.warning("Extreme case diff vec shift")
 
             index_borrow_virmen.append([where_insert_iteration[index_shift], diff_vec_shift.shape[0]])
-            print("index_borrow_virmen", index_borrow_virmen)
+            logger.debug("index_borrow_virmen: %s", index_borrow_virmen)
             break
 
     # print('index_borrow_virmen', index_borrow_virmen)
@@ -300,7 +303,7 @@ def sync_evaluation_process2(synced_time_vector, behavior_time_vector):
         pass
     else:
         status = -1
-        print(median_general)
+        logger.debug("median_general: %s", median_general)
 
     return status
 
@@ -330,26 +333,26 @@ def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq
         iteration_dict["iter_start_idx"].append(synced_iteration_vector.copy())
         iteration_dict["iter_times_idx"].append(synced_time_vector.copy())
 
-    print("end fix sync code 1")
+    logger.debug("end fix sync code 1")
 
     iteration_dict["iter_start_idx"] = np.asarray(iteration_dict["iter_start_idx"].copy(), dtype=object)
     iteration_dict["iter_times_idx"] = np.asarray(iteration_dict["iter_times_idx"].copy(), dtype=object)
 
-    print("end fix sync code")
+    logger.debug("end fix sync code")
 
     # Check # of trials and iterations match
     trial_count_diff, trials_diff_iteration_big, trials_diff_iteration_small = (
         ephys_utils.assert_iteration_samples_count(iteration_dict["iter_start_idx"], behavior_time)
     )
 
-    print("after assert_iteration_samples_count fix sync code")
+    logger.debug("after assert_iteration_samples_count fix sync code")
 
     if trial_count_diff != 0:
-        print("trial_count_diff", trial_count_diff)
+        logger.debug("trial_count_diff: %s", trial_count_diff)
     if len(trials_diff_iteration_big) > 0:
-        print("trials_diff_iteration_big", trials_diff_iteration_big)
+        logger.debug("trials_diff_iteration_big: %s", trials_diff_iteration_big)
     if len(trials_diff_iteration_small) > 0:
-        print("trials_diff_iteration_small", trials_diff_iteration_small)
+        logger.debug("trials_diff_iteration_small: %s", trials_diff_iteration_small)
 
     status = ephys_utils.evaluate_sync_process(
         trial_count_diff,
@@ -358,7 +361,7 @@ def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq
         behavior_time.shape[0],
     )
 
-    print("after evaluate_sync_process fix sync code")
+    logger.debug("after evaluate_sync_process fix sync code")
 
     for i in range(len(iteration_dict["iter_start_idx"])):
         synced_time_vector = iteration_dict["iter_times_idx"][i]
@@ -368,13 +371,13 @@ def main_ephys_fix_sync_code(iter_start_idx, iter_times_idx, behavior_time, nidq
         if status == -1:
             break
 
-    print("after sync_evaluation_process2", status)
+    logger.debug("after sync_evaluation_process2: status=%s", status)
 
     if status == 1:
         iteration_dict["trial_start_idx"] = ephys_utils.get_index_trial_vector_from_iteration(
             iteration_dict["iter_start_idx"]
         )
 
-    print("after get_index_trial_vector_from_iteration")
+    logger.debug("after get_index_trial_vector_from_iteration")
 
     return status, iteration_dict

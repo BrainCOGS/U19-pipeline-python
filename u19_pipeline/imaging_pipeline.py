@@ -10,6 +10,9 @@ import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.utils.tiff_utils as tu
 from u19_pipeline import lab, recording, subject
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 schema = dj.schema(dj.config["custom"]["database.prefix"] + "imaging_pipeline")
 
@@ -81,7 +84,7 @@ class AcquiredTiff(dj.Imported):
         is_mesoscope = acq_type in self.mesoscope_acq
         is_2photon = acq_type in self.photon_micro_acq
 
-        print(f"Preparing {scan_directory}")
+        logger.info(f"Preparing {scan_directory}")
 
         if is_mesoscope:
             original_stacks_dir = scan_directory / "originalStacks"
@@ -170,14 +173,14 @@ class AcquiredTiff(dj.Imported):
             config.startup_pipeline_matlab_dir,
             str_key,
         ]
-        print(command)
+        logger.debug("command: %s", command)
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
-        print("aftercommand before comm")
+        logger.debug("aftercommand before comm")
         stdout, stderr = p.communicate()
-        print("aftercommand after comm")
-        print(stdout.decode("UTF-8"))
-        print(stderr.decode("UTF-8"))
+        logger.debug("aftercommand after comm")
+        logger.debug(stdout.decode("UTF-8"))
+        logger.debug(stderr.decode("UTF-8"))
 
 
 @schema

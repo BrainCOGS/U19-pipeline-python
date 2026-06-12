@@ -29,6 +29,10 @@ from globus_sdk import (
 from globus_sdk.exc import GlobusAPIError
 from globus_sdk.services.transfer.errors import TransferAPIError
 
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 # Princeton TIGRESS
 SOURCE_ENDPOINT = "a9df83d2-42f0-11e6-80cf-22000b1701d1"
 # SOURCE_ENDPOINT = 'ef3a4e74-e742-11ec-9912-3b4cfda38030'
@@ -122,7 +126,7 @@ def check_endpoint_path(transfer_client, endpoint, path):
     try:
         transfer_client.operation_ls(endpoint, path=path)
     except TransferAPIError as tapie:
-        print(f'Failed to query endpoint "{endpoint}": {tapie.message}')
+        logger.error('Failed to query endpoint "%s": %s', endpoint, tapie.message)
         sys.exit(1)
 
 
@@ -133,9 +137,9 @@ def create_destination_directory(transfer_client, dest_ep, dest_path):
     except TransferAPIError:
         try:
             transfer_client.operation_mkdir(dest_ep, dest_path)
-            print(f"Created directory: {dest_path}")
+            logger.info("Created directory: %s", dest_path)
         except TransferAPIError as tapie:
-            print(f"Failed to start transfer: {tapie.message}")
+            logger.error("Failed to start transfer: %s", tapie.message)
             sys.exit(1)
 
 
@@ -145,14 +149,14 @@ def main():
     try:
         # if we already have tokens, load and use the
         tokens = client.load_tokens(requested_scopes=SCOPES)
-        print(tokens)
+        logger.debug("tokens %s", tokens)
     except Exception:
         pass
 
     if not tokens:
         # if we need to get tokens, start the Native App authentication process
         # need to specify that we want refresh tokens
-        print("login in")
+        logger.info("login in")
         tokens = client.login(requested_scopes=SCOPES, refresh_tokens=True)
         with contextlib.suppress(Exception):
             client.save_tokens(tokens)
@@ -165,14 +169,14 @@ def main():
             task_data = data["task"]
             task = transfer.get_task(task_data["task_id"])
             if task["status"] not in PREVIOUS_TASK_RUN_CASES:
-                print("The last transfer status is {}, skipping run...".format(task["status"]))
+                logger.info("The last transfer status is %s, skipping run...", task["status"])
                 sys.exit(1)
     except KeyError:
         # Ignore if there is no previous task
         pass
 
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} tigress_dir pni_dir")
+        logger.error("Usage: %s tigress_dir pni_dir", sys.argv[0])
         sys.exit(1)
 
     SOURCE_PATH = sys.argv[1]
@@ -194,8 +198,9 @@ def main():
 
     task = transfer.submit_transfer(tdata)
     save_data_to_file(DATA_FILE, "task", task.data)
-    print(
-        f"Transfer has been started from\n  {SOURCE_ENDPOINT}:{SOURCE_PATH}\nto\n  {DESTINATION_ENDPOINT}:{DESTINATION_PATH}"
+    logger.info(
+        "Transfer has been started from\n  %s:%s\nto\n  %s:%s",
+        SOURCE_ENDPOINT, SOURCE_PATH, DESTINATION_ENDPOINT, DESTINATION_PATH,
     )
     url_string = "https://globus.org/app/transfer?" + six.moves.urllib.parse.urlencode(
         {
@@ -205,7 +210,7 @@ def main():
             "destination_path": DESTINATION_PATH,
         }
     )
-    print(f"Visit the link below to see the changes:\n{url_string}")
+    logger.info("Visit the link below to see the changes:\n%s", url_string)
 
 
 if __name__ == "__main__":

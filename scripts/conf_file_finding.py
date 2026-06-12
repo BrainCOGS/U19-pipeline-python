@@ -1,5 +1,8 @@
 import os
 import pathlib
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def chdir_to_root():
@@ -47,12 +50,12 @@ def try_find_conf_file():
 
     root_dir_found, conf_file_found = chdir_to_root()
     if root_dir_found and conf_file_found:
-        print("Local configuration file found !!, no need to run the configuration (unless configuration has changed)")
+        logger.info("Local configuration file found !!, no need to run the configuration (unless configuration has changed)")
     elif root_dir_found:
         raise FileNotFoundError(
             "Local configuration file not found. Ignore this if you have a global config. Run configuration script (initial_conf.py) otherwise"
         )
     elif os.path.isfile(pathlib.Path(pathlib.Path.home(), ".datajoint_config.json")):
-        print("Global configuration file found !!, no need to run the configuration (unless configuration has changed)")
+        logger.info("Global configuration file found !!, no need to run the configuration (unless configuration has changed)")
     else:
         raise FileNotFoundError("Root dir not found, change this notebook to the project folder")

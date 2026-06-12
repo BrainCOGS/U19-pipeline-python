@@ -5,6 +5,9 @@ import datajoint as dj
 
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline import ephys_pipeline, recording, recording_process
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def main(recording_id):
@@ -36,5 +39,5 @@ if __name__ == "__main__":
 
     try_find_conf_file()
     args = sys.argv[1:]
-    print(args)
+    logger.debug("args %s", args)
     main(args[0])

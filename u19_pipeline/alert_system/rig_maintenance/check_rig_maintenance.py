@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+from u19_pipeline.utils.logging_config import get_logger
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -27,11 +28,13 @@ try:
     from u19_pipeline import lab, rig_maintenance, scheduler
     from u19_pipeline.utils import slack_utils as su
 except Exception as e:  # pragma: no cover - only happens when package not available
-    print(f"Error importing modules: {e}")
-    print("Make sure u19_pipeline is properly installed and configured.")
+    # Cannot use logger here since get_logger may not be importable
+    import sys as _sys
+    _sys.stderr.write(f"Error importing modules: {e}\n")
+    _sys.stderr.write("Make sure u19_pipeline is properly installed and configured.\n")
     sys.exit(1)
 
-logger = logging.getLogger("rig_maintenance")
+logger = get_logger(__name__)
 
 
 def setup_logging():
@@ -540,7 +543,7 @@ def main():
 
         records = pd.DataFrame(overdue_items)
         records.columns = [" ".join(w.capitalize() for w in col.split("_")) for col in records.columns]
-        print(records)
+        logger.info("records\n%s", records)
 
         records = records[["Location", "Maintenance Type", "Status"]]
 

@@ -16,6 +16,9 @@ import argparse
 from getpass import getpass
 
 import pandas as pd
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
@@ -29,13 +32,13 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
         try_find_conf_file()
     except FileNotFoundError:
         pass
-        print("DataJoint configuration file not found. Running configuration script...")
+        logger.info("DataJoint configuration file not found. Running configuration script...")
         if global_config_flag:
-            print(
+            logger.info(
                 "Global configuration flag is set to True. The configuration will be saved in the global configuration file."
             )
         else:
-            print(
+            logger.info(
                 "Global configuration flag is set to False. The configuration will be saved in the local configuration file."
             )
 
@@ -48,7 +51,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
         user_already = True
 
     if replace_user or not user_already:
-        print("Enter your username (Princeton NETID):")
+        logger.info("Enter your username (Princeton NETID):")
         user = input()
         password = getpass()
         dj.conn(host=host, user=user, password=password)
@@ -100,7 +103,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     dj.config["stores"] = dj_stores_dict
 
     if global_config_flag:
-        print(
+        logger.info(
             "Global configuration flag is set to True. The configuration will be saved in the global configuration file."
         )
         dj.config.save_global()

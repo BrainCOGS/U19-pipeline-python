@@ -7,6 +7,9 @@ import u19_pipeline.utils.DemoReadSGLXData.readSGLX as readSGLX
 import u19_pipeline.utils.ephys_utils as ephys_utils
 from u19_pipeline import behavior
 from u19_pipeline.ephys_pipeline import ephys_element, get_session_directory
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Tables downstream from `ephys_pipeline` module ---------------------------------------
 schema = dj.schema(dj.config["custom"]["database.prefix"] + "ephys_sync")
@@ -76,7 +79,7 @@ class BehaviorSync(dj.Imported):
             trial_index_nidq=iteration_dict["trialnumber_vector_samples"],
         )
 
-        print(final_key)
+        logger.debug("final_key: %s", final_key)
 
         self.insert1(final_key, allow_direct_insert=True)
 
@@ -154,7 +157,7 @@ class CuratedClustersIteration(dj.Computed):
         #    if iteration_index_nidq[iteration_transition_indexes[i]] <= first_vr_iteration:
         #        ls[iteration_transition_indexes[i]] = 0
 
-        print("sum_iterationtrans", np.sum(ls))
+        logger.debug("sum_iterationtrans: %s", np.sum(ls))
 
         iteration_times = np.where(ls)[0] / nidq_sampling_rate
 

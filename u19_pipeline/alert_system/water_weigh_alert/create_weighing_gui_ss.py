@@ -17,6 +17,9 @@ from u19_pipeline import subject
 from u19_pipeline.utils.subject_metadata import (
     fetch_slack_handles_for_lab_managers_by_subject,
 )
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 slack_configuration_dictionary = {
     "slack_notification_channel": ["subject_health"],
@@ -220,7 +223,7 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         (lab.LabManager().proj("lab", "lab_manager") & 'lab = "technician"')
         * lab.User().proj(lab_manager="user_id", manager_slack="slack")
     ).fetch("manager_slack", as_dict=True)
-    print(technician_manager_slack)
+    logger.debug("technician_manager_slack %s", technician_manager_slack)
     technician_manager_slack = [item["manager_slack"] for item in technician_manager_slack]
 
     people_and_their_managers: pd.DataFrame = people_and_their_managers_query.fetch(format="frame")
@@ -332,7 +335,7 @@ def slack_alert_message_format_weight_water(
     individual_alert: bool = False,
 ):
 
-    print(missing_transport)
+    logger.debug("missing_transport %s", missing_transport)
     temp_missing_transport = missing_transport.copy().reset_index()
     notifiable_subjects = list(
         set(
@@ -551,7 +554,7 @@ def split_text_to_fit(text: str, max_payload_size: int, text_type: str = "mrkdwn
                 if _estimate_section_size(line, text_type) > max_payload_size:
                     # Single line too big - this shouldn't happen often, but handle it
                     # by truncating (better than crashing)
-                    print("Warning: Single line too large, may be truncated")
+                    logger.warning("Warning: Single line too large, may be truncated")
             else:
                 # Even first line doesn't fit - add it anyway (will be handled later)
                 current_lines = [line]
@@ -659,7 +662,7 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                             su.send_slack_notification(webhook, {"blocks": [small_block]})
                             time.sleep(0.5)
                         except HTTPError:
-                            print("Failed to send block even after splitting")
+                            logger.error("Failed to send block even after splitting")
                 else:
                     raise
         else:
@@ -670,7 +673,7 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                     su.send_slack_notification(webhook, {"blocks": [small_block]})
                     time.sleep(0.5)
                 except HTTPError:
-                    print("Failed to send small block")
+                    logger.error("Failed to send small block")
 
 
 def main_water_weigh_alert():

@@ -7,6 +7,9 @@ import traceback
 import u19_pipeline.alert_system.custom_alerts as ca
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {"slack_notification_channel": ["custom_alerts"]}
@@ -18,7 +21,7 @@ def main_alert_system():
     all_alert_submodules = pkgutil.iter_modules(ca.__path__)
 
     for this_alert_submodule in all_alert_submodules:
-        print("executing " + this_alert_submodule.name + " alert code")
+        logger.info("executing %s alert code", this_alert_submodule.name)
 
         my_alert_module = importlib.import_module(
             "u19_pipeline.alert_system.custom_alerts." + this_alert_submodule.name
