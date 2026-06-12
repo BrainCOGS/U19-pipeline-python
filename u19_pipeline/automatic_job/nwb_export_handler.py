@@ -5,6 +5,8 @@ This module handles the automated processing of NWB export jobs through
 the pipeline stages: data validation, NWB conversion, and validation.
 """
 
+import ast
+import json
 import time
 import traceback
 from datetime import datetime
@@ -12,13 +14,33 @@ from pathlib import Path
 
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.slack_utils as slack_utils
-from u19_pipeline import nwb_production, recording
+from u19_pipeline import acquisition, nwb_production, recording
 from u19_pipeline.imaging_pipeline import imaging_element
 from u19_pipeline.nwb_production_utils import (
     validate_behavior_data_exists,
     validate_ephys_data_exists,
     validate_imaging_data_exists,
 )
+
+
+def _parse_number_list(raw) -> list:
+    """
+    Parse a probe_numbers / fov_numbers value into a list of ints.
+
+    NwbExportModality stores these as a JSON-array string (e.g. "[0, 1, 2]"),
+    but the value may already be a list/None. Returns an empty list for NULL.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, (list, tuple)):
+        return list(raw)
+    try:
+        return list(json.loads(raw))
+    except (ValueError, TypeError):
+        try:
+            return list(ast.literal_eval(raw))
+        except (ValueError, SyntaxError, TypeError):
+            return []
 
 
 class NwbExportHandler:
@@ -33,12 +55,12 @@ class NwbExportHandler:
         NWB export jobs through their pipeline stages.
         """
         # Get active jobs (status < COMPLETED and not FAILED)
-        active_jobs = (nwb_production.NwbExportJob & "status_nwb_id >= 0 AND status_nwb_id < 3").fetch(as_dict=True)
+        active_jobs = (nwb_production.NwbExportJob & "status_id >= 0 AND status_id < 3").fetch(as_dict=True)
 
         print(f"Processing {len(active_jobs)} active NWB export jobs...")
 
         for job in active_jobs:
-            current_status = job["status_nwb_id"]
+            current_status = job["status_id"]
 
             try:
                 # Dispatch to appropriate handler based on current status
@@ -112,37 +134,43 @@ class NwbExportHandler:
         try:
             print(f"Validating data for job {job['nwb_job_id']}...")
 
-            # Check behavior data
-            if nwb_production.NwbExportJob.BehaviorExport & {"nwb_job_id": job["nwb_job_id"]}:
-                session_key = (nwb_production.NwbExportJob.BehaviorExport & {"nwb_job_id": job["nwb_job_id"]}).fetch1(
-                    "KEY"
-                )
+            # The session that this job exports is the acquisition.Session referenced
+            # by the NwbExportJob primary key. Derive its key from the job record.
+            session_key = {
+                k: job[k] for k in acquisition.Session.primary_key if k in job
+            }
 
-                valid, error_msg = validate_behavior_data_exists(session_key)
-                if not valid:
-                    raise ValueError(f"Behavior validation failed: {error_msg}")
+            # Modalities to export are recorded in NwbExportModality (one row per
+            # modality_name). Branch on modality_name to run the right validation.
+            modalities = (
+                nwb_production.NwbExportModality & {"nwb_job_id": job["nwb_job_id"]}
+            ).fetch(as_dict=True)
 
-            # Check ephys data
-            if nwb_production.NwbExportJob.EphysExport & {"nwb_job_id": job["nwb_job_id"]}:
-                ephys_record = (nwb_production.NwbExportJob.EphysExport & {"nwb_job_id": job["nwb_job_id"]}).fetch1()
-                recording_key = {k: ephys_record[k] for k in recording.Recording.primary_key if k in ephys_record}
-                probe_numbers = list(ephys_record["probe_numbers"])
+            for modality in modalities:
+                modality_name = modality["modality_name"]
 
-                valid, error_msg = validate_ephys_data_exists(recording_key, probe_numbers)
-                if not valid:
-                    raise ValueError(f"Ephys validation failed: {error_msg}")
+                if modality_name == "behavior":
+                    valid, error_msg = validate_behavior_data_exists(session_key)
+                    if not valid:
+                        raise ValueError(f"Behavior validation failed: {error_msg}")
 
-            # Check imaging data
-            if nwb_production.NwbExportJob.ImagingExport & {"nwb_job_id": job["nwb_job_id"]}:
-                imaging_record = (
-                    nwb_production.NwbExportJob.ImagingExport & {"nwb_job_id": job["nwb_job_id"]}
-                ).fetch1()
-                scan_key = {k: imaging_record[k] for k in imaging_element.Scan.primary_key if k in imaging_record}
-                fov_numbers = list(imaging_record["fov_numbers"])
+                elif modality_name == "ephys":
+                    recording_key = {
+                        k: job[k] for k in recording.Recording.primary_key if k in job
+                    }
+                    probe_numbers = _parse_number_list(modality.get("probe_numbers"))
+                    valid, error_msg = validate_ephys_data_exists(recording_key, probe_numbers)
+                    if not valid:
+                        raise ValueError(f"Ephys validation failed: {error_msg}")
 
-                valid, error_msg = validate_imaging_data_exists(scan_key, fov_numbers)
-                if not valid:
-                    raise ValueError(f"Imaging validation failed: {error_msg}")
+                elif modality_name == "imaging":
+                    scan_key = {
+                        k: job[k] for k in imaging_element.Scan.primary_key if k in job
+                    }
+                    fov_numbers = _parse_number_list(modality.get("fov_numbers"))
+                    valid, error_msg = validate_imaging_data_exists(scan_key, fov_numbers)
+                    if not valid:
+                        raise ValueError(f"Imaging validation failed: {error_msg}")
 
             print(f"Data validation passed for job {job['nwb_job_id']}")
             return True, error_info
@@ -295,7 +323,7 @@ class NwbExportHandler:
         print(f"Updating job {job_key['nwb_job_id']}: status {old_status} -> {new_status}")
 
         # Update job status
-        (nwb_production.NwbExportJob & job_key).update1({"status_nwb_id": new_status})
+        (nwb_production.NwbExportJob & job_key).update1({"status_id": new_status})
 
         # Set completion timestamp if completed
         if new_status == 3:  # COMPLETED
@@ -304,8 +332,8 @@ class NwbExportHandler:
         # Log status change
         log_entry = {
             **job_key,
-            "status_nwb_id_old": old_status,
-            "status_nwb_id_new": new_status,
+            "status_old": old_status,
+            "status_new": new_status,
             "status_timestamp": datetime.now(),
         }
 

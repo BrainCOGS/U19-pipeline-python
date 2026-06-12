@@ -69,11 +69,31 @@ def estimate_imaging_size_gb(scan_key: dict, fov_numbers: list) -> float:
     return size_gb
 
 
+def _parse_number_list(raw) -> list:
+    """Parse a probe_numbers / fov_numbers value (JSON-array string) into a list."""
+    import ast
+    import json
+
+    if raw is None:
+        return []
+    if isinstance(raw, (list, tuple)):
+        return list(raw)
+    try:
+        return list(json.loads(raw))
+    except (ValueError, TypeError):
+        try:
+            return list(ast.literal_eval(raw))
+        except (ValueError, SyntaxError, TypeError):
+            return []
+
+
 def estimate_total_size(nwb_job_key: dict) -> float:
     """
     Calculate total estimated size for a job.
 
-    Queries modality part tables and sums estimates.
+    Queries the NwbExportModality association table for the job and sums the
+    per-modality estimates. The session/recording/scan keys are derived from the
+    NwbExportJob record (which carries the acquisition.Session primary key).
 
     Args:
         nwb_job_key: Dictionary with nwb_job_id
@@ -81,26 +101,30 @@ def estimate_total_size(nwb_job_key: dict) -> float:
     Returns:
         Total estimated size in GB
     """
-    from u19_pipeline import nwb_production
+    from u19_pipeline import acquisition, nwb_production, recording
+    from u19_pipeline.imaging_pipeline import imaging_element
 
     total_gb = 0.0
 
-    # Check behavior
-    if nwb_production.NwbExportJob.BehaviorExport & nwb_job_key:
-        session_key = (nwb_production.NwbExportJob.BehaviorExport & nwb_job_key).fetch1("KEY")
-        total_gb += estimate_behavior_size_gb(session_key)
+    job = (nwb_production.NwbExportJob & nwb_job_key).fetch1()
+    modalities = (nwb_production.NwbExportModality & nwb_job_key).fetch(as_dict=True)
 
-    # Check ephys
-    if nwb_production.NwbExportJob.EphysExport & nwb_job_key:
-        recording_key, probe_numbers = (nwb_production.NwbExportJob.EphysExport & nwb_job_key).fetch1(
-            "KEY", "probe_numbers"
-        )
-        total_gb += estimate_ephys_size_gb(recording_key, probe_numbers)
+    for modality in modalities:
+        modality_name = modality["modality_name"]
 
-    # Check imaging
-    if nwb_production.NwbExportJob.ImagingExport & nwb_job_key:
-        scan_key, fov_numbers = (nwb_production.NwbExportJob.ImagingExport & nwb_job_key).fetch1("KEY", "fov_numbers")
-        total_gb += estimate_imaging_size_gb(scan_key, fov_numbers)
+        if modality_name == "behavior":
+            session_key = {k: job[k] for k in acquisition.Session.primary_key if k in job}
+            total_gb += estimate_behavior_size_gb(session_key)
+
+        elif modality_name == "ephys":
+            recording_key = {k: job[k] for k in recording.Recording.primary_key if k in job}
+            probe_numbers = _parse_number_list(modality.get("probe_numbers"))
+            total_gb += estimate_ephys_size_gb(recording_key, probe_numbers)
+
+        elif modality_name == "imaging":
+            scan_key = {k: job[k] for k in imaging_element.Scan.primary_key if k in job}
+            fov_numbers = _parse_number_list(modality.get("fov_numbers"))
+            total_gb += estimate_imaging_size_gb(scan_key, fov_numbers)
 
     return total_gb
 
