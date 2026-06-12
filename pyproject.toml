@@ -75,12 +75,12 @@ extend-exclude = ["*.ipynb", "**/*.ipynb"]
 # https://docs.astral.sh/ruff/rules/
 # here's a couple to start with
 select = [
-	"A",    # warn about shadowing built-ins
-	"E",    # style stuff, whitespaces
-	"F",    # important pyflakes lints
-	"I",    # import sorting
-	"N",    # naming
-	"T100", # breakpoints (probably don't want these in prod!)
+    "A",    # warn about shadowing built-ins
+    "E",    # style stuff, whitespaces
+    "F",    # important pyflakes lints
+    "I",    # import sorting
+    "N",    # naming
+    "T100", # breakpoints (probably don't want these in prod!)
     "B",    # flake8-bugbear: likely bugs and design problems
     "SIM",  # flake8-simplify: code that can be simplified
     "UP",   # pyupgrade: syntax that can be modernized (e.g., old Python idioms)
@@ -89,7 +89,7 @@ select = [
 # if you're feeling confident you can do:
 # select = ["ALL"]
 # and then manually ignore annoying ones:
-ignore = ["N815","A002", "N806"]
+ignore = ["N815", "A002", "N806", "E501", "SIM108"]
 
 [dependency-groups]
 dev = [
