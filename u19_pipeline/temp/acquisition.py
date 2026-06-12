@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('u19_acquisition')
+schema = dj.schema("u19_acquisition")
 
 
 @schema

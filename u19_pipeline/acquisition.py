@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'acquisition')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "acquisition")
 
 
 @schema

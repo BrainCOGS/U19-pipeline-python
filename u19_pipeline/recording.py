@@ -1,14 +1,14 @@
-
 import datajoint as dj
 
 import u19_pipeline.automatic_job.params_config as config
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'recording')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "recording")
+
 
 # Declare recording tables -------------------------------------------------------------
 @schema
 class Modality(dj.Lookup):
-     definition = """
+    definition = """
      recording_modality:         varchar(64)  # recording modalities 
                                               # (ephys, imaging, video_recording, etc.) 
      ---
@@ -26,22 +26,22 @@ class Modality(dj.Lookup):
      process_repository:         varchar(64)  # Name of the repository that handles the 
                                               # processing of these modality
      """
-     contents = config.recording_modality_list
+    contents = config.recording_modality_list
 
 
 @schema
 class Status(dj.Lookup):
-     definition = """
+    definition = """
      status_recording_id: TINYINT(1)      # Status in the automatic processing pipeline
      ---
      status_recording_definition:   VARCHAR(256)    # Status definition 
      """
-     contents = config.recording_status_list
+    contents = config.recording_status_list
 
 
 @schema
 class Recording(dj.Manual):
-     definition = """
+    definition = """
      recording_id:  INT(11) AUTO_INCREMENT    # Unique number assigned to recording   
      ---
      -> Modality
@@ -50,17 +50,17 @@ class Recording(dj.Manual):
      task_copy_id_pni=null:      int(11)      # globus transfer task raw file local->cup
      recording_directory:        varchar(255) # relative directory on cup
      local_directory:            varchar(255) # local directory where the recording is stored on system
-     """    
+     """
 
-     class BehaviorSession(dj.Part):
-         definition = """
+    class BehaviorSession(dj.Part):
+        definition = """
          -> master
          ---
          -> acquisition.Session
          """
-    
-     class RecordingSession(dj.Part):
-         definition = """
+
+    class RecordingSession(dj.Part):
+        definition = """
          -> master
          ---
          -> subject.Subject
@@ -70,7 +70,7 @@ class Recording(dj.Manual):
 
 @schema
 class LogStatus(dj.Manual):
-     definition = """
+    definition = """
      recording_log_id: INT(11) AUTO_INCREMENT # Unique number assigned to each change 
                                               # of status for all recordings
      ---
@@ -85,7 +85,7 @@ class LogStatus(dj.Manual):
 
 @schema
 class DefaultParams(dj.Manual):
-     definition = """
+    definition = """
      -> Recording
      fragment_number:                   TINYINT(1)  # probe/field_of_view # if not always the same 
      -----
@@ -95,50 +95,70 @@ class DefaultParams(dj.Manual):
      paramset_idx:                      INT(11)     # params index for recording (could be imaging/ephys)
      """
 
-     @staticmethod
-     def get_default_params_rec_process(recording_processes, default_params_record_df):
-          'Get associated params from DefaultParams record and recording processes (jobs) of recording'
+    @staticmethod
+    def get_default_params_rec_process(recording_processes, default_params_record_df):
+        "Get associated params from DefaultParams record and recording processes (jobs) of recording"
 
-          params_rec_process = list()
-          for i in recording_processes:
+        params_rec_process = list()
+        for i in recording_processes:
+            this_params_rec_process = dict()
+            this_params_rec_process["job_id"] = i["job_id"]
+            this_fragment = i["fragment_number"]
 
-               this_params_rec_process = dict()
-               this_params_rec_process['job_id'] = i['job_id']
-               this_fragment = i['fragment_number']
+            this_params_rec_process["preprocess_param_steps_id"] = (
+                DefaultParams.get_corresponding_param(
+                    default_params_record_df,
+                    this_fragment,
+                    "default_same_preparams_all",
+                    "preprocess_param_steps_id",
+                )
+            )
 
-               this_params_rec_process['preprocess_param_steps_id'] = \
-                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_preparams_all', 'preprocess_param_steps_id')
+            this_params_rec_process["paramset_idx"] = (
+                DefaultParams.get_corresponding_param(
+                    default_params_record_df,
+                    this_fragment,
+                    "default_same_params_all",
+                    "paramset_idx",
+                )
+            )
 
-               this_params_rec_process['paramset_idx'] = \
-                    DefaultParams.get_corresponding_param(default_params_record_df, this_fragment, 'default_same_params_all', 'paramset_idx')
+            params_rec_process.append(this_params_rec_process)
 
-               params_rec_process.append(this_params_rec_process)
+        return params_rec_process
 
-          return params_rec_process
+    @staticmethod
+    def get_corresponding_param(
+        default_params_record_df, this_fragment, default_label, param_label
+    ):
+        "Get corresponding param (preprocess_param_steps_id or paramset_idx) for this fragment"
 
+        "default_label = default_same_preparams_all / default_same_params_all "
+        "param_label   = preprocess_param_steps_id  / paramset_idx "
 
-     @staticmethod
-     def get_corresponding_param(default_params_record_df, this_fragment, default_label, param_label):
-          'Get corresponding param (preprocess_param_steps_id or paramset_idx) for this fragment'
+        # If there is no default params for this recording, get default ones (0 id)
+        if default_params_record_df.shape[0] == 0:
+            this_fragment_preprocess_param_steps_id = 0
+            return this_fragment_preprocess_param_steps_id
 
-          'default_label = default_same_preparams_all / default_same_params_all '
-          'param_label   = preprocess_param_steps_id  / paramset_idx '
+        else:
+            if default_params_record_df.loc[0, default_label] == 1:
+                this_fragment_preprocess_param_steps_id = default_params_record_df.loc[
+                    0, param_label
+                ]
+            else:
+                this_fragment_preprocess_param_steps_id = default_params_record_df.loc[
+                    default_params_record_df["fragment_number"] == this_fragment,
+                    param_label,
+                ]
+                # If there is no list id for this specific fragment, get default one
+                if this_fragment_preprocess_param_steps_id.shape[0] == 0:
+                    this_fragment_preprocess_param_steps_id = (
+                        default_params_record_df.loc[0, param_label]
+                    )
+                else:
+                    this_fragment_preprocess_param_steps_id = (
+                        this_fragment_preprocess_param_steps_id.values[0]
+                    )
 
-          #If there is no default params for this recording, get default ones (0 id)
-          if default_params_record_df.shape[0] == 0:
-               this_fragment_preprocess_param_steps_id = 0
-               return this_fragment_preprocess_param_steps_id
-
-          else:
-               if default_params_record_df.loc[0, default_label] == 1:
-                    this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
-               else:
-                    this_fragment_preprocess_param_steps_id = \
-                         default_params_record_df.loc[default_params_record_df['fragment_number'] == this_fragment, param_label]
-                    #If there is no list id for this specific fragment, get default one
-                    if this_fragment_preprocess_param_steps_id.shape[0] == 0:
-                         this_fragment_preprocess_param_steps_id = default_params_record_df.loc[0, param_label]
-                    else:
-                         this_fragment_preprocess_param_steps_id = this_fragment_preprocess_param_steps_id.values[0]
-
-               return this_fragment_preprocess_param_steps_id
+            return this_fragment_preprocess_param_steps_id

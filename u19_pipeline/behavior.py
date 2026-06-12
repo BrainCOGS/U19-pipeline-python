@@ -1,6 +1,7 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'behavior')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "behavior")
+
 
 @schema
 class DataDirectory(dj.Computed):

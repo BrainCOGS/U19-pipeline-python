@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('u19_meso_analysis')
+schema = dj.schema("u19_meso_analysis")
 
 
 @schema

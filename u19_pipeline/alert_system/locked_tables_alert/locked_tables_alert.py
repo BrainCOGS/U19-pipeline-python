@@ -8,22 +8,22 @@ import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 
 # Slack Configuration dictionary
-slack_configuration_dictionary = {
-    'slack_notification_channel': ['dev_notifications']
-}
+slack_configuration_dictionary = {"slack_notification_channel": ["dev_notifications"]}
 
 
 def main_locked_tables_alert():
 
-    locked_tables_query = 'show open tables where in_use > 0'
+    locked_tables_query = "show open tables where in_use > 0"
     conn = dj.conn()
-    locked_tables_df = pd.DataFrame(conn.query(locked_tables_query, as_dict=True).fetchall())
+    locked_tables_df = pd.DataFrame(
+        conn.query(locked_tables_query, as_dict=True).fetchall()
+    )
 
     if locked_tables_df.shape[0] == 0:
         return
     else:
         locked_tables_df = locked_tables_df.head()
-        locked_tables_df = locked_tables_df.drop('Name_locked',axis=1)
+        locked_tables_df = locked_tables_df.drop("Name_locked", axis=1)
         locked_tables_df = su.format_df_for_slack_message(locked_tables_df)
         slack_json_message = slack_alert_message_format_locked_tables(locked_tables_df)
 

@@ -2,7 +2,7 @@
 
 import datajoint as dj
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'task')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "task")
 
 
 @schema
@@ -12,12 +12,7 @@ class Task(dj.Lookup):
     ---
     task_description=""  : varchar(512)
     """
-    contents = [
-        ['AirPuffs', ''],
-        ['Towers', ''],
-        ['Clicks', ''],
-        ['LinearTrack', '']
-    ]
+    contents = [["AirPuffs", ""], ["Towers", ""], ["Clicks", ""], ["LinearTrack", ""]]
 
 
 @schema

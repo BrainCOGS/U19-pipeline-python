@@ -23,7 +23,9 @@ slack_configuration_dictionary = {
 }
 
 # Query from file
-QUERY_FILE = pathlib.Path(pathlib.Path(__file__).resolve().parent, "get_subject_data.sql").as_posix()
+QUERY_FILE = pathlib.Path(
+    pathlib.Path(__file__).resolve().parent, "get_subject_data.sql"
+).as_posix()
 
 
 def get_subject_data():
@@ -53,7 +55,10 @@ def get_subject_data():
 
     subject_data = subject_data.loc[
         (
-            ((subject_data["schedule_today"] != "Nothing") & (subject_data["subject_status"] == "InExperiments"))
+            (
+                (subject_data["schedule_today"] != "Nothing")
+                & (subject_data["subject_status"] == "InExperiments")
+            )
             | (subject_data["subject_status"] == "WaterRestrictionOnly")
         ),
         :,
@@ -62,18 +67,28 @@ def get_subject_data():
     subject_data = subject_data.reset_index(drop=True)
 
     with pd.option_context("future.no_silent_downcasting", True):
-        subject_data["earned"] = subject_data["earned"].fillna(0).infer_objects(copy=False)
-        subject_data["received"] = subject_data["received"].fillna(0).infer_objects(copy=False)
-        subject_data["supplement"] = subject_data["supplement"].fillna(0).infer_objects(copy=False)
+        subject_data["earned"] = (
+            subject_data["earned"].fillna(0).infer_objects(copy=False)
+        )
+        subject_data["received"] = (
+            subject_data["received"].fillna(0).infer_objects(copy=False)
+        )
+        subject_data["supplement"] = (
+            subject_data["supplement"].fillna(0).infer_objects(copy=False)
+        )
         subject_data["prescribed_extra_supplement_amount"] = (
-            subject_data["prescribed_extra_supplement_amount"].fillna(0).infer_objects(copy=False)
+            subject_data["prescribed_extra_supplement_amount"]
+            .fillna(0)
+            .infer_objects(copy=False)
         )
 
     # Calculated fields
     subject_data["already_water"] = subject_data["supplement"] > 0
     subject_data["upper_cage"] = subject_data["cage"].str.upper()
     subject_data["total_water_received"] = subject_data["received"]
-    subject_data.loc[subject_data["total_water_received"].isnull(), "total_water_received"] = 0
+    subject_data.loc[
+        subject_data["total_water_received"].isnull(), "total_water_received"
+    ] = 0
 
     subject_data["need_supplement"] = 0
     subject_data["need_supplement"] = (
@@ -83,19 +98,31 @@ def get_subject_data():
     subject_data.loc[subject_data["already_received"].isnull(), "already_received"] = 0
     subject_data["need_extra_water_now"] = 0
     subject_data.loc[
-        ((subject_data["prescribed_extra_supplement_amount"] > 0) & (subject_data["already_received"] == 0)),
+        (
+            (subject_data["prescribed_extra_supplement_amount"] > 0)
+            & (subject_data["already_received"] == 0)
+        ),
         "need_extra_water_now",
     ] = 1
 
     subject_data["water_status"] = "Already Watered"
-    subject_data.loc[subject_data["need_supplement"] == 1, "water_status"] = "Need Supplement"
-    subject_data.loc[subject_data["need_extra_water_now"] == 1, "water_status"] = "Need Extra Supplement"
+    subject_data.loc[subject_data["need_supplement"] == 1, "water_status"] = (
+        "Need Supplement"
+    )
+    subject_data.loc[subject_data["need_extra_water_now"] == 1, "water_status"] = (
+        "Need Extra Supplement"
+    )
 
     subject_data["need_water"] = 0
-    subject_data.loc[(subject_data["need_supplement"] | subject_data["need_extra_water_now"]), "need_water"] = 1
+    subject_data.loc[
+        (subject_data["need_supplement"] | subject_data["need_extra_water_now"]),
+        "need_water",
+    ] = 1
 
     subject_data["current_need_water"] = subject_data["suggested_water"]
-    subject_data.loc[subject_data["need_extra_water_now"] == 1, "current_need_water"] = subject_data.loc[
+    subject_data.loc[
+        subject_data["need_extra_water_now"] == 1, "current_need_water"
+    ] = subject_data.loc[
         subject_data["need_extra_water_now"] == 1, "prescribed_extra_supplement_amount"
     ]
 
@@ -104,15 +131,23 @@ def get_subject_data():
     subject_data.loc[~subject_data["session_location"].isnull(), "training_status"] = 2
 
     subject_data["training_status_label"] = "Not scheduled"
-    subject_data.loc[subject_data["training_status"] == 1, "training_status_label"] = "Scheduled"
-    subject_data.loc[subject_data["training_status"] == 2, "training_status_label"] = "Training Started"
+    subject_data.loc[subject_data["training_status"] == 1, "training_status_label"] = (
+        "Scheduled"
+    )
+    subject_data.loc[subject_data["training_status"] == 2, "training_status_label"] = (
+        "Training Started"
+    )
 
     # Calculated fields
     subject_data["already_weighted"] = ~subject_data["weight"].isnull()
-    subject_data["need_weight"] = ~subject_data["already_weighted"] | subject_data["need_reweight"]
+    subject_data["need_weight"] = (
+        ~subject_data["already_weighted"] | subject_data["need_reweight"]
+    )
 
     subject_data["weight_status"] = "Already Weighted"
-    subject_data.loc[subject_data["already_weighted"] == 0, "weight_status"] = "Need Weight"
+    subject_data.loc[subject_data["already_weighted"] == 0, "weight_status"] = (
+        "Need Weight"
+    )
     subject_data.loc[subject_data["need_reweight"] == 1, "weight_status"] = "REWEIGHT"
 
     return subject_data
@@ -138,17 +173,26 @@ def fetch_and_parse_icalevents(weburl: str):
         (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
         (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
         (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
-        (r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at", "VR Brody Mice", "purple", " VR with Brody (Mice)"),
+        (
+            r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at",
+            "VR Brody Mice",
+            "purple",
+            " VR with Brody (Mice)",
+        ),
     ]
 
     filtered_events: list[dict[str, str | int]] = []
 
     # Consolidate lab clean-up events
     lab_clean_up_events = [
-        event for event in vr_events if re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+        event
+        for event in vr_events
+        if re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     non_lab_clean_up_events = [
-        event for event in vr_events if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+        event
+        for event in vr_events
+        if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     if lab_clean_up_events:
         consolidated_event = {
@@ -213,9 +257,13 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         * lab.User().proj(lab_manager="user_id", manager_slack="slack")
     ).fetch("manager_slack", as_dict=True)
     print(technician_manager_slack)
-    technician_manager_slack = [item["manager_slack"] for item in technician_manager_slack]
+    technician_manager_slack = [
+        item["manager_slack"] for item in technician_manager_slack
+    ]
 
-    people_and_their_managers: pd.DataFrame = people_and_their_managers_query.fetch(format="frame")
+    people_and_their_managers: pd.DataFrame = people_and_their_managers_query.fetch(
+        format="frame"
+    )
 
     load_dotenv()
 
@@ -243,7 +291,9 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
             tech_slack.append(tech_uid)
 
     if tech_slack:
-        tech_slack.append(technician_manager_slack[0])  # Fallback to default technician manager slack
+        tech_slack.append(
+            technician_manager_slack[0]
+        )  # Fallback to default technician manager slack
 
     coowner_dataframe: pd.DataFrame = (
         (
@@ -264,7 +314,11 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         lab_name = row.get("lab")
 
         token = str(schedule_today).strip() if schedule_today is not None else None
-        use_coowners = (token is None) or (token.lower() == "transport") or (token.lower() == "nothing")
+        use_coowners = (
+            (token is None)
+            or (token.lower() == "transport")
+            or (token.lower() == "nothing")
+        )
 
         slack_tags = []
 
@@ -281,14 +335,18 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
             # print(temp)
             slack_tags += temp["manager_slack"].tolist()
             slack_tags += temp["user_slack"].tolist()
-            slack_tags += coowner_dataframe.query(f"subject_fullname == '{row['subject_fullname']}'")["slack"].tolist()
+            slack_tags += coowner_dataframe.query(
+                f"subject_fullname == '{row['subject_fullname']}'"
+            )["slack"].tolist()
 
         slack_tags = set(slack_tags)  # Remove duplicates
 
         return " ".join(f"<@{item}>" for item in slack_tags)
 
     subject_data = subject_data.copy()
-    subject_data["responsible_slack_tags"] = subject_data.apply(resolve_responsible_slack, axis=1)
+    subject_data["responsible_slack_tags"] = subject_data.apply(
+        resolve_responsible_slack, axis=1
+    )
     return subject_data
 
 
@@ -311,7 +369,9 @@ def find_unreturned_subjects() -> pd.DataFrame:
         .fetch(format="frame")
     )
 
-    unreturned_subjects: pd.DataFrame = local_transport_data[local_transport_data["transport_in_datetime"].isnull()]
+    unreturned_subjects: pd.DataFrame = local_transport_data[
+        local_transport_data["transport_in_datetime"].isnull()
+    ]
 
     return unreturned_subjects
 
@@ -326,13 +386,17 @@ def slack_alert_message_format_weight_water(
 
     print(missing_transport)
     temp_missing_transport = missing_transport.copy().reset_index()
-    notifiable_subjects = list(set(
-        temp_missing_transport["subject_fullname"].tolist()
-        + subjects_not_watered["subject_fullname"].tolist()
-        + subjects_not_weighted["subject_fullname"].tolist()
-    ))
+    notifiable_subjects = list(
+        set(
+            temp_missing_transport["subject_fullname"].tolist()
+            + subjects_not_watered["subject_fullname"].tolist()
+            + subjects_not_weighted["subject_fullname"].tolist()
+        )
+    )
 
-    slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(notifiable_subjects)
+    slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(
+        notifiable_subjects
+    )
     lab_manager_text = "\n\n"
     if len(slack_handles) >= 1:
         lab_manager_text += "Lab Manager"
@@ -342,7 +406,9 @@ def slack_alert_message_format_weight_water(
     slack_handles_formatted = ", ".join("<@" + handle + ">" for handle in slack_handles)
     if slack_handles_formatted:
         lab_manager_text += (
-            " " + slack_handles_formatted + ", please be advised that your labs' subjects are listed below."
+            " "
+            + slack_handles_formatted
+            + ", please be advised that your labs' subjects are listed below."
         )
 
     msep = dict()
@@ -457,7 +523,9 @@ def slack_alert_message_format_weight_water(
             # Try to get responsible slack tags for this subject
             tags = ""
             try:
-                tags = missing_transport.iloc[i].get("responsible_slack_tags", "")  # may be string or iterable
+                tags = missing_transport.iloc[i].get(
+                    "responsible_slack_tags", ""
+                )  # may be string or iterable
             except Exception:
                 tags = ""
             # Normalize tags to a string
@@ -514,7 +582,9 @@ def _estimate_section_size(text: str, text_type: str = "mrkdwn") -> int:
     return estimate_size({"blocks": [block]})
 
 
-def split_text_to_fit(text: str, max_payload_size: int, text_type: str = "mrkdwn") -> list[str]:
+def split_text_to_fit(
+    text: str, max_payload_size: int, text_type: str = "mrkdwn"
+) -> list[str]:
     """Split text by lines so each chunk fits in max_payload_size when JSON-encoded.
 
     Uses actual JSON size estimation rather than raw character count.
@@ -574,7 +644,9 @@ def _split_large_block(block: dict, max_size: int) -> list[dict]:
         return [block]
 
 
-def send_slack_blocks_safely(webhook: str, blocks: list[dict], max_size: int = SLACK_MAX_CHARS):
+def send_slack_blocks_safely(
+    webhook: str, blocks: list[dict], max_size: int = SLACK_MAX_CHARS
+):
     """Send blocks together when possible, splitting only when necessary.
 
     Strategy:
@@ -646,7 +718,9 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                     smaller = _split_large_block(block, max_size)
                     for small_block in smaller:
                         try:
-                            su.send_slack_notification(webhook, {"blocks": [small_block]})
+                            su.send_slack_notification(
+                                webhook, {"blocks": [small_block]}
+                            )
                             time.sleep(0.5)
                         except HTTPError:
                             print("Failed to send block even after splitting")
@@ -672,16 +746,22 @@ def main_water_weigh_alert():
 
     # print(subject_data.columns)
 
-    subject_data = subject_data.loc[~subject_data["subject_fullname"].str.contains("test"), :]
+    subject_data = subject_data.loc[
+        ~subject_data["subject_fullname"].str.contains("test"), :
+    ]
     subjects_not_watered = subject_data.loc[
-        subject_data["current_need_water"] > 0, ["subject_fullname", "current_need_water", "responsible_slack_tags"]
+        subject_data["current_need_water"] > 0,
+        ["subject_fullname", "current_need_water", "responsible_slack_tags"],
     ]
     subjects_not_watered = subjects_not_watered.reset_index(drop=True)
-    subjects_not_watered["current_need_water"] = subjects_not_watered["current_need_water"].apply(lambda x: f"{x:.1f}")
+    subjects_not_watered["current_need_water"] = subjects_not_watered[
+        "current_need_water"
+    ].apply(lambda x: f"{x:.1f}")
     # subjects_not_watered = subjects_not_watered.head()
 
     subjects_not_weighted = subject_data.loc[
-        subject_data["need_weight"], ["subject_fullname", "need_weight", "responsible_slack_tags"]
+        subject_data["need_weight"],
+        ["subject_fullname", "need_weight", "responsible_slack_tags"],
     ]
     subjects_not_weighted = subjects_not_weighted.reset_index(drop=True)
     # subjects_not_weighted = subjects_not_weighted.head()
@@ -707,9 +787,11 @@ def main_water_weigh_alert():
 
     # Send alert
     slack_json_messages = slack_alert_message_format_weight_water(
-        subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport=subject_not_returned
+        subjects_not_watered,
+        subjects_not_weighted,
+        subjects_not_trained,
+        missing_transport=subject_not_returned,
     )
-
 
     # Send each message's blocks safely (splitting large blocks as needed)
     for this_webhook in webhooks_list:

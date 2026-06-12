@@ -67,7 +67,9 @@ def setup_logging():
         # File handler
         file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
 
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="[%X]")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s", datefmt="[%X]"
+        )
         console_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
 
@@ -87,8 +89,12 @@ def get_slack_webhook():
         str or None: Webhook URL if found, None otherwise
     """
     try:
-        slack_configuration_dictionary = {"webhook_name": "rigs_issues_and_troubleshooting"}
-        webhook_url = (lab.SlackWebhooks & slack_configuration_dictionary).fetch1("webhook_url")
+        slack_configuration_dictionary = {
+            "webhook_name": "rigs_issues_and_troubleshooting"
+        }
+        webhook_url = (lab.SlackWebhooks & slack_configuration_dictionary).fetch1(
+            "webhook_url"
+        )
         return webhook_url
     except Exception as e:
         logger.warning(f"Failed to get Slack webhook: {e}")
@@ -195,7 +201,11 @@ def check_overdue_maintenance():
     # Determine which locations are active based on recent schedules (last 30 days)
 
     five_weeks_ago = date.today() - timedelta(weeks=5)
-    query = scheduler.Schedule & f'date >= "{five_weeks_ago}"' & 'subject_fullname not like "test%"'
+    query = (
+        scheduler.Schedule
+        & f'date >= "{five_weeks_ago}"'
+        & 'subject_fullname not like "test%"'
+    )
     locations = query.fetch("location")
     unique_locations = sorted(set(locations))
 
@@ -204,8 +214,12 @@ def check_overdue_maintenance():
     maintenance_types = maintenance_fetch(as_dict=True)
 
     # Separate maintenance types by system type
-    rig_maintenance_types = [m for m in maintenance_types if m.get("number_of_lines") >= 0]
-    hosting_maintenance_types = [m for m in maintenance_types if m.get("number_of_lines") < 0]
+    rig_maintenance_types = [
+        m for m in maintenance_types if m.get("number_of_lines") >= 0
+    ]
+    hosting_maintenance_types = [
+        m for m in maintenance_types if m.get("number_of_lines") < 0
+    ]
 
     # Get all locations (rigs)
     rig_queries = [
@@ -253,7 +267,9 @@ def check_overdue_maintenance():
                 "maintenance_type": maintenance_type,
             }
             recent_fetch = recent_q.fetch
-            recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
+            recent_maintenance = recent_fetch(
+                "maintenance_date", order_by="maintenance_date DESC", limit=1
+            )
 
             if len(recent_maintenance) == 0:
                 # No maintenance record exists
@@ -295,7 +311,9 @@ def check_overdue_maintenance():
                             "message": f"{maintenance_type} is {days_overdue} days overdue",
                         }
                     )
-                    logger.info(f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌")
+                    logger.info(
+                        f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌"
+                    )
                 else:
                     # Not yet overdue: check if within notification window
                     if 0 < days_until_due <= notification_window:
@@ -317,7 +335,9 @@ def check_overdue_maintenance():
                             f"{days_until_due} days (window {notification_window}) ⚠️"
                         )
                     else:
-                        logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
+                        logger.info(
+                            f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅"
+                        )
 
     # Get all hosting VMs for certificate & secret updates
     hosting_queries = [
@@ -351,7 +371,9 @@ def check_overdue_maintenance():
                 "maintenance_type": maintenance_type,
             }
             recent_fetch = recent_q.fetch
-            recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
+            recent_maintenance = recent_fetch(
+                "maintenance_date", order_by="maintenance_date DESC", limit=1
+            )
 
             if len(recent_maintenance) == 0:
                 # No maintenance record exists
@@ -386,7 +408,9 @@ def check_overdue_maintenance():
                             "message": f"{maintenance_type} is {days_overdue} days overdue",
                         }
                     )
-                    logger.info(f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌")
+                    logger.info(
+                        f"  {maintenance_type:.<30} OVERDUE by {days_overdue} days ❌"
+                    )
                 else:
                     # Not yet overdue: check if within notification window
                     days_until_due = interval_days - days_since_last
@@ -408,7 +432,9 @@ def check_overdue_maintenance():
                             f"  {maintenance_type:.<30} DUE SOON in {days_until_due} days (window {notification_window}) ⚠️"
                         )
                     else:
-                        logger.info(f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅")
+                        logger.info(
+                            f"  {maintenance_type:.<30} OK ({days_until_due} days until due) ✅"
+                        )
 
     # Return combined list; status distinguishes OVERDUE vs UPCOMING
     return overdue_items + upcoming_items
@@ -437,14 +463,18 @@ def log_summary(overdue_items):
 
     if no_record_items:
         # Print a plain-text table for no-record items
-        logger.warning(f"📋 RIGS WITH NO MAINTENANCE RECORDS ({len(no_record_items)} items)")
+        logger.warning(
+            f"📋 RIGS WITH NO MAINTENANCE RECORDS ({len(no_record_items)} items)"
+        )
         loc_w = 30
         type_w = 40
         logger.debug(f"{'.' * (loc_w + type_w + 5)}")
         logger.debug(f"{'Location':<{loc_w}} | {'Maintenance Type':<{type_w}}")
         logger.debug(f"{'.' * (loc_w + type_w + 5)}")
         for item in no_record_items:
-            logger.debug(f"{item['location']:<{loc_w}} | {item['maintenance_type']:<{type_w}}")
+            logger.debug(
+                f"{item['location']:<{loc_w}} | {item['maintenance_type']:<{type_w}}"
+            )
         logger.debug(f"{'.' * (loc_w + type_w + 5)}")
 
     if overdue_items_list:
@@ -477,7 +507,9 @@ def log_summary(overdue_items):
     logger.debug("=" * 60)
 
 
-def dataframe_to_slack_table_block(df: pd.DataFrame, truncate_cell: int = 200, use_markdown: bool = False) -> dict:
+def dataframe_to_slack_table_block(
+    df: pd.DataFrame, truncate_cell: int = 200, use_markdown: bool = False
+) -> dict:
     """
     Convert a DataFrame into one Slack table block.
     Docs: https://docs.slack.dev/reference/block-kit/blocks/table-block/
@@ -510,7 +542,9 @@ def dataframe_to_slack_table_block(df: pd.DataFrame, truncate_cell: int = 200, u
     return block
 
 
-def dataframe_to_slack_table_blocks(df: pd.DataFrame, chunk_size: int = 15, **kwargs) -> list[dict]:
+def dataframe_to_slack_table_blocks(
+    df: pd.DataFrame, chunk_size: int = 15, **kwargs
+) -> list[dict]:
     """
     Chunk a DataFrame into multiple Slack table blocks by rows.
 
@@ -547,7 +581,9 @@ def main():
         log_summary(overdue_items)
 
         records = pd.DataFrame(overdue_items)
-        records.columns = [" ".join(w.capitalize() for w in col.split("_")) for col in records.columns]
+        records.columns = [
+            " ".join(w.capitalize() for w in col.split("_")) for col in records.columns
+        ]
         print(records)
 
         records = records[["Location", "Maintenance Type", "Status"]]

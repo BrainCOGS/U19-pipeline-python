@@ -1,5 +1,3 @@
-
-
 import os
 import subprocess
 import sys
@@ -23,8 +21,8 @@ def is_this_spock():
 
     stdout, stderr = p.communicate()
     if p.returncode == 0:
-        hostname = stdout.decode('UTF-8')
-        if 'spock' in hostname or 'scotty' in hostname:
+        hostname = stdout.decode("UTF-8")
+        if "spock" in hostname or "scotty" in hostname:
             isSpock = True
 
     return isSpock
@@ -35,24 +33,20 @@ def basic_dj_configuration(dj):
     Configure host and external storage locations for datajoint
     """
 
-    dj.config['database.host'] = 'datajoint00.pni.princeton.edu'
-    dj.config['enable_python_native_blobs'] = True
+    dj.config["database.host"] = "datajoint00.pni.princeton.edu"
+    dj.config["enable_python_native_blobs"] = True
 
     if is_this_spock():
-        ext_storage_location = '/mnt/bucket/u19_dj/external_dj_blobs'
+        ext_storage_location = "/mnt/bucket/u19_dj/external_dj_blobs"
     elif sys.platform == "darwin":
-        ext_storage_location = '/Volumes/u19_dj/external_dj_blobs'
+        ext_storage_location = "/Volumes/u19_dj/external_dj_blobs"
     elif sys.platform == "win32":
-        ext_storage_location = '//bucket.pni.princeton.edu/u19_dj/external_dj_blobs'
+        ext_storage_location = "//bucket.pni.princeton.edu/u19_dj/external_dj_blobs"
     elif sys.platform == "linux" or sys.platform == "linux2":
-        ext_storage_location = '/mnt/u19_dj/external_dj_blobs'
+        ext_storage_location = "/mnt/u19_dj/external_dj_blobs"
 
-    dj.config['stores'] = {
-        'extstorage':
-            {
-                'location': ext_storage_location,
-                'protocol': 'file'
-            }
+    dj.config["stores"] = {
+        "extstorage": {"location": ext_storage_location, "protocol": "file"}
     }
 
 
@@ -66,27 +60,30 @@ def get_network_path(path_name):
     """
 
     key = dict()
-    # Check if path name to search starts with needed / at start 
-    if path_name[0] != '/':
-        key['global_path'] = '/' + path_name
+    # Check if path name to search starts with needed / at start
+    if path_name[0] != "/":
+        key["global_path"] = "/" + path_name
     else:
-        key['global_path'] = path_name
-    
-    field_get = ['local_path']
+        key["global_path"] = path_name
+
+    field_get = ["local_path"]
 
     if is_this_spock():
-        field_get = ['bucket_path']
-        key['system'] = 'linux'
+        field_get = ["bucket_path"]
+        key["system"] = "linux"
     elif sys.platform == "darwin":
-        key['system'] = 'mac'
-    elif os.name == 'nt':
-        key['system'] = 'windows'
+        key["system"] = "mac"
+    elif os.name == "nt":
+        key["system"] = "windows"
     else:
-        key['system'] = 'linux'
+        key["system"] = "linux"
 
-    lab         = dj.create_virtual_module('lab', dj.config['custom']['database.prefix']+'lab')
+    lab = dj.create_virtual_module(
+        "lab", dj.config["custom"]["database.prefix"] + "lab"
+    )
     network_path = (lab.Path & key).fetch1(*field_get)
     return network_path
+
 
 # Function copied in dj_shorts
 def smart_dj_join(t1, t2):
@@ -96,12 +93,12 @@ def smart_dj_join(t1, t2):
     """
 
     # Get all fields from tables
-    fields_t1 = pd.DataFrame.from_dict(t1.heading.attributes, orient='index')
-    fields_t2 = pd.DataFrame.from_dict(t2.heading.attributes, orient='index')
+    fields_t1 = pd.DataFrame.from_dict(t1.heading.attributes, orient="index")
+    fields_t2 = pd.DataFrame.from_dict(t2.heading.attributes, orient="index")
 
     # Get only secondary fields and check matches
-    fields_t1_list = set(fields_t1.loc[fields_t1['in_key'] == False].index.to_list())
-    fields_t2_list = set(fields_t2.loc[fields_t2['in_key'] == False].index.to_list())
+    fields_t1_list = set(fields_t1.loc[fields_t1["in_key"] == False].index.to_list())
+    fields_t2_list = set(fields_t2.loc[fields_t2["in_key"] == False].index.to_list())
     intersected_fields = fields_t2_list.intersection(fields_t1_list)
 
     # If there are:
@@ -110,7 +107,7 @@ def smart_dj_join(t1, t2):
         suffix = t2.table_name
         new_name_attr_dict = dict()
         for i in intersected_fields:
-            new_name_attr_dict[suffix + '_' + i] = i
+            new_name_attr_dict[suffix + "_" + i] = i
 
         # List non matching ones
         non_intersected_fields = list(fields_t2_list - intersected_fields)
@@ -128,7 +125,7 @@ def psychometrics_function(x, O, A, lambd, x0):
     """
     Standard sigmoid function
     """
-    return O + A/(1+np.exp(-(x-x0)/lambd))
+    return O + A / (1 + np.exp(-(x - x0) / lambd))
 
 
 def psychFit(deltaBins, numR, numL, choices):
@@ -146,7 +143,7 @@ def psychFit(deltaBins, numR, numL, choices):
     nCues_RminusL = numR - numL
     # Correct deltaBin & trialBin to produce same result as Matlab psychFit
     deltaBins_search = deltaBins.astype(float) - 1.5
-    trialBin = np.searchsorted(deltaBins_search, nCues_RminusL, side='right')
+    trialBin = np.searchsorted(deltaBins_search, nCues_RminusL, side="right")
     trialBin -= 1
 
     # Put into evidence bins all Trials with corresponding choices
@@ -155,9 +152,11 @@ def psychFit(deltaBins, numR, numL, choices):
         if choices[iTrial] == 2:
             numRight[trialBin[iTrial]] = numRight[trialBin[iTrial]] + 1
 
-        trialDelta[trialBin[iTrial]] = trialDelta[trialBin[iTrial]] + nCues_RminusL[iTrial]
+        trialDelta[trialBin[iTrial]] = (
+            trialDelta[trialBin[iTrial]] + nCues_RminusL[iTrial]
+        )
 
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         trialDelta = np.true_divide(trialDelta, numTrials)
 
     # Select only bins with trials
@@ -166,8 +165,12 @@ def psychFit(deltaBins, numR, numL, choices):
     numRight_nz = numRight[~idx_zero]
 
     # (Binomial proportion confidence interval given k successes, n trials)
-    phat_nz = binom_conf_interval(numRight_nz, numTrials_nz, confidence_level=0, interval='jeffreys')
-    pci_nz = binom_conf_interval(numRight_nz, numTrials_nz, confidence_level=1 - 0.1587, interval='jeffreys')
+    phat_nz = binom_conf_interval(
+        numRight_nz, numTrials_nz, confidence_level=0, interval="jeffreys"
+    )
+    pci_nz = binom_conf_interval(
+        numRight_nz, numTrials_nz, confidence_level=1 - 0.1587, interval="jeffreys"
+    )
 
     # Correct confidence intervals and expected outcomes for bins with no trials (ci = [0 1], hat = 0.5)
     phat_nz = phat_nz[0]
@@ -191,8 +194,14 @@ def psychFit(deltaBins, numR, numL, choices):
         weight_array = np.power((pci[1][~idx_zero] - pci[0][~idx_zero]) / 2, 2)
         sigma_fit = np.diag(weight_array)
 
-        psychometric, pcov = curve_fit(psychometrics_function, deltaBins[~idx_zero], phat[~idx_zero], \
-                                       p0=(0, 1, 3, 0), sigma=sigma_fit, maxfev=40000)
+        psychometric, pcov = curve_fit(
+            psychometrics_function,
+            deltaBins[~idx_zero],
+            phat[~idx_zero],
+            p0=(0, 1, 3, 0),
+            sigma=sigma_fit,
+            maxfev=40000,
+        )
 
     # Append a row of nans to confidence intervals . whyy ??
     aux_vec = np.empty((1, pci.shape[1]))
@@ -211,18 +220,18 @@ def psychFit(deltaBins, numR, numL, choices):
 
     # Fill  dictionary of results
     fit_results = dict()
-    fit_results['delta_bins'] = deltaBins[~idx_zero]
-    fit_results['delta_data'] = trialDelta[~idx_zero]
-    fit_results['pright_data'] = 100 * phat[~idx_zero]
-    fit_results['delta_error'] = errorX
-    fit_results['pright_error'] = 100 * errorY
+    fit_results["delta_bins"] = deltaBins[~idx_zero]
+    fit_results["delta_data"] = trialDelta[~idx_zero]
+    fit_results["pright_data"] = 100 * phat[~idx_zero]
+    fit_results["delta_error"] = errorX
+    fit_results["pright_error"] = 100 * errorY
 
     if is_there_psychometric:
-        fit_results['delta_fit'] = delta
-        fit_results['pright_fit'] = psychometrics_function(delta, *psychometric) * 100
+        fit_results["delta_fit"] = delta
+        fit_results["pright_fit"] = psychometrics_function(delta, *psychometric) * 100
     else:
-        fit_results['delta_fit'] = np.empty([0])
-        fit_results['pright_fit'] = np.empty([0])
+        fit_results["delta_fit"] = np.empty([0])
+        fit_results["pright_fit"] = np.empty([0])
 
     return fit_results
 
@@ -232,21 +241,25 @@ def translate_choice_trials_cues(session_df):
     Transform to numeric values trialtype, choice and left & right cues
     """
 
-    session_df['trial_type_int'] = 0
-    session_df.loc[session_df['trial_type'] == 'L','trial_type_int'] = 1
-    session_df.loc[session_df['trial_type'] == 'R','trial_type_int'] = 2
-    session_df['choice_int'] = 0
-    session_df.loc[session_df['choice'] == 'L','choice_int'] = 1
-    session_df.loc[session_df['choice'] == 'R','choice_int'] = 2
+    session_df["trial_type_int"] = 0
+    session_df.loc[session_df["trial_type"] == "L", "trial_type_int"] = 1
+    session_df.loc[session_df["trial_type"] == "R", "trial_type_int"] = 2
+    session_df["choice_int"] = 0
+    session_df.loc[session_df["choice"] == "L", "choice_int"] = 1
+    session_df.loc[session_df["choice"] == "R", "choice_int"] = 2
 
     # If we are translating towers task cues
-    if 'cue_presence_left' in session_df.columns:
-        session_df['cue_presence_left'] = session_df['cue_presence_left'].apply(lambda x: np.count_nonzero(x))
-        session_df['cue_presence_right'] = session_df['cue_presence_right'].apply(lambda x: np.count_nonzero(x))
+    if "cue_presence_left" in session_df.columns:
+        session_df["cue_presence_left"] = session_df["cue_presence_left"].apply(
+            lambda x: np.count_nonzero(x)
+        )
+        session_df["cue_presence_right"] = session_df["cue_presence_right"].apply(
+            lambda x: np.count_nonzero(x)
+        )
     # If we are translating puff task cues
-    elif 'num_puffs_received_r' in session_df.columns:
-        session_df['cue_presence_left'] = session_df['num_puffs_received_l']
-        session_df['cue_presence_right'] = session_df['num_puffs_received_r']
+    elif "num_puffs_received_r" in session_df.columns:
+        session_df["cue_presence_left"] = session_df["num_puffs_received_l"]
+        session_df["cue_presence_right"] = session_df["num_puffs_received_r"]
 
     return session_df
 
@@ -259,11 +272,10 @@ def get_cols_rows_plot(num_plots, fig_size):
     # Check width vs height relation
     fig_rel = fig_size[1] / fig_size[0]
 
-    #Let's start with square root
+    # Let's start with square root
     num_rows = 1
     num_cols = 1
     while 1:
-
         # Add rows and columns to closely match desired width height relationship and surpass number of desired plots
         ac_rel = num_cols / num_rows
 
@@ -280,17 +292,17 @@ def get_cols_rows_plot(num_plots, fig_size):
 
 def create_str_from_dict(key_dict):
 
-    slurm_file_name = ''
+    slurm_file_name = ""
     for i in key_dict.keys():
-        slurm_file_name += str(i) + '_' +  str(key_dict[i])
+        slurm_file_name += str(i) + "_" + str(key_dict[i])
     return slurm_file_name
 
 
 def numpy_array_to_dict(np_array, as_int=True):
-    '''
+    """
     Transform a numpy array to dictionary:
     (numpy array are stored when saving Blobs in  MATLAB Datajoint, normally a dictionary will be the fit)
-    '''
+    """
 
     # Transform numpy array to DF
     out_dict = pd.DataFrame(np_array.flatten())
@@ -298,27 +310,31 @@ def numpy_array_to_dict(np_array, as_int=True):
     # Flatten each column and get the "real value of it"
     out_dict = out_dict.applymap(lambda x: x.flatten())
 
-    #Get not empty columns to extract fist value of only those columns
+    # Get not empty columns to extract fist value of only those columns
     s = out_dict.applymap(lambda x: x.shape[0])
     not_empty_columns = s.loc[:, ~(s == 0).any()].columns.to_list()
-    out_dict = out_dict.apply(lambda x: x[0].flatten() if x.name in not_empty_columns else x)
-    
+    out_dict = out_dict.apply(
+        lambda x: x[0].flatten() if x.name in not_empty_columns else x
+    )
+
     if not isinstance(out_dict, pd.DataFrame):
         out_dict = out_dict.to_frame()
-        #Get columns that are "real" arrays not unique values disguised
+        # Get columns that are "real" arrays not unique values disguised
         s = out_dict.applymap(lambda x: x.size).T
         real_array_columns = s.loc[:, (s > 1).any()].columns.to_list()
         out_dict = out_dict.T
-        out_dict = out_dict.apply(lambda x: x[0] if x.name not in real_array_columns else x, axis=0)
-        
+        out_dict = out_dict.apply(
+            lambda x: x[0] if x.name not in real_array_columns else x, axis=0
+        )
+
     columns = out_dict.columns.copy()
     out_dict = out_dict.squeeze()
 
-    #Transform numeric columns to int (normally for params)
+    # Transform numeric columns to int (normally for params)
     if as_int:
         for i in columns:
-            if (isinstance(out_dict[i],np.float64) and out_dict[i].is_integer()):
-                out_dict[i] = out_dict[i].astype('int')
+            if isinstance(out_dict[i], np.float64) and out_dict[i].is_integer():
+                out_dict[i] = out_dict[i].astype("int")
 
     out_dict = out_dict.to_dict()
 

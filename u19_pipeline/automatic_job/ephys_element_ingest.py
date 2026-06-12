@@ -26,7 +26,7 @@ Manual insertion:
     (for an example, see: https://github.com/ttngu207/workflow-ephys/blob/main/notebooks/run_workflow.ipynb)
 """
 
-acq_software = 'SpikeGLX'
+acq_software = "SpikeGLX"
 
 
 def process_session(sess_key):
@@ -37,36 +37,49 @@ def process_session(sess_key):
 
     :param scan_key: a `KEY` of `acquisition.Session`
     """
-    sess_dir = pathlib.Path(find_full_path(get_ephys_root_data_dir(),
-                                                get_session_directory(sess_key)))
-    ephys_meta_filepaths = [fp for fp in sess_dir.rglob('*.ap.meta')]
+    sess_dir = pathlib.Path(
+        find_full_path(get_ephys_root_data_dir(), get_session_directory(sess_key))
+    )
+    ephys_meta_filepaths = [fp for fp in sess_dir.rglob("*.ap.meta")]
 
-    print('ephys_meta_filepaths', ephys_meta_filepaths)
+    print("ephys_meta_filepaths", ephys_meta_filepaths)
 
     if not len(ephys_meta_filepaths):
-        print(f'No SpikeGLX data found for session:{sess_key} - at {sess_dir}')
+        print(f"No SpikeGLX data found for session:{sess_key} - at {sess_dir}")
         return
 
     probe_list, probe_insertion_list = [], []
     for meta_filepath in ephys_meta_filepaths:
-        print('meta_filepath', meta_filepath)
+        print("meta_filepath", meta_filepath)
         spikeglx_meta = spikeglx.SpikeGLXMeta(meta_filepath)
 
-        probe_key = {'probe_type': spikeglx_meta.probe_model, 'probe': spikeglx_meta.probe_SN}
-        if probe_key['probe'] not in [p['probe'] for p in probe_list] and probe_key not in probe_element.Probe():
+        probe_key = {
+            "probe_type": spikeglx_meta.probe_model,
+            "probe": spikeglx_meta.probe_SN,
+        }
+        if (
+            probe_key["probe"] not in [p["probe"] for p in probe_list]
+            and probe_key not in probe_element.Probe()
+        ):
             probe_list.append(probe_key)
 
         probe_dir = meta_filepath.parent
-        probe_number = re.search('(imec)?\d{1}$', probe_dir.name).group()
-        probe_number = int(probe_number.replace('imec', ''))
+        probe_number = re.search("(imec)?\d{1}$", probe_dir.name).group()
+        probe_number = int(probe_number.replace("imec", ""))
 
-        probe_insertion_list.append({**sess_key, 'probe': spikeglx_meta.probe_SN, 'insertion_number': int(probe_number)})
+        probe_insertion_list.append(
+            {
+                **sess_key,
+                "probe": spikeglx_meta.probe_SN,
+                "insertion_number": int(probe_number),
+            }
+        )
 
     print(f"{probe_list =}")
     probe_element.Probe.insert(probe_list, skip_duplicates=True)
     ephys_element.ProbeInsertion.insert(probe_insertion_list, skip_duplicates=True)
 
 
-if __name__ == '__main__':
-    for sess_key in ephys_pipeline.EphysPipelineSession.fetch('KEY'):
+if __name__ == "__main__":
+    for sess_key in ephys_pipeline.EphysPipelineSession.fetch("KEY"):
         process_session(sess_key)

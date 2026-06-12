@@ -28,10 +28,22 @@ class MaintenanceType(dj.Lookup):
     contents = [
         ["Replacing lines", "Replacing water/reward lines", 30, 7, 1],
         ["Replacing spheres", "Replacing spheres in the rig", 60, 7, 0],
-        ["General Calibration", "General calibration (always after changing lines or solenoids)", 30, 7, 0],
+        [
+            "General Calibration",
+            "General calibration (always after changing lines or solenoids)",
+            30,
+            7,
+            0,
+        ],
         ["Replacing solenoid valve", "Replacing solenoid valve", 365, 30, 1],
         ["Deep Clean solenoid valve", "Deep cleaning of solenoid valve", 30, 7, 1],
-        ["Replacing reward lines connectors", "Replacing reward lines connectors", 180, 14, 0],
+        [
+            "Replacing reward lines connectors",
+            "Replacing reward lines connectors",
+            180,
+            14,
+            0,
+        ],
     ]
 
 

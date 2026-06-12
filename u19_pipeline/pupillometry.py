@@ -2,7 +2,7 @@ import datajoint as dj
 
 from u19_pipeline import acquisition
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'pupillometry')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "pupillometry")
 
 
 @schema
@@ -26,10 +26,10 @@ class PupillometrySession(dj.Imported):
     -> acquisition.Session
     ---
     """
-    
+
     @property
     def key_source(self):
-        return acquisition.SessionVideo & {'video_type': 'pupillometry'}
+        return acquisition.SessionVideo & {"video_type": "pupillometry"}
 
     def make(self, key):
         pass
@@ -46,7 +46,7 @@ class PupillometrySyncBehavior(dj.Imported):
     """
 
     def make(self, key):
-        pass 
+        pass
 
 
 @schema

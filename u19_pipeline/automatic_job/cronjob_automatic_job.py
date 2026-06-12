@@ -1,4 +1,3 @@
-
 import time
 
 from scripts.conf_file_finding import try_find_conf_file
@@ -18,7 +17,5 @@ time.sleep(5)
 rec_process_handler.RecProcessHandler.pipeline_handler_main()
 
 time.sleep(5)
-#Check if we need to delete empty directories
-#rec_process_handler.RecProcessHandler.check_job_process_deletion()
-
-
+# Check if we need to delete empty directories
+# rec_process_handler.RecProcessHandler.check_job_process_deletion()

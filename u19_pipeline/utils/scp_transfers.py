@@ -1,4 +1,3 @@
-
 import os
 import subprocess
 import sys
@@ -12,7 +11,7 @@ from u19_pipeline.automatic_job.clusters_paths_and_transfers import (
     public_key_location as public_key_location,
 )
 
-#Steps on windows machine
+# Steps on windows machine
 #   https://thesysadminchannel.com/solved-add-windowscapability-failed-error-code-0x800f0954-rsat-fix/
 #   PowerShell
 #     Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
@@ -30,6 +29,7 @@ from u19_pipeline.automatic_job.clusters_paths_and_transfers import (
 #   PowerShell
 #         restart-service sshd
 
+
 class RemoteClient:
     """Client to interact with a remote host via SSH & SCP."""
 
@@ -40,21 +40,17 @@ class RemoteClient:
         self.remote_path = remote_path
 
     def _get_ssh_key(self):
-        """ Fetch locally stored SSH key."""
+        """Fetch locally stored SSH key."""
         try:
-            self.ssh_key = RSAKey.from_private_key_file(
-                self.ssh_key_filepath
-            )
-            print(
-                f"Found SSH key at self {self.ssh_key_filepath}"
-            )
+            self.ssh_key = RSAKey.from_private_key_file(self.ssh_key_filepath)
+            print(f"Found SSH key at self {self.ssh_key_filepath}")
             return self.ssh_key
         except SSHException as e:
             print(e)
 
     @property
     def connection(self):
-        """Open connection to remote host. """
+        """Open connection to remote host."""
         try:
             client = SSHClient()
             client.load_system_host_keys()
@@ -67,9 +63,7 @@ class RemoteClient:
             )
             return client
         except AuthenticationException as e:
-            print(
-                f"Authentication failed: did you remember to create an SSH key? {e}"
-            )
+            print(f"Authentication failed: did you remember to create an SSH key? {e}")
             raise e
 
     @property
@@ -102,25 +96,39 @@ def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
     rc.download_folder(remote_path=remote_path, local_path=local_path)
     rc.disconnect()
 
-def call_scp_background(ip_address=None, system_user=None, recording_system_directory=None, data_directory=None):
+
+def call_scp_background(
+    ip_address=None,
+    system_user=None,
+    recording_system_directory=None,
+    data_directory=None,
+):
 
     print(ip_address, system_user, data_directory, recording_system_directory)
-    #transfer_scp(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
+    # transfer_scp(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
 
     this_file = os.path.realpath(__file__)
 
-
-    p = subprocess.Popen(["nohup", "python", this_file, ip_address, system_user, recording_system_directory, data_directory, "&"])
+    p = subprocess.Popen(
+        [
+            "nohup",
+            "python",
+            this_file,
+            ip_address,
+            system_user,
+            recording_system_directory,
+            data_directory,
+            "&",
+        ]
+    )
 
     # To test without nohup
-    #p = subprocess.run(["python", this_file, ip_address, system_user, recording_system_directory, data_directory], capture_output=True)
-    #print('stderr', p.stderr.decode('UTF-8'))
-    #print('stdout', p.stdout.decode('UTF-8'))
-    #print('p.returncode', p.returncode)
+    # p = subprocess.run(["python", this_file, ip_address, system_user, recording_system_directory, data_directory], capture_output=True)
+    # print('stderr', p.stderr.decode('UTF-8'))
+    # print('stdout', p.stdout.decode('UTF-8'))
+    # print('p.returncode', p.returncode)
 
-    return True,p.pid
-
-
+    return True, p.pid
 
 
 def check_scp_transfer(pid):
@@ -144,6 +152,7 @@ def check_scp_transfer(pid):
 
     return finished, exit_code
 
+
 def check_directory_copied_correctly():
     pass
     # diff -r -q /path/to/dir1 /path/to/dir2
@@ -153,7 +162,6 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     print(args)
 
-    transfer_scp(host=args[0], username=args[1], remote_path=args[2], local_path=args[3])
-
-
-
+    transfer_scp(
+        host=args[0], username=args[1], remote_path=args[2], local_path=args[3]
+    )
