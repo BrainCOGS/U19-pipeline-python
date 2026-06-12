@@ -8,6 +8,9 @@ import datajoint as dj
 from icalevents.icalevents import events
 
 from u19_pipeline.utils import slack_utils as su
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def tech_schedule():
@@ -36,25 +39,25 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
     # Divider #
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = "🗓 *Today's Tech Schedule:*"
     m1["text"] = m1_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep]
     message["text"] = "🗓 *Today's Tech Schedule:*"
 
     # Info#
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     # If there are shifts today, list them; otherwise provide a short fallback
@@ -116,9 +119,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
 
     if alerts:
         alert_text = "\n".join(alerts)
-        m3 = dict()
+        m3 = {}
         m3["type"] = "section"
-        m3_1 = dict()
+        m3_1 = {}
         m3_1["type"] = "mrkdwn"
         m3_1["text"] = f"*:rotating_light: Upcoming Shifts: :rotating_light:*\n{alert_text}"
         m3["text"] = m3_1
@@ -260,7 +263,7 @@ def fetch_and_parse_icalevents(weburl: str):
     try:
         vr_events = events(url=weburl, start=start_date, end=end_date)
     except Exception as e:
-        print(f"Error fetching events from WhenIWork: {e}")
+        logger.error("Error fetching events from WhenIWork: %s", e)
         return []
 
     # Define mapping of substrings to event types and their corresponding colors
@@ -268,7 +271,12 @@ def fetch_and_parse_icalevents(weburl: str):
         (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
         (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
         (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
-        (r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at", "VR Brody Mice", "purple", " VR with Brody (Mice)"),
+        (
+            r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at",
+            "VR Brody Mice",
+            "purple",
+            " VR with Brody (Mice)",
+        ),
     ]
 
     filtered_events: list[dict[str, str | int]] = []
@@ -282,7 +290,7 @@ def fetch_and_parse_icalevents(weburl: str):
         event for event in vr_events if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     if lab_clean_up_events:
-        unique_days = sorted(set(event.start.date() for event in lab_clean_up_events))
+        unique_days = sorted({event.start.date() for event in lab_clean_up_events})
         for day in unique_days:
             filtered_events.append(
                 {
@@ -320,7 +328,7 @@ def fetch_and_parse_icalevents(weburl: str):
 
 
 if __name__ == "__main__":
-    print("Command-line arguments:", sys.argv)
+    logger.info("Command-line arguments: %s", sys.argv)
     if len(sys.argv) < 2:
         main_loop()
     else:

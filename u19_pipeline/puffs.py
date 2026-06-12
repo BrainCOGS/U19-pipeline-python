@@ -1,9 +1,8 @@
 """This module defines tables in the schema ahoag_puffs_lab_demo"""
 
 import datajoint as dj
-from . import lab, acquisition, task
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'puffs')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "puffs")
 
 
 @schema
@@ -14,10 +13,7 @@ class Rig(dj.Lookup):
     -> lab.location
     """
     #  "wang-behavior"
-    contents = [
-        [0, "pni-ltl016-05"],
-        [1, "wang-behavior"]
-    ]
+    contents = [[0, "pni-ltl016-05"], [1, "wang-behavior"]]
 
 
 @schema

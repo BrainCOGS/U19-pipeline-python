@@ -16,6 +16,9 @@ import argparse
 from getpass import getpass
 
 import pandas as pd
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
@@ -29,13 +32,13 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
         try_find_conf_file()
     except FileNotFoundError:
         pass
-        print("DataJoint configuration file not found. Running configuration script...")
+        logger.info("DataJoint configuration file not found. Running configuration script...")
         if global_config_flag:
-            print(
+            logger.info(
                 "Global configuration flag is set to True. The configuration will be saved in the global configuration file."
             )
         else:
-            print(
+            logger.info(
                 "Global configuration flag is set to False. The configuration will be saved in the local configuration file."
             )
 
@@ -44,14 +47,11 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     host = "datajoint00.pni.princeton.edu"
 
     user_already = False
-    if (
-        "database.user" in dj.config
-        and dj.config.instance._conf["database.user"] is not None
-    ):
+    if "database.user" in dj.config and dj.config.instance._conf["database.user"] is not None:
         user_already = True
 
     if replace_user or not user_already:
-        print("Enter your username (Princeton NETID):")
+        logger.info("Enter your username (Princeton NETID):")
         user = input()
         password = getpass()
         dj.conn(host=host, user=user, password=password)
@@ -65,7 +65,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
     dj.config["database.host"] = host
 
     if "custom" not in dj.config:
-        dj.config["custom"] = dict()
+        dj.config["custom"] = {}
         dj.config["custom"]["database.prefix"] = "u19_"
 
     import u19_pipeline.lab as lab
@@ -76,9 +76,7 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
 
     # Transform variables to list and path if applicable
     for custom_var in custom_vars_names:
-        this_var = custom_vars.loc[
-            custom_vars["custom_variable"] == custom_var, "value"
-        ].tolist()
+        this_var = custom_vars.loc[custom_vars["custom_variable"] == custom_var, "value"].tolist()
 
         # If custom variables are directories, get local path for this system
         if "dir" in custom_var:
@@ -92,22 +90,20 @@ def initial_conf(save_user=True, replace_user=False, global_config_flag=True):
 
     # Get store info
     if "stores" not in dj.config:
-        dj.config["stores"] = dict()
+        dj.config["stores"] = {}
 
     dj_stores = lab.DjStores.fetch(as_dict=True)
 
-    dj_stores_dict = dict()
+    dj_stores_dict = {}
     for i in dj_stores:
         store_name = i.pop("store_name")
         dj_stores_dict[store_name] = i
-        dj_stores_dict[store_name]["location"] = (
-            lab.Path().get_local_path2(i["location"]).as_posix()
-        )
+        dj_stores_dict[store_name]["location"] = lab.Path().get_local_path2(i["location"]).as_posix()
 
     dj.config["stores"] = dj_stores_dict
 
     if global_config_flag:
-        print(
+        logger.info(
             "Global configuration flag is set to True. The configuration will be saved in the global configuration file."
         )
         dj.config.save_global()
@@ -123,9 +119,7 @@ if __name__ == "__main__":
         help="prevent to save user into conf file",
         action="store_true",
     )
-    parser.add_argument(
-        "--replace_user", "-r", help="replace user in conf file", action="store_true"
-    )
+    parser.add_argument("--replace_user", "-r", help="replace user in conf file", action="store_true")
     parser.add_argument(
         "--not_global_config",
         "-ng",
@@ -133,7 +127,7 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-    default_args = dict()
+    default_args = {}
     default_args["save_user"] = True
     default_args["replace_user"] = False
     default_args["global_config"] = False

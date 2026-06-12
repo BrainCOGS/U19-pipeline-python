@@ -1,15 +1,20 @@
-
 import os
-import psutil
 import subprocess
 import sys
-from paramiko import SSHClient, AutoAddPolicy, RSAKey
+
+import psutil
+from paramiko import AutoAddPolicy, RSAKey, SSHClient
 from paramiko.auth_handler import AuthenticationException, SSHException
-from scp import SCPClient, SCPException
+from scp import SCPClient
 
-from u19_pipeline.automatic_job.clusters_paths_and_transfers import public_key_location as public_key_location
+from u19_pipeline.automatic_job.clusters_paths_and_transfers import (
+    public_key_location as public_key_location,
+)
+from u19_pipeline.utils.logging_config import get_logger
 
-#Steps on windows machine
+logger = get_logger(__name__)
+
+# Steps on windows machine
 #   https://thesysadminchannel.com/solved-add-windowscapability-failed-error-code-0x800f0954-rsat-fix/
 #   PowerShell
 #     Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
@@ -27,6 +32,7 @@ from u19_pipeline.automatic_job.clusters_paths_and_transfers import public_key_l
 #   PowerShell
 #         restart-service sshd
 
+
 class RemoteClient:
     """Client to interact with a remote host via SSH & SCP."""
 
@@ -37,21 +43,17 @@ class RemoteClient:
         self.remote_path = remote_path
 
     def _get_ssh_key(self):
-        """ Fetch locally stored SSH key."""
+        """Fetch locally stored SSH key."""
         try:
-            self.ssh_key = RSAKey.from_private_key_file(
-                self.ssh_key_filepath
-            )
-            print(
-                f"Found SSH key at self {self.ssh_key_filepath}"
-            )
+            self.ssh_key = RSAKey.from_private_key_file(self.ssh_key_filepath)
+            logger.info("Found SSH key at %s", self.ssh_key_filepath)
             return self.ssh_key
         except SSHException as e:
-            print(e)
+            logger.error("SSHException: %s", e)
 
     @property
     def connection(self):
-        """Open connection to remote host. """
+        """Open connection to remote host."""
         try:
             client = SSHClient()
             client.load_system_host_keys()
@@ -64,9 +66,7 @@ class RemoteClient:
             )
             return client
         except AuthenticationException as e:
-            print(
-                f"Authentication failed: did you remember to create an SSH key? {e}"
-            )
+            logger.error("Authentication failed: did you remember to create an SSH key? %s", e)
             raise e
 
     @property
@@ -89,35 +89,49 @@ class RemoteClient:
 
 def transfer_scp(host=None, username=None, remote_path=None, local_path=None):
     rc = RemoteClient(host, username, public_key_location, remote_path)
-    print(host)
-    print(username)
-    print(public_key_location)
-    print(remote_path)
-    print(local_path)
+    logger.debug("host: %s", host)
+    logger.debug("username: %s", username)
+    logger.debug("public_key_location: %s", public_key_location)
+    logger.debug("remote_path: %s", remote_path)
+    logger.debug("local_path: %s", local_path)
     rc._get_ssh_key()
-    rc.scp
+    logger.debug("scp: %s", rc.scp)
     rc.download_folder(remote_path=remote_path, local_path=local_path)
     rc.disconnect()
 
-def call_scp_background(ip_address=None, system_user=None, recording_system_directory=None, data_directory=None):
 
-    print(ip_address, system_user, data_directory, recording_system_directory)
-    #transfer_scp(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
+def call_scp_background(
+    ip_address=None,
+    system_user=None,
+    recording_system_directory=None,
+    data_directory=None,
+):
+
+    logger.debug("ip_address=%s, system_user=%s, data_directory=%s, recording_system_directory=%s", ip_address, system_user, data_directory, recording_system_directory)
+    # transfer_scp(rec_series['ip_address'], rec_series['system_user'], rec_series['local_directory'], full_remote_path)
 
     this_file = os.path.realpath(__file__)
 
-
-    p = subprocess.Popen(["nohup", "python", this_file, ip_address, system_user, recording_system_directory, data_directory, "&"])
+    p = subprocess.Popen(
+        [
+            "nohup",
+            "python",
+            this_file,
+            ip_address,
+            system_user,
+            recording_system_directory,
+            data_directory,
+            "&",
+        ]
+    )
 
     # To test without nohup
-    #p = subprocess.run(["python", this_file, ip_address, system_user, recording_system_directory, data_directory], capture_output=True)
-    #print('stderr', p.stderr.decode('UTF-8'))
-    #print('stdout', p.stdout.decode('UTF-8'))
-    #print('p.returncode', p.returncode)
+    # p = subprocess.run(["python", this_file, ip_address, system_user, recording_system_directory, data_directory], capture_output=True)
+    # print('stderr', p.stderr.decode('UTF-8'))
+    # print('stdout', p.stdout.decode('UTF-8'))
+    # print('p.returncode', p.returncode)
 
-    return True,p.pid
-
-
+    return True, p.pid
 
 
 def check_scp_transfer(pid):
@@ -127,9 +141,9 @@ def check_scp_transfer(pid):
 
     if psutil.pid_exists(pid):
         pr = psutil.Process(pid=pid)
-        print(pr)
+        logger.debug("process: %s", pr)
         gone, _ = psutil.wait_procs([pr], timeout=3)
-        print(gone)
+        logger.debug("gone: %s", gone)
 
         if len(gone) > 0:
             finished = True
@@ -141,6 +155,7 @@ def check_scp_transfer(pid):
 
     return finished, exit_code
 
+
 def check_directory_copied_correctly():
     pass
     # diff -r -q /path/to/dir1 /path/to/dir2
@@ -148,9 +163,6 @@ def check_directory_copied_correctly():
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    print(args)
+    logger.debug("args: %s", args)
 
     transfer_scp(host=args[0], username=args[1], remote_path=args[2], local_path=args[3])
-
-
-

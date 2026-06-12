@@ -1,7 +1,6 @@
 import datajoint as dj
-from u19_pipeline import meso
 
-schema = dj.schema('u19_meso_analysis')
+schema = dj.schema("u19_meso_analysis")
 
 
 @schema

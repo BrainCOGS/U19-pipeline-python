@@ -1,9 +1,11 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from u19_pipeline import lab, subject
 
 
-def fetch_slack_handles_for_lab_managers_by_subject(subjects: list[str] | str) -> list[str]:
+def fetch_slack_handles_for_lab_managers_by_subject(
+    subjects: list[str] | str,
+) -> list[str]:
     """Returns the Slack handles of lab managers for the labs associated with the given subjects."""
     if isinstance(subjects, str):
         subjects = [subjects]
@@ -18,7 +20,9 @@ def fetch_slack_handles_for_lab_managers_by_subject(subjects: list[str] | str) -
     return slack_tags
 
 
-def fetch_slack_handles_for_lab_managers_by_user(user_ids: Iterable[str] | str) -> list[str]:
+def fetch_slack_handles_for_lab_managers_by_user(
+    user_ids: Iterable[str] | str,
+) -> list[str]:
     """Returns the Slack handles of lab managers for the given user IDs."""
 
     if isinstance(user_ids, str):

@@ -1,6 +1,9 @@
-
 import os
 import pathlib
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 def chdir_to_root():
 
@@ -8,16 +11,15 @@ def chdir_to_root():
     conf_file_found = 0
     starting_directory = os.getcwd()
     while 1:
-
         current_dir = os.getcwd()
-        u19_dir = pathlib.Path(current_dir,'u19_pipeline')
+        u19_dir = pathlib.Path(current_dir, "u19_pipeline")
         if os.path.isdir(u19_dir):
             root_dir_found = 1
-            if os.path.isfile(pathlib.Path(current_dir,'dj_local_conf.json')):
+            if os.path.isfile(pathlib.Path(current_dir, "dj_local_conf.json")):
                 conf_file_found = 1
         if root_dir_found:
             break
-        os.chdir('..')
+        os.chdir("..")
         new_current_dir = os.getcwd()
         if str(current_dir) == str(new_current_dir):
             os.chdir(starting_directory)
@@ -25,14 +27,14 @@ def chdir_to_root():
 
     return root_dir_found, conf_file_found
 
+
 def get_root_directory():
 
     root_dir_found = 0
     current_dir = pathlib.Path(os.getcwd())
     while 1:
-
-        u19_dir = pathlib.Path(current_dir,'U19-pipeline_python')
-        u19_dir2 = pathlib.Path(current_dir,'U19-pipeline-python')
+        u19_dir = pathlib.Path(current_dir, "U19-pipeline_python")
+        u19_dir2 = pathlib.Path(current_dir, "U19-pipeline-python")
         if os.path.isdir(u19_dir) or os.path.isdir(u19_dir2):
             root_dir_found = 1
             break
@@ -48,10 +50,12 @@ def try_find_conf_file():
 
     root_dir_found, conf_file_found = chdir_to_root()
     if root_dir_found and conf_file_found:
-        print('Local configuration file found !!, no need to run the configuration (unless configuration has changed)')
+        logger.info("Local configuration file found !!, no need to run the configuration (unless configuration has changed)")
     elif root_dir_found:
-        raise FileNotFoundError('Local configuration file not found. Ignore this if you have a global config. Run configuration script (initial_conf.py) otherwise')
-    elif os.path.isfile(pathlib.Path(pathlib.Path.home(),".datajoint_config.json")):
-        print("Global configuration file found !!, no need to run the configuration (unless configuration has changed)")
+        raise FileNotFoundError(
+            "Local configuration file not found. Ignore this if you have a global config. Run configuration script (initial_conf.py) otherwise"
+        )
+    elif os.path.isfile(pathlib.Path(pathlib.Path.home(), ".datajoint_config.json")):
+        logger.info("Global configuration file found !!, no need to run the configuration (unless configuration has changed)")
     else:
-        raise FileNotFoundError('Root dir not found, change this notebook to the project folder')
+        raise FileNotFoundError("Root dir not found, change this notebook to the project folder")

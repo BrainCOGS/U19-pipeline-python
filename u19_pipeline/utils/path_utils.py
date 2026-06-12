@@ -1,28 +1,25 @@
-
-import pathlib
-import os
 import glob
+import os
 import subprocess
-import sys
 
 file_patterns_acq = {
-    "raw_imaging": ['/*.tiff', '/*.tif'],
-    "commpressed_imaging": ['/*.tiff.gz', '/*.tif.gz'],
-    "segmented_imaging_files": ['/*.modeling.mat', '/*suite2p/'],
-    "raw_np_files": ['/*ap.bin', '/*ap.meta'],
-    "sorted_np_files": ['/*.npy']
+    "raw_imaging": ["/*.tiff", "/*.tif"],
+    "commpressed_imaging": ["/*.tiff.gz", "/*.tif.gz"],
+    "segmented_imaging_files": ["/*.modeling.mat", "/*suite2p/"],
+    "raw_np_files": ["/*ap.bin", "/*ap.meta"],
+    "sorted_np_files": ["/*.npy"],
 }
+
 
 def check_file_pattern_dir(filepath, file_patterns):
     """
     Check if directory (or its childs) contains some files with specific pattern names
     """
-    dirs_with_session_files = []
     child_dirs = [x[0] for x in os.walk(filepath)]
     patterns_found = 0
-    for dir in child_dirs:
+    for directory in child_dirs:
         for pat in file_patterns:
-            found_file = glob.glob(dir+pat)
+            found_file = glob.glob(directory + pat)
             if len(found_file) > 0:
                 patterns_found = 1
                 break
@@ -35,25 +32,24 @@ def check_file_pattern_dir(filepath, file_patterns):
     else:
         return 0
 
+
 def get_filepattern_paths(filepath, file_pattern):
     """
     Check directory/files that correspond to file pattern in filepath
     """
-    found_patterns = glob.glob(filepath+file_pattern)
+    found_patterns = glob.glob(filepath + file_pattern)
 
     return found_patterns
+
 
 def get_size_directory(path):
     """
     get directory size of a folder for linux systems
     """
-    command = ["du", path, '-s']
+    command = ["du", path, "-s"]
     s = subprocess.run(command, capture_output=True)
-    output = s.stdout.decode('UTF-8')
-    if len(output) != 0:
-        kbytes = int(output.split('\t')[0])
-    else:
-        kbytes = -1
+    output = s.stdout.decode("UTF-8")
+    kbytes = int(output.split("\t")[0]) if len(output) != 0 else -1
     return kbytes
 
 
@@ -64,18 +60,16 @@ def get_size_directory_time(path):
 
     command = ["du", "--separate-dirs", "--time", path]
     output = subprocess.check_output(command)
-    output = output.decode('UTF-8')
+    output = output.decode("UTF-8")
     list_values = output.split("\n")
     list_return = []
     for line in list_values:
         line_values = line.split("\t")
-        dict_line = dict()
+        dict_line = {}
         if len(line_values) == 3:
-            dict_line['size'] = line_values[0]
-            dict_line['date'] = line_values[1]
-            dict_line['directory'] = line_values[2]
+            dict_line["size"] = line_values[0]
+            dict_line["date"] = line_values[1]
+            dict_line["directory"] = line_values[2]
             list_return.append(dict_line)
-        
+
     return list_return
-
-

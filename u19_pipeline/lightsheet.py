@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('U19_lightsheet') 
+schema = dj.schema("U19_lightsheet")
 
 
 @schema
@@ -11,7 +11,8 @@ class User(dj.Lookup):
     ---
     princeton_email       : varchar(50)
     """
-    
+
+
 @schema
 class Experiment(dj.Manual):
     definition = """ # Experiments performed using the light sheet microscope
@@ -33,10 +34,13 @@ class Experiment(dj.Manual):
     channel555                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
     channel647                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
     channel790                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
-    """  
+    """
+
 
 @schema
-class IdiscoPlusClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoPlusClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Periodic calibration data of the light sheet microscope
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
@@ -147,7 +151,9 @@ class IdiscoPlusClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table
 
 
 @schema
-class IdiscoAbbreviatedClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoAbbreviatedClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Periodic calibration data of the light sheet microscope
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
@@ -186,8 +192,11 @@ class IdiscoAbbreviatedClearing(dj.Manual): # dj.Manual is one of the 4 datajoin
     clearing_notes = ""                                      :   varchar(500)
     """
 
+
 @schema
-class IdiscoAbbreviatedRatClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoAbbreviatedRatClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Abbreviated Rat clearing table
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
@@ -240,8 +249,11 @@ class IdiscoAbbreviatedRatClearing(dj.Manual): # dj.Manual is one of the 4 dataj
     clearing_notes = ""                                      : varchar(500)
     """
 
+
 @schema
-class UdiscoClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class UdiscoClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # uDISCO clearing table
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----

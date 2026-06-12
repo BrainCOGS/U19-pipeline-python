@@ -1,9 +1,7 @@
 import datajoint as dj
 import numpy as np
-from u19_pipeline import acquisition
 
-
-schema = dj.schema('u19_meso')
+schema = dj.schema("u19_meso")
 
 
 @schema
@@ -109,8 +107,8 @@ class MotionCorrectionMethod(dj.Lookup):
     """
 
     contents = [
-        ['LinearNormalized', 'Normalized', 'Linear'],
-        ['NonLinearNormalized', 'Normalized', 'Nonlinear']
+        ["LinearNormalized", "Normalized", "Linear"],
+        ["NonLinearNormalized", "Normalized", "Nonlinear"],
     ]
 
 
@@ -124,11 +122,11 @@ class McParameter(dj.Lookup):
     """
 
     contents = [
-        ['LinearNormalized', 'mc_max_shift', ''],
-        ['LinearNormalized', 'mc_max_iter', ''],
-        ['LinearNormalized', 'mc_stop_below_shift', ''],
-        ['LinearNormalized', 'mc_black_tolerance', ''],
-        ['LinearNormalized', 'mc_median_rebin', '']
+        ["LinearNormalized", "mc_max_shift", ""],
+        ["LinearNormalized", "mc_max_iter", ""],
+        ["LinearNormalized", "mc_stop_below_shift", ""],
+        ["LinearNormalized", "mc_black_tolerance", ""],
+        ["LinearNormalized", "mc_median_rebin", ""],
     ]
 
 
@@ -140,7 +138,7 @@ class McParameterSet(dj.Lookup):
     mc_parameter_set_id  : int                          # parameter set id
     """
 
-    contents = [['LinearNormalized', 1]]
+    contents = [["LinearNormalized", 1]]
 
     class Parameter(dj.Part):
         definition = """
@@ -355,23 +353,15 @@ class Trace(dj.Imported):
     """
 
 
-
-
-if __name__ == '__main__':
-
-    key = {'mcorr_method': 'LinearNormalized',
-           'mc_parameter_set_id': 1}
+if __name__ == "__main__":
+    key = {"mcorr_method": "LinearNormalized", "mc_parameter_set_id": 1}
 
     parameters = [
-        dict(**key, mc_parameter_name='mc_max_shift',
-             mc_parameter_value=np.array([15.])),
-        dict(**key, mc_parameter_name='mc_max_iter',
-             mc_parameter_value=np.array([5.])),
-        dict(**key, mc_parameter_name='mc_stop_below_shift',
-             mc_parameter_value=0.3),
-        dict(**key, mc_parameter_name='mc_black_tolerance',
-             mc_parameter_value=-1.),
-        dict(**key, mc_parameter_name='mc_median_rebin',
-             mc_parameter_value=10.)]
+        dict(**key, mc_parameter_name="mc_max_shift", mc_parameter_value=np.array([15.0])),
+        dict(**key, mc_parameter_name="mc_max_iter", mc_parameter_value=np.array([5.0])),
+        dict(**key, mc_parameter_name="mc_stop_below_shift", mc_parameter_value=0.3),
+        dict(**key, mc_parameter_name="mc_black_tolerance", mc_parameter_value=-1.0),
+        dict(**key, mc_parameter_name="mc_median_rebin", mc_parameter_value=10.0),
+    ]
 
     McParameterSet.Parameter.insert(parameters)

@@ -30,9 +30,9 @@ def format_df_for_slack_message(df):
     for i in column_list:
         df[i] = df[i].astype(str)
         max_len = max([df[i].str.len().max(), len(i)])
-        df[i] = df[i].str.pad(width=max_len, side='right', fillchar='_')
-        column_pad = i.ljust(max_len, '_')
-        df = df.rename(columns={i:column_pad})
+        df[i] = df[i].str.pad(width=max_len, side="right", fillchar="_")
+        column_pad = i.ljust(max_len, "_")
+        df = df.rename(columns={i: column_pad})
 
     df = df.to_string(index=False)
     df = df.replace(" ", " --- ")
@@ -51,21 +51,21 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
     now = datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title #
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":white_check_mark: *Automation pipeline update* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = (
         "*"
@@ -88,7 +88,7 @@ def send_slack_update_notification(webhook_url, base_message, session_info):
     )
     m2["text"] = m2_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2]
     message["text"] = "Automation pipeline update recording:" + str(session_info["recording_id"])
 
@@ -104,21 +104,21 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     if "job_id" not in session_info:
         session_info["job_id"] = "Not a job"
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title #
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":rotating_light: *Automation pipeline error* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = (
         "*Automation pipeline failed for:* \n"
@@ -140,9 +140,9 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     m2["text"] = m2_1
 
     # Error #
-    m3 = dict()
+    m3 = {}
     m3["type"] = "section"
-    m3_1 = dict()
+    m3_1 = {}
     m3_1["type"] = "mrkdwn"
     m3_1["text"] = (
         "*Error info* \n"
@@ -154,7 +154,7 @@ def send_slack_error_notification(webhook_url, error_info, session_info):
     )
     m3["text"] = m3_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep, m3]
     message["text"] = "Automation pipeline error in recording:" + str(session_info["recording_id"])
 
@@ -170,21 +170,21 @@ def send_slack_error_pupillometry_notification(webhook_url, error_info, session_
     if "job_id" not in session_info:
         session_info["job_id"] = "Not a job"
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title #
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":rotating_light: *Automation pipeline error* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = (
         "*Pupillometry pipeline failed for:* \n"
@@ -203,9 +203,9 @@ def send_slack_error_pupillometry_notification(webhook_url, error_info, session_
     m2["text"] = m2_1
 
     # Error #
-    m3 = dict()
+    m3 = {}
     m3["type"] = "section"
-    m3_1 = dict()
+    m3_1 = {}
     m3_1["type"] = "mrkdwn"
     m3_1["text"] = (
         "*Error info* \n"
@@ -217,7 +217,7 @@ def send_slack_error_pupillometry_notification(webhook_url, error_info, session_
     )
     m3["text"] = m3_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep, m3]
     message["text"] = "Pupillometry pipeline error in session"
 
@@ -230,21 +230,21 @@ def send_slack_pupillometry_update_notification(webhook_url, base_message, sessi
     now = datetime.now()
     datestr = now.strftime("%d-%b-%Y %H:%M:%S")
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title #
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
     m1_1["text"] = ":white_check_mark: *Pupillometry pipeline update* on " + datestr + "\n\n"
     m1["text"] = m1_1
 
     # Info #
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
     m2_1["text"] = (
         "*"
@@ -264,7 +264,7 @@ def send_slack_pupillometry_update_notification(webhook_url, base_message, sessi
     )
     m2["text"] = m2_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2]
     message["text"] = "Pupillometry pipeline update"
 

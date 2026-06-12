@@ -12,10 +12,12 @@ Features:
 - Uses the rigs_issues_and_troubleshooting webhook for notifications
 """
 
+import contextlib
 import json
 import logging
 import os
 import sys
+from u19_pipeline.utils.logging_config import get_logger
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -26,11 +28,13 @@ try:
     from u19_pipeline import lab, rig_maintenance, scheduler
     from u19_pipeline.utils import slack_utils as su
 except Exception as e:  # pragma: no cover - only happens when package not available
-    print(f"Error importing modules: {e}")
-    print("Make sure u19_pipeline is properly installed and configured.")
+    # Cannot use logger here since get_logger may not be importable
+    import sys as _sys
+    _sys.stderr.write(f"Error importing modules: {e}\n")
+    _sys.stderr.write("Make sure u19_pipeline is properly installed and configured.\n")
     sys.exit(1)
 
-logger = logging.getLogger("rig_maintenance")
+logger = get_logger(__name__)
 
 
 def setup_logging():
@@ -43,18 +47,12 @@ def setup_logging():
     # Create logs directory in the user's home directory (allow override via env var)
     # Default: ~/.u19_pipeline/logs
     env_log_dir = os.getenv("U19_PIPELINE_LOG_DIR")
-    if env_log_dir:
-        log_dir = Path(env_log_dir)
-    else:
-        log_dir = Path.home() / "u19_pipeline_logs"
+    log_dir = Path(env_log_dir) if env_log_dir else Path.home() / "u19_pipeline_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create log file with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"rig_maintenance_check_{timestamp}.log"
-
-    # Open log file handle
-    log_file_handle = open(log_file, "a", encoding="utf-8")
 
     # Configure standard logging: StreamHandler (console) + FileHandler (file)
     logger = logging.getLogger("rig_maintenance")
@@ -76,7 +74,7 @@ def setup_logging():
     # Prevent messages from also being handled by the root logger
     logger.propagate = False
 
-    return logger, log_file, log_file_handle
+    return logger, log_file
 
 
 def get_slack_webhook():
@@ -200,7 +198,7 @@ def check_overdue_maintenance():
     unique_locations = sorted(set(locations))
 
     # Get all maintenance types and their intervals
-    maintenance_fetch = getattr(rig_maintenance.MaintenanceType, "fetch")
+    maintenance_fetch = rig_maintenance.MaintenanceType.fetch
     maintenance_types = maintenance_fetch(as_dict=True)
 
     # Separate maintenance types by system type
@@ -219,7 +217,7 @@ def check_overdue_maintenance():
 
     rig_loc_query = lab.Location & merged_rig_queries
 
-    rig_loc_fetch = getattr(rig_loc_query, "fetch")
+    rig_loc_fetch = rig_loc_query.fetch
     rig_locations = rig_loc_fetch(as_dict=True)
 
     logger.info(f"🔍 Checking maintenance status as of {current_date}")
@@ -252,7 +250,7 @@ def check_overdue_maintenance():
                 "location": location_name,
                 "maintenance_type": maintenance_type,
             }
-            recent_fetch = getattr(recent_q, "fetch")
+            recent_fetch = recent_q.fetch
             recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
 
             if len(recent_maintenance) == 0:
@@ -277,9 +275,7 @@ def check_overdue_maintenance():
                 if interval_days <= 0:
                     # If the interval is 0 or negative, it is an as-needed maintenance type,
                     # so we only log if there is no record
-                    logger.info(
-                        f"  {maintenance_type:.<30} AS-NEEDED (record exists, no interval) ✅"
-                    )
+                    logger.info(f"  {maintenance_type:.<30} AS-NEEDED (record exists, no interval) ✅")
                 elif days_since_last > interval_days:
                     # Maintenance is overdue
                     days_overdue = days_since_last - interval_days
@@ -330,7 +326,7 @@ def check_overdue_maintenance():
 
     hosting_loc_query = lab.Location & merged_hosting_queries
 
-    hosting_loc_fetch = getattr(hosting_loc_query, "fetch")
+    hosting_loc_fetch = hosting_loc_query.fetch
     hosting_locations = hosting_loc_fetch(as_dict=True)
 
     # Check hosting VMs
@@ -350,7 +346,7 @@ def check_overdue_maintenance():
                 "location": location_name,
                 "maintenance_type": maintenance_type,
             }
-            recent_fetch = getattr(recent_q, "fetch")
+            recent_fetch = recent_q.fetch
             recent_maintenance = recent_fetch("maintenance_date", order_by="maintenance_date DESC", limit=1)
 
             if len(recent_maintenance) == 0:
@@ -531,10 +527,9 @@ def dataframe_to_slack_table_blocks(df: pd.DataFrame, chunk_size: int = 15, **kw
 
 def main():
     """Main function to run the maintenance check."""
-    log_file_handle = None
     try:
         # Set up logging
-        _, log_file, log_file_handle = setup_logging()
+        _, log_file = setup_logging()
 
         logger.info("🔧 Rig Maintenance Status Checker")
         logger.info("=" * 60)
@@ -548,7 +543,7 @@ def main():
 
         records = pd.DataFrame(overdue_items)
         records.columns = [" ".join(w.capitalize() for w in col.split("_")) for col in records.columns]
-        print(records)
+        logger.info("records\n%s", records)
 
         records = records[["Location", "Maintenance Type", "Status"]]
 
@@ -608,12 +603,10 @@ def main():
         logger.exception(f"❌ Error during maintenance check: {e}")
         sys.exit(1)
     finally:
-        # Close the log file handle
-        if log_file_handle:
-            try:
-                log_file_handle.close()
-            except Exception:
-                pass
+        # Close any file handlers to flush logs
+        for handler in logging.getLogger("rig_maintenance").handlers[:]:
+            with contextlib.suppress(Exception):
+                handler.close()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 import datajoint as dj
-from u19_pipeline import lab, task, subject
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'acquisition')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "acquisition")
 
 
 @schema

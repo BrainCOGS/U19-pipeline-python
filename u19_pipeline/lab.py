@@ -229,11 +229,35 @@ class Path(dj.Lookup):
 
     contents = [
         ["/Bezos-center", "windows", "Y:", r"\\cup.pni.princeton.edu\Bezos-center", ""],
-        ["/Bezos-center", "mac", "/Volumes/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
-        ["/Bezos-center", "linux", "/mnt/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
+        [
+            "/Bezos-center",
+            "mac",
+            "/Volumes/Bezos-center",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
+        [
+            "/Bezos-center",
+            "linux",
+            "/mnt/Bezos-center",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
         ["/braininit", "windows", "Z:", r"\\cup.pni.princeton.edu\braininit", ""],
-        ["/braininit", "mac", "/Volumes/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
-        ["/braininit", "linux", "/mnt/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
+        [
+            "/braininit",
+            "mac",
+            "/Volumes/braininit",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
+        [
+            "/braininit",
+            "linux",
+            "/mnt/braininit",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
     ]
 
     def get_local_path(self, path, local_os=None):
@@ -282,11 +306,7 @@ class Path(dj.Lookup):
                     path = os.path.join(mapping[i, local], path[n + 1 :])
                     break
 
-        if os.path.sep == "\\" and local_os.lower() != "glo":
-            path = path.replace("/", "\\")
-
-        else:
-            path = path.replace("\\", "/")
+        path = path.replace("/", "\\") if os.path.sep == "\\" and local_os.lower() != "glo" else path.replace("\\", "/")
 
         return path
 

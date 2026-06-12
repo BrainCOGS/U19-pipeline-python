@@ -125,6 +125,7 @@ class InputOutputProfileList(dj.Manual):
     check_type                 : enum('Mandatory','Optional') # Prevent training if missing this input/output
     """
 
+
 @schema
 class RigStatus(dj.Manual):
     definition = """
@@ -136,6 +137,7 @@ class RigStatus(dj.Manual):
     -> [nullable] scheduler.RigIOTechReport
     last_status_update   : datetime                     # at what time status changed
     """
+
 
 @schema
 class Shift(dj.Lookup):

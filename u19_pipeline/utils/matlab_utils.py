@@ -1,24 +1,22 @@
 """Authors: Ben Dichter, Cody Baker."""
+
 import os
 import sys
+from collections.abc import Iterable, Sequence
+from datetime import datetime
 from pathlib import Path
 from shutil import which
-import pandas as pd
 
 import numpy as np
-from datetime import datetime
+
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+import pandas as pd
+from numpy import ndarray
 from scipy.io import loadmat, matlab
-from collections.abc import Iterable
 
-
-try:
-    from typing import ArrayLike
-except ImportError:
-    from numpy import ndarray
-    from typing import Union, Sequence
-
-    # adapted from numpy typing
-    ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
+ArrayLike = bool | int | float | complex | list | ndarray | Sequence
 
 
 def check_module(nwbfile, name, description=None):
@@ -48,7 +46,7 @@ def find_discontinuities(tt, factor=10000):
 
     if len(before_jumps):
         out = np.array([tt[0], tt[before_jumps[0]]])
-        for i, j in zip(before_jumps, before_jumps[1:]):
+        for i, j in zip(before_jumps, before_jumps[1:], strict=False):
             out = np.vstack((out, [tt[i + 1], tt[j]]))
         out = np.vstack((out, [tt[before_jumps[-1] + 1], tt[-1]]))
         return out
@@ -59,7 +57,7 @@ def find_discontinuities(tt, factor=10000):
 def mat_obj_to_dict(mat_struct):
     """Recursive function to convert nested matlab struct objects to dictionaries."""
     dict_from_struct = {}
-    for field_name in mat_struct.__dict__['_fieldnames']:
+    for field_name in mat_struct.__dict__["_fieldnames"]:
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
             dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
@@ -85,8 +83,7 @@ def mat_obj_to_array(mat_struct_array):
 
 def has_struct(mat_struct_array):
     """Determines if a matlab cell array contains any mat objects."""
-    return any(
-        isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
+    return any(isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
 
 
 def convert_mat_file_to_dict(mat_file_name):
@@ -133,7 +130,7 @@ def flatten_nested_dict(nested_dict):
         if isinstance(v, dict):
             if v:
                 flatten_sub_dict = flatten_nested_dict(v).items()
-                flatten_dict.update({k2: v2 for k2, v2 in flatten_sub_dict})
+                flatten_dict.update(dict(flatten_sub_dict))
             else:
                 flatten_dict[k] = np.array([])
         else:
@@ -144,8 +141,8 @@ def flatten_nested_dict(nested_dict):
 
 def convert_function_handle_to_str(mat_file_path):
     """Executes a matlab script which converts function handle values to str
-     if matlab is installed on the system."""
-    matlab_class = '''
+    if matlab is installed on the system."""
+    matlab_class = """
     classdef Choice < uint32
   
         enumeration
@@ -179,8 +176,8 @@ def convert_function_handle_to_str(mat_file_path):
         end
   
     end
-    '''
-    matlab_code = r'''
+    """
+    matlab_code = r"""
 
     %Support when behavioral files has 2 "versions"
     if length(log.version) > 1
@@ -230,49 +227,49 @@ def convert_function_handle_to_str(mat_file_path):
     fclose(fid);
     
     quit;
-    '''
+    """
 
-    with Path('Choice.m').open('w') as f:
+    with Path("Choice.m").open("w") as f:
         f.write(matlab_class)
 
     metadata = {}
     convert_script_code = f"filePath = '{mat_file_path}';\nload(filePath);{matlab_code}"
     convert_script_path = Path("convert_function_to_txt.m")
 
-    with convert_script_path.open('w') as f:
+    with convert_script_path.open("w") as f:
         f.write(convert_script_code)
 
-    if 'win' in sys.platform and sys.platform != 'darwin':
-        matlab_cmd = '''
+    if "win" in sys.platform and sys.platform != "darwin":
+        matlab_cmd = """
                      #!/bin/bash
                      matlab -nosplash -wait -log -r convert_function_to_txt
-                     '''
+                     """
     else:
-        matlab_cmd = '''
+        matlab_cmd = """
                      #!/bin/bash
                      matlab -nosplash -nodisplay -log -r convert_function_to_txt
-                     '''
+                     """
 
-    if which('matlab') is not None:
+    if which("matlab") is not None:
         try:
             os.system(matlab_cmd)
-        
-            with open("trial_choice.txt", "r") as f:
+
+            with open("trial_choice.txt") as f:
                 trial_choice = f.read().splitlines()
-            with open("trial_type.txt", "r") as f:
+            with open("trial_type.txt") as f:
                 trial_type = f.read().splitlines()
-            with open("shaping_protocol.txt", "r") as f:
+            with open("shaping_protocol.txt") as f:
                 shaping_protocol = f.read().splitlines()
-            with open("code_version.txt", "r") as f:
+            with open("code_version.txt") as f:
                 version = f.readline()
-            with open("protocol.txt", "r") as f:
+            with open("protocol.txt") as f:
                 protocol = f.readline()
 
-            metadata['experiment_name'] = version
-            metadata['protocol_name'] = protocol
-            metadata['trial_choice'] = trial_choice
-            metadata['trial_type'] = trial_type
-            metadata['shaping_protocol'] = shaping_protocol
+            metadata["experiment_name"] = version
+            metadata["protocol_name"] = protocol
+            metadata["trial_choice"] = trial_choice
+            metadata["trial_type"] = trial_type
+            metadata["shaping_protocol"] = shaping_protocol
 
             os.remove("code_version.txt")
             os.remove("protocol.txt")
@@ -281,15 +278,18 @@ def convert_function_handle_to_str(mat_file_path):
             os.remove("shaping_protocol.txt")
 
         except Exception as e:
-            print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
+            logger.error("There was an error while trying to execute %s: %s", convert_script_path, e)
     else:
-        print("A working matlab version was not found. "
-              "Code version, animal protocol, type of trial, and choice could not be saved to NWB.")
+        logger.warning(
+            "A working matlab version was not found. "
+            "Code version, animal protocol, type of trial, and choice could not be saved to NWB."
+        )
 
     os.remove("Choice.m")
     os.remove("convert_function_to_txt.m")
 
     return metadata
+
 
 def convert_towers_block_trial_2_df(current_block_trial, block_num):
     """
@@ -302,25 +302,26 @@ def convert_towers_block_trial_2_df(current_block_trial, block_num):
     -------
     pandas.DataFrame
     """
-    
+
     valid_block = 0
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
     if isinstance(current_block_trial, np.ndarray) and current_block_trial.shape[0] > 0:
         current_block_trial = current_block_trial.tolist()
-        valid_block = 1 
+        valid_block = 1
     # One trial blocks are stored as dictionaries
     if isinstance(current_block_trial, dict):
         current_block_trial = [current_block_trial]
-        valid_block = 1 
+        valid_block = 1
 
     if valid_block:
         block_trial_df = pd.DataFrame(current_block_trial)
-        block_trial_df.insert(loc=0, column='trial_idx', value=np.arange(len(block_trial_df))+1)
-        block_trial_df.insert(loc=0, column='block', value=block_num)
+        block_trial_df.insert(loc=0, column="trial_idx", value=np.arange(len(block_trial_df)) + 1)
+        block_trial_df.insert(loc=0, column="block", value=block_num)
     else:
         block_trial_df = pd.DataFrame()
 
     return valid_block, block_trial_df
+
 
 def convert_towers_block_2_df(current_block, num_block):
     """
@@ -336,18 +337,18 @@ def convert_towers_block_2_df(current_block, num_block):
     valid_block = 0
 
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-    if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
+    if isinstance(current_block, np.ndarray) and current_block.shape[0] > 0:
         current_block = current_block.tolist()
-        valid_block = 1 
+        valid_block = 1
     # One trial blocks are stored as dictionaries
     if isinstance(current_block, dict):
         current_block = [current_block]
-        valid_block = 1 
+        valid_block = 1
 
     if valid_block:
         block_df = pd.DataFrame(current_block)
-        block_df.insert(loc=0, column='block', value=num_block)
-        block_df = block_df.drop(['trial'], axis=1)
+        block_df.insert(loc=0, column="block", value=num_block)
+        block_df = block_df.drop(["trial"], axis=1)
     else:
         block_df = pd.DataFrame()
 
@@ -367,53 +368,48 @@ def convert_behavior_file(mat_file):
 
     matin = convert_mat_file_to_dict(mat_file)
     converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
-    if bool(converted_metadata):
-        metadata_read = True
-    else:
-        metadata_read = False
+    metadata_read = bool(bool(converted_metadata))
 
     session_block_trial_df = pd.DataFrame()
 
-    #Convert all blocks trials to dataframe and append them
+    # Convert all blocks trials to dataframe and append them
 
-    #For a single block sessions
-    if isinstance(matin['log']['block'], dict):
+    # For a single block sessions
+    if isinstance(matin["log"]["block"], dict):
         length_blocks = 1
         dict_block = 1
-    #For multiple block sessions
+    # For multiple block sessions
     else:
-        length_blocks = matin['log']['block'].shape[0]
+        length_blocks = matin["log"]["block"].shape[0]
         dict_block = 0
 
-    #Convert all blocks of the session
+    # Convert all blocks of the session
     num_blocks_conv = 0
     for i in range(length_blocks):
+        block = matin["log"]["block"] if dict_block else matin["log"]["block"][i]
 
-        if dict_block:
-            block = matin['log']['block']
-        else:
-            block = matin['log']['block'][i]
-
-        #Convert trial df and block df
-        valid_block, block_trial_df = convert_towers_block_trial_2_df(block['trial'],i+1)
-        valid_blocks, block_df = convert_towers_block_2_df(block, i+1)
-        #Write string of block level Protocol  (from matlab obscured data)
+        # Convert trial df and block df
+        valid_block, block_trial_df = convert_towers_block_trial_2_df(block["trial"], i + 1)
+        valid_blocks, block_df = convert_towers_block_2_df(block, i + 1)
+        # Write string of block level Protocol  (from matlab obscured data)
         if metadata_read:
-            block_df['shapingProtocol'] = converted_metadata['shaping_protocol'][i]
+            block_df["shapingProtocol"] = converted_metadata["shaping_protocol"][i]
 
         if valid_block and valid_blocks:
-            session_current_block_trial_df = block_trial_df.merge(block_df, on='block', suffixes=['_block', '_trial'])
+            session_current_block_trial_df = block_trial_df.merge(block_df, on="block", suffixes=["_block", "_trial"])
             if num_blocks_conv == 0:
                 session_block_trial_df = session_current_block_trial_df.copy()
             else:
-                session_block_trial_df = pd.concat([session_block_trial_df, session_current_block_trial_df],ignore_index=True)
-            num_blocks_conv +=1
+                session_block_trial_df = pd.concat(
+                    [session_block_trial_df, session_current_block_trial_df],
+                    ignore_index=True,
+                )
+            num_blocks_conv += 1
 
-
-    #Write choice and trial type of each trial (from matlab obscured data)
+    # Write choice and trial type of each trial (from matlab obscured data)
     if metadata_read:
-        session_block_trial_df['choice'] = converted_metadata['trial_choice']
-        session_block_trial_df['trialType'] = converted_metadata['trial_type']
-        
+        session_block_trial_df["choice"] = converted_metadata["trial_choice"]
+        session_block_trial_df["trialType"] = converted_metadata["trial_type"]
+
     session_block_trial_df = session_block_trial_df.reset_index(drop=True)
     return session_block_trial_df

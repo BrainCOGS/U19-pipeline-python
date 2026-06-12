@@ -14,7 +14,12 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
-from u19_pipeline.utils.subject_metadata import fetch_slack_handles_for_lab_managers_by_subject
+from u19_pipeline.utils.subject_metadata import (
+    fetch_slack_handles_for_lab_managers_by_subject,
+)
+from u19_pipeline.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 slack_configuration_dictionary = {
     "slack_notification_channel": ["subject_health"],
@@ -25,7 +30,7 @@ QUERY_FILE = pathlib.Path(pathlib.Path(__file__).resolve().parent, "get_subject_
 
 
 def get_subject_data():
-    with open(QUERY_FILE, "r", encoding="utf-8") as file:
+    with open(QUERY_FILE, encoding="utf-8") as file:
         subject_query = file.read()
 
     conn = dj.conn()
@@ -90,7 +95,10 @@ def get_subject_data():
     subject_data.loc[subject_data["need_extra_water_now"] == 1, "water_status"] = "Need Extra Supplement"
 
     subject_data["need_water"] = 0
-    subject_data.loc[(subject_data["need_supplement"] | subject_data["need_extra_water_now"]), "need_water"] = 1
+    subject_data.loc[
+        (subject_data["need_supplement"] | subject_data["need_extra_water_now"]),
+        "need_water",
+    ] = 1
 
     subject_data["current_need_water"] = subject_data["suggested_water"]
     subject_data.loc[subject_data["need_extra_water_now"] == 1, "current_need_water"] = subject_data.loc[
@@ -136,7 +144,12 @@ def fetch_and_parse_icalevents(weburl: str):
         (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
         (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
         (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
-        (r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at", "VR Brody Mice", "purple", " VR with Brody (Mice)"),
+        (
+            r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at",
+            "VR Brody Mice",
+            "purple",
+            " VR with Brody (Mice)",
+        ),
     ]
 
     filtered_events: list[dict[str, str | int]] = []
@@ -210,7 +223,7 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         (lab.LabManager().proj("lab", "lab_manager") & 'lab = "technician"')
         * lab.User().proj(lab_manager="user_id", manager_slack="slack")
     ).fetch("manager_slack", as_dict=True)
-    print(technician_manager_slack)
+    logger.debug("technician_manager_slack %s", technician_manager_slack)
     technician_manager_slack = [item["manager_slack"] for item in technician_manager_slack]
 
     people_and_their_managers: pd.DataFrame = people_and_their_managers_query.fetch(format="frame")
@@ -259,7 +272,7 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
 
     def resolve_responsible_slack(row):
         schedule_today = row.get("schedule_today")
-        lab_name = row.get("lab")
+        row.get("lab")
 
         token = str(schedule_today).strip() if schedule_today is not None else None
         use_coowners = (token is None) or (token.lower() == "transport") or (token.lower() == "nothing")
@@ -322,13 +335,15 @@ def slack_alert_message_format_weight_water(
     individual_alert: bool = False,
 ):
 
-    print(missing_transport)
+    logger.debug("missing_transport %s", missing_transport)
     temp_missing_transport = missing_transport.copy().reset_index()
-    notifiable_subjects = list(set(
-        temp_missing_transport["subject_fullname"].tolist()
-        + subjects_not_watered["subject_fullname"].tolist()
-        + subjects_not_weighted["subject_fullname"].tolist()
-    ))
+    notifiable_subjects = list(
+        set(
+            temp_missing_transport["subject_fullname"].tolist()
+            + subjects_not_watered["subject_fullname"].tolist()
+            + subjects_not_weighted["subject_fullname"].tolist()
+        )
+    )
 
     slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(notifiable_subjects)
     lab_manager_text = "\n\n"
@@ -343,22 +358,22 @@ def slack_alert_message_format_weight_water(
             " " + slack_handles_formatted + ", please be advised that your labs' subjects are listed below."
         )
 
-    msep = dict()
+    msep = {}
     msep["type"] = "divider"
 
     # Title#
-    m1 = dict()
+    m1 = {}
     m1["type"] = "section"
-    m1_1 = dict()
+    m1_1 = {}
     m1_1["type"] = "mrkdwn"
 
     m1_1["text"] = ":rotating_light: *Subjects Status Alert *" + lab_manager_text
     m1["text"] = m1_1
 
     # Info for subjects missing water
-    m2 = dict()
+    m2 = {}
     m2["type"] = "section"
-    m2_1 = dict()
+    m2_1 = {}
     m2_1["type"] = "mrkdwn"
 
     if subjects_not_watered.empty:
@@ -388,9 +403,9 @@ def slack_alert_message_format_weight_water(
     m2["text"] = m2_1
 
     # Info for subjects missing weighing
-    m4 = dict()
+    m4 = {}
     m4["type"] = "section"
-    m4_1 = dict()
+    m4_1 = {}
     m4_1["type"] = "mrkdwn"
 
     if subjects_not_weighted.empty:
@@ -421,9 +436,9 @@ def slack_alert_message_format_weight_water(
     m4["text"] = m4_1
 
     # Info for subjects missing training
-    m5 = dict()
+    m5 = {}
     m5["type"] = "section"
-    m5_1 = dict()
+    m5_1 = {}
     m5_1["type"] = "mrkdwn"
 
     if subjects_not_trained.empty:
@@ -441,9 +456,9 @@ def slack_alert_message_format_weight_water(
     m5["text"] = m5_1
 
     # Info for missing transport
-    m6 = dict()
+    m6 = {}
     m6["type"] = "section"
-    m6_1 = dict()
+    m6_1 = {}
     m6_1["type"] = "mrkdwn"
 
     if missing_transport.empty:
@@ -472,7 +487,7 @@ def slack_alert_message_format_weight_water(
             m6_1["text"] += line + "\n"
     m6["text"] = m6_1
 
-    message = dict()
+    message = {}
     message["blocks"] = [m1, msep, m2, msep, m4, msep, m5, msep, m6, msep]
     # msg_groups = [m1, m2, m4, m5, m6]
     msg_groups = [m2]
@@ -539,7 +554,7 @@ def split_text_to_fit(text: str, max_payload_size: int, text_type: str = "mrkdwn
                 if _estimate_section_size(line, text_type) > max_payload_size:
                     # Single line too big - this shouldn't happen often, but handle it
                     # by truncating (better than crashing)
-                    print("Warning: Single line too large, may be truncated")
+                    logger.warning("Warning: Single line too large, may be truncated")
             else:
                 # Even first line doesn't fit - add it anyway (will be handled later)
                 current_lines = [line]
@@ -647,7 +662,7 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                             su.send_slack_notification(webhook, {"blocks": [small_block]})
                             time.sleep(0.5)
                         except HTTPError:
-                            print("Failed to send block even after splitting")
+                            logger.error("Failed to send block even after splitting")
                 else:
                     raise
         else:
@@ -658,7 +673,7 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                     su.send_slack_notification(webhook, {"blocks": [small_block]})
                     time.sleep(0.5)
                 except HTTPError:
-                    print("Failed to send small block")
+                    logger.error("Failed to send small block")
 
 
 def main_water_weigh_alert():
@@ -672,21 +687,22 @@ def main_water_weigh_alert():
 
     subject_data = subject_data.loc[~subject_data["subject_fullname"].str.contains("test"), :]
     subjects_not_watered = subject_data.loc[
-        subject_data["current_need_water"] > 0, ["subject_fullname", "current_need_water", "responsible_slack_tags"]
+        subject_data["current_need_water"] > 0,
+        ["subject_fullname", "current_need_water", "responsible_slack_tags"],
     ]
     subjects_not_watered = subjects_not_watered.reset_index(drop=True)
     subjects_not_watered["current_need_water"] = subjects_not_watered["current_need_water"].apply(lambda x: f"{x:.1f}")
     # subjects_not_watered = subjects_not_watered.head()
 
     subjects_not_weighted = subject_data.loc[
-        subject_data["need_weight"], ["subject_fullname", "need_weight", "responsible_slack_tags"]
+        subject_data["need_weight"],
+        ["subject_fullname", "need_weight", "responsible_slack_tags"],
     ]
     subjects_not_weighted = subjects_not_weighted.reset_index(drop=True)
     # subjects_not_weighted = subjects_not_weighted.head()
 
     subjects_not_trained = subject_data.loc[
-        (subject_data["training_status"] == 1)
-        & (subject_data["schedule_today"].str.lower() != "water"),
+        (subject_data["training_status"] == 1) & (subject_data["schedule_today"].str.lower() != "water"),
         ["subject_fullname", "scheduled_rig"],
     ]
     subjects_not_trained = subjects_not_trained.reset_index(drop=True)
@@ -705,9 +721,11 @@ def main_water_weigh_alert():
 
     # Send alert
     slack_json_messages = slack_alert_message_format_weight_water(
-        subjects_not_watered, subjects_not_weighted, subjects_not_trained, missing_transport=subject_not_returned
+        subjects_not_watered,
+        subjects_not_weighted,
+        subjects_not_trained,
+        missing_transport=subject_not_returned,
     )
-
 
     # Send each message's blocks safely (splitting large blocks as needed)
     for this_webhook in webhooks_list:
