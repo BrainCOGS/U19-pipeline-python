@@ -21,6 +21,22 @@ log = logging.getLogger(__name__)
 # NOTE: u19 plugin imports are inside task bodies (TODO stubs) so the DAG
 # parses even when plugins/ is not on PYTHONPATH at collection time.
 
+# recording_process.Processing.status_processing_id values these tasks
+# dual-write — mirror of u19_pipeline.automatic_job.params_config
+# (recording_process_status_dict). Kept as named constants here so each task's
+# dual_write_status(...) call is explicit; the implementation should import
+# these from params_config rather than redeclaring, to stay in sync.
+STATUS_ERROR = -1
+STATUS_NEW = 0
+STATUS_TRANSFER_REQUEST = 1  # RAW_FILE_TRANSFER_REQUEST
+STATUS_RAW_TRANSFER_STARTED = 1
+STATUS_RAW_TRANSFER_DONE = 2  # RAW_FILE_TRANSFER_END
+STATUS_SLURM_SUBMITTED = 3  # JOB_QUEUE
+STATUS_SLURM_DONE = 4  # JOB_FINISHED
+STATUS_PROC_TRANSFER_STARTED = 5  # PROC_FILE_TRANSFER_REQUEST
+STATUS_PROC_TRANSFER_DONE = 6  # PROC_FILE_TRANSFER_END
+STATUS_COMPLETE = 7  # JOB_FINISHED_ELEMENT_WORKFLOW
+
 default_args = {
     "owner": "u19",
     "retries": 1,
