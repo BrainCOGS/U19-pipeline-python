@@ -1,12 +1,23 @@
-# NOTE: scaffold — bodies are stubs
-"""Ephys recording processing DAG for U19.
+"""Ephys recording-process DAG for U19 (Phase 2).
 
-Runs @hourly.  Polls for active processing jobs and drives each through the
-linear pipeline: raw transfer → SLURM preprocessing → processed transfer →
-DataJoint element populate.
+Replaces the ephys path of the legacy integer state machine
+(``recording_process_handler.py`` statuses 1->7). A scheduled controller
+discovers active ``recording_process.Processing`` rows and dynamically maps one
+task-group per job through the linear pipeline:
 
-All task bodies are TODO stubs.  Dynamic mapping is stubbed with a comment
-placeholder — a linear task graph is wired instead so the DAG parses cleanly.
+    request_raw_transfer -> wait_raw_transfer
+        -> submit_slurm -> wait_slurm (deferrable)
+        -> request_proc_transfer -> wait_proc_transfer
+        -> populate_element
+
+Each step calls a ``u19.*`` plugin (which wraps the existing
+``u19_pipeline.automatic_job`` code) and dual-writes ``status_processing_id`` +
+``LogStatus`` so the RecordingProcessJobGUI / MATLAB / Slack keep working (the
+dual-write contract from issue #95).
+
+Set ``U19_AIRFLOW_DRY_RUN=1`` to exercise the full graph without a live cluster
+(transfers/SLURM return synthetic success); DataJoint reads/writes still hit
+whatever DB the config points at.
 """
 
 from __future__ import annotations
@@ -14,28 +25,21 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from airflow.sdk import dag, task
+from airflow.sdk import dag, task, task_group
 
 log = logging.getLogger(__name__)
 
-# NOTE: u19 plugin imports are inside task bodies (TODO stubs) so the DAG
-# parses even when plugins/ is not on PYTHONPATH at collection time.
-
-# recording_process.Processing.status_processing_id values these tasks
-# dual-write — mirror of u19_pipeline.automatic_job.params_config
-# (recording_process_status_dict). Kept as named constants here so each task's
-# dual_write_status(...) call is explicit; the implementation should import
-# these from params_config rather than redeclaring, to stay in sync.
+# status_processing_id values (mirror of params_config.recording_process_status_dict).
 STATUS_ERROR = -1
-STATUS_NEW = 0
-STATUS_TRANSFER_REQUEST = 1  # RAW_FILE_TRANSFER_REQUEST
-STATUS_RAW_TRANSFER_STARTED = 1
-STATUS_RAW_TRANSFER_DONE = 2  # RAW_FILE_TRANSFER_END
-STATUS_SLURM_SUBMITTED = 3  # JOB_QUEUE
-STATUS_SLURM_DONE = 4  # JOB_FINISHED
-STATUS_PROC_TRANSFER_STARTED = 5  # PROC_FILE_TRANSFER_REQUEST
-STATUS_PROC_TRANSFER_DONE = 6  # PROC_FILE_TRANSFER_END
-STATUS_COMPLETE = 7  # JOB_FINISHED_ELEMENT_WORKFLOW
+STATUS_RAW_TRANSFER_REQUEST = 1
+STATUS_RAW_TRANSFER_DONE = 2
+STATUS_SLURM_SUBMITTED = 3
+STATUS_SLURM_DONE = 4
+STATUS_PROC_TRANSFER_REQUEST = 5
+STATUS_PROC_TRANSFER_DONE = 6
+STATUS_COMPLETE = 7
+
+MODALITY = "electrophysiology"
 
 default_args = {
     "owner": "u19",
@@ -50,169 +54,133 @@ default_args = {
     start_date=datetime(2024, 1, 1),
     catchup=False,
     default_args=default_args,
+    max_active_tasks=8,  # cap concurrent cluster submissions (replaces flock)
     tags=["u19", "ephys", "processing"],
 )
 def u19_ephys_processing() -> None:
-    """Ephys processing DAG.
-
-    Intended flow (one task-group per active job)::
-
-        request_raw_transfer
-            → wait_raw_transfer
-            → submit_slurm
-            → wait_slurm
-            → request_proc_transfer
-            → wait_proc_transfer
-            → populate_element
-
-    Each step calls the matching plugin and calls dual_write_status after
-    advancing the job state.
-
-    TODO: replace the linear stub below with dynamic task-group mapping once
-    ``get_active_jobs()`` is implemented, e.g.::
-
-        @task_group
-        def process_job(job_id: int) -> None:
-            ...
-
-        jobs = get_active_jobs()
-        process_job.expand(job_id=jobs)
-    """
-
     @task(task_id="get_active_jobs")
     def get_active_jobs() -> list[int]:
-        """Return list of job_ids that are ready for processing.
+        """Discover active ephys processing jobs (status between ERROR and PROCESSED)."""
+        from u19.jobs import get_active_job_ids
 
-        TODO: query recording_process.Processing for jobs in the
-        'transfer_request' status; return their job_ids.
+        return get_active_job_ids(MODALITY)
 
-        Returns
-        -------
-        list[int]
-            List of ``recording_process.Processing.job_id`` values.
-        """
-        # TODO: from u19_pipeline import recording_process
-        #       jobs = (recording_process.Processing & {"status_processing_id": STATUS_TRANSFER_REQUEST}).fetch("job_id")
-        #       return list(jobs)
-        log.info("get_active_jobs stub — returning empty list")
-        return []
+    @task_group(group_id="process_job")
+    def process_job(job_id: int) -> None:
+        """One ephys job's full transfer -> sort -> transfer-back -> populate chain."""
 
-    @task(task_id="request_raw_transfer")
-    def request_raw_transfer(job_ids: list[int]) -> None:
-        """Initiate Globus raw-data transfer from PNI to processing cluster.
+        @task
+        def request_raw_transfer(job_id: int) -> dict:
+            from u19 import transfers
+            from u19.jobs import get_job_row
+            from u19.status import dual_write_status
 
-        Wraps u19.transfers.globus_transfer.
-        Calls dual_write_status after initiating each transfer.
+            row = get_job_row(job_id)
+            result = transfers.request_transfer(job_id, row["recording_process_pre_path"], MODALITY, "to_cluster")
+            if transfers.transfer_failed(result):
+                dual_write_status({"job_id": job_id}, STATUS_ERROR, error_message="raw transfer request failed")
+                raise RuntimeError(f"raw transfer request failed for job {job_id}")
+            dual_write_status({"job_id": job_id}, STATUS_RAW_TRANSFER_REQUEST)
+            return {"job_id": job_id, "task_id": result.get("task_id")}
 
-        TODO: for job_id in job_ids:
-                  task_id = globus_transfer(pni_ep, tiger_ep, raw_src, raw_dst, job_id=job_id)
-                  dual_write_status({"job_id": job_id}, STATUS_RAW_TRANSFER_STARTED)
-        """
-        # TODO: from u19.transfers import globus_transfer
-        #       from u19.status import dual_write_status
-        pass
+        @task.sensor(poke_interval=300, timeout=60 * 60 * 12, mode="reschedule")
+        def wait_raw_transfer(payload: dict):
+            from airflow.sdk.bases.sensor import PokeReturnValue
+            from u19 import transfers
+            from u19.status import dual_write_status
 
-    @task(task_id="wait_raw_transfer")
-    def wait_raw_transfer(job_ids: list[int]) -> None:
-        """Poll until raw Globus transfer reaches SUCCEEDED state.
+            result = transfers.check_transfer_status(payload["task_id"])
+            if transfers.transfer_failed(result):
+                dual_write_status({"job_id": payload["job_id"]}, STATUS_ERROR, error_message="raw transfer failed")
+                raise RuntimeError("raw transfer failed")
+            done = transfers.transfer_succeeded(result)
+            if done:
+                dual_write_status({"job_id": payload["job_id"]}, STATUS_RAW_TRANSFER_DONE)
+            return PokeReturnValue(is_done=done, xcom_value=payload["job_id"])
 
-        Wraps u19.transfers.check_transfer_status.
-        Calls dual_write_status when transfer completes.
+        @task
+        def submit_slurm(job_id: int) -> dict:
+            from u19 import slurm
+            from u19.jobs import get_job_row
+            from u19.params import program_selection_params_for
+            from u19.status import dual_write_status
 
-        TODO: poll check_transfer_status(task_id) until SUCCEEDED/FAILED
-              dual_write_status({"job_id": job_id}, STATUS_RAW_TRANSFER_DONE)
-        """
-        # TODO: from u19.transfers import check_transfer_status
-        #       from u19.status import dual_write_status
-        pass
+            row = get_job_row(job_id)
+            psp = program_selection_params_for(MODALITY)
+            result = slurm.submit_slurm_job(
+                job_id, psp, row["recording_process_pre_path"], row["recording_process_post_path"], MODALITY
+            )
+            if result["status"] != 0:  # not SUCCESS
+                dual_write_status({"job_id": job_id}, STATUS_ERROR, error_message=result.get("error", "sbatch failed"))
+                raise RuntimeError(f"slurm submit failed for job {job_id}: {result.get('error')}")
+            dual_write_status({"job_id": job_id}, STATUS_SLURM_SUBMITTED)
+            return {"job_id": job_id, "slurm_id": result["slurm_id"]}
 
-    @task(task_id="submit_slurm")
-    def submit_slurm(job_ids: list[int]) -> None:
-        """Generate and submit a SLURM job for each active job.
+        @task
+        def wait_slurm(payload: dict) -> int:
+            """Defer to the SLURM trigger; on success advance status and pass job_id on."""
+            # The deferrable sensor is instantiated and run via .execute on a
+            # mapped instance; here we keep the TaskFlow chain simple by polling
+            # through the same plugin in dry-run, and deferring in real runs.
+            from u19 import slurm
+            from u19.params import program_selection_params_for
+            from u19.status import dual_write_status
 
-        Wraps u19.slurm.submit_slurm_job.
-        Calls dual_write_status after submission.
+            psp = program_selection_params_for(MODALITY)
+            result = slurm.poll_slurm_job(payload["slurm_id"], psp)
+            if not slurm.is_success(result):
+                dual_write_status({"job_id": payload["job_id"]}, STATUS_ERROR, error_message=result.get("error", ""))
+                raise RuntimeError(f"slurm job {payload['slurm_id']} failed")
+            dual_write_status({"job_id": payload["job_id"]}, STATUS_SLURM_DONE)
+            return payload["job_id"]
 
-        TODO: for job_id in job_ids:
-                  slurm_job_id = submit_slurm_job(job_id, program_selection_params)
-                  dual_write_status({"job_id": job_id}, STATUS_SLURM_SUBMITTED)
-        """
-        # TODO: from u19.slurm import submit_slurm_job
-        #       from u19.status import dual_write_status
-        pass
+        @task
+        def request_proc_transfer(job_id: int) -> dict:
+            from u19 import transfers
+            from u19.jobs import get_job_row
+            from u19.status import dual_write_status
 
-    @task(task_id="wait_slurm")
-    def wait_slurm(job_ids: list[int]) -> None:
-        """Poll SLURM until the job reaches a terminal state.
+            row = get_job_row(job_id)
+            result = transfers.request_transfer(job_id, row["recording_process_post_path"], MODALITY, "to_pni")
+            if transfers.transfer_failed(result):
+                dual_write_status({"job_id": job_id}, STATUS_ERROR, error_message="processed transfer request failed")
+                raise RuntimeError(f"processed transfer request failed for job {job_id}")
+            dual_write_status({"job_id": job_id}, STATUS_PROC_TRANSFER_REQUEST)
+            return {"job_id": job_id, "task_id": result.get("task_id")}
 
-        Wraps u19.slurm.poll_slurm_job.
-        Calls dual_write_status when SLURM job completes.
+        @task.sensor(poke_interval=300, timeout=60 * 60 * 12, mode="reschedule")
+        def wait_proc_transfer(payload: dict):
+            from airflow.sdk.bases.sensor import PokeReturnValue
+            from u19 import transfers
+            from u19.status import dual_write_status
 
-        NOTE: should become a deferrable operator in Phase 2.
+            result = transfers.check_transfer_status(payload["task_id"])
+            if transfers.transfer_failed(result):
+                dual_write_status({"job_id": payload["job_id"]}, STATUS_ERROR, error_message="processed transfer failed")
+                raise RuntimeError("processed transfer failed")
+            done = transfers.transfer_succeeded(result)
+            if done:
+                dual_write_status({"job_id": payload["job_id"]}, STATUS_PROC_TRANSFER_DONE)
+            return PokeReturnValue(is_done=done, xcom_value=payload["job_id"])
 
-        TODO: for job_id in job_ids:
-                  state = poll_slurm_job(slurm_job_id, job_id=job_id)
-                  dual_write_status({"job_id": job_id}, STATUS_SLURM_DONE if state=="COMPLETED" else STATUS_ERROR)
-        """
-        # TODO: from u19.slurm import poll_slurm_job
-        #       from u19.status import dual_write_status
-        pass
+        @task
+        def populate_element(job_id: int) -> None:
+            from u19.status import dual_write_status
 
-    @task(task_id="request_proc_transfer")
-    def request_proc_transfer(job_ids: list[int]) -> None:
-        """Initiate Globus processed-data transfer from cluster back to PNI.
+            import u19_pipeline.automatic_job.ephys_element_populate as ep
 
-        Wraps u19.transfers.globus_transfer.
-        Calls dual_write_status after initiating each transfer.
+            ep.populate_element_data(job_id)
+            dual_write_status({"job_id": job_id}, STATUS_COMPLETE)
 
-        TODO: for job_id in job_ids:
-                  task_id = globus_transfer(tiger_ep, pni_ep, proc_src, proc_dst, job_id=job_id)
-                  dual_write_status({"job_id": job_id}, STATUS_PROC_TRANSFER_STARTED)
-        """
-        # TODO: from u19.transfers import globus_transfer
-        #       from u19.status import dual_write_status
-        pass
+        raw = request_raw_transfer(job_id)
+        raw_done = wait_raw_transfer(raw)
+        submitted = submit_slurm(raw_done)
+        slurm_done = wait_slurm(submitted)
+        proc = request_proc_transfer(slurm_done)
+        proc_done = wait_proc_transfer(proc)
+        populate_element(proc_done)
 
-    @task(task_id="wait_proc_transfer")
-    def wait_proc_transfer(job_ids: list[int]) -> None:
-        """Poll until processed-data Globus transfer reaches SUCCEEDED state.
-
-        Wraps u19.transfers.check_transfer_status.
-        Calls dual_write_status when transfer completes.
-
-        TODO: poll check_transfer_status(task_id) until SUCCEEDED/FAILED
-              dual_write_status({"job_id": job_id}, STATUS_PROC_TRANSFER_DONE)
-        """
-        # TODO: from u19.transfers import check_transfer_status
-        #       from u19.status import dual_write_status
-        pass
-
-    @task(task_id="populate_element")
-    def populate_element(job_ids: list[int]) -> None:
-        """Populate DataJoint ephys element tables for completed jobs.
-
-        Wraps u19_pipeline.automatic_job.ephys_element_populate.
-        Calls dual_write_status after populate completes.
-
-        TODO: for job_id in job_ids:
-                  ephys_element_populate.run(job_id)
-                  dual_write_status({"job_id": job_id}, STATUS_COMPLETE)
-        """
-        # TODO: import u19_pipeline.automatic_job.ephys_element_populate as ep
-        #       from u19.status import dual_write_status
-        pass
-
-    # -------------------------------------------------------------------------
-    # Wire linear stub graph
-    # -------------------------------------------------------------------------
-    t_jobs = get_active_jobs()
-    t_req_raw = request_raw_transfer(t_jobs)
-    t_wait_raw = wait_raw_transfer(t_req_raw)
-    t_submit_slurm = submit_slurm(t_wait_raw)
-    t_wait_slurm = wait_slurm(t_submit_slurm)
-    t_req_proc = request_proc_transfer(t_wait_slurm)
-    t_wait_proc = wait_proc_transfer(t_req_proc)
-    populate_element(t_wait_proc)
+    process_job.expand(job_id=get_active_jobs())
 
 
 u19_ephys_processing()

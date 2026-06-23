@@ -59,3 +59,11 @@ jobs:
           for dag_id in sorted(db.dags):
               print(f"  {dag_id}")
           EOF
+
+      # Run the plugin unit tests (dry-run; no DB). Integration tests that need
+      # the Dockerised MariaDB auto-skip because U19_RUN_INTEGRATION is unset.
+      - name: Run plugin unit tests
+        env:
+          PYTHONPATH: "${{ github.workspace }}/airflow/plugins"
+          U19_AIRFLOW_DRY_RUN: "1"
+        run: uv run --only-group airflow-test python -m pytest airflow/tests -q

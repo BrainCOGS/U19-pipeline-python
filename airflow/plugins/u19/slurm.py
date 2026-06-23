@@ -1,88 +1,94 @@
-"""SLURM job submission and polling stubs.
+"""SLURM submission and polling helpers for the ephys processing DAG.
 
-Wraps ``u19_pipeline.automatic_job.slurm_creator`` functions:
+Wrap ``u19_pipeline.automatic_job.slurm_creator`` (file generation, sbatch,
+``sacct`` status check) so orchestration lives in Airflow and the cluster calls
+stay in proven code.
 
-* :func:`~u19_pipeline.automatic_job.slurm_creator.generate_slurm_file` —
-  writes a ``.slurm`` file from pipeline parameters.
-* :func:`~u19_pipeline.automatic_job.slurm_creator.queue_slurm_file` —
-  submits the generated file to the cluster via ``sbatch``.
+``dry_run`` (default from ``U19_AIRFLOW_DRY_RUN``) lets the DAG and tests run
+without a cluster: submission returns a synthetic slurm id, polling returns the
+terminal "next status" code.
 
-And the job-status helper from ``u19_pipeline.automatic_job.recording_handler``
-(``check_slurm_job`` / ``get_slurm_job_state``).
-
-.. note::
-    These functions should eventually become **deferrable operators** using
-    Airflow's async/trigger pattern so the scheduler does not hold a worker
-    slot while polling — see
-    https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/deferring.html
+The long-running poll (Kilosort runs for hours) should be driven by the
+**deferrable** sensor in :mod:`u19.slurm_sensor`, not by calling
+:func:`poll_slurm_job` in a loop inside a worker.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+import os
+
+log = logging.getLogger(__name__)
 
 
-def submit_slurm_job(job_id: int, program_selection_params: dict, **kwargs: Any) -> str:
-    """Generate and queue a SLURM job for a recording processing unit.
+def _dry_run_default() -> bool:
+    return os.environ.get("U19_AIRFLOW_DRY_RUN", "0") in ("1", "true", "True")
 
-    Parameters
-    ----------
-    job_id:
-        ``recording_process.Processing.job_id`` — the integer job identifier
-        assigned when the processing row was inserted.
-    program_selection_params:
-        Dict containing at minimum ``process_cluster`` and the preprocessing
-        tool selector. Forwarded verbatim to
-        ``slurm_creator.generate_slurm_file``.
-    **kwargs:
-        Additional keyword arguments reserved for future use (e.g. overriding
-        ``slurm_default`` values per-job).
 
-    Returns
-    -------
-    str
-        The SLURM job ID string returned by ``sbatch`` (e.g. ``"12345678"``).
+def submit_slurm_job(
+    job_id: int,
+    program_selection_params: dict,
+    raw_directory: str,
+    proc_directory: str,
+    modality: str,
+    *,
+    dry_run: bool | None = None,
+) -> dict:
+    """Generate a ``.slurm`` file and submit it via ``sbatch``.
 
-    Notes
-    -----
-    Intended call sequence::
-
-        generate_slurm_file(job_id, program_selection_params)
-        queue_slurm_file(job_id, program_selection_params)
-
-    Both live in ``u19_pipeline.automatic_job.slurm_creator``.
+    Returns ``{"status": <system_process>, "slurm_id": str|None, "error": str}``.
+    Wraps ``slurm_creator.generate_slurm_file`` + ``queue_slurm_file``.
     """
-    # TODO: call slurm_creator
-    #   import u19_pipeline.automatic_job.slurm_creator as sc
-    #   sc.generate_slurm_file(job_id, program_selection_params)
-    #   return sc.queue_slurm_file(job_id, program_selection_params)
-    raise NotImplementedError("submit_slurm_job is a scaffold stub")
+    dry_run = _dry_run_default() if dry_run is None else dry_run
+    if dry_run:
+        fake = f"dryrun-slurm-{job_id}"
+        log.info("[dry_run] submit_slurm_job job_id=%s -> %s", job_id, fake)
+        return {"status": 0, "slurm_id": fake, "error": ""}  # SUCCESS
+
+    import u19_pipeline.automatic_job.params_config as config
+    import u19_pipeline.automatic_job.slurm_creator as sc
+
+    status, slurm_filepath = sc.generate_slurm_file(job_id, program_selection_params)
+    if status != config.system_process["SUCCESS"]:
+        return {"status": config.system_process["ERROR"], "slurm_id": None, "error": "slurm file generation failed"}
+
+    status, slurm_jobid, error_message = sc.queue_slurm_file(
+        job_id, program_selection_params, raw_directory, proc_directory, modality, slurm_filepath
+    )
+    return {"status": status, "slurm_id": slurm_jobid, "error": error_message}
 
 
-def poll_slurm_job(slurm_job_id: str, job_id: int | None = None) -> str:
-    """Return the current state string for a running SLURM job.
+def poll_slurm_job(slurm_job_id: str, program_selection_params: dict, *, dry_run: bool | None = None) -> dict:
+    """Check a SLURM job's state once (single ``sacct`` call).
 
-    Parameters
-    ----------
-    slurm_job_id:
-        The SLURM-assigned job ID string (as returned by :func:`submit_slurm_job`).
-    job_id:
-        Optional ``recording_process.Processing.job_id`` for logging context.
-
-    Returns
-    -------
-    str
-        SLURM job state, e.g. ``"PENDING"``, ``"RUNNING"``, ``"COMPLETED"``,
-        ``"FAILED"``.  Callers should loop / reschedule until a terminal state
-        is reached.
-
-    Notes
-    -----
-    Should be converted to a deferrable operator trigger before production use.
-    Wraps ``check_slurm_job`` / ``get_slurm_job_state`` from
-    ``u19_pipeline.automatic_job.recording_handler`` (or ``slurm_creator``).
+    Returns ``{"pipeline_status": <status_update_idx>, "error": str}`` where
+    pipeline_status is NEXT_STATUS(1)/NO_CHANGE(0)/ERROR_STATUS(-1) — the same
+    encoding the legacy ``check_slurm_job`` returns. Used by the deferrable
+    sensor's trigger; not meant to be looped inside a worker.
     """
-    # TODO: call recording_handler or slurm_creator job-state check
-    #   import u19_pipeline.automatic_job.recording_handler as rh
-    #   return rh.check_slurm_job(slurm_job_id)
-    raise NotImplementedError("poll_slurm_job is a scaffold stub")
+    dry_run = _dry_run_default() if dry_run is None else dry_run
+    if dry_run:
+        log.info("[dry_run] poll_slurm_job %s -> NEXT_STATUS", slurm_job_id)
+        return {"pipeline_status": 1, "error": ""}  # NEXT_STATUS
+
+    import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+    import u19_pipeline.automatic_job.slurm_creator as sc
+    from u19_pipeline.utility import is_this_spock
+
+    cluster = program_selection_params["process_cluster"]
+    local_user = cluster == "spock" and is_this_spock()
+    ssh_user = ft.cluster_vars[cluster]["user"]
+    ssh_host = ft.cluster_vars[cluster]["hostname"]
+
+    state_pipeline, error_message = sc.check_slurm_job(ssh_user, ssh_host, str(slurm_job_id), local_user=local_user)
+    return {"pipeline_status": state_pipeline, "error": error_message}
+
+
+def is_terminal(poll_result: dict) -> bool:
+    """True if a poll result is terminal (job finished or errored)."""
+    return poll_result.get("pipeline_status", 0) != 0
+
+
+def is_success(poll_result: dict) -> bool:
+    """True if a poll result indicates the SLURM job completed successfully."""
+    return poll_result.get("pipeline_status", 0) == 1

@@ -11,9 +11,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from airflow.sdk import dag, task
 from airflow.providers.standard.operators.empty import EmptyOperator
-
+from airflow.sdk import dag, task
 from u19.callbacks import slack_failure_callback
 
 log = logging.getLogger(__name__)
@@ -350,12 +349,13 @@ def u19_nightly_populate() -> None:
     # Instantiate tasks
     # =========================================================================
 
-    t_reset_reweight = reset_reweight()
-
-    t_sched_tomorrow = populate_schedule_for_tomorrow()
-    t_sched_tech = populate_technician_schedule()
-    t_protocol_level = update_protocol_level()
-    t_training_profile = update_training_profile()
+    # Independent tasks: instantiating registers them in the DAG; no edges,
+    # so no variable binding is needed.
+    reset_reweight()
+    populate_schedule_for_tomorrow()
+    populate_technician_schedule()
+    update_protocol_level()
+    update_training_profile()
 
     t_session = session()
     t_session_block = session_block()
@@ -378,13 +378,15 @@ def u19_nightly_populate() -> None:
 
     t_ingest_subtasks = ingest_subtasks()
 
-    t_alert_live_monitor = alert_live_monitor()
-    t_alert_schedule_check = alert_schedule_check()
-    t_alert_water_weigh = alert_water_weigh()
-    t_alert_tech = alert_tech()
-    t_alert_locked_tables = alert_locked_tables()
-    t_alert_rig_maintenance = alert_rig_maintenance()
-    t_alert_live_session_stats_deletion = alert_live_session_stats_deletion()
+    # Alerts: all independent (each wraps an alert_system sub-check with its own
+    # Slack on_failure_callback). Instantiating registers them; no edges.
+    alert_live_monitor()
+    alert_schedule_check()
+    alert_water_weigh()
+    alert_tech()
+    alert_locked_tables()
+    alert_rig_maintenance()
+    alert_live_session_stats_deletion()
 
     # =========================================================================
     # Wire dependencies

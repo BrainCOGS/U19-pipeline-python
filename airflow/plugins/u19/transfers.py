@@ -1,79 +1,83 @@
-"""Globus file transfer stubs.
+"""Globus transfer helpers for the processing DAGs.
 
-Wraps ``u19_pipeline.automatic_job.clusters_paths_and_transfers``, which
-contains the Globus SDK calls, endpoint IDs (PNI and Della/Tiger), and
-transfer-status polling.
+Thin wrappers over ``u19_pipeline.automatic_job.clusters_paths_and_transfers``
+so the orchestration logic lives in Airflow while the actual Globus calls stay
+in the existing, proven code (endpoint IDs, path building, status polling).
+
+All functions accept ``dry_run`` (default from the ``U19_AIRFLOW_DRY_RUN`` env
+var). In dry-run mode they log what they *would* do and return a synthetic
+success/COMPLETED result — letting the DAG and its tests run end-to-end without
+a live Globus endpoint or cluster.
+
+Return values mirror the wrapped functions: a dict with a ``status`` key whose
+value is one of ``config.system_process`` (COMPLETED=1, SUCCESS=0, ERROR=-1),
+plus ``task_id`` for newly requested transfers.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+import os
+
+log = logging.getLogger(__name__)
+
+# Mirror of u19_pipeline.automatic_job.params_config.system_process. Inlined so
+# these tiny, stable status helpers don't import the whole pipeline (and its
+# heavy scientific deps) just to read three constants.
+COMPLETED = 1
+SUCCESS = 0
+ERROR = -1
+
+_VALID_DIRECTIONS = ("to_cluster", "to_pni")
 
 
-def globus_transfer(
-    src_endpoint: str,
-    dst_endpoint: str,
-    src_path: str,
-    dst_path: str,
-    job_id: int | None = None,
-    **kwargs: Any,
-) -> str:
-    """Initiate a Globus transfer and return the transfer task ID.
+def _dry_run_default() -> bool:
+    return os.environ.get("U19_AIRFLOW_DRY_RUN", "0") in ("1", "true", "True")
 
-    Parameters
-    ----------
-    src_endpoint:
-        Globus endpoint UUID for the source (e.g. PNI ``pni_ep_id``).
-    dst_endpoint:
-        Globus endpoint UUID for the destination (e.g. Della/Tiger ``tiger_ep_dir``).
-    src_path:
-        Absolute path on the source endpoint.
-    dst_path:
-        Absolute path on the destination endpoint.
-    job_id:
-        Optional ``recording_process.Processing.job_id`` for logging / status
-        dual-write via :mod:`u19.status`.
-    **kwargs:
-        Additional options forwarded to the Globus SDK transfer document
-        (e.g. ``sync_level``, ``notify_on_succeeded``).
 
-    Returns
-    -------
-    str
-        Globus transfer task ID string.
+def request_transfer(job_id: int, rel_path: str, modality: str, direction: str, *, dry_run: bool | None = None) -> dict:
+    """Request a Globus transfer.
 
-    Notes
-    -----
-    Wraps the transfer initiation logic in
-    ``u19_pipeline.automatic_job.clusters_paths_and_transfers``.
+    direction: ``"to_cluster"`` (raw PNI -> cluster) or ``"to_pni"`` (processed
+    cluster -> PNI). Wraps ``globus_transfer_to_tiger`` / ``globus_transfer_to_pni``.
     """
-    # TODO: call clusters_paths_and_transfers
-    #   import u19_pipeline.automatic_job.clusters_paths_and_transfers as ct
-    #   return ct.transfer_request(src_endpoint, dst_endpoint, src_path, dst_path, ...)
-    raise NotImplementedError("globus_transfer is a scaffold stub")
+    if direction not in _VALID_DIRECTIONS:
+        raise ValueError(f"unknown direction {direction!r}; expected one of {_VALID_DIRECTIONS}")
+
+    dry_run = _dry_run_default() if dry_run is None else dry_run
+    if dry_run:
+        fake = f"dryrun-task-{job_id}-{direction}"
+        log.info("[dry_run] request_transfer job_id=%s dir=%s path=%s -> %s", job_id, direction, rel_path, fake)
+        return {"status": SUCCESS, "task_id": fake}
+
+    import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+
+    if direction == "to_cluster":
+        return ft.globus_transfer_to_tiger(job_id, rel_path, modality)
+    return ft.globus_transfer_to_pni(job_id, rel_path, modality)
 
 
-def check_transfer_status(task_id: str) -> str:
-    """Return the current status of a Globus transfer task.
+def check_transfer_status(task_id: str, *, dry_run: bool | None = None) -> dict:
+    """Check the status of an in-flight Globus transfer.
 
-    Parameters
-    ----------
-    task_id:
-        Globus transfer task ID returned by :func:`globus_transfer`.
-
-    Returns
-    -------
-    str
-        Globus task status string, e.g. ``"ACTIVE"``, ``"SUCCEEDED"``,
-        ``"FAILED"``.  Callers should poll until a terminal state.
-
-    Notes
-    -----
-    Wraps the status-check helper in
-    ``u19_pipeline.automatic_job.clusters_paths_and_transfers``.
-    Should become a deferrable operator in Phase 2.
+    Returns ``{"status": <config.system_process value>}`` — COMPLETED(1) when
+    done, SUCCESS(0) while in flight, ERROR(-1) on failure.
     """
-    # TODO: call clusters_paths_and_transfers status check
-    #   import u19_pipeline.automatic_job.clusters_paths_and_transfers as ct
-    #   return ct.check_transfer_status(task_id)
-    raise NotImplementedError("check_transfer_status is a scaffold stub")
+    dry_run = _dry_run_default() if dry_run is None else dry_run
+    if dry_run:
+        log.info("[dry_run] check_transfer_status task_id=%s -> COMPLETED", task_id)
+        return {"status": COMPLETED}
+
+    import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
+
+    return ft.request_globus_transfer_status(str(task_id))
+
+
+def transfer_succeeded(result: dict) -> bool:
+    """True if a check_transfer_status result indicates COMPLETED."""
+    return result.get("status") == COMPLETED
+
+
+def transfer_failed(result: dict) -> bool:
+    """True if a transfer result indicates ERROR."""
+    return result.get("status") == ERROR
