@@ -73,6 +73,14 @@ dev = [
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
 ]
+# Apache Airflow 3.x orchestration deps (see airflow/). Installed via
+# `uv sync --group airflow`. EmptyOperator/standard operators live in
+# apache-airflow-providers-standard in Airflow 3.x.
+airflow = [
+    "apache-airflow==3.2.2",
+    "apache-airflow-providers-ssh",
+    "apache-airflow-providers-standard",
+]
 
 [tool.uv]
 exclude-newer = "14 days"

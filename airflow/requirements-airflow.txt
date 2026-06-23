@@ -1,0 +1,17 @@
+# Airflow 3.x orchestration dependencies.
+#
+# These are declared canonically in the project's pyproject.toml under
+# [dependency-groups].airflow and locked in uv.lock. Install them with uv:
+#
+#     uv sync --only-group airflow      # just Airflow (CI / DAG validation)
+#     uv sync --group airflow           # Airflow alongside the rest of the env
+#
+# This file is kept only as a human-readable listing; it is NOT the source of
+# truth and is not consumed by CI (CI uses `uv sync --only-group airflow`).
+#
+#   apache-airflow==3.2.2
+#   apache-airflow-providers-ssh
+#   apache-airflow-providers-standard   # EmptyOperator / standard operators (Airflow 3.x)
+#
+# DataJoint and u19_pipeline dependencies come from the main project deps —
+# install the package (uv sync) alongside the airflow group as needed.

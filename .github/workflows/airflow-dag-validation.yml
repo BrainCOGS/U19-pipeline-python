@@ -1,0 +1,61 @@
+# Airflow DAG validation workflow
+# Runs on every push and pull_request to verify that all DAGs in airflow/dags/
+# are importable by Airflow's DagBag with zero import errors.
+# No Airflow database is required — DagBag loads the DAGs in-process.
+#
+# Dependencies are managed with uv against the locked `airflow` dependency group
+# in pyproject.toml (uv.lock), so installs are reproducible without a pip
+# constraints file.
+
+name: Airflow DAG Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dag-validation:
+    name: Validate DAGs (Python 3.12 / Airflow 3.2.2)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Resolve only the `airflow` dependency group from uv.lock — this keeps the
+      # CI environment small (no GPU/science stack) and fully reproducible.
+      - name: Sync Airflow dependencies
+        run: uv sync --only-group airflow
+
+      # Run DagBag import-error check via `uv run`.
+      # AIRFLOW__CORE__DAGS_FOLDER points at the DAG directory.
+      # PYTHONPATH includes airflow/plugins so the u19.* plugin imports resolve.
+      # AIRFLOW__CORE__LOAD_EXAMPLES=False avoids loading Airflow's bundled examples.
+      - name: Check DAG import errors
+        env:
+          AIRFLOW__CORE__DAGS_FOLDER: "${{ github.workspace }}/airflow/dags"
+          AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+          PYTHONPATH: "${{ github.workspace }}/airflow/plugins"
+        run: |
+          uv run --only-group airflow python - <<'EOF'
+          from airflow.models import DagBag
+          import os
+
+          dags_folder = os.environ["AIRFLOW__CORE__DAGS_FOLDER"]
+          db = DagBag(dag_folder=dags_folder, include_examples=False)
+
+          if db.import_errors:
+              import json
+              print("DAG import errors detected:")
+              print(json.dumps(db.import_errors, indent=2))
+              raise SystemExit(1)
+
+          print(f"OK — {len(db.dags)} DAG(s) loaded with no import errors:")
+          for dag_id in sorted(db.dags):
+              print(f"  {dag_id}")
+          EOF
