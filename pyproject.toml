@@ -67,11 +67,37 @@ include = [
 # Allow lines to be as long as 120.
 line-length = 120
 
+[tool.pytest.ini_options]
+testpaths = ["airflow/tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: tests that require the Dockerised MariaDB (opt-in via U19_RUN_INTEGRATION=1)",
+]
+
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
+]
+# Apache Airflow 3.x orchestration deps (see airflow/). Installed via
+# `uv sync --group airflow`. EmptyOperator/standard operators live in
+# apache-airflow-providers-standard in Airflow 3.x.
+airflow = [
+    "apache-airflow==3.2.2",
+    "apache-airflow-providers-ssh",
+    "apache-airflow-providers-standard",
+]
+# Test deps for the airflow plugins/DAGs. Unit tests need only this group;
+# the integration test additionally imports `datajoint` (also pulled here).
+airflow-test = [
+    "apache-airflow==3.2.2",
+    "apache-airflow-providers-ssh",
+    "apache-airflow-providers-standard",
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "datajoint<2.0.0",
+    "pandas>=2.0",
 ]
 
 [tool.uv]
