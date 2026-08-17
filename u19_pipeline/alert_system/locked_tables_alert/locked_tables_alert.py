@@ -15,6 +15,11 @@ slack_configuration_dictionary = {
 
 def main_locked_tables_alert():
 
+    # Source of the "Locked Tables Alert" Slack message: this raw MySQL
+    # `SHOW OPEN TABLES` query (not a DataJoint table query) is the only
+    # place `in_use` is read. A table is reported here whenever any open
+    # connection is holding a lock on it (e.g. an in-flight transaction
+    # from a `.populate()`/`.update1()` call), not necessarily a stuck one.
     locked_tables_query = 'show open tables where in_use > 0'
     conn = dj.conn()
     locked_tables_df = pd.DataFrame(conn.query(locked_tables_query, as_dict=True).fetchall())
