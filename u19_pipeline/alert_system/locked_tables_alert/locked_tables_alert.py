@@ -29,6 +29,7 @@ def main_locked_tables_alert():
     else:
         locked_tables_df = locked_tables_df.head()
         locked_tables_df = locked_tables_df.drop('Name_locked',axis=1)
+        locked_tables_df = add_locking_process_info(locked_tables_df, conn)
         locked_tables_df = su.format_df_for_slack_message(locked_tables_df)
         slack_json_message = slack_alert_message_format_locked_tables(locked_tables_df)
 
@@ -37,6 +38,44 @@ def main_locked_tables_alert():
         for this_webhook in webhooks_list:
             su.send_slack_notification(this_webhook, slack_json_message)
             time.sleep(1)
+
+
+def add_locking_process_info(locked_tables_df, conn):
+    """Annotate each locked table row with the connection(s) currently using
+    that table's database, so the alert shows *which process* is holding
+    the lock and not just which table is locked.
+
+    `SHOW OPEN TABLES` does not expose a connection/process id, so we
+    cross-reference `SHOW PROCESSLIST` (matched on `Database`) to surface
+    the process id, user/host, how long it's been running, and the query
+    text it's currently executing (if any).
+    """
+
+    processlist_df = pd.DataFrame(conn.query('show full processlist', as_dict=True).fetchall())
+
+    def summarize_processes(database_name):
+        if processlist_df.shape[0] == 0:
+            return 'unknown'
+
+        matching_processes = processlist_df[processlist_df['db'] == database_name]
+        if matching_processes.shape[0] == 0:
+            return 'unknown'
+
+        process_descriptions = []
+        for _, this_process in matching_processes.iterrows():
+            query_info = (this_process['Info'] or '').strip().replace('\n', ' ')
+            query_info = (query_info[:60] + '...') if len(query_info) > 60 else query_info
+            process_descriptions.append(
+                'Id={} User={} Host={} Command={} Time={}s Query={}'.format(
+                    this_process['Id'], this_process['User'], this_process['Host'],
+                    this_process['Command'], this_process['Time'], query_info or '<none>'
+                )
+            )
+        return ' | '.join(process_descriptions)
+
+    locked_tables_df['Locking_process'] = locked_tables_df['Database'].apply(summarize_processes)
+
+    return locked_tables_df
 
 
 def slack_alert_message_format_locked_tables(locked_tables_df):
