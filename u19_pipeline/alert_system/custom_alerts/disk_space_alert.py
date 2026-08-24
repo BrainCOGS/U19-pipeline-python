@@ -1,5 +1,5 @@
 import datetime
-import shutil
+import os
 import time
 
 import u19_pipeline.lab as lab
@@ -32,6 +32,26 @@ def get_free_space_threshold_bytes(total_bytes):
     return min(total_bytes * PERCENT_FREE_SPACE_THRESHOLD, MAX_FREE_SPACE_THRESHOLD_TB * BYTES_PER_TB)
 
 
+def get_disk_usage(path):
+    """
+    Space available to unprivileged users on the filesystem containing
+    `path`, matching what `df` reports (i.e. `f_bavail`, not the raw
+    `f_bfree`, which can include blocks reserved for root).
+
+    Returns (total_bytes, available_bytes), where total_bytes is likewise
+    the denominator `df` uses: blocks in use plus blocks available to
+    users (excludes blocks reserved for root, which `os.statvfs().f_blocks`
+    would otherwise include).
+    """
+
+    vfs = os.statvfs(path)
+    available_bytes = vfs.f_bavail * vfs.f_frsize
+    used_bytes = (vfs.f_blocks - vfs.f_bfree) * vfs.f_frsize
+    total_bytes = used_bytes + available_bytes
+
+    return total_bytes, available_bytes
+
+
 def get_low_disk_space_alerts(monitored_paths=MONITORED_PATHS):
     """
     Check each path in `monitored_paths` and return a list of alert dicts
@@ -41,7 +61,7 @@ def get_low_disk_space_alerts(monitored_paths=MONITORED_PATHS):
     alert_rows = []
     for this_path in monitored_paths:
         try:
-            total_bytes, _, free_bytes = shutil.disk_usage(this_path)
+            total_bytes, available_bytes = get_disk_usage(this_path)
         except OSError:
             alert_rows.append({
                 'alert_message': 'Could not check disk space (path not found or not mounted)',
@@ -50,12 +70,12 @@ def get_low_disk_space_alerts(monitored_paths=MONITORED_PATHS):
             continue
 
         threshold_bytes = get_free_space_threshold_bytes(total_bytes)
-        if free_bytes < threshold_bytes:
+        if available_bytes < threshold_bytes:
             alert_rows.append({
                 'alert_message': 'Low disk space',
                 'path': this_path,
-                'free_space(tb)': round(free_bytes / BYTES_PER_TB, 2),
-                'free_space(%)': round(100 * free_bytes / total_bytes, 2),
+                'available_space(tb)': round(available_bytes / BYTES_PER_TB, 2),
+                'available_space(%)': round(100 * available_bytes / total_bytes, 2),
             })
 
     return alert_rows
