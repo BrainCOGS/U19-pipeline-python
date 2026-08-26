@@ -67,15 +67,50 @@ which is physically backwards.
 
 - [x] Spike: converter + ScanImage interface + our timestamps in one env, real conversion, aligned TwoPhotonSeries
 - [x] Rebase/merge strategy: bring `feat/nwb-export-handler-completion` and our sync branch together
-- [ ] `validate_imaging_data_exists`: fix table references; resolve session→recording→TiffSplit
-- [ ] `resolve_input_paths` / `build_source_data`: add imaging tiff paths + behavior file
-- [ ] Converter: add ScanImage imaging interface with behavior-clock timestamps (subclass or extend TowersNWBConverter)
-- [ ] Handler `process_data_validation` imaging branch: replace fail-loud TODO
-- [ ] Size estimation: `estimate_imaging_size_gb` with real numbers (raw frames ≫ 0.05 GB/FOV)
-- [ ] Tests (mirror existing handler tests)
-- [ ] End-to-end run on the `~/neuro-data` sample session
+- [x] `validate_imaging_data_exists`: fix table references; resolve session→recording→TiffSplit
+- [x] `resolve_input_paths` / `build_source_data`: add imaging tiff paths + behavior file
+- [x] Converter: add ScanImage imaging interface with behavior-clock timestamps (subclass or extend TowersNWBConverter)
+- [x] Handler `process_data_validation` imaging branch: replace fail-loud TODO
+- [x] Size estimation: `estimate_imaging_size_gb` with real numbers (raw frames ≫ 0.05 GB/FOV)
+- [x] Tests (mirror existing handler tests)
+- [x] End-to-end run on the `~/neuro-data` sample session
 
 ## Phase C — Documentation
 
-- [ ] `docs/nwb_export.md`: how imaging export works and how to add future modalities
-- [ ] Update `docs/imaging_behavior_sync.md` cross-references
+- [x] `docs/nwb_export.md`: how imaging export works and how to add future modalities
+- [x] Update `docs/imaging_behavior_sync.md` cross-references
+
+## Phase D — Cross-repo contract (coordinator)
+
+- [x] `tank-lab-to-nwb`: register `ScanImageImagingInterface`, fix the `TiffImagaging` typo key
+- [x] `tank-lab-to-nwb`: per-interface `aligned_timestamps`, with a length guard on the shared array
+- [x] `tank-lab-to-nwb`: stop `convert_function_handle_to_str` raising when MATLAB is absent
+- [x] `tank-lab-to-nwb`: run its scratch files in a TemporaryDirectory instead of the cwd
+- [x] `tank-lab-to-nwb`: fix the tz-aware/naive subtraction in `get_original_timestamps`
+- [x] Clock convention decided and written down (`docs/imaging_behavior_sync.md` section 6, `docs/nwb_export.md`)
+- [ ] **Open:** mixed ephys+imaging clock rule — needs sign-off before the first DANDI upload
+- [ ] Pin the `tank-lab-to-nwb` dependency to a commit
+- [ ] PRs: this repo + `tank-lab-to-nwb` (`building-nwb-converter`)
+
+### End-to-end result (sample session, through the shipped code path)
+
+```
+source_data: ['ScanImageImaging', 'VirmenData']
+diagnostics: slope 1.000027891, residual 10.4 ms, epoch_offset 27.0 ms,
+             2000 frames -> 400 volumes
+nwb:         TwoPhotonSeries + 179 trials, 0.420 GB
+frame 644 (trial 1's first imaging frame) = +22.3 ms after trial 1 start
+```
+
+The per-frame check is the meaningful one; the written file stores volumes, so
+its resolution is one volume period (99.6 ms).
+
+### Known gaps
+
+- `resolve_imaging_paths` and the handler's imaging branch are exercised only by
+  mocked tests — no DataJoint instance was reachable here, so the
+  session -> recording -> TiffSplit hop is unverified against a real database.
+- The end-to-end run supplied TIFF paths directly, bypassing that same hop.
+- `tests/nwb_export/test_nwb_export_handler.py` has 10 failures + 9 errors that
+  predate this work: they fail at import on `dj.config["custom"]`, with no DB
+  configured.
