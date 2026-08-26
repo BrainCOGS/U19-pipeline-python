@@ -61,6 +61,30 @@ uv run python -m u19_pipeline.utils.imaging_behavior_sync ~/neuro-data/ef932_act
 Expected: trials at frames 644–1176 / 1177–1690 / 1691–2000; fit slope
 ≈1.000027891, residual ≈10.4 ms.
 
+## Synchronization ownership — Python, not MATLAB
+
+The per-frame synchronization for NWB is done **entirely in this repo**, by
+`u19_pipeline/utils/imaging_behavior_sync.py`. Do not shell out to MATLAB and
+do not depend on the nightly MATLAB populate. The chain, per frame:
+
+1. `parse_scanimage_sync(tif)` — reads each TIFF frame's header: the frame's
+   own timestamp on the imaging clock (`frameTimestamps_sec`) and the I2C
+   packet giving `(block, trial, iteration)`.
+2. `sync_imaging_behavior(tif_files, log)` — assigns every frame a
+   `(block, trial, iteration)` (forward-filling frames that missed a packet).
+3. `frame_times_on_behavior_clock(sync, log)` — looks up each frame's
+   **iteration time from the behavior log** (`trial.start +
+   trial.time[iteration-1]`, the per-iteration timestamps ViRMEn logged),
+   pairs it with the frame's imaging-clock time, and fits one linear clock
+   mapping. Result: a behavior-clock timestamp for **every** frame, including
+   pre/post-behavior stretches with no I2C data. This array is what feeds
+   `set_aligned_timestamps` on the imaging interface.
+
+The MATLAB `u19_imaging_pipeline.SyncImagingBehavior` table stores only the
+block/trial/iteration vectors (no time vector); treat it as an optional
+cross-check, never as a dependency. Full explanation and verified numbers:
+`docs/imaging_behavior_sync.md` §4–5.
+
 ## Step 0 — done for you
 
 The sync port and docs are already committed on `feat/nwb-imaging-export`
