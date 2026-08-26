@@ -322,3 +322,97 @@ in this document are the missing ingredient for that TODO: resolve the scan's
 TIFFs, run `sync_imaging_behavior` + `frame_times_on_behavior_clock` (or
 fetch the stored vectors from `u19_imaging_pipeline.SyncImagingBehavior`),
 and hand the aligned timestamps to `ScanImageImagingInterface`.
+
+## 6. Which clock is `trial.start` on? (and the ~27 ms NWB offset)
+
+Short answer: `trial.start` is on ViRMEn's `vr.timeElapsed` clock, which is
+zeroed at **block start**, not at `log.session.start`. NWB zeroes its timeline
+at `session.start`. The gap between the two is the offset, and it must be read
+out of each session's log rather than assumed.
+
+### Where the numbers come from
+
+`ExperimentLog` writes trial times straight off the engine clock, with no
+block-relative correction anywhere:
+
+```matlab
+% ExperimentLog.m:501
+obj.currentTrial.start = vr.timeElapsed;
+% ExperimentLog.m:~540 (logTick)
+obj.currentTrial.time(obj.currentIt,1) = vr.timeElapsed - obj.currentTrial.start;
+```
+
+`obj.blockStart` exists but is only ever read to compute `block.duration`
+(`ExperimentLog.m:381,848`) — it is never subtracted from `trial.start`.
+
+So the question is what zeroes `vr.timeElapsed`. The engine:
+
+```matlab
+% virmenEngine.m
+101  vr.initialTimestamp = clock;              % logged as log.initialTimestamp
+102  vr.preTic = tic;
+105  vr = vr.code.initialization(vr);          % <- ExperimentLog built in here
+123  vr.timeElapsedFirstTrial = toc(vr.preTic);
+124  firstTic = tic;                           % <- vr.timeElapsed zero
+367  timeElapsed = toc(firstTic);
+```
+
+`vr.code.initialization` is where the `ExperimentLog` is constructed, and that
+constructor stamps `session.start = clock` (`ExperimentLog.m:228`) and then, via
+`newBlock()`, `block.start = clock` (`ExperimentLog.m:864`). Both land *before*
+`firstTic`. So the ordering on the wall clock is:
+
+```
+initialTimestamp ... session.start ... block.start ... firstTic (timeElapsed = 0)
+   12:03:17.783      12:03:23.152     12:03:23.179     ~12:03:23.179 + eps
+```
+
+### What the 27 ms actually is
+
+It is the wall-clock time between two `clock` calls during ViRMEn startup —
+the tail of the `ExperimentLog` constructor plus the start of `newBlock()`:
+
+- version/bookkeeping struct assembly,
+- `obj.makeOrContinueLog(cfg.logFile)` — **file I/O on the behavior log**,
+- `repmat(obj.trialInfo, 1, totalTrials)` — allocating the entire trial struct
+  array up front (`ExperimentLog.m:858`).
+
+It is not clock drift, not a physical delay in the data, and not a sync
+artifact. It is allocation and file-I/O cost. It therefore **varies per
+session** — it scales with `totalTrials` and with whatever else the machine was
+doing — so it must be computed from each log as
+`block[0].start - session.start` and never hardcoded to 27 ms.
+
+### Consequence for NWB export
+
+Everything measured in `timeElapsed` units shares the block-start zero: trial
+starts, per-iteration `trial.time`, and — because
+`frame_times_on_behavior_clock` fits against `trial.start + trial.time` — our
+per-frame imaging timestamps. NWB zeroes at `session.start`. So all of them take
+the same shift:
+
+```python
+epoch_offset = (block[0].start - session.start).total_seconds()
+timestamps = frame_times_on_behavior_clock(sync, log)[0] + epoch_offset
+```
+
+`VirmenDataInterface` already applies this shift to its trials table
+(`epoch_start_nwb`). Imaging must match it. Skipping it puts trial 1's first
+imaging frame 4.7 ms *before* trial 1 starts instead of 22.3 ms after — wrong
+by one frame period, and small enough to pass for ordinary jitter.
+
+### Why wall clocks can't do this job
+
+The imaging TIFF header carries an absolute `epoch` (acquisition start on the
+ScanImage PC). Reconstructing the `timeElapsed` zero through it — imaging
+`epoch` + `frameTimestamps_sec` for a frame, minus that frame's behavior time —
+gives an instant **958 ms** after `block.start`. That residual is inter-machine
+wall-clock skew between the ViRMEn and ScanImage PCs, and it is three orders of
+magnitude larger than the alignment we need.
+
+It does cleanly rule out `initialTimestamp` as the zero (that candidate misses
+by 6.35 s, far outside any plausible skew), which is what it was used for here.
+But it is also the whole reason the sync is content-based: the I2C
+`[block, trial, iteration]` packets tie the two streams together by *what* was
+happening, not by *when* two unsynchronized clocks each thought it was. Never
+align these streams through `epoch`.
