@@ -27,7 +27,46 @@ Tracking issue: https://github.com/BrainCOGS/U19-pipeline-python/issues/111
 
 ## Phase B — Implementation (after feasibility verdict + user go-ahead)
 
-- [ ] Rebase/merge strategy: bring `feat/nwb-export-handler-completion` and our sync branch together
+### Spike result — **PASS** (2026-08-26)
+
+`TowersNWBConverter` + `ScanImageImagingInterface` + our behavior-clock
+timestamps coexist in one env (neuroconv 0.10.0, roiextractors 0.9.0, pynwb
+4.1.0, hdmf 6.2.0, spikeinterface 0.104.8, datajoint 0.14.9 — no conflict).
+A real conversion of the sample session wrote a 0.42 GB NWB with VirmenData
+behavior (179 trials) + a `TwoPhotonSeries` of 400 volume timestamps, and
+trial 1's first imaging frame lands **+22.3 ms** after trial 1 starts — one
+frame period at 50.2 Hz, as expected.
+
+Three defects surfaced that task D must fix in `tank-lab-to-nwb`:
+
+1. **One `sync_timestamps` array for every interface.**
+   `temporally_align_data_interfaces` applies the same array to all
+   interfaces; imaging has a different sample count (400 volumes vs behavior's
+   per-iteration frames) and needs its own. Alignment must become
+   per-interface.
+2. **`convert_function_handle_to_str` hard-requires MATLAB.** It raises when
+   `which("matlab")` is None, which kills the whole conversion — even though
+   all four values it produces (`experiment_name`, `protocol_name`,
+   `trial_choice`, `trial_type`) are already treated as optional by the only
+   caller. It should warn and return `{}`. No MATLAB on the export host means
+   no export at all today.
+3. **tz-aware/naive mismatch in `VirmenDataInterface.get_original_timestamps`.**
+   `_get_session_start_time()` is tz-aware (`America/New_York`) but
+   `array_to_dt(epoch["start"])` is naive, so the subtraction raises
+   `TypeError`. It is masked whenever `sync_timestamps` is supplied — which an
+   imaging-only session has no reason to supply, so this fires the moment
+   imaging goes through.
+
+**Clock zero-point (contract detail, easy to get wrong).**
+`frame_times_on_behavior_clock` returns times on the *block-relative* ViRMEn
+clock (`trial.start + trial.time`), but the converter zeroes the NWB timeline
+at `log.session.start` and shifts its trials table by `epoch_start_nwb`. On
+the sample session that offset is **+27.0 ms**. Imaging timestamps must take
+the same shift; without it frame 644 lands 4.7 ms *before* trial 1 starts,
+which is physically backwards.
+
+- [x] Spike: converter + ScanImage interface + our timestamps in one env, real conversion, aligned TwoPhotonSeries
+- [x] Rebase/merge strategy: bring `feat/nwb-export-handler-completion` and our sync branch together
 - [ ] `validate_imaging_data_exists`: fix table references; resolve session→recording→TiffSplit
 - [ ] `resolve_input_paths` / `build_source_data`: add imaging tiff paths + behavior file
 - [ ] Converter: add ScanImage imaging interface with behavior-clock timestamps (subclass or extend TowersNWBConverter)
