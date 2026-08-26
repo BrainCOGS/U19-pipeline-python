@@ -28,10 +28,18 @@ import pytest
 
 
 def _make_dj_table(rows: list):
-    """Mirrors the helper in tests/nwb_export/test_modality_validators.py."""
+    """
+    Mirrors the helper in tests/nwb_export/test_modality_validators.py.
+
+    ``__mul__`` is defined too: tiff_split_directory lives on the TiffSplit
+    master and tiff_split_filename on the Part table, so resolving a path needs
+    the join, not just a restriction.
+    """
     mock = MagicMock()
     mock.__bool__ = lambda self: bool(rows)
     mock.__and__ = lambda self, _: self
+    mock.__mul__ = lambda self, _: self
+    mock.__rmul__ = lambda self, _: self
     mock.fetch.return_value = rows
     return mock
 
