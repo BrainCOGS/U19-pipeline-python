@@ -128,8 +128,8 @@ class TestBuildSourceDataImaging:
     contract: build_source_data(job, export_params, virmen_file, kilosort_dir)
     gains an imaging branch analogous to the existing ephys branch: when
     export_params['include_imaging'] is truthy, it resolves TIFF paths (via
-    resolve_imaging_paths or equivalent) and adds an imaging source_data
-    entry; when TIFF paths do not resolve, or imaging was not requested,
+    resolve_imaging_paths_by_fov) and adds one imaging source_data entry per
+    field of view, named ScanImageImagingFOV<n>; when TIFF paths do not resolve, or imaging was not requested,
     imaging is simply absent from source_data -- and the other entries are
     unaffected either way.
     """
@@ -172,9 +172,9 @@ class TestBuildSourceDataImaging:
 
         export_params = {"include_imaging": True}
         with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths",
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
             create=True,
-            return_value=["/data/root/subj1/split_0.tif"],
+            return_value={0: ["/data/root/subj1/split_0.tif"]},
         ):
             source_data = build_source_data(base_job, export_params, virmen_file, None)
 
@@ -191,9 +191,9 @@ class TestBuildSourceDataImaging:
 
         export_params = {"include_ephys": True, "include_imaging": True}
         with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths",
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
             create=True,
-            return_value=["/data/root/subj1/split_0.tif"],
+            return_value={0: ["/data/root/subj1/split_0.tif"]},
         ):
             source_data = build_source_data(
                 base_job, export_params, virmen_file, kilosort_dir
@@ -211,9 +211,9 @@ class TestBuildSourceDataImaging:
         resolved_paths = ["/data/root/subj1/split_0.tif"]
 
         with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths",
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
             create=True,
-            return_value=resolved_paths,
+            return_value={0: resolved_paths},
         ):
             source_data = build_source_data(base_job, export_params, virmen_file, None)
 
@@ -228,10 +228,84 @@ class TestBuildSourceDataImaging:
 
         export_params = {"include_imaging": True}
         with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths",
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
             create=True,
-            return_value=[],
+            return_value={},
         ):
             source_data = build_source_data(base_job, export_params, virmen_file, None)
 
         assert self._imaging_like_keys(source_data) == []
+
+
+@pytest.mark.no_db
+class TestBuildSourceDataMultipleFovs:
+    """
+    A mesoscope session has one TiffSplit per field of view, and fields of view
+    are separate regions rather than continuations of one another. Each must get
+    its own interface: merging them presents unrelated regions as one continuous
+    recording and misaligns every field of view after the first.
+    """
+
+    @pytest.fixture()
+    def virmen_file(self, tmp_path):
+        f = tmp_path / "session.mat"
+        f.write_bytes(b"\x00")
+        return f
+
+    @pytest.fixture()
+    def base_job(self):
+        return {
+            "subject_fullname": "subj1",
+            "session_date": "2026-08-07",
+            "session_number": 1,
+        }
+
+    def test_each_fov_gets_its_own_interface(self, virmen_file, base_job):
+        from u19_pipeline.nwb_export.conversion import build_source_data
+
+        by_fov = {
+            0: ["/root/fov0_00001.tif", "/root/fov0_00002.tif"],
+            1: ["/root/fov1_00001.tif", "/root/fov1_00002.tif"],
+        }
+        with patch(
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
+            create=True,
+            return_value=by_fov,
+        ):
+            source_data = build_source_data(
+                base_job, {"include_imaging": True}, virmen_file, None
+            )
+
+        assert source_data["ScanImageImagingFOV0"]["file_paths"] == by_fov[0]
+        assert source_data["ScanImageImagingFOV1"]["file_paths"] == by_fov[1]
+
+    def test_fov_files_are_not_cross_contaminated(self, virmen_file, base_job):
+        from u19_pipeline.nwb_export.conversion import build_source_data
+
+        by_fov = {0: ["/root/fov0.tif"], 1: ["/root/fov1.tif"]}
+        with patch(
+            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
+            create=True,
+            return_value=by_fov,
+        ):
+            source_data = build_source_data(
+                base_job, {"include_imaging": True}, virmen_file, None
+            )
+
+        for fov in (0, 1):
+            paths = source_data[f"ScanImageImagingFOV{fov}"]["file_paths"]
+            assert len(paths) == 1
+            assert f"fov{fov}" in paths[0]
+
+    def test_explicit_tiff_paths_stay_a_single_interface(self, virmen_file, base_job):
+        """An explicit override names exact files, so it is one interface."""
+        from u19_pipeline.nwb_export.conversion import build_source_data
+
+        source_data = build_source_data(
+            base_job,
+            {"include_imaging": True, "tiff_paths": ["/root/a.tif", "/root/b.tif"]},
+            virmen_file,
+            None,
+        )
+        imaging = [k for k in source_data if k.startswith("ScanImageImaging")]
+        assert imaging == ["ScanImageImaging"]
