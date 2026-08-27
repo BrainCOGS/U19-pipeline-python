@@ -188,6 +188,77 @@ def resolve_imaging_paths(recording_key: dict, fov_numbers: list | None = None) 
     return paths
 
 
+def resolve_imaging_paths_by_fov(
+    recording_key: dict, fov_numbers: list | None = None
+) -> dict:
+    """
+    Same resolution as :func:`resolve_imaging_paths`, grouped by ``tiff_split``.
+
+    A ``tiff_split`` is one field of view of a mesoscope session. Fields of view
+    are separate regions of tissue, not continuations of one another, so each
+    needs its own imaging interface and its own ``TwoPhotonSeries``. Flattening
+    them into a single file list would present unrelated fields of view as one
+    continuous recording, and would misalign every one after the first.
+
+    Returns:
+        ``{tiff_split: [absolute path, ...]}``, each list in acquisition order.
+        Splits whose files are all missing from disk are omitted.
+    """
+    import pathlib as _pathlib  # noqa: PLC0415
+
+    import datajoint as dj  # noqa: PLC0415
+
+    from u19_pipeline import imaging_pipeline  # noqa: PLC0415
+    from u19_pipeline.nwb_production_utils import (  # noqa: PLC0415
+        recording_ids_for_session,
+    )
+
+    restriction = dict(recording_key)
+    if "recording_id" not in restriction:
+        recording_ids = recording_ids_for_session(restriction)
+        if not recording_ids:
+            return {}
+        restriction = [{"recording_id": rid} for rid in recording_ids]
+
+    splits = imaging_pipeline.TiffSplit & restriction
+    if fov_numbers:
+        splits = splits & [{"tiff_split": int(n)} for n in fov_numbers]
+
+    rows = (imaging_pipeline.TiffSplit.File * splits).fetch(
+        "tiff_split",
+        "file_number",
+        "tiff_split_directory",
+        "tiff_split_filename",
+        as_dict=True,
+    )
+
+    roots = dj.config.get("custom", {}).get("imaging_root_data_dir", None) or []
+    if isinstance(roots, (str, _pathlib.Path)):
+        roots = [roots]
+
+    by_fov: dict = {}
+    for row in sorted(
+        rows, key=lambda r: (r.get("tiff_split", 0), r.get("file_number", 0))
+    ):
+        relative = (
+            _pathlib.Path(row["tiff_split_directory"]) / row["tiff_split_filename"]
+        )
+        for root in roots:
+            candidate = _pathlib.Path(root) / relative
+            if candidate.exists():
+                by_fov.setdefault(int(row.get("tiff_split", 0)), []).append(
+                    candidate.as_posix()
+                )
+                break
+        else:
+            log.warning(
+                "Imaging file listed in TiffSplit.File not found under any "
+                "imaging_root_data_dir: %s",
+                relative,
+            )
+    return by_fov
+
+
 def imaging_timestamps_for_session(
     tiff_paths: list,
     virmen_file,
@@ -330,39 +401,41 @@ def build_source_data(
 
     # ── Imaging ───────────────────────────────────────────────────────────────
     if export_params.get("include_imaging"):
-        tiff_paths = export_params.get("tiff_paths")
-        if not tiff_paths:
+        explicit = export_params.get("tiff_paths")
+        if explicit:
+            # Manual override: one interface over exactly the files given.
+            source_data["ScanImageImaging"] = {"file_paths": [str(p) for p in explicit]}
+            log.info(f"  ScanImageImaging: {len(explicit)} tiff file(s)")
+        else:
             fov_numbers = export_params.get("fov_numbers") or []
             recording_ids = export_params.get("recording_ids") or []
             if recording_ids:
-                tiff_paths = []
+                by_fov: dict = {}
                 for rid in recording_ids:
-                    tiff_paths.extend(
-                        resolve_imaging_paths({"recording_id": rid}, fov_numbers)
-                    )
+                    for fov, paths in resolve_imaging_paths_by_fov(
+                        {"recording_id": rid}, fov_numbers
+                    ).items():
+                        by_fov.setdefault(fov, []).extend(paths)
             else:
-                # No explicit recordings: hand the session key over and let
-                # resolve_imaging_paths do the session -> recording hop.
                 session_key = {
                     k: job[k]
                     for k in ("subject_fullname", "session_date", "session_number")
                     if k in job
                 }
-                tiff_paths = resolve_imaging_paths(session_key, fov_numbers)
+                by_fov = resolve_imaging_paths_by_fov(session_key, fov_numbers)
 
-        if tiff_paths:
-            # ScanImage BigTIFFs, not the generic TiffImagingInterface: only the
-            # ScanImage reader understands their volumetric fastZ layout and the
-            # per-frame headers the I2C sync depends on.
-            source_data["ScanImageImaging"] = {
-                "file_paths": [str(p) for p in tiff_paths]
-            }
-            log.info(f"  ScanImageImaging: {len(tiff_paths)} tiff file(s)")
-        else:
-            log.warning(
-                "include_imaging=True but no TIFF files resolved; "
-                "imaging data will not be included."
-            )
+            # One interface per field of view. Fields of view are separate
+            # regions, so merging them would both misrepresent the anatomy and
+            # break alignment for every FOV after the first.
+            for fov in sorted(by_fov):
+                source_data[f"ScanImageImagingFOV{fov}"] = {"file_paths": by_fov[fov]}
+                log.info(f"  ScanImageImagingFOV{fov}: {len(by_fov[fov])} tiff file(s)")
+
+            if not by_fov:
+                log.warning(
+                    "include_imaging=True but no TIFF files resolved; "
+                    "imaging data will not be included."
+                )
 
     return source_data
 
@@ -478,24 +551,25 @@ def run_conversion_to_file(
     # alignment to ask the interface how many samples it actually has, then
     # again with an array cut to fit.
     aligned_timestamps: dict = {}
-    if "ScanImageImaging" in source_data:
+    imaging_interfaces = [k for k in source_data if k.startswith("ScanImageImaging")]
+    if imaging_interfaces:
         import numpy as np  # noqa: PLC0415
 
+        # Build once without alignment purely to ask each interface how many
+        # samples it reports: a volumetric fastZ stack exposes volumes, not
+        # pages, and the count differs per field of view.
         probe = TowersNWBConverter(source_data=source_data)
-        n_samples = int(
-            np.size(
-                probe.data_interface_objects[
-                    "ScanImageImaging"
-                ].get_original_timestamps()
+        for name in imaging_interfaces:
+            n_samples = int(
+                np.size(probe.data_interface_objects[name].get_original_timestamps())
             )
-        )
-        imaging_ts, diagnostics = imaging_timestamps_for_session(
-            source_data["ScanImageImaging"]["file_paths"],
-            virmen_file,
-            n_samples=n_samples,
-        )
-        aligned_timestamps["ScanImageImaging"] = imaging_ts
-        log.info(f"  imaging sync diagnostics: {diagnostics}")
+            imaging_ts, diagnostics = imaging_timestamps_for_session(
+                source_data[name]["file_paths"],
+                virmen_file,
+                n_samples=n_samples,
+            )
+            aligned_timestamps[name] = imaging_ts
+            log.info(f"  {name} sync diagnostics: {diagnostics}")
 
     converter = TowersNWBConverter(
         source_data=source_data,
