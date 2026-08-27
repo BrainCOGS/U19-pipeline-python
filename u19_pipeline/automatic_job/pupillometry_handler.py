@@ -252,7 +252,12 @@ class PupillometryProcessingHandler():
     @staticmethod
     @pupillometry_exception_handler
     def check_pupillometry_sessions_queue():
-
+        # Joins/updates acquisition.SessionVideo and
+        # pupillometry.PupillometrySessionModelData below; run on a cron
+        # schedule (see call_pupillometry_queue_jobs.sh) with no flock guard,
+        # so overlapping runs can hold both tables open at once. This is a
+        # source of the `session_video` / `_pupillometry_session_model_data`
+        # entries reported by locked_tables_alert.py.
         status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 
@@ -334,7 +339,10 @@ class PupillometryProcessingHandler():
     @staticmethod
     @pupillometry_exception_handler
     def check_processed_pupillometry_sessions():
-
+        # Same SessionVideo/PupillometrySessionModelData join+update pattern
+        # as check_pupillometry_sessions_queue() above; run on its own cron
+        # schedule (see call_pupillometry_check_jobs.sh), also without a
+        # flock guard against overlapping runs.
         #status_update = config.status_update_idx['NO_CHANGE']
         update_value_dict = copy.deepcopy(config.default_update_value_dict)
 

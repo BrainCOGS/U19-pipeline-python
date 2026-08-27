@@ -70,6 +70,7 @@ line-length = 120
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
+    "pytest>=8.0.0",
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
 ]
