@@ -243,16 +243,14 @@ policy — record it here as the rule, not as an open design question:
   magnitude larger than the alignment precision needed. Alignment must stay
   content-based, through the I2C `[block, trial, iteration]` packets, exactly
   as `imaging_behavior_sync.py` does it.
-- **Mixed ephys+imaging sessions are an open question, not a decided one.**
-  Ephys exports today align behavior onto the ephys clock (via the
-  `nwb_production.BehaviorSync` table consumed in
-  `conversion.py:query_metadata`, `:223-236`). That directly conflicts with
-  the ViRMEn-clock rule above for imaging. No resolution is written down for
-  a session that has both modalities in one export job. **This needs
-  explicit sign-off before the first DANDI upload of a mixed-modality
-  session** — once timestamps are published to DANDI they are effectively
-  immutable, so this is not a decision to make casually or silently default.
-  Do not invent an answer here; flag it on the tracking issue if you hit it.
+- **Ephys and imaging are separate modalities and are not combined in one
+  session.** Ephys exports align behavior onto the ephys clock (via
+  `nwb_production.BehaviorSync`, consumed in `conversion.py:query_metadata`,
+  `:223-236`); imaging exports use the ViRMEn clock as described above. The two
+  rules would conflict in a session carrying both, but no such session is
+  acquired, so there is no combined rule and none is needed. If that ever
+  changes, decide and write the rule down *before* the first DANDI upload of
+  such a session — published timestamps are effectively immutable.
 
 ## 5. The `tank-lab-to-nwb` dependency
 

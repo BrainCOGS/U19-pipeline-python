@@ -88,7 +88,7 @@ which is physically backwards.
 - [x] `tank-lab-to-nwb`: run its scratch files in a TemporaryDirectory instead of the cwd
 - [x] `tank-lab-to-nwb`: fix the tz-aware/naive subtraction in `get_original_timestamps`
 - [x] Clock convention decided and written down (`docs/imaging_behavior_sync.md` section 6, `docs/nwb_export.md`)
-- [ ] **Open:** mixed ephys+imaging clock rule — needs sign-off before the first DANDI upload
+- [x] Mixed ephys+imaging clock rule — **not applicable**: the two modalities are not acquired in the same session (confirmed 2026-08-27)
 - [ ] Pin the `tank-lab-to-nwb` dependency to a commit
 - [ ] PRs: this repo + `tank-lab-to-nwb` (`building-nwb-converter`)
 
