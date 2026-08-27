@@ -416,3 +416,71 @@ But it is also the whole reason the sync is content-based: the I2C
 `[block, trial, iteration]` packets tie the two streams together by *what* was
 happening, not by *when* two unsynchronized clocks each thought it was. Never
 align these streams through `epoch`.
+
+## 7. How ViRMEn records time (and why `trial.time[iter-1]` is the right lookup)
+
+The I2C packet carries `[block, trial, iteration]`, and turning that into a time
+depends on knowing exactly which counter `iteration` is. It is the **per-trial**
+iteration index, not ViRMEn's global one, and the source makes that unambiguous.
+
+### The clock
+
+`vr.timeElapsed = toc(firstTic)` (`virmenEngine.m:367`). `firstTic` is set once
+at `:124`, after initialization, and never reset — so this is one monotonic
+clock for the whole session, zeroed at approximately block 1 start (section 6).
+
+### One `logTick` call writes both the time and the number that is broadcast
+
+```matlab
+% ExperimentLog.m, logTick()
+obj.currentIt = obj.currentIt + 1;
+obj.currentTrial.time(obj.currentIt,1) = vr.timeElapsed - obj.currentTrial.start;
+...
+indices = [numel(obj.block), obj.writeIndex, obj.currentIt];
+```
+
+`obj.currentIt` is reset to 0 at each trial start, alongside
+`obj.currentTrial.start = vr.timeElapsed` (`ExperimentLog.m:~497-501`). The
+returned `indices` triple is handed straight to `updateDAQSyncSignals`, which
+sends it over I2C:
+
+```matlab
+%data(1): block number
+%data(2): trial number.
+%data(3): VR iteration in the present trial.
+```
+
+So the number stamped into the TIFF header and the index into `trial.time` are
+the same counter, assigned in the same call. Hence:
+
+```
+time(block, trial, iter) = trial.start + trial.time[iter-1]
+```
+
+on the `timeElapsed` clock, with the section 6 offset applied to reach the NWB
+timeline.
+
+### Confirmed against the sample session
+
+- `trial.viStart` holds the *global* counter (`vr.iterations`) at trial start.
+  Its successive deltas — 904, 903, 949, 676, 698 — equal the per-trial
+  iteration counts exactly, which is what distinguishes the two counters.
+- Packets for trial 1 span iterations 1..904, and `trial.time` for trial 1 has
+  904 entries. Trial 3's packets span 1..565. A global counter would put trial
+  3 in the thousands.
+- `trial.time[0] == 0`: the first iteration coincides with trial start, so
+  there is no off-by-one at the trial boundary.
+
+### Two things this does not give you
+
+- **Not every frame has a packet** — 1180 of 2000 on the sample session.
+  ViRMEn iterations and imaging frames are not 1:1, and imaging runs before and
+  after behavior. This is why every frame's timestamp comes from the linear fit
+  rather than a direct lookup.
+- **The packet marks computation, not display.** `updateDAQSyncSignals` is
+  called from `runtimeCodeFun`, which its own header notes runs *just before*
+  ViRMEn executes that iteration's display update. The logged time and the
+  broadcast packet refer to the same instant, so they stay mutually consistent,
+  but an unmeasured display latency separates both from what the animal saw. It
+  is a constant offset rather than a drift, and it is smaller than the ~10 ms
+  fit residual.
