@@ -18,6 +18,19 @@ import u19_pipeline.automatic_job.params_config as config
 
 
 
+def format_call_args(func, args, kwargs, max_len=2000):
+    '''
+    Build a human-readable, truncated repr of the arguments a function was called with,
+    so a failure log shows what input triggered it (e.g. which recording/query_key).
+    '''
+    arg_strs = [repr(a) for a in args]
+    kwarg_strs = [f'{k}={v!r}' for k, v in kwargs.items()]
+    call_repr = f"{func.__name__}({', '.join(arg_strs + kwarg_strs)})"
+    if len(call_repr) > max_len:
+        call_repr = call_repr[:max_len] + '...<truncated>'
+    return call_repr
+
+
 def exception_handler(func):
     '''
     Decorator function to get error message when a workflow manager function fails
@@ -27,10 +40,15 @@ def exception_handler(func):
              argout = func(*args, **kwargs)
              return argout
         except Exception as e:
+            call_repr = format_call_args(func, args, kwargs)
             print('Exception HERE ................')
+            print('Failed call:', call_repr)
             update_value_dict = copy.deepcopy(config.default_update_value_dict)
             update_value_dict['error_info']['error_message'] = str(e)
-            update_value_dict['error_info']['error_exception'] = (''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__)))
+            update_value_dict['error_info']['error_exception'] = (
+                'Failed call: ' + call_repr + '\n' +
+                ''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__))
+            )
             return (config.RECORDING_STATUS_ERROR_ID, update_value_dict)
     return inner_function
 
