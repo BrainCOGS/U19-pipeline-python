@@ -40,7 +40,11 @@ def generate_slurm_file(job_id, program_selection_params):
     print('slurm_dict', slurm_dict)
 
     if program_selection_params['process_cluster'] == 'spock':
-        slurm_text = generate_slurm_spock(slurm_dict)
+        # Ephys (BrainCogsEphysSorters) runs on uv; imaging keeps the conda path.
+        if program_selection_params['process_repository'] == 'BrainCogsEphysSorters':
+            slurm_text = generate_slurm_spockmk2_ephys(slurm_dict)
+        else:
+            slurm_text = generate_slurm_spock(slurm_dict)
     else:
         slurm_text = generate_slurm_tiger(slurm_dict)
 
@@ -67,6 +71,40 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
+def prefetch_uv_env(program_selection_params, cluster_vars, repository_dir):
+    '''
+    Sync the uv environment on the head node before submitting the job.
+
+    Compute nodes have no network access, so all packages must be present in the uv cache
+    (on the mounted $HOME) before sbatch. The head node has network, so we run
+    `uv sync --locked` there. `uv sync --locked` is idempotent and near-instant on a warm
+    cache, so this is cheap on every submit and only does real work after a uv.lock change.
+
+    Raises so a dependency problem surfaces at submit time with a real error message,
+    instead of as a job that dies minutes later on a compute node.
+    '''
+
+    # bash -lc so a login profile is sourced and `uv` is on PATH over non-interactive ssh.
+    remote = ("cd " + repository_dir + " && "
+              "uv python install 3.14 && "
+              "uv sync --locked")
+
+    if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
+        command = ['bash', '-lc', remote]        # already on spock: run locally
+    else:
+        command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'bash', '-lc', remote]
+
+    print('prefetch_uv_env', command)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.wait()
+    stdout, stderr = p.communicate()
+    print(stdout)
+    print(stderr)
+
+    if p.returncode != config.system_process['SUCCESS']:
+        raise Exception('uv env prefetch failed before sbatch: ' + stderr.decode('UTF-8'))
+
+
 def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_directory, modality, slurm_location):
 
     id_slurm_job = -1
@@ -80,6 +118,11 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
 
     processing_repository = program_selection_params['process_repository']
     repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
+
+    # The BrainCogsEphysSorters repo runs on uv. Compute nodes have no network, so sync the
+    # environment on the head node (which does) before submitting; the job then runs offline.
+    if processing_repository == 'BrainCogsEphysSorters':
+        prefetch_uv_env(program_selection_params, cluster_vars, repository_dir)
 
     command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'sbatch',
     "--export=recording_process_id="+job_id+
@@ -230,10 +273,20 @@ def module_defininition_text():
 
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
+    # Ephys-specific resources. DREDge peak detection is CPU-parallel and is the DREDge
+    # wall-time bottleneck, so give the (single) task multiple cores; keep a generous
+    # walltime since DREDge is additive on top of Kilosort. Copy so we don't mutate the
+    # shared default dict used by the imaging path.
+    slurm_dict = copy.deepcopy(slurm_dict)
+    slurm_dict['cpus-per-task'] = 8
+    slurm_dict['time'] = '16:00:00'
+
+    # #SBATCH directives must come first; put `source ~/.bashrc` in the body (after the
+    # directives) so it does not swallow the first #SBATCH line, and so `uv` is on PATH.
     slurm_text = '#!/bin/bash\n'
-    slurm_text += 'source ~/.bashrc'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
+    source ~/.bashrc
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
     echo "RECORDING_PROCESS_ID: ${recording_process_id}"
@@ -242,14 +295,12 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anacondapy/2023.07-cuda -s
+    # matlab is still needed for the Kilosort2 / Kilosort3 shell-outs; uv replaces conda.
     module load matlab/R2024a -s
 
-    conda activate BraincogsEphysSorters_Env
-
     cd ${repository_dir}
-    python -u ${process_script_path}
-    #python ${process_script_path} ${recording_process_id}
+    uv sync --frozen --offline
+    uv run --frozen --offline python -u ${process_script_path}
     '''
 
     return slurm_text
