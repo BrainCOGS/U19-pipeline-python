@@ -470,7 +470,7 @@ class RecProcessHandler:
                 status_update == config.status_update_idx["NEXT_STATUS"]
                 or status_update == config.status_update_idx["ERROR_STATUS"]
             ):
-                ft.transfer_log_file(
+                transfer_status = ft.transfer_log_file(
                     rec_series["job_id"],
                     program_selection_params,
                     ssh_host,
@@ -484,13 +484,32 @@ class RecProcessHandler:
                 )
                 error_log = ft.get_error_log_str(rec_series["job_id"])
 
-                # If the program errored, print the log.
+                # If the program errored, report the actual error and where the log is.
                 # Previous method of capturing the error_log was insufficient since Kilosort wrote to stderr
                 if status_update == config.status_update_idx["ERROR_STATUS"]:
+                    # If the log could not be copied over, point to the log in the cluster instead
+                    if (
+                        transfer_status == config.system_process["SUCCESS"]
+                        and error_log
+                    ):
+                        log_location = ft.get_log_file_local_path(
+                            rec_series["job_id"], log_type="ERROR"
+                        )
+                    else:
+                        log_location = ft.get_log_file_cluster_path(
+                            rec_series["job_id"],
+                            program_selection_params,
+                            log_type="ERROR",
+                        )
+
                     update_value_dict["error_info"]["error_message"] = (
-                        "An error occured in processing (check LOG)"
+                        ft.build_error_message(message, error_log, log_location)
                     )
-                    update_value_dict["error_info"]["error_exception"] = error_log
+                    update_value_dict["error_info"]["error_exception"] = (
+                        error_log
+                        if error_log
+                        else "Error log empty or not available in " + log_location
+                    )
         else:
             status_update = config.status_update_idx["NEXT_STATUS"]
 
