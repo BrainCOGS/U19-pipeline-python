@@ -10,7 +10,11 @@ from datetime import datetime
 from element_interface.utils import dict_to_uuid
 
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utils.file_utils import build_error_message, summarize_error_log  # noqa: F401
 #Functions to transfer files (globus, scp, smbclient)
+
+#Log files of cluster jobs are named after the job id
+default_log_filename = 'job_id_%s.log'
 
 #FOR PNI endpoint
 #pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
@@ -235,28 +239,44 @@ def translate_globus_output(stdout_process):
     return d1
 
 
-def transfer_log_file(recording_process_id, program_selection_params, user_host, log_type='ERROR'):
+def get_log_file_local_path(recording_process_id, log_type='ERROR'):
     '''
-    Transfer and send parameter files for processing
+    Local path where the cluster log of this job is copied to
+    '''
+    if log_type == 'ERROR':
+        local_log_file_dir = dj.config['custom']['error_logs_dir']
+    else:
+        local_log_file_dir = dj.config['custom']['output_logs_dir']
+
+    log_filename = default_log_filename % (recording_process_id)
+
+    return pathlib.Path(local_log_file_dir, log_filename).as_posix()
+
+
+def get_log_file_cluster_path(recording_process_id, program_selection_params, log_type='ERROR'):
+    '''
+    user@host:path of the log of this job in the processing cluster
     '''
     this_cluster_vars = get_cluster_vars(program_selection_params['process_cluster'])
     if log_type == 'ERROR':
         cluster_log_file_dir = this_cluster_vars['error_files_dir']
-        local_log_file_dir = dj.config['custom']['error_logs_dir']
     else:
         cluster_log_file_dir = this_cluster_vars['log_files_dir']
-        local_log_file_dir = dj.config['custom']['output_logs_dir']
-
-    user_host = this_cluster_vars['user']+'@'+this_cluster_vars['hostname']
-
-    default_log_filename = 'job_id_%s.log'
 
     log_filename = default_log_filename % (recording_process_id)
-    log_file_local_path = pathlib.Path(local_log_file_dir,log_filename).as_posix()
-    log_file_cluster_path = pathlib.Path(cluster_log_file_dir,log_filename).as_posix()
-    chanmap_file_full_path = user_host+':'+log_file_cluster_path
+    log_file_cluster_path = pathlib.Path(cluster_log_file_dir, log_filename).as_posix()
 
-    status = scp_file_transfer(chanmap_file_full_path, log_file_local_path)
+    return this_cluster_vars['user']+'@'+this_cluster_vars['hostname']+':'+log_file_cluster_path
+
+
+def transfer_log_file(recording_process_id, program_selection_params, user_host, log_type='ERROR'):
+    '''
+    Transfer and send parameter files for processing
+    '''
+    log_file_local_path = get_log_file_local_path(recording_process_id, log_type=log_type)
+    log_file_full_path = get_log_file_cluster_path(recording_process_id, program_selection_params, log_type=log_type)
+
+    status = scp_file_transfer(log_file_full_path, log_file_local_path)
 
     return status
 
@@ -264,11 +284,7 @@ def transfer_log_file(recording_process_id, program_selection_params, user_host,
 def get_error_log_str(recording_process_id):
 
     error_log_data = ''
-    default_log_filename = 'job_id_%s.log'
-
-    local_log_file_dir = dj.config['custom']['error_logs_dir']
-    log_filename = default_log_filename % (recording_process_id)
-    log_file_local_path = pathlib.Path(local_log_file_dir,log_filename).as_posix()
+    log_file_local_path = get_log_file_local_path(recording_process_id, log_type='ERROR')
 
     if os.path.exists(log_file_local_path):
         with open(log_file_local_path, 'r') as error_log_file:
