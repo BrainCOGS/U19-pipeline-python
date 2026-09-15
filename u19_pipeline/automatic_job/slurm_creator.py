@@ -71,7 +71,7 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
-def prefetch_uv_env(program_selection_params, cluster_vars, repository_dir):
+def prefetch_uv_env(program_selection_params, modality):
     '''
     Sync the uv environment on the head node before submitting the job.
 
@@ -80,9 +80,19 @@ def prefetch_uv_env(program_selection_params, cluster_vars, repository_dir):
     `uv sync --locked` there. `uv sync --locked` is idempotent and near-instant on a warm
     cache, so this is cheap on every submit and only does real work after a uv.lock change.
 
-    Raises so a dependency problem surfaces at submit time with a real error message,
-    instead of as a job that dies minutes later on a compute node.
+    Only the BrainCogsEphysSorters repo runs on uv; for any other repository this is a no-op.
+
+    Returns (status, error_message) like queue_slurm_file, so the handler can mark the job
+    ERROR_STATUS with the real stderr at submit time instead of a job that dies minutes
+    later on a compute node.
     '''
+
+    processing_repository = program_selection_params['process_repository']
+    if processing_repository != 'BrainCogsEphysSorters':
+        return config.system_process['SUCCESS'], ''
+
+    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+    repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
 
     # bash -lc so a login profile is sourced and `uv` is on PATH over non-interactive ssh.
     remote = ("cd " + repository_dir + " && "
@@ -101,8 +111,12 @@ def prefetch_uv_env(program_selection_params, cluster_vars, repository_dir):
     print(stdout)
     print(stderr)
 
-    if p.returncode != config.system_process['SUCCESS']:
-        raise Exception('uv env prefetch failed before sbatch: ' + stderr.decode('UTF-8'))
+    if p.returncode == config.system_process['SUCCESS']:
+        error_message = ''
+    else:
+        error_message = stderr.decode('UTF-8')
+
+    return p.returncode, error_message
 
 
 def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_directory, modality, slurm_location):
@@ -118,11 +132,6 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
 
     processing_repository = program_selection_params['process_repository']
     repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
-
-    # The BrainCogsEphysSorters repo runs on uv. Compute nodes have no network, so sync the
-    # environment on the head node (which does) before submitting; the job then runs offline.
-    if processing_repository == 'BrainCogsEphysSorters':
-        prefetch_uv_env(program_selection_params, cluster_vars, repository_dir)
 
     command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'sbatch',
     "--export=recording_process_id="+job_id+
