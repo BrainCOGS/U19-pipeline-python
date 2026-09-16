@@ -95,8 +95,9 @@ def prefetch_uv_env(program_selection_params, modality):
     repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
 
     # bash -lc so a login profile is sourced and `uv` is on PATH over non-interactive ssh.
+    # `uv sync` downloads the interpreter required by the repo's pyproject on its own, so the
+    # Python version is not pinned here and does not need updating when the repo bumps it.
     remote = ("cd " + repository_dir + " && "
-              "uv python install 3.14 && "
               "uv sync --locked")
 
     if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
@@ -282,13 +283,13 @@ def module_defininition_text():
 
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
-    # Ephys-specific resources. DREDge peak detection is CPU-parallel and is the DREDge
-    # wall-time bottleneck, so give the (single) task multiple cores; keep a generous
-    # walltime since DREDge is additive on top of Kilosort. Copy so we don't mutate the
-    # shared default dict used by the imaging path.
-    slurm_dict = copy.deepcopy(slurm_dict)
-    slurm_dict['cpus-per-task'] = 8
-    slurm_dict['time'] = '16:00:00'
+    # Ephys-specific resources (cpus-per-task, walltime, gpus) live in
+    # ft.slurm_dict_spockmk2_ephys; only the per-job fields set by generate_slurm_file are
+    # carried over from the incoming dict.
+    ephys_dict = copy.deepcopy(ft.slurm_dict_spockmk2_ephys)
+    for key in ('job-name', 'output', 'error'):
+        ephys_dict[key] = slurm_dict[key]
+    slurm_dict = ephys_dict
 
     # #SBATCH directives must come first; put `source ~/.bashrc` in the body (after the
     # directives) so it does not swallow the first #SBATCH line, and so `uv` is on PATH.
@@ -308,7 +309,10 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     module load matlab/R2024a -s
 
     cd ${repository_dir}
-    uv sync --frozen --offline
+    # Compute nodes have no network: this only succeeds if the head-node sync already
+    # matched uv.lock. Exit non-zero so the job shows FAILED with a clear reason instead
+    # of running against a stale environment.
+    uv sync --frozen --offline || { echo "uv environment does not match uv.lock (offline sync failed; was the head-node prefetch run?)" >&2; exit 1; }
     uv run --frozen --offline python -u ${process_script_path}
     '''
 

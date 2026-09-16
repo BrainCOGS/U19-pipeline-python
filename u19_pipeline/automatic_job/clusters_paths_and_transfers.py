@@ -39,10 +39,13 @@ slurm_dict_tiger_default = {
     'output': 'OutputLog/job_id_${job_id}".log',
     'error':  'ErrorLog/job_id_${job_id}".log'
 }
+# Used by slurm_creator.generate_slurm_spockmk2_ephys (BrainCogsEphysSorters jobs).
+# cpus-per-task: DREDge peak detection is CPU-parallel and is its wall-time bottleneck.
 slurm_dict_spockmk2_ephys = {
     'job-name': 'kilosort2',
     'nodes': 1,
     'ntasks': 1,
+    'cpus-per-task': 8,
     'time': '30:00:00',
     'mem': '50G',
     'gres': 'gpu:2',
