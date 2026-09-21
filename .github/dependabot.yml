@@ -37,8 +37,16 @@ updates:
 
     rebase-strategy: "auto"
 
+    # A group without `applies-to` only batches scheduled version updates.
+    # Security updates are grouped separately, so declare both or the
+    # security fixes keep arriving as one PR per package.
     groups:
       docker:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      docker-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
 
@@ -67,8 +75,15 @@ updates:
 
     rebase-strategy: "auto"
 
+    # See the docker entry above: version and security updates are grouped
+    # independently, so both need a group.
     groups:
       python:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      python-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
 
