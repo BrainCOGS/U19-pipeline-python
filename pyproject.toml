@@ -77,8 +77,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 markers = [
-    "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/conftest.py",
+    "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/dbskip.py",
 ]
 
 [tool.uv]

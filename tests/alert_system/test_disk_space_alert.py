@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from conftest import import_or_skip_db
+from dbskip import import_or_skip_db
 
 # Importing disk_space_alert pulls in u19_pipeline.lab, which declares a
 # dj.schema at import time and therefore needs dj_local_conf.json and a
