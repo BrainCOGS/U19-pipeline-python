@@ -68,7 +68,6 @@ updates:
 
     labels:
       - "dependencies"
-      - "python"
 
     commit-message:
       prefix: "deps"
