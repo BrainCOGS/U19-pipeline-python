@@ -44,7 +44,9 @@ def pytest_configure(config):
 
 def _skip_or_fail(reason):
     if _run_db:
-        pytest.fail(f"--run-db given but the database is unavailable: {reason}", pytrace=False)
+        pytest.fail(
+            f"--run-db given but the database is unavailable: {reason}", pytrace=False
+        )
     pytest.skip(reason, allow_module_level=True)
 
 
@@ -55,7 +57,9 @@ def db_unavailable_reason():
 
     custom = dj.config.get("custom") or {}
     if "database.prefix" not in custom:
-        return "dj.config['custom']['database.prefix'] is not set (no dj_local_conf.json?)"
+        return (
+            "dj.config['custom']['database.prefix'] is not set (no dj_local_conf.json?)"
+        )
     try:
         dj.conn()
     except Exception as exc:  # DataJointError, OperationalError, ...
@@ -79,7 +83,9 @@ def pytest_collection_modifyitems(config, items):
     if reason is None:
         return
     if _run_db:
-        pytest.fail(f"--run-db given but the database is unavailable: {reason}", pytrace=False)
+        pytest.fail(
+            f"--run-db given but the database is unavailable: {reason}", pytrace=False
+        )
     skip = pytest.mark.skip(reason=reason)
     for item in items:
         if item.get_closest_marker(DB_MARKER):
