@@ -1,8 +1,14 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from conftest import import_or_skip_db
 
-from u19_pipeline.alert_system.custom_alerts import disk_space_alert as dsa
+# Importing disk_space_alert pulls in u19_pipeline.lab, which declares a
+# dj.schema at import time and therefore needs dj_local_conf.json and a
+# reachable database, even though every test below mocks the filesystem
+# and Slack. See tests/conftest.py.
+pytestmark = pytest.mark.db
+dsa = import_or_skip_db("u19_pipeline.alert_system.custom_alerts.disk_space_alert")
 
 TB = dsa.BYTES_PER_TB
 

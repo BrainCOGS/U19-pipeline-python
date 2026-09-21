@@ -75,5 +75,11 @@ dev = [
     "setuptools>=75.8.0"
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/conftest.py",
+]
+
 [tool.uv]
 exclude-newer = "14 days"
