@@ -1,0 +1,10 @@
+.git
+.venv
+.claude
+__pycache__
+*.py[cod]
+*.env*
+dj_local_conf.json
+.idea
+*.vscode*
+.DS_Store
