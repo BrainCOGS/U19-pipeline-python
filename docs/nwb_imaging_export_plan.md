@@ -34,8 +34,10 @@ timestamps coexist in one env (neuroconv 0.10.0, roiextractors 0.9.0, pynwb
 4.1.0, hdmf 6.2.0, spikeinterface 0.104.8, datajoint 0.14.9 — no conflict).
 A real conversion of the sample session wrote a 0.42 GB NWB with VirmenData
 behavior (179 trials) + a `TwoPhotonSeries` of 400 volume timestamps, and
-trial 1's first imaging frame lands **+22.3 ms** after trial 1 starts — one
-frame period at 50.2 Hz, as expected.
+trial 1's first packet-carrying frame lands **+22.3 ms** after trial 1 starts.
+(Later checked on the full session: that is trial 1's late first packet, not
+alignment error; the typical trial is +1 ms. See `docs/imaging_behavior_sync.md`
+section 9.)
 
 Three defects surfaced that task D must fix in `tank-lab-to-nwb`:
 
@@ -62,8 +64,10 @@ Three defects surfaced that task D must fix in `tank-lab-to-nwb`:
 clock (`trial.start + trial.time`), but the converter zeroes the NWB timeline
 at `log.session.start` and shifts its trials table by `epoch_start_nwb`. On
 the sample session that offset is **+27.0 ms**. Imaging timestamps must take
-the same shift; without it frame 644 lands 4.7 ms *before* trial 1 starts,
-which is physically backwards.
+the same shift, because the trials table and the imaging series must share
+one zero. (The original argument here, that skipping it made frame 644 land
+"physically backwards", was wrong; see `docs/imaging_behavior_sync.md` section
+9.)
 
 - [x] Spike: converter + ScanImage interface + our timestamps in one env, real conversion, aligned TwoPhotonSeries
 - [x] Rebase/merge strategy: bring `feat/nwb-export-handler-completion` and our sync branch together

@@ -259,8 +259,10 @@ nwbfile = interface.create_nwbfile(metadata=...)  # TwoPhotonSeries w/ timestamp
 # trials table straight from the spans / behavior log
 for i, tr in enumerate(log.block.trial):
     nwbfile.add_trial(start_time=tr.start, stop_time=tr.start + tr.duration)
-    # + columns: trialType, choice, cuePos, ... and the imaging frame span
-    #   from sync['sync_im_frame_span_by_behav_trial'][i]
+    # + columns: trialType, choice, cuePos, ...
+    # Do NOT add frame spans from sync['sync_im_frame_span_by_behav_trial']:
+    # they are packet-based and one frame late at the onset of over half the
+    # trials (section 9). Derive frame membership from the timestamps.
 
 # per-iteration behavior (position, velocity) as TimeSeries on the same clock
 # t = tr.start + tr.time;  data = tr.position / tr.velocity
@@ -305,9 +307,10 @@ trial 1 row: {'start_time': 1.757, 'stop_time': 12.400,
               'first_im_frame': 644, 'last_im_frame': 1176}
 ```
 
-Cross-check: trial 1 starts at 1.757 s on the behavior clock, and its first
-imaging frame (page 644) maps to ≈1.77 s — the two data streams agree to
-within the expected sub-frame jitter. Negative timestamps are the ~11 s of
+Cross-check: trial 1 starts at 1.757 s on the behavior clock, and page 644,
+the first page carrying a trial-1 packet, maps to ≈1.78 s. That 23 ms is not
+alignment error: trial 1's first packet was sent late (section 9), and the
+trial actually starts inside page 642. Negative timestamps are the ~11 s of
 imaging acquired before ViRMEn behavior started (frames with `I2CData = {}`).
 
 ### Relationship to the existing NWB export branches
@@ -400,9 +403,12 @@ timestamps = frame_times_on_behavior_clock(sync, log)[0] + epoch_offset
 ```
 
 `VirmenDataInterface` already applies this shift to its trials table
-(`epoch_start_nwb`). Imaging must match it. Skipping it puts trial 1's first
-imaging frame 4.7 ms *before* trial 1 starts instead of 22.3 ms after — wrong
-by one frame period, and small enough to pass for ordinary jitter.
+(`epoch_start_nwb`). Imaging must match it: the two must share one zero, and
+27 ms of disagreement is more than a frame at 50 Hz. (An earlier version of
+this paragraph cited trial 1's +22.3 ms first-frame offset as evidence that the
+shift was physically right. That was wrong reasoning — the +22 ms is trial 1's
+late first packet, section 9 — but the shift itself stands on the
+shared-zero argument.)
 
 ### Why wall clocks can't do this job
 
@@ -553,3 +559,35 @@ and never rejects down to fewer than two points.
   frame). The trial-1 difference is not yet explained.
 
 Covered by `tests/utils/test_imaging_behavior_sync.py`.
+
+## 9. The first packet of every trial is late, so packet-based frame spans are too
+
+Checked on the full sample session (all 45 files, 89,508 frames, 179 trials;
+fit +5.14 ppm, 1.05 ms scatter).
+
+The first iteration of every trial is slow: ViRMEn records `vr.timeElapsed`,
+then does its trial-setup work, then sends the packet. The step from iteration
+1 to 2 has a median of 21.0 ms against ~11.7 ms elsewhere, and the iteration-1
+packet arrives a median **8.9 ms** late (95th percentile 11.6 ms). Trial 1,
+the first trial of the session, is the extreme case: a 40.8 ms first step and a
+packet 23.2 ms late, which lands 0.2 ms into page 644 although the trial began
+inside page 642.
+
+Frame timestamps come from the robust clock fit and are unaffected. What is
+affected is anything that decides a trial's frames by *which frame header
+received the packet*: `sync_im_frame_span_by_behav_trial` here, and the
+production `u19_imaging_pipeline.SyncImagingBehavior` spans it reproduces.
+Against the frame that contains each trial's start:
+
+| Span's first frame | Trials |
+|---|---|
+| same frame | 78 |
+| one frame late | 100 |
+| two frames late | 1 (trial 1) |
+
+- **NWB export is not affected.** It writes per-frame timestamps and the trial
+  table's start times; it does not write packet-based spans. Frame membership
+  should be derived from those timestamps.
+- **Analyses that cut trials with the DataJoint spans** have up to one frame of
+  onset jitter (20 ms at 50 Hz, ~70 ms on the mesoscope). The spans keep
+  matching production on purpose, so they are left as they are here.

@@ -112,7 +112,9 @@ this personally (it's the decision point).
 3. Run the conversion (stub-sized write is fine).
 
 **Pass:** NWB file has VirmenData behavior + TwoPhotonSeries, trial 1
-(start 1.757 s) has its first imaging frame at ≈1.77 s.
+(start 1.757 s) has its first packet-carrying frame at ≈1.78 s. (That 23 ms is
+trial 1's late first packet, not alignment error — see
+`docs/imaging_behavior_sync.md` section 9.)
 **Fail:** version conflict or the converter can't take per-interface
 timestamps → report findings on issue #111 before proceeding; the fix then
 happens in tank-lab-to-nwb first.
