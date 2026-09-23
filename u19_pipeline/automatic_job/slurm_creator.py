@@ -71,6 +71,11 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
+# Upper bound for the head-node `uv sync`; a cold cache (torch etc.) takes a few minutes,
+# a hung ssh must not block the pipeline loop forever.
+prefetch_uv_env_timeout_s = 30 * 60
+
+
 def prefetch_uv_env(program_selection_params, modality):
     '''
     Sync the uv environment on the head node before submitting the job.
@@ -80,7 +85,8 @@ def prefetch_uv_env(program_selection_params, modality):
     `uv sync --locked` there. `uv sync --locked` is idempotent and near-instant on a warm
     cache, so this is cheap on every submit and only does real work after a uv.lock change.
 
-    Only the BrainCogsEphysSorters repo runs on uv; for any other repository this is a no-op.
+    Only BrainCogsEphysSorters on spock runs on uv (tiger still uses conda, see
+    generate_slurm_tiger); for anything else this is a no-op.
 
     Returns (status, error_message) like queue_slurm_file, so the handler can mark the job
     ERROR_STATUS with the real stderr at submit time instead of a job that dies minutes
@@ -88,7 +94,7 @@ def prefetch_uv_env(program_selection_params, modality):
     '''
 
     processing_repository = program_selection_params['process_repository']
-    if processing_repository != 'BrainCogsEphysSorters':
+    if processing_repository != 'BrainCogsEphysSorters' or program_selection_params['process_cluster'] != 'spock':
         return config.system_process['SUCCESS'], ''
 
     cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
@@ -107,15 +113,24 @@ def prefetch_uv_env(program_selection_params, modality):
 
     print('prefetch_uv_env', command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    p.wait()
-    stdout, stderr = p.communicate()
+    # communicate() drains both pipes while waiting; p.wait() first can deadlock once uv
+    # writes more than a pipe buffer (a cold-cache sync lists every installed package).
+    try:
+        stdout, stderr = p.communicate(timeout=prefetch_uv_env_timeout_s)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.communicate()
+        return config.system_process['ERROR'], ('uv sync on head node timed out after '
+                                                + str(prefetch_uv_env_timeout_s) + ' s')
     print(stdout)
     print(stderr)
 
     if p.returncode == config.system_process['SUCCESS']:
         error_message = ''
     else:
-        error_message = stderr.decode('UTF-8')
+        error_message = stderr.decode('UTF-8', errors='replace')
+        if not error_message:
+            error_message = 'uv sync on head node exited with code ' + str(p.returncode)
 
     return p.returncode, error_message
 
@@ -309,10 +324,11 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     module load matlab/R2024a -s
 
     cd ${repository_dir}
-    # Compute nodes have no network: this only succeeds if the head-node sync already
-    # matched uv.lock. Exit non-zero so the job shows FAILED with a clear reason instead
-    # of running against a stale environment.
-    uv sync --frozen --offline || { echo "uv environment does not match uv.lock (offline sync failed; was the head-node prefetch run?)" >&2; exit 1; }
+    # Compute nodes have no network: this only succeeds if the head-node prefetch already
+    # put every package in uv.lock into the uv cache. `--frozen` does not check uv.lock
+    # against pyproject.toml; the head-node `uv sync --locked` is what enforces that.
+    # Exit non-zero so the job shows FAILED with a clear reason.
+    uv sync --frozen --offline || { echo "offline uv sync failed: packages in uv.lock are missing from the uv cache (did the head-node prefetch run?)" >&2; exit 1; }
     uv run --frozen --offline python -u ${process_script_path}
     '''
 
