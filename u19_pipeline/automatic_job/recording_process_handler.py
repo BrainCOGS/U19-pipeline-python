@@ -276,6 +276,15 @@ class RecProcessHandler():
 
             print('lets transfer slum file ..............xxxxxxxx............')
 
+            #Sync the uv environment on the head node before submitting the job,
+            #since compute nodes have no network access to fetch packages themselves
+            if status == config.system_process['SUCCESS']:
+                status, prefetch_error_message = slurmlib.prefetch_uv_env(rec_series['program_selection_params'], rec_series['recording_modality'])
+                if status != config.system_process['SUCCESS']:
+                    status_update = config.status_update_idx['ERROR_STATUS']
+                    update_value_dict['error_info']['error_message'] = 'Error while syncing uv environment on head node: ' + prefetch_error_message
+                    return (status_update, update_value_dict)
+
             #Create and transfer slurm file
             if status == config.system_process['SUCCESS']:
                 status, slurm_filepath = slurmlib.generate_slurm_file(rec_series['job_id'], rec_series['program_selection_params'])

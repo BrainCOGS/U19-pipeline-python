@@ -67,6 +67,49 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
+def prefetch_uv_env(program_selection_params, modality):
+    '''
+    Sync the uv-managed python environment for the processing repository on the
+    cluster's head/login node, before a job is submitted with sbatch.
+
+    Compute nodes have no network access, so any package download must happen here,
+    while a `uv sync --frozen --offline` on the compute node can later verify the
+    environment matches what was just synced.
+    '''
+
+    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+
+    processing_repository = program_selection_params['process_repository']
+    repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
+
+    shell_command = (
+        "source ~/.bashrc && "
+        "conda activate U19-pipeline_python_env3 && "
+        "cd " + repository_dir + " && "
+        "uv sync"
+    )
+
+    command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], shell_command]
+
+    if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
+        command = ['bash', '-c', shell_command]
+
+    print(command)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.wait()
+    stdout, stderr = p.communicate()
+
+    print(stdout)
+    print(stderr)
+
+    if p.returncode == config.system_process['SUCCESS']:
+        error_message = ''
+    else:
+        error_message = stderr.decode('UTF-8')
+
+    return p.returncode, error_message
+
+
 def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_directory, modality, slurm_location):
 
     id_slurm_job = -1
@@ -191,6 +234,7 @@ def generate_slurm_spock(slurm_dict):
     conda activate u19_pipeline_python_env3
 
     cd ${repository_dir}
+    uv sync --frozen --offline || { echo "uv environment does not match lockfile (offline check failed)" >&2; exit 1; }
     python -u ${process_script_path}
     #python ${process_script_path} ${recording_process_id}
     '''
