@@ -98,6 +98,8 @@ which is physically backwards.
 source_data: ['ScanImageImaging', 'VirmenData']
 diagnostics: slope 1.000027891, residual 10.4 ms, epoch_offset 27.0 ms,
              2000 frames -> 400 volumes
+             (pre-rejection fit; with late-packet rejection the same file
+             gives slope 0.999997709, residual 1.2 ms, frame 644 at +23.0 ms)
 nwb:         TwoPhotonSeries + 179 trials, 0.420 GB
 frame 644 (trial 1's first imaging frame) = +22.3 ms after trial 1 start
 ```

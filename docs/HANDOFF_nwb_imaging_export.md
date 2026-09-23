@@ -59,7 +59,8 @@ uv run python -m u19_pipeline.utils.imaging_behavior_sync ~/neuro-data/ef932_act
 ```
 
 Expected: trials at frames 644–1176 / 1177–1690 / 1691–2000; fit slope
-≈1.000027891, residual ≈10.4 ms.
+≈0.999997709, residual ≈1.2 ms. (Before late-packet rejection this read
+1.000027891 / 10.4 ms; see `docs/imaging_behavior_sync.md` section 8.)
 
 ## Synchronization ownership — Python, not MATLAB
 

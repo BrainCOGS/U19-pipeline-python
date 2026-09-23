@@ -210,13 +210,15 @@ frames with behavior info: 1357 (67.8%)
   trial 1 frame span: [644, 1176]
   trial 2 frame span: [1177, 1690]
   trial 3 frame span: [1691, 2000]
-behavior-clock fit: slope=1.000027891, offset=-11.028s, residual std=10.4 ms
+behavior-clock fit: slope=0.999997709, offset=-11.027s, residual std=1.2 ms
 ```
 
-Frame spans match an independent raw-header decode exactly; the fitted slope
-(≈28 ppm) is the real clock drift between the two computers, and the 10 ms
-residual is the expected sub-frame jitter (iterations arrive faster than
-frames and only the first packet per frame is kept).
+Frame spans match an independent raw-header decode exactly. The fit rejects
+late packets (section 8) before fitting; the 1.2 ms residual is the scatter of
+the packets it keeps. Do not read clock drift off this single-file slope: 40 s
+of baseline cannot resolve a few ppm, and the long-baseline figure is about
++5 ppm (section 8). An earlier version of this fit had no rejection and reported
++28 ppm and 10.4 ms here; both numbers were artifacts of one late packet.
 
 ## 5. Building an NWB file from this
 
@@ -272,9 +274,10 @@ Choices worth noting:
 - **Clock choice**: use the ViRMEn session clock as the NWB timebase (trials
   and behavior arrays are already in it; `session_start_time` =
   `log.initialTimestamp`). Imaging gets explicit per-frame `timestamps`
-  instead of a start+rate pair — this also absorbs the measured 28 ppm drift.
-- **Sub-frame accuracy**: the linear fit is good to ~10 ms (≈ half a frame at
-  50 Hz). If per-iteration precision is ever needed, the I2C packet
+  instead of a start+rate pair — this also absorbs the ~5 ppm drift between
+  the two computers (about 8 ms over a 29-minute session).
+- **Sub-frame accuracy**: the linear fit is good to ~1 ms (packet scatter),
+  well inside one 20 ms frame at 50 Hz. If per-iteration precision is ever needed, the I2C packet
   timestamps (`sync_time`) pin individual iterations to the imaging clock at
   millisecond level.
 - **Multi-file / volumetric sessions**: pass all split TIFFs in order;
@@ -482,5 +485,71 @@ timeline.
   ViRMEn executes that iteration's display update. The logged time and the
   broadcast packet refer to the same instant, so they stay mutually consistent,
   but an unmeasured display latency separates both from what the animal saw. It
-  is a constant offset rather than a drift, and it is smaller than the ~10 ms
-  fit residual.
+  is a constant offset rather than a drift. It cannot be measured from these
+  files, since both the logged time and the packet sit on the ViRMEn side of
+  the display.
+
+## 8. Late packets at trial end, and what the clock fit really shows
+
+Checked against files 1, 2, 3 and 40 of the sample session (40 is ~25 minutes
+in; the files in between were not copied).
+
+### Files split by ScanImage are one continuous recording
+
+ScanImage rolls to a new file every `SI.hScan2D.logFramesPerFile` = 2000
+frames. Across files 1 -> 2 -> 3, and at file 40 (first frame 78001 = 39 x 2000
++ 1), frame numbers and `frameTimestamps_sec` continue without a reset, every
+file carries the same `epoch`, and the I2C stream picks up where it left off
+(trial 3, iteration 565 at the end of file 1; iteration 567 at the start of
+file 2). Passing the files in order to `sync_imaging_behavior` and to
+`ScanImageImagingInterface(file_paths=...)` therefore gives one recording with
+increasing timestamps across the boundaries. This session is single-FOV
+(`mroiEnable = False`) with 5 fastZ planes interleaved within each file.
+
+### One late packet per trial
+
+Once per trial, one packet reaches ScanImage 200-450 ms after the time the
+behavior log records for its iteration. It is always iteration
+`trial.iterations + 1`, the first after the trial proper ends, and it lines up
+with a single long gap in `trial.time` (e.g. 451 ms where the median step is
+11.7 ms). The call order in `LSTT_Active_TrialStructure_EF.m` explains it:
+
+1. The engine stamps `vr.timeElapsed` at the top of the loop
+   (`virmenEngine.m:367`), before `runtimeCodeFun` runs.
+2. In the `EndOfTrial` state, `runtimeCodeFun` calls `logEnd`, `endVRTrial` and
+   `protocol.updateRun` (`:540-548`).
+3. Only then do `logTick` (`:684`), which stores the time stamped in step 1,
+   and `updateDAQSyncSignals` (`:690`), which sends the packet, run.
+
+So the logged time is right and the packet is late by the duration of the
+end-of-trial work. The delay grows through the session (~210 ms early, ~450 ms
+by trial 169), consistent with work that scales with the number of trials run
+so far.
+
+### Effect on the fit, and the fix
+
+A plain least-squares fit gives those ~1 in 130 packets enough weight to
+drag it. `frame_times_on_behavior_clock` now rejects packets more than
+max(5 x MAD, 5 ms) from the fit, iterating until the kept set stops changing,
+and never rejects down to fewer than two points.
+
+| Files | Plain fit | With rejection | Packets rejected |
+|---|---|---|---|
+| 1 | +27.9 ppm, residual 10.4 ms | -2.3 ppm, residual 1.16 ms | 10 / 1180 |
+| 1-3 | +6.0 ppm, residual 9.2 ms | +3.9 ppm, residual 1.18 ms | 35 / 4674 |
+| 1-3 + 40 | +4.8 ppm, residual 13.0 ms | +5.2 ppm, residual 1.13 ms | 45 / 6288 |
+
+- **Drift is about +5 ppm**, roughly 8 ms over the 29-minute session. The +28
+  ppm reported earlier came from the first file alone: 40 s of baseline plus
+  one 573 ms late packet.
+- **Packet scatter is ~1.1 ms**, not ~10 ms.
+- **The linear model holds over the session**: a fit on files 1-3 predicts
+  file 40's packets, 25 minutes later, with a median error of -1.9 ms and 1.2
+  ms scatter.
+- **The alignment result barely moves**: frame 644 is +22.6 ms after trial 1
+  starts with the plain fit and +23.0 ms with rejection. Through the export
+  path on files 1-3, the first imaging frame of trials 2-12 lands within
+  +/-10 ms (half a frame) of trial start; trial 1 is at +23 ms (about one
+  frame). The trial-1 difference is not yet explained.
+
+Covered by `tests/utils/test_imaging_behavior_sync.py`.

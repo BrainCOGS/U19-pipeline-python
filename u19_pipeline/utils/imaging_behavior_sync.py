@@ -438,9 +438,44 @@ def frame_times_on_behavior_clock(sync, log):
         raise ValueError('Not enough synchronized frames to fit a clock mapping.')
     # the I2C packet timestamp marks when the iteration happened on the
     # imaging clock; frames between packets interpolate linearly
-    slope, offset = np.polyfit(sync_time[valid], behav_t[valid], 1)
-    residuals = behav_t[valid] - (slope * sync_time[valid] + offset)
-    return slope * frame_time + offset, slope, offset, float(np.std(residuals))
+    slope, offset, residual = _robust_linear_fit(sync_time[valid], behav_t[valid])
+    return slope * frame_time + offset, slope, offset, residual
+
+
+# Packets further than this from the fit are candidates for rejection even
+# when the scatter of good packets is tiny; well above the ~1 ms scatter of
+# good packets, well below the 200-450 ms lateness of end-of-trial packets.
+_OUTLIER_FLOOR_S = 0.005
+_OUTLIER_MADS = 5.0
+
+
+def _robust_linear_fit(x, y, max_passes=5):
+    """Least-squares line with iterative rejection of late packets.
+
+    Once per trial, ViRMEn does its end-of-trial work (``logEnd``,
+    ``endVRTrial``, the performance-plot update) after ``vr.timeElapsed`` has
+    been stamped for that iteration and before ``updateDAQSyncSignals`` sends
+    the packet. That one packet reaches ScanImage 200-450 ms after the time the
+    behavior log records for it. A plain fit lets those outliers drag the
+    slope and inflate the residual; here they are dropped by a MAD-based
+    threshold and the line is refit on the rest.
+
+    Returns ``(slope, offset, residual_std)`` where the residual is the scatter
+    of the packets kept. Never rejects down to fewer than two points.
+    """
+    keep = np.ones(x.size, dtype=bool)
+    slope, offset = np.polyfit(x, y, 1)
+    for _ in range(max_passes):
+        resid = y - (slope * x + offset)
+        centre = np.median(resid[keep])
+        mad = 1.4826 * np.median(np.abs(resid[keep] - centre))
+        new_keep = np.abs(resid - centre) <= max(_OUTLIER_MADS * mad, _OUTLIER_FLOOR_S)
+        if new_keep.sum() < 2 or np.array_equal(new_keep, keep):
+            break
+        keep = new_keep
+        slope, offset = np.polyfit(x[keep], y[keep], 1)
+    resid = y[keep] - (slope * x[keep] + offset)
+    return slope, offset, float(np.std(resid))
 
 
 def _main(argv=None):
