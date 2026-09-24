@@ -594,9 +594,10 @@ def main():
         #     headers={"Content-Type": "application/json"},
         # )
 
-        # Send Slack notification with summary only
-        current_date = datetime.now().date()
-        send_slack_notification(overdue_items, current_date)
+        # Send Slack notification with summary only if there are issues
+        if overdue_items:
+            current_date = datetime.now().date()
+            send_slack_notification(overdue_items, current_date)
 
         # Exit with error code if there are overdue items
         if overdue_items:
