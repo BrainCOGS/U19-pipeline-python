@@ -109,12 +109,28 @@ def test_export_is_trimmed_to_the_behavior_window():
         start, stop = ranges[name]
         assert ts.size == stop - start < full[name].size == 17_901
         np.testing.assert_array_equal(ts, full[name][start:stop])
-        # nothing earlier than one volume before trial 1's first iteration
-        assert ts[0] >= trials[0].start + 0.027 - 0.1
         assert full_ranges[name] == (0, 17_901)
+
+    # The earliest kept page is the one trial 1's first iteration falls in: it
+    # starts at most one frame (19.92 ms) before that iteration, not after it.
+    offset = 0.027  # block-vs-session offset of this session
+    t_first = trials[0].start + offset
+    t_last = trials[-1].start + np.atleast_1d(trials[-1].time)[-1] + offset
+    first = min(ts[0] for ts in aligned.values())
+    last = max(ts[-1] for ts in aligned.values())
+    assert t_first - 0.0200 < first <= t_first
+    assert t_last - 0.0200 < last <= t_last
 
     conv = _converter(sd, aligned_timestamps=aligned, sample_ranges=ranges)
     conv.temporally_align_data_interfaces()
     for name, ts in aligned.items():
         got = conv.data_interface_objects[name].get_timestamps()
         np.testing.assert_array_equal(got, ts)
+
+    # Regression: the sliced extractor lacked attributes the ScanImage
+    # interface reads, so building the file failed.
+    nwb = conv.create_nwbfile(
+        metadata=conv.get_metadata(),
+        conversion_options={k: {"stub_test": True} for k in aligned},
+    )
+    assert {f"TwoPhotonSeriesFOV0Plane{k}" for k in range(5)} <= set(nwb.acquisition)

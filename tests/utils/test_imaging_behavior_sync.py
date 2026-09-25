@@ -222,9 +222,22 @@ class TestDegenerateInput:
 
 
 class TestBehaviorPageWindow:
-    """Frames outside the recorded behavior cannot be tied to the experiment,
-    so the export keeps only first..last page whose packet maps to a trial in
-    the behavior log (inter-trial intervals included)."""
+    """
+    Frames outside the recorded behavior cannot be tied to the experiment, so
+    the export keeps only the pages from the one containing the first logged
+    iteration to the one containing the last. The window is found by time on
+    the fitted clock, not by where packets landed: the first packet of a trial
+    is routinely late (trial setup runs between stamping the time and sending
+    it), which would otherwise push the start a frame or two too late.
+    """
+
+    @staticmethod
+    def _drop_leading(sync, n):
+        f = sync["files"][0]
+        f.frame_time, f.sync_time = f.frame_time[n:], f.sync_time[n:]
+        for k in ("block", "trial", "iter"):
+            key = f"sync_behav_{k}_by_im_frame"
+            sync[key] = sync[key][n:]
 
     def test_leading_and_trailing_frames_are_outside(self):
         sync, log = _session(lead_frames=50, trail_frames=30)
@@ -236,18 +249,22 @@ class TestBehaviorPageWindow:
         n = sync["files"][0].frame_time.size
         assert behavior_page_window(sync, log) == (0, n - 1)
 
+    def test_late_first_packet_does_not_move_the_start(self):
+        """Regression: the window started where trial 1's late packet landed."""
+        sync, log = _session(lead_frames=50)
+        sync["files"][0].sync_time[50:52] = np.nan  # first packet two frames late
+        assert behavior_page_window(sync, log)[0] == 50
+
     def test_packets_for_trials_missing_from_the_log_are_outside(self):
         """An aborted final trial is stamped in the TIFF but absent from the log."""
-        sync, log = _session()
+        sync, log = _session(trail_frames=30)
         n = sync["files"][0].frame_time.size
-        sync["sync_behav_trial_by_im_frame"][-40:] = 99
-        assert behavior_page_window(sync, log) == (0, n - 41)
-
-    def test_iterations_past_the_trial_end_are_outside(self):
-        sync, log = _session()
-        n = sync["files"][0].frame_time.size
-        sync["sync_behav_iter_by_im_frame"][-1] = 10_000
-        assert behavior_page_window(sync, log)[1] == n - 2
+        f = sync["files"][0]
+        f.sync_time[-30:] = f.frame_time[-30:]
+        sync["sync_behav_block_by_im_frame"][-30:] = 1
+        sync["sync_behav_trial_by_im_frame"][-30:] = 99
+        sync["sync_behav_iter_by_im_frame"][-30:] = np.arange(1, 31)
+        assert behavior_page_window(sync, log) == (0, n - 31)
 
     def test_packetless_gaps_inside_the_window_are_kept(self):
         """End-of-trial stalls leave frames without packets mid-session."""
@@ -256,8 +273,13 @@ class TestBehaviorPageWindow:
         n = sync["files"][0].frame_time.size
         assert behavior_page_window(sync, log) == (0, n - 1)
 
-    def test_no_behavior_at_all_raises(self):
+    def test_imaging_starting_after_behavior_starts_at_page_zero(self):
+        sync, log = _session()
+        self._drop_leading(sync, 10)
+        assert behavior_page_window(sync, log)[0] == 0
+
+    def test_no_synchronized_frames_raises(self):
         sync, log = _session()
         sync["files"][0].sync_time[:] = np.nan
-        with pytest.raises(ValueError, match="behavior"):
+        with pytest.raises(ValueError, match="synchroniz"):
             behavior_page_window(sync, log)
