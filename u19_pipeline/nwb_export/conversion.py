@@ -259,13 +259,53 @@ def resolve_imaging_paths_by_fov(
     return by_fov
 
 
-def imaging_timestamps_for_session(
-    tiff_paths: list,
-    virmen_file,
-    n_samples: int | None = None,
-):
+def scanimage_plane_count(tiff_path) -> int:
     """
-    Per-frame imaging timestamps on the NWB timeline for ``tiff_paths``.
+    Number of fastZ planes interleaved page by page in a ScanImage TIFF.
+
+    Uses ``SI.hStackManager.actualNumSlices``, not ``numSlices``: the latter
+    can hold a stale setting (the sample mesoscope file says 91 for a
+    single-plane acquisition). Only the layouts the export handles are
+    accepted: one saved channel, and either no stack or a fast (interleaved)
+    stack.
+    """
+    import tifffile  # noqa: PLC0415
+
+    with tifffile.TiffFile(str(tiff_path)) as tif:
+        meta = tif.scanimage_metadata
+    frame_data = (meta or {}).get("FrameData") or {}
+    if not frame_data:
+        raise ValueError(
+            f"{tiff_path} has no ScanImage metadata, so its plane layout cannot be "
+            f"determined. Per-ROI splits written by the legacy u19_meso pipeline "
+            f"are missing it; export from the raw ScanImage files instead."
+        )
+
+    saved = frame_data.get("SI.hChannels.channelSave", 1)
+    n_channels = len(saved) if isinstance(saved, (list, tuple)) else 1
+    if n_channels != 1:
+        raise NotImplementedError(
+            f"{tiff_path} saves {n_channels} channels; pages then interleave "
+            f"channels as well as planes, which the imaging export does not handle."
+        )
+
+    if not frame_data.get("SI.hStackManager.enable", False):
+        return 1
+    mode = frame_data.get("SI.hStackManager.stackMode", "fast")
+    if mode != "fast":
+        raise NotImplementedError(
+            f"{tiff_path} is a '{mode}' z-stack; only fast (interleaved) stacks "
+            f"are supported."
+        )
+    n = frame_data.get("SI.hStackManager.actualNumSlices")
+    if n is None:
+        n = frame_data.get("SI.hStackManager.numSlices", 1)
+    return max(int(n), 1)
+
+
+def page_timestamps_for_session(tiff_paths: list, virmen_file):
+    """
+    One NWB-timeline timestamp per TIFF page for ``tiff_paths``.
 
     Runs the I2C content-based sync (``u19_pipeline.utils.imaging_behavior_sync``)
     and then applies the block-vs-session shift, because the two clocks do not
@@ -276,15 +316,11 @@ def imaging_timestamps_for_session(
     ``docs/imaging_behavior_sync.md`` section 6.
 
     Args:
-        tiff_paths: Split TIFFs in acquisition order.
+        tiff_paths: The TIFFs of one field of view, in acquisition order.
         virmen_file: The session's ViRMEn behavior .mat file.
-        n_samples: How many timestamps the imaging interface expects. A
-            volumetric fastZ file reports one sample per *volume*, not per page,
-            so the per-frame array is strided down to match. ``None`` returns
-            the full per-frame array.
 
     Returns:
-        ``(timestamps, diagnostics)`` — diagnostics carries the fit slope,
+        ``(page_timestamps, diagnostics)`` -- diagnostics carries the fit slope,
         residual and the applied offset, for logging and validation.
     """
     import numpy as np  # noqa: PLC0415
@@ -315,35 +351,79 @@ def imaging_timestamps_for_session(
     epoch_offset = (block_start - session_start).total_seconds()
     timestamps = timestamps + epoch_offset
 
-    n_frames = int(np.size(timestamps))
-    if n_samples is not None and n_samples != n_frames:
-        if n_samples <= 0 or n_frames % n_samples:
-            raise ValueError(
-                f"Cannot map {n_frames} imaging frame timestamps onto {n_samples} "
-                f"interface samples: {n_frames} is not a whole multiple of {n_samples}. "
-                f"Expected a volumetric fastZ stack (frames = volumes x slices)."
-            )
-        stride = n_frames // n_samples
-        timestamps = timestamps[::stride][:n_samples]
-
     diagnostics = {
         "slope": float(slope),
         "fit_offset": float(offset),
         "residual_std_s": float(residual),
         "epoch_offset_s": float(epoch_offset),
-        "n_frames": n_frames,
-        "n_samples": int(np.size(timestamps)),
+        "n_pages": int(np.size(timestamps)),
     }
     log.info(
-        "  imaging sync: %d frames -> %d samples, clock slope %.9f, "
-        "residual %.1f ms, block-vs-session offset %+.1f ms",
-        n_frames,
-        diagnostics["n_samples"],
+        "  imaging sync: %d pages, clock slope %.9f, residual %.1f ms, "
+        "block-vs-session offset %+.1f ms",
+        diagnostics["n_pages"],
         slope,
         residual * 1000,
         epoch_offset * 1000,
     )
     return timestamps, diagnostics
+
+
+def plane_timestamps(page_timestamps, plane_index: int, n_planes: int):
+    """
+    Timestamps for one fastZ plane: every ``n_planes``-th page from
+    ``plane_index``, over complete volumes only.
+
+    ScanImage writes page p to plane ``p % n_planes``. neuroconv's per-plane
+    reader (``ScanImageImagingInterface(plane_index=k)``) keeps only complete
+    volumes, so a recording that stops partway through its last volume gives
+    every plane ``n_pages // n_planes`` samples; this matches that count. Each
+    plane keeps its own page times rather than sharing one time per volume --
+    within a 5-plane volume at 50 Hz the planes span 80 ms.
+    """
+    import numpy as np  # noqa: PLC0415
+
+    if n_planes < 1:
+        raise ValueError(f"n_planes must be at least 1, got {n_planes}.")
+    if not 0 <= plane_index < n_planes:
+        raise ValueError(
+            f"plane_index {plane_index} is out of range for {n_planes} plane(s)."
+        )
+    page_timestamps = np.asarray(page_timestamps)
+    n_volumes = page_timestamps.size // n_planes
+    if n_volumes == 0:
+        raise ValueError(
+            f"{page_timestamps.size} page(s) do not make up one complete volume "
+            f"of {n_planes} plane(s)."
+        )
+    return page_timestamps[plane_index::n_planes][:n_volumes]
+
+
+def imaging_aligned_timestamps(source_data: dict, virmen_file) -> dict:
+    """
+    Per-interface NWB-timeline timestamps for every ScanImage interface in
+    ``source_data``.
+
+    The I2C sync runs once per field of view -- all its planes share the same
+    files and page clock -- and each plane then takes its own pages
+    (:func:`plane_timestamps`). Returns ``{interface_name: timestamps}``, ready
+    for ``TowersNWBConverter(aligned_timestamps=...)``.
+    """
+    aligned: dict = {}
+    by_files: dict = {}
+    for name in source_data:
+        if name.startswith("ScanImageImaging"):
+            files = tuple(source_data[name]["file_paths"])
+            by_files.setdefault(files, []).append(name)
+    for files, names in by_files.items():
+        page_ts, diagnostics = page_timestamps_for_session(list(files), virmen_file)
+        n_planes = scanimage_plane_count(files[0])
+        log.info(f"  {names} sync diagnostics: {diagnostics}")
+        for name in names:
+            aligned[name] = plane_timestamps(
+                page_ts, source_data[name].get("plane_index", 0), n_planes
+            )
+    return aligned
 
 
 def build_source_data(
@@ -403,14 +483,13 @@ def build_source_data(
     if export_params.get("include_imaging"):
         explicit = export_params.get("tiff_paths")
         if explicit:
-            # Manual override: one interface over exactly the files given.
-            source_data["ScanImageImaging"] = {"file_paths": [str(p) for p in explicit]}
-            log.info(f"  ScanImageImaging: {len(explicit)} tiff file(s)")
+            # Manual override: exactly the files given, as field of view 0.
+            by_fov = {0: [str(p) for p in explicit]}
         else:
             fov_numbers = export_params.get("fov_numbers") or []
             recording_ids = export_params.get("recording_ids") or []
             if recording_ids:
-                by_fov: dict = {}
+                by_fov = {}
                 for rid in recording_ids:
                     for fov, paths in resolve_imaging_paths_by_fov(
                         {"recording_id": rid}, fov_numbers
@@ -424,18 +503,29 @@ def build_source_data(
                 }
                 by_fov = resolve_imaging_paths_by_fov(session_key, fov_numbers)
 
-            # One interface per field of view. Fields of view are separate
-            # regions, so merging them would both misrepresent the anatomy and
-            # break alignment for every FOV after the first.
-            for fov in sorted(by_fov):
-                source_data[f"ScanImageImagingFOV{fov}"] = {"file_paths": by_fov[fov]}
-                log.info(f"  ScanImageImagingFOV{fov}: {len(by_fov[fov])} tiff file(s)")
+        # One interface per field of view and plane. Fields of view are separate
+        # regions and fastZ planes separate depths; each is its own
+        # TwoPhotonSeries with its own page times. Every interface gets a unique
+        # metadata_key -- sharing neuroconv's default made the second series
+        # collide with the first.
+        for fov in sorted(by_fov):
+            paths = by_fov[fov]
+            n_planes = scanimage_plane_count(paths[0])
+            for k in range(n_planes):
+                entry = {"file_paths": paths, "metadata_key": f"fov{fov}_plane{k}"}
+                if n_planes > 1:
+                    entry["plane_index"] = k
+                source_data[f"ScanImageImagingFOV{fov}Plane{k}"] = entry
+            log.info(
+                f"  ScanImageImagingFOV{fov}: {len(paths)} tiff file(s), "
+                f"{n_planes} plane(s)"
+            )
 
-            if not by_fov:
-                log.warning(
-                    "include_imaging=True but no TIFF files resolved; "
-                    "imaging data will not be included."
-                )
+        if not by_fov:
+            log.warning(
+                "include_imaging=True but no TIFF files resolved; "
+                "imaging data will not be included."
+            )
 
     return source_data
 
@@ -545,31 +635,7 @@ def run_conversion_to_file(
 
     metadata = query_metadata(session_key)
 
-    # Imaging gets its own timestamp array rather than the shared behavior one:
-    # the interface reports one sample per volume for a fastZ stack, so a single
-    # array cannot describe both streams. Build the converter once without
-    # alignment to ask the interface how many samples it actually has, then
-    # again with an array cut to fit.
-    aligned_timestamps: dict = {}
-    imaging_interfaces = [k for k in source_data if k.startswith("ScanImageImaging")]
-    if imaging_interfaces:
-        import numpy as np  # noqa: PLC0415
-
-        # Build once without alignment purely to ask each interface how many
-        # samples it reports: a volumetric fastZ stack exposes volumes, not
-        # pages, and the count differs per field of view.
-        probe = TowersNWBConverter(source_data=source_data)
-        for name in imaging_interfaces:
-            n_samples = int(
-                np.size(probe.data_interface_objects[name].get_original_timestamps())
-            )
-            imaging_ts, diagnostics = imaging_timestamps_for_session(
-                source_data[name]["file_paths"],
-                virmen_file,
-                n_samples=n_samples,
-            )
-            aligned_timestamps[name] = imaging_ts
-            log.info(f"  {name} sync diagnostics: {diagnostics}")
+    aligned_timestamps = imaging_aligned_timestamps(source_data, virmen_file)
 
     converter = TowersNWBConverter(
         source_data=source_data,
