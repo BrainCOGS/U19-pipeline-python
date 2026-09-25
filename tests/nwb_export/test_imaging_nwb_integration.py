@@ -16,13 +16,17 @@ import pytest
 
 DATA = Path.home() / "neuro-data"
 FIRST = DATA / "ef932_act131_08072026_00001_00001.tif"
-LAST = DATA / "ef932_act131_08072026_00001_00045.tif"  # 1,508 pages = 5 x 301 + 3
+# The last two files: 2,000 + 1,508 = 3,508 pages = 5 x 701 + 3, so the
+# recording stops partway through a volume. File 45 alone cannot be synced:
+# it was recorded after behavior ended and carries no packets.
+TAIL = [DATA / f"ef932_act131_08072026_00001_000{n}.tif" for n in (44, 45)]
+LAST = TAIL[-1]
 BEHAVIOR = next(DATA.glob("Session_*ef932_act131_20260807_1.mat"), None)
 
 tank_lab_to_nwb = pytest.importorskip("tank_lab_to_nwb")
 pytest.importorskip("neuroconv")
 pytestmark = pytest.mark.skipif(
-    not (FIRST.exists() and LAST.exists() and BEHAVIOR is not None),
+    not (FIRST.exists() and all(f.exists() for f in TAIL) and BEHAVIOR is not None),
     reason="sample recordings not present in ~/neuro-data",
 )
 
@@ -50,12 +54,12 @@ def test_partial_last_volume_matches_the_per_plane_reader():
         plane_timestamps,
     )
 
-    page_ts, _ = page_timestamps_for_session([str(LAST)], BEHAVIOR)
-    assert page_ts.size == 1508
+    page_ts, _ = page_timestamps_for_session([str(f) for f in TAIL], BEHAVIOR)
+    assert page_ts.size == 3508
     for k in range(5):
         ts = plane_timestamps(page_ts, plane_index=k, n_planes=5)
-        reader = ScanImageImagingInterface(file_paths=[LAST], plane_index=k)
-        assert ts.size == np.size(reader.get_original_timestamps()) == 301
+        reader = ScanImageImagingInterface(file_paths=TAIL, plane_index=k)
+        assert ts.size == np.size(reader.get_original_timestamps()) == 701
 
 
 def test_two_fovs_and_planes_build_with_unique_names():
