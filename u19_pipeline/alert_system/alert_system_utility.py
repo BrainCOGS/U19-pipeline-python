@@ -1,10 +1,48 @@
 
 
-import pandas as pd
-import datajoint as dj
 import datetime
+import traceback
+
+import datajoint as dj
+import pandas as pd
 
 import u19_pipeline.utils.dj_shortcuts as djs
+
+
+def run_cronjob_alert_job(job_name, job_function, lab, su, slack_configuration_dictionary):
+    """
+    Run a single nightly cronjob_alert.py job in isolation: an exception is
+    reported to Slack and swallowed so that the remaining nightly jobs still
+    run instead of aborting the whole script.
+    """
+
+    try:
+        job_function()
+    except Exception as e:
+        print('error while executing ' + job_name + ': ' + str(e))
+        traceback.print_exc()
+
+        error_message = ''.join(traceback.format_exception(type(e), value=e, tb=e.__traceback__))
+        slack_json_message = {
+            'blocks': [
+                {
+                    'type': 'section',
+                    'text': {
+                        'type': 'mrkdwn',
+                        'text': ':rotating_light: *cronjob_alert.py: ' + job_name + ' failed*\n\n```' + error_message + '```',
+                    },
+                }
+            ],
+            'text': 'cronjob_alert.py: ' + job_name + ' failed',
+        }
+
+        try:
+            webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
+            for this_webhook in webhooks_list:
+                su.send_slack_notification(this_webhook, slack_json_message)
+        except Exception:
+            traceback.print_exc()
+
 
 def get_acquisition_data_alert_system(type='subject_fullname', data_days=60, min_sessions=20):
     '''

@@ -20,6 +20,7 @@ from u19_pipeline.nwb_production_utils import (
     recording_ids_for_session,
     validate_behavior_data_exists,
     validate_ephys_data_exists,
+    validate_imaging_data_exists,
 )
 
 
@@ -245,14 +246,24 @@ class NwbExportHandler:
                             )
 
                 elif modality_name == "imaging":
-                    # TODO: the imaging_element.Scan <-> acquisition.Session linkage
-                    # is not reliably known. Do NOT fabricate a scan key (an empty
-                    # restriction matches all rows and passes vacuously). Fail loud
-                    # until the linkage is confirmed and wired here.
-                    raise ValueError(
-                        f"Imaging validation failed: could not resolve imaging Scan "
-                        f"for session {session_key}; imaging export not yet wired."
-                    )
+                    # Same session -> recording hop as ephys above; the imaging
+                    # tables hang off recording.Recording, not off a separate
+                    # Scan key.
+                    recording_ids = recording_ids_for_session(session_key)
+                    if not recording_ids:
+                        raise ValueError(
+                            f"Imaging validation failed: no recording linked to "
+                            f"session {session_key}"
+                        )
+                    fov_numbers = _parse_number_list(modality.get("fov_numbers"))
+                    for rid in recording_ids:
+                        valid, error_msg = validate_imaging_data_exists(
+                            {"recording_id": rid}, fov_numbers
+                        )
+                        if not valid:
+                            raise ValueError(
+                                f"Imaging validation failed for recording {rid}: {error_msg}"
+                            )
 
             print(f"Data validation passed for job {job['nwb_job_id']}")
             return True, error_info
