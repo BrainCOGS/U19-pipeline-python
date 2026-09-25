@@ -108,7 +108,8 @@ this personally (it's the decision point).
    ScanImage entry for the sample TIFF; compute timestamps with
    `sync_imaging_behavior` + `frame_times_on_behavior_clock`; remember the
    file is volumetric — the interface exposes 400 volumes, so pass
-   `timestamps[::5][:400]`.
+   `timestamps[::5][:400]`. (Superseded: the export now writes one series per
+   plane; see `docs/nwb_export.md` §3.)
 3. Run the conversion (stub-sized write is fine).
 
 **Pass:** NWB file has VirmenData behavior + TwoPhotonSeries, trial 1

@@ -170,27 +170,22 @@ you read this:
   `imaging_element.Scan`/`FieldOfView` references an earlier version had.
 - `estimate_total_size`'s imaging branch (`nwb_production_utils.py:222-236`)
   correctly resolves `recording_ids_for_session` and calls the estimator.
-- **But** `NwbExportHandler.process_data_validation`'s imaging branch
-  (`nwb_export_handler.py:247-255`) still unconditionally raises
-  `"could not resolve imaging Scan ... imaging export not yet wired"` — it
-  does not call `validate_imaging_data_exists` at all yet. Any imaging job
-  fails DATA_VALIDATION today regardless of whether the data actually
-  exists.
-- `conversion.py`'s `build_source_data` (`:112-165`) has no imaging branch —
-  only `VirmenData` and per-probe `Kilosort*` entries — and
-  `resolve_input_paths` has no notion of a TIFF/FOV path.
-- `towersnwbconverter.py` on `tank-lab-to-nwb`'s
-  `feat/scanimage-per-interface-alignment` branch (the branch with the most
-  recent imaging-related work as of this read) still maps `"TiffImagaging"`
-  to the generic `TiffImagingInterface`, not `ScanImageImagingInterface`, and
-  `temporally_align_data_interfaces` still applies one `sync_timestamps`
-  array to every interface rather than a per-interface array.
+- `NwbExportHandler.process_data_validation`'s imaging branch resolves the
+  session's recordings and calls `validate_imaging_data_exists` for each.
+- `conversion.py` resolves TIFFs per field of view
+  (`resolve_imaging_paths_by_fov`) and `build_source_data` emits one
+  `ScanImageImagingFOV{f}Plane{k}` interface per field of view and plane, each
+  with a unique `metadata_key`. `imaging_aligned_timestamps` computes each
+  one's timestamps, passed to the converter as `aligned_timestamps`.
+- `tank-lab-to-nwb` (`feat/scanimage-per-interface-alignment`) registers
+  `ScanImageImaging*` keys dynamically, aligns per interface, and names each
+  interface's objects `TwoPhotonSeries{suffix}` / `ImagingPlane{suffix}` from
+  its key.
 
-In other words: the validation/estimation half of imaging wiring (step 2/3
-above) is done; the path-resolution, source-data, and converter-registration
-halves (steps 4/5/6) were not yet landed on this branch as of this read. If
-you're picking this up, check `git log` / the other in-flight branches before
-assuming either state — this section describes a snapshot, not a guarantee.
+Not yet covered: multi-ROI mesoscope sessions (the legacy per-ROI split TIFFs
+lack ScanImage metadata and have clipped pixel values, and neuroconv cannot
+read the raw multi-ROI stack), and Suite2p output (`imaging-processed`). See
+`docs/imaging_behavior_sync.md` and the Suite2p design report tracked on #111.
 
 ## 3. Imaging specifics
 
@@ -209,14 +204,27 @@ In brief: imaging data arrives as ScanImage BigTIFFs, read by
 `TwoPhotonSeries`. Per-frame timestamps on the behavior clock come from
 `u19_pipeline/utils/imaging_behavior_sync.py`
 (`sync_imaging_behavior` + `frame_times_on_behavior_clock`), not from the
-TIFF's own clock (see §4 below for why). One subtlety worth restating because
-it's easy to get backwards: a volumetric (fastZ) acquisition has more TIFF
-*pages* than the interface exposes as *volumes* — the sample session's
-5-slice fastZ file has 2000 pages but `ScanImageImagingInterface` reports 400
-volumes, so the per-frame timestamp array must be subset `[::5][:n_volumes]`
-(one timestamp per volume, taking every 5th frame time) before being handed
-to `set_aligned_timestamps`. Passing all 2000 per-frame timestamps to a
-400-volume series is a length mismatch that neuroconv will reject.
+TIFF's own clock (see §4 below for why).
+
+**One series per plane.** A fastZ acquisition interleaves its planes page by
+page: page p belongs to plane `p % n_planes`. The export writes each plane as
+its own `TwoPhotonSeries` (`ScanImageImagingInterface(plane_index=k)`), named
+`TwoPhotonSeriesFOV{f}Plane{k}` on `ImagingPlaneFOV{f}Plane{k}`, and gives it
+its own page times: `plane_timestamps(page_ts, k, n_planes)`, i.e.
+`page_ts[k::n_planes]` over complete volumes. Two details matter:
+
+- **Recordings rarely end on a volume boundary.** The sample session has 89,508
+  pages = 5 x 17,901 + 3. neuroconv's per-plane reader keeps complete volumes
+  only, and so does `plane_timestamps`, giving 17,901 samples per plane. An
+  earlier version subset one volumetric series with `[::5]` and required an
+  exact multiple, which raised `ValueError` on the full session.
+- **Planes within a volume are not simultaneous.** At 50.2 Hz the five planes
+  of one volume span 80 ms; per-plane series keep that, where one timestamp
+  per volume could not.
+
+The plane count comes from the TIFF header (`scanimage_plane_count`, using
+`SI.hStackManager.actualNumSlices`), and only single-channel, fast-stack files
+are accepted.
 
 ## 4. The clock convention
 

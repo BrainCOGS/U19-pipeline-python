@@ -296,7 +296,9 @@ The recipe above was executed for real against the sample data (neuroconv
 0.10.0): `ScanImageImagingInterface` opened the 620 MB BigTIFF and, because
 of the 5-slice fastZ stack, exposed it as a **volumetric** series of **400
 volumes** (2000 pages / 5 slices), with `get_original_timestamps()` returning
-400 volume timestamps. Aligning with `set_aligned_timestamps(ts[::5][:400])`
+400 volume timestamps. (This smoke test predates the per-plane export; see
+`docs/nwb_export.md` §3 for the current layout.) Aligning with
+`set_aligned_timestamps(ts[::5][:400])`
 (one behavior-clock timestamp per volume, from
 `frame_times_on_behavior_clock`) and building the file produced:
 
