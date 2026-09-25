@@ -175,8 +175,9 @@ you read this:
 - `conversion.py` resolves TIFFs per field of view
   (`resolve_imaging_paths_by_fov`) and `build_source_data` emits one
   `ScanImageImagingFOV{f}Plane{k}` interface per field of view and plane, each
-  with a unique `metadata_key`. `imaging_aligned_timestamps` computes each
-  one's timestamps, passed to the converter as `aligned_timestamps`.
+  with a unique `metadata_key`. `imaging_alignment` computes each one's
+  timestamps and the sample range to keep, passed to the converter as
+  `aligned_timestamps` and `sample_ranges`.
 - `tank-lab-to-nwb` (`feat/scanimage-per-interface-alignment`) registers
   `ScanImageImaging*` keys dynamically, aligns per interface, and names each
   interface's objects `TwoPhotonSeries{suffix}` / `ImagingPlane{suffix}` from
@@ -221,6 +222,19 @@ its own page times: `plane_timestamps(page_ts, k, n_planes)`, i.e.
 - **Planes within a volume are not simultaneous.** At 50.2 Hz the five planes
   of one volume span 80 ms; per-plane series keep that, where one timestamp
   per volume could not.
+
+**Only frames recorded during behavior are exported.** Imaging usually runs
+before the first trial and after the last (on the sample session, 12.8 s
+before and 43.4 s after, including all of the last file). Those frames cannot
+be tied to anything in the experiment, so each plane keeps only the samples
+from the frame in which the first logged iteration falls through the frame in
+which the last one falls, located by time on the fitted clock
+(`behavior_page_window`). The window is deliberately not bounded by packet
+arrival: a trial's first packet is sent after trial setup and routinely lands a
+frame late, which would drop the frames in which behavior began. The converter
+cuts each interface to its range (`sample_ranges`) before writing. Set
+`export_parameters["trim_imaging_to_behavior"] = False` to keep every frame,
+e.g. to use pre-behavior imaging as a fluorescence baseline.
 
 The plane count comes from the TIFF header (`scanimage_plane_count`, using
 `SI.hStackManager.actualNumSlices`), and only single-channel, fast-stack files
