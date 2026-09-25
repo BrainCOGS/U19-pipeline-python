@@ -321,12 +321,14 @@ def page_timestamps_for_session(tiff_paths: list, virmen_file):
 
     Returns:
         ``(page_timestamps, diagnostics)`` -- diagnostics carries the fit slope,
-        residual and the applied offset, for logging and validation.
+        residual and the applied offset, and ``behavior_pages``: the first and
+        last page (0-based, inclusive) recorded during behavior.
     """
     import numpy as np  # noqa: PLC0415
 
     from u19_pipeline.utils.imaging_behavior_sync import (  # noqa: PLC0415
         _as_list,
+        behavior_page_window,
         frame_times_on_behavior_clock,
         load_behavior_log,
         sync_imaging_behavior,
@@ -357,6 +359,7 @@ def page_timestamps_for_session(tiff_paths: list, virmen_file):
         "residual_std_s": float(residual),
         "epoch_offset_s": float(epoch_offset),
         "n_pages": int(np.size(timestamps)),
+        "behavior_pages": behavior_page_window(sync, log_struct),
     }
     log.info(
         "  imaging sync: %d pages, clock slope %.9f, residual %.1f ms, "
@@ -399,17 +402,49 @@ def plane_timestamps(page_timestamps, plane_index: int, n_planes: int):
     return page_timestamps[plane_index::n_planes][:n_volumes]
 
 
-def imaging_aligned_timestamps(source_data: dict, virmen_file) -> dict:
+def plane_sample_range(
+    first_page: int, last_page: int, plane_index: int, n_planes: int, n_volumes: int
+) -> tuple:
     """
-    Per-interface NWB-timeline timestamps for every ScanImage interface in
+    Half-open ``(start, stop)`` range of one plane's samples whose pages fall
+    inside ``[first_page, last_page]``.
+
+    Plane k's sample i is page ``k + i * n_planes``. The range is also capped at
+    ``n_volumes`` (complete volumes, as in :func:`plane_timestamps`). Raises if
+    the plane has no sample in the window.
+    """
+    if last_page < first_page:
+        raise ValueError(f"Empty page window: {first_page}..{last_page}.")
+    start = max(0, -(-(first_page - plane_index) // n_planes))  # ceil division
+    stop = min(n_volumes, (last_page - plane_index) // n_planes + 1)
+    if stop <= start:
+        raise ValueError(
+            f"Plane {plane_index} has no samples in pages {first_page}..{last_page}."
+        )
+    return start, stop
+
+
+def imaging_alignment(
+    source_data: dict, virmen_file, trim_to_behavior: bool = True
+) -> tuple:
+    """
+    Timestamps and sample ranges for every ScanImage interface in
     ``source_data``.
 
     The I2C sync runs once per field of view -- all its planes share the same
     files and page clock -- and each plane then takes its own pages
-    (:func:`plane_timestamps`). Returns ``{interface_name: timestamps}``, ready
-    for ``TowersNWBConverter(aligned_timestamps=...)``.
+    (:func:`plane_timestamps`). With ``trim_to_behavior`` (the default) each
+    plane keeps only the samples recorded between the first and last page tied
+    to a trial in the behavior log; frames before behavior starts or after it
+    ends cannot be related to the experiment. Pass False to keep every frame,
+    e.g. to use pre-behavior imaging as a fluorescence baseline.
+
+    Returns ``(aligned_timestamps, sample_ranges)``, both keyed by interface
+    name, for ``TowersNWBConverter(aligned_timestamps=..., sample_ranges=...)``.
+    Each timestamp array already covers exactly its ``(start, stop)`` range.
     """
     aligned: dict = {}
+    ranges: dict = {}
     by_files: dict = {}
     for name in source_data:
         if name.startswith("ScanImageImaging"):
@@ -418,12 +453,22 @@ def imaging_aligned_timestamps(source_data: dict, virmen_file) -> dict:
     for files, names in by_files.items():
         page_ts, diagnostics = page_timestamps_for_session(list(files), virmen_file)
         n_planes = scanimage_plane_count(files[0])
-        log.info(f"  {names} sync diagnostics: {diagnostics}")
+        n_volumes = page_ts.size // n_planes
+        first_page, last_page = (
+            diagnostics["behavior_pages"] if trim_to_behavior else (0, page_ts.size - 1)
+        )
+        log.info(
+            f"  {names} sync diagnostics: {diagnostics}; exporting pages "
+            f"{first_page}..{last_page} of {page_ts.size}"
+        )
         for name in names:
-            aligned[name] = plane_timestamps(
-                page_ts, source_data[name].get("plane_index", 0), n_planes
+            k = source_data[name].get("plane_index", 0)
+            start, stop = plane_sample_range(
+                first_page, last_page, k, n_planes, n_volumes
             )
-    return aligned
+            aligned[name] = plane_timestamps(page_ts, k, n_planes)[start:stop]
+            ranges[name] = (start, stop)
+    return aligned, ranges
 
 
 def build_source_data(
@@ -635,12 +680,17 @@ def run_conversion_to_file(
 
     metadata = query_metadata(session_key)
 
-    aligned_timestamps = imaging_aligned_timestamps(source_data, virmen_file)
+    aligned_timestamps, sample_ranges = imaging_alignment(
+        source_data,
+        virmen_file,
+        trim_to_behavior=export_params.get("trim_imaging_to_behavior", True),
+    )
 
     converter = TowersNWBConverter(
         source_data=source_data,
         sync_timestamps=metadata["sync_timestamps"],
         aligned_timestamps=aligned_timestamps or None,
+        sample_ranges=sample_ranges or None,
     )
 
     raw_metadata = converter.get_metadata()

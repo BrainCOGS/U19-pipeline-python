@@ -404,6 +404,67 @@ def sync_imaging_behavior(tif_files, log=None, min_behavior_secs=MIN_BEHAVIOR_SE
     }
 
 
+def behavior_times_by_page(sync, log):
+    """Behavior-clock time of each page's I2C packet, NaN where there is none.
+
+    A page gets a time when its packet names a (block, trial, iteration) that
+    exists in the behavior log: ``trial.start + trial.time[iteration - 1]``.
+    Pages without a packet, with zeroed indices, or naming a trial or
+    iteration the log does not contain (an aborted final trial) get NaN.
+    """
+    blocks = _as_list(log.block)
+    sync_time = np.concatenate([f.sync_time for f in sync['files']])
+    behav_t = np.full(sync_time.size, np.nan)
+    for i in np.flatnonzero(~np.isnan(sync_time)):
+        blk = int(sync['sync_behav_block_by_im_frame'][i])
+        tri = int(sync['sync_behav_trial_by_im_frame'][i])
+        itr = int(sync['sync_behav_iter_by_im_frame'][i])
+        if blk < 1 or tri < 1 or itr < 1 or blk > len(blocks):
+            continue
+        trials = _as_list(blocks[blk - 1].trial)
+        if tri > len(trials):
+            continue
+        t = np.atleast_1d(trials[tri - 1].time)
+        if itr <= t.size:
+            behav_t[i] = trials[tri - 1].start + t[itr - 1]
+    return behav_t
+
+
+def behavior_page_window(sync, log):
+    """First and last page (0-based, inclusive) recorded during behavior.
+
+    Found by time on the fitted clock: the page in which the first logged
+    iteration falls, through the page in which the last one falls. Packet
+    arrival is not used to bound it -- a trial's first packet is sent after
+    trial setup and routinely arrives a frame or more late, which would drop
+    the frames in which behavior began. Pages outside cannot be tied to any
+    part of the experiment; pages inside without a packet (stalls at trial
+    ends) stay inside. Trials missing from the log (an aborted final trial)
+    are not behavior. If imaging started after behavior, the window starts at
+    page 0 (likewise at the end).
+    """
+    page_t, *_ = frame_times_on_behavior_clock(sync, log)
+    starts, ends = [], []
+    for blk in _as_list(log.block):
+        for trial in _as_list(blk.trial):
+            t = np.atleast_1d(trial.time)
+            if t.size and np.isfinite(trial.start):
+                starts.append(trial.start + t[0])
+                ends.append(trial.start + t[-1])
+    if not starts:
+        raise ValueError('The behavior log contains no iterations.')
+    # page p covers [page_t[p], page_t[p + 1]); the 1 us tolerance keeps an
+    # iteration that lands exactly on a page start (up to fit round-off) in
+    # that page rather than the one before
+    tol = 1e-6
+    first = int(np.searchsorted(page_t, min(starts) + tol, side='right')) - 1
+    last = int(np.searchsorted(page_t, max(ends) + tol, side='right')) - 1
+    first, last = max(first, 0), min(last, page_t.size - 1)
+    if last < 0 or first > page_t.size - 1 or last < first:
+        raise ValueError('The behavior log does not overlap the imaging.')
+    return first, last
+
+
 def frame_times_on_behavior_clock(sync, log):
     """Per-frame timestamps on the ViRMEn behavior clock, for NWB alignment.
 
@@ -416,22 +477,9 @@ def frame_times_on_behavior_clock(sync, log):
 
     Returns (timestamps, slope, offset, residual_std).
     """
-    blocks = _as_list(log.block)
     frame_time = np.concatenate([f.frame_time for f in sync['files']])
     sync_time = np.concatenate([f.sync_time for f in sync['files']])
-
-    has_sync = ~np.isnan(sync_time)
-    behav_t = np.full(frame_time.size, np.nan)
-    for i in np.flatnonzero(has_sync):
-        blk = sync['sync_behav_block_by_im_frame'][i]
-        tri = sync['sync_behav_trial_by_im_frame'][i]
-        itr = sync['sync_behav_iter_by_im_frame'][i]
-        if blk < 1 or tri < 1 or itr < 1:
-            continue
-        trial = _as_list(blocks[blk - 1].trial)[tri - 1]
-        t = np.atleast_1d(trial.time)
-        if itr <= t.size:
-            behav_t[i] = trial.start + t[itr - 1]
+    behav_t = behavior_times_by_page(sync, log)
 
     valid = ~np.isnan(behav_t)
     if valid.sum() < 2:
