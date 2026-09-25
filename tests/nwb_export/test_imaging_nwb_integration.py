@@ -83,3 +83,38 @@ def test_two_fovs_and_planes_build_with_unique_names():
     assert expected <= set(nwb.acquisition)
     planes = {s.imaging_plane.name for s in nwb.acquisition.values() if s.name in expected}
     assert planes == {f"ImagingPlaneFOV{f}Plane{k}" for f in (0, 1) for k in range(5)}
+
+
+def _full_session():
+    files = sorted(DATA.glob("ef932_act131_08072026_00001_*.tif"))
+    if len(files) != 45:
+        pytest.skip("full 45-file sample session not present")
+    return [str(f) for f in files]
+
+
+def test_export_is_trimmed_to_the_behavior_window():
+    """Frames before behavior starts or after it ends are left out."""
+    from u19_pipeline.nwb_export.conversion import build_source_data, imaging_alignment
+
+    files = _full_session()
+    job = {"subject_fullname": "s", "session_date": "2026-08-07", "session_number": 1}
+    sd = build_source_data(job, {"include_imaging": True, "tiff_paths": files}, BEHAVIOR, None)
+    aligned, ranges = imaging_alignment(sd, BEHAVIOR)
+    full, full_ranges = imaging_alignment(sd, BEHAVIOR, trim_to_behavior=False)
+
+    from u19_pipeline.utils.imaging_behavior_sync import _as_list, load_behavior_log
+
+    trials = _as_list(_as_list(load_behavior_log(BEHAVIOR).block)[0].trial)
+    for name, ts in aligned.items():
+        start, stop = ranges[name]
+        assert ts.size == stop - start < full[name].size == 17_901
+        np.testing.assert_array_equal(ts, full[name][start:stop])
+        # nothing earlier than one volume before trial 1's first iteration
+        assert ts[0] >= trials[0].start + 0.027 - 0.1
+        assert full_ranges[name] == (0, 17_901)
+
+    conv = _converter(sd, aligned_timestamps=aligned, sample_ranges=ranges)
+    conv.temporally_align_data_interfaces()
+    for name, ts in aligned.items():
+        got = conv.data_interface_objects[name].get_timestamps()
+        np.testing.assert_array_equal(got, ts)

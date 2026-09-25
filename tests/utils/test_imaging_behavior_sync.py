@@ -17,7 +17,10 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from u19_pipeline.utils.imaging_behavior_sync import frame_times_on_behavior_clock
+from u19_pipeline.utils.imaging_behavior_sync import (
+    behavior_page_window,
+    frame_times_on_behavior_clock,
+)
 
 TRUE_SLOPE = 1.000005  # +5 ppm, the drift measured on the sample session
 TRUE_OFFSET = -11.03  # imaging started ~11 s before behavior
@@ -31,6 +34,7 @@ def _session(
     late_packets=(),
     lead_frames=0,
     n_blocks=1,
+    trail_frames=0,
 ):
     """
     Synthetic sync dict + behavior log with one imaging frame per iteration.
@@ -70,6 +74,15 @@ def _session(
                 itr.append(i)
             t_behav += times[-1] + iti
             trial_global += 1
+
+    # Imaging frames after behavior ended: no packet.
+    last = frame_time[-1]
+    for k in range(1, trail_frames + 1):
+        frame_time.append(last + k * dt)
+        sync_time.append(np.nan)
+        blk.append(0)
+        tri.append(0)
+        itr.append(0)
 
     f = SimpleNamespace(
         frame_time=np.asarray(frame_time),
@@ -206,3 +219,45 @@ class TestDegenerateInput:
         ts, slope, offset, residual = frame_times_on_behavior_clock(sync, log)
         assert np.all(np.isfinite(ts))
         assert np.isfinite(slope) and np.isfinite(offset) and np.isfinite(residual)
+
+
+class TestBehaviorPageWindow:
+    """Frames outside the recorded behavior cannot be tied to the experiment,
+    so the export keeps only first..last page whose packet maps to a trial in
+    the behavior log (inter-trial intervals included)."""
+
+    def test_leading_and_trailing_frames_are_outside(self):
+        sync, log = _session(lead_frames=50, trail_frames=30)
+        n = sync["files"][0].frame_time.size
+        assert behavior_page_window(sync, log) == (50, n - 31)
+
+    def test_no_padding_means_every_page(self):
+        sync, log = _session()
+        n = sync["files"][0].frame_time.size
+        assert behavior_page_window(sync, log) == (0, n - 1)
+
+    def test_packets_for_trials_missing_from_the_log_are_outside(self):
+        """An aborted final trial is stamped in the TIFF but absent from the log."""
+        sync, log = _session()
+        n = sync["files"][0].frame_time.size
+        sync["sync_behav_trial_by_im_frame"][-40:] = 99
+        assert behavior_page_window(sync, log) == (0, n - 41)
+
+    def test_iterations_past_the_trial_end_are_outside(self):
+        sync, log = _session()
+        n = sync["files"][0].frame_time.size
+        sync["sync_behav_iter_by_im_frame"][-1] = 10_000
+        assert behavior_page_window(sync, log)[1] == n - 2
+
+    def test_packetless_gaps_inside_the_window_are_kept(self):
+        """End-of-trial stalls leave frames without packets mid-session."""
+        sync, log = _session()
+        sync["files"][0].sync_time[100:120] = np.nan
+        n = sync["files"][0].frame_time.size
+        assert behavior_page_window(sync, log) == (0, n - 1)
+
+    def test_no_behavior_at_all_raises(self):
+        sync, log = _session()
+        sync["files"][0].sync_time[:] = np.nan
+        with pytest.raises(ValueError, match="behavior"):
+            behavior_page_window(sync, log)

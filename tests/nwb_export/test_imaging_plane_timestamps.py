@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from u19_pipeline.nwb_export.conversion import plane_timestamps
+from u19_pipeline.nwb_export.conversion import plane_sample_range, plane_timestamps
 
 
 @pytest.mark.no_db
@@ -65,3 +65,45 @@ class TestPlaneTimestamps:
     def test_empty_input_raises(self):
         with pytest.raises(ValueError, match="complete volume"):
             plane_timestamps(np.array([]), plane_index=0, n_planes=1)
+
+
+@pytest.mark.no_db
+class TestPlaneSampleRange:
+    """
+    Samples of plane k whose page (k + i * n_planes) lies inside the behavior
+    window [first_page, last_page], as a half-open (start, stop) range over
+    that plane's complete-volume samples.
+    """
+
+    def test_window_covering_everything(self):
+        assert plane_sample_range(0, 99, plane_index=2, n_planes=5, n_volumes=20) == (0, 20)
+
+    def test_leading_trim_depends_on_plane(self):
+        # pages: plane 0 -> 0,5,10,15..  plane 2 -> 2,7,12,17..
+        assert plane_sample_range(12, 99, 0, 5, 20) == (3, 20)
+        assert plane_sample_range(12, 99, 2, 5, 20) == (2, 20)
+
+    def test_trailing_trim_depends_on_plane(self):
+        # plane 4 -> 4,9,14 ; plane 3 -> 3,8,13
+        assert plane_sample_range(0, 13, 4, 5, 20) == (0, 2)
+        assert plane_sample_range(0, 13, 3, 5, 20) == (0, 3)
+
+    def test_capped_at_complete_volumes(self):
+        # 13 pages, 5 planes -> 2 complete volumes even though page 12 is in range
+        assert plane_sample_range(0, 12, 2, 5, 2) == (0, 2)
+
+    def test_single_plane(self):
+        assert plane_sample_range(7, 30, 0, 1, 50) == (7, 31)
+
+    def test_window_on_the_plane_boundary(self):
+        assert plane_sample_range(5, 9, 0, 5, 20) == (1, 2)
+        assert plane_sample_range(5, 9, 4, 5, 20) == (1, 2)
+
+    def test_plane_with_no_sample_in_window_raises(self):
+        # window is pages 6..8: planes 1,2,3 of volume 1 only
+        with pytest.raises(ValueError, match="no samples"):
+            plane_sample_range(6, 8, 0, 5, 20)
+
+    def test_inverted_window_raises(self):
+        with pytest.raises(ValueError, match="window"):
+            plane_sample_range(10, 5, 0, 1, 20)
