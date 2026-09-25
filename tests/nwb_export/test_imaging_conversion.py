@@ -27,6 +27,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _single_plane_tiffs():
+    """The source-data tests use made-up paths; build_source_data reads the
+    plane count from the first TIFF's header, so default it to one plane.
+    Tests that need several planes patch it again inside the test."""
+    with patch(
+        "u19_pipeline.nwb_export.conversion.scanimage_plane_count",
+        create=True,
+        return_value=1,
+    ):
+        yield
+
+
 def _make_dj_table(rows: list):
     """
     Mirrors the helper in tests/nwb_export/test_modality_validators.py.
@@ -240,10 +253,10 @@ class TestBuildSourceDataImaging:
 @pytest.mark.no_db
 class TestBuildSourceDataMultipleFovs:
     """
-    A mesoscope session has one TiffSplit per field of view, and fields of view
-    are separate regions rather than continuations of one another. Each must get
-    its own interface: merging them presents unrelated regions as one continuous
-    recording and misaligns every field of view after the first.
+    One interface per (field of view, plane). Fields of view are separate
+    regions, and fastZ planes are separate depths; each gets its own
+    TwoPhotonSeries, so every interface needs a unique key and metadata_key
+    (sharing one made the NWB build fail on the second series).
     """
 
     @pytest.fixture()
@@ -260,52 +273,70 @@ class TestBuildSourceDataMultipleFovs:
             "session_number": 1,
         }
 
-    def test_each_fov_gets_its_own_interface(self, virmen_file, base_job):
+    @staticmethod
+    def _build(base_job, virmen_file, export_params, by_fov=None, n_planes=1):
         from u19_pipeline.nwb_export.conversion import build_source_data
 
+        with (
+            patch(
+                "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
+                create=True,
+                return_value=by_fov or {},
+            ),
+            patch(
+                "u19_pipeline.nwb_export.conversion.scanimage_plane_count",
+                create=True,
+                return_value=n_planes,
+            ),
+        ):
+            return build_source_data(base_job, export_params, virmen_file, None)
+
+    def test_each_fov_and_plane_gets_its_own_interface(self, virmen_file, base_job):
         by_fov = {
             0: ["/root/fov0_00001.tif", "/root/fov0_00002.tif"],
             1: ["/root/fov1_00001.tif", "/root/fov1_00002.tif"],
         }
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value=by_fov,
-        ):
-            source_data = build_source_data(
-                base_job, {"include_imaging": True}, virmen_file, None
-            )
+        sd = self._build(
+            base_job, virmen_file, {"include_imaging": True}, by_fov, n_planes=3
+        )
+        keys = sorted(k for k in sd if k.startswith("ScanImageImaging"))
+        assert keys == [f"ScanImageImagingFOV{f}Plane{k}" for f in (0, 1) for k in range(3)]
+        for f in (0, 1):
+            for k in range(3):
+                entry = sd[f"ScanImageImagingFOV{f}Plane{k}"]
+                assert entry["file_paths"] == by_fov[f]
+                assert entry["plane_index"] == k
 
-        assert source_data["ScanImageImagingFOV0"]["file_paths"] == by_fov[0]
-        assert source_data["ScanImageImagingFOV1"]["file_paths"] == by_fov[1]
+    def test_metadata_keys_are_unique(self, virmen_file, base_job):
+        by_fov = {0: ["/root/fov0.tif"], 1: ["/root/fov1.tif"]}
+        sd = self._build(
+            base_job, virmen_file, {"include_imaging": True}, by_fov, n_planes=5
+        )
+        mks = [v["metadata_key"] for k, v in sd.items() if k.startswith("ScanImageImaging")]
+        assert len(mks) == 10
+        assert len(set(mks)) == 10
 
     def test_fov_files_are_not_cross_contaminated(self, virmen_file, base_job):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
         by_fov = {0: ["/root/fov0.tif"], 1: ["/root/fov1.tif"]}
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value=by_fov,
-        ):
-            source_data = build_source_data(
-                base_job, {"include_imaging": True}, virmen_file, None
-            )
-
+        sd = self._build(base_job, virmen_file, {"include_imaging": True}, by_fov)
         for fov in (0, 1):
-            paths = source_data[f"ScanImageImagingFOV{fov}"]["file_paths"]
-            assert len(paths) == 1
-            assert f"fov{fov}" in paths[0]
+            paths = sd[f"ScanImageImagingFOV{fov}Plane0"]["file_paths"]
+            assert paths == [f"/root/fov{fov}.tif"]
 
-    def test_explicit_tiff_paths_stay_a_single_interface(self, virmen_file, base_job):
-        """An explicit override names exact files, so it is one interface."""
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        source_data = build_source_data(
-            base_job,
-            {"include_imaging": True, "tiff_paths": ["/root/a.tif", "/root/b.tif"]},
-            virmen_file,
-            None,
+    def test_single_plane_omits_plane_index(self, virmen_file, base_job):
+        """A single-plane file has no plane dimension to select."""
+        sd = self._build(
+            base_job, virmen_file, {"include_imaging": True}, {0: ["/root/a.tif"]}, 1
         )
-        imaging = [k for k in source_data if k.startswith("ScanImageImaging")]
-        assert imaging == ["ScanImageImaging"]
+        assert "plane_index" not in sd["ScanImageImagingFOV0Plane0"]
+
+    def test_explicit_tiff_paths_are_field_of_view_zero(self, virmen_file, base_job):
+        sd = self._build(
+            base_job,
+            virmen_file,
+            {"include_imaging": True, "tiff_paths": ["/root/a.tif", "/root/b.tif"]},
+            n_planes=2,
+        )
+        imaging = sorted(k for k in sd if k.startswith("ScanImageImaging"))
+        assert imaging == ["ScanImageImagingFOV0Plane0", "ScanImageImagingFOV0Plane1"]
+        assert sd["ScanImageImagingFOV0Plane1"]["file_paths"] == ["/root/a.tif", "/root/b.tif"]
