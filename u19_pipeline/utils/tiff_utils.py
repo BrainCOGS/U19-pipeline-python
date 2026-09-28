@@ -86,6 +86,20 @@ def get_parsed_info_mesoscope(fl):
     return imheader, parsed_info
 
 
+def behav_frames_per_frame(behav_frames):
+    """Return a 1-D object array with exactly one entry per frame.
+
+    ``np.array(..., dtype=object)`` infers its shape from the entries: a file whose
+    frames all lack I2C sync (``[]``) becomes 2-D ``(n, 0)``, and equal-length
+    entries become 2-D ``(n, k)``. Filling a preallocated array keeps each frame's
+    entry intact whatever it holds.
+    """
+    out = np.empty(len(behav_frames), dtype=object)
+    for i, entry in enumerate(behav_frames):
+        out[i] = entry
+    return out
+
+
 def get_recording_info(fl, imheader, parsed_info):
 
     frames_per_file = np.zeros(len(fl), dtype=int)
@@ -94,11 +108,13 @@ def get_recording_info(fl, imheader, parsed_info):
 
         if i == 0:
             rec_info = parsed_info[i]
-            rec_info['Timing']['BehavFrames'] = np.array(rec_info['Timing']['BehavFrames'], dtype=object)
+            rec_info['Timing']['BehavFrames'] = behav_frames_per_frame(rec_info['Timing']['BehavFrames'])
 
         else:
 
-            if parsed_info[i]['Timing']['Frame_ts_sec'][0] == 0:
+            frame_ts = parsed_info[i]['Timing']['Frame_ts_sec']
+
+            if len(frame_ts) > 0 and frame_ts[0] == 0:
 
                 parsed_info[i]['Timing']['Frame_ts_sec'] += (
                     rec_info['Timing']['Frame_ts_sec'][-1]
@@ -110,14 +126,10 @@ def get_recording_info(fl, imheader, parsed_info):
                 parsed_info[i]['Timing']['Frame_ts_sec']
             ])
 
-            aux = np.array(parsed_info[i]['Timing']['BehavFrames'], dtype=object)
-            aux = np.squeeze(aux)
-
-            if aux.size > 0:
-                rec_info['Timing']['BehavFrames'] = np.concatenate([
-                    rec_info['Timing']['BehavFrames'],
-                    aux
-                ])
+            rec_info['Timing']['BehavFrames'] = np.concatenate([
+                rec_info['Timing']['BehavFrames'],
+                behav_frames_per_frame(parsed_info[i]['Timing']['BehavFrames'])
+            ])
 
         frames_per_file[i] = len(imheader[i])
 
