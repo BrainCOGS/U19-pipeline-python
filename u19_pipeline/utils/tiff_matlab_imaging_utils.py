@@ -6,6 +6,8 @@ import time
 import re
 import ast
 
+from u19_pipeline.utils.scanimage_i2c import parse_i2c_packets
+
 
 xySizeFactor          = 1.05; # images are this much larger than nominal size
 zFactor               = 1.45; # actual displacement in z vs command
@@ -136,6 +138,22 @@ def select_files_from_mean_f(
     print(f" done after {elapsed_minutes:.1f} min")
 
     return last_good_file
+
+
+def behav_frame_sync(description):
+    """
+    One ``BehavFrames`` entry: the frame's decoded I2C packets.
+
+    A list of ``(timestamp_sec, [block, trial, iteration])`` tuples, ``[]`` when
+    the frame carries no packet, or NaN when a packet cannot be decoded (as the
+    MATLAB parser did when ``eval`` failed), so one bad header does not fail
+    the whole file.
+    """
+
+    try:
+        return parse_i2c_packets(description)
+    except ValueError:
+        return np.nan
 
 
 def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
@@ -272,27 +290,8 @@ def parse_tif_header_2photon(tif_fn, skip_behav_sync=False):
                     )
 
                 # I2C behavioral sync
-                i2c_match = re.search(
-                    r'I2CData = ({.+})',
-                    desc
-                )
-
-                if i2c_match:
-
-                    raw_data = i2c_match.group(1)
-
-                    try:
-                        # MATLAB eval equivalent
-                        behav_data = ast.literal_eval(raw_data)
-
-                    except Exception:
-                        behav_data = np.nan
-
-                else:
-                    behav_data = []
-
                 parsed_info['Timing']['BehavFrames'].append(
-                    behav_data
+                    behav_frame_sync(desc)
                 )
 
         # -----------------------------------------------------
@@ -622,27 +621,8 @@ def parse_tif_header_mesoscope(
                         float(ts_match.group(0))
                     )
 
-                i2c_match = re.search(
-                    r'(?<=I2CData = ){.+}',
-                    desc
-                )
-
-                if i2c_match:
-
-                    raw_data = i2c_match.group(0)
-
-                    try:
-                        behav_data = ast.literal_eval(raw_data)
-
-                    except Exception:
-                        behav_data = np.nan
-
-                else:
-
-                    behav_data = []
-
                 parsed_info['Timing']['BehavFrames'].append(
-                    behav_data
+                    behav_frame_sync(desc)
                 )
 
         # -----------------------------------------------------
