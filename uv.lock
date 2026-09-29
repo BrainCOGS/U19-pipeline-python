@@ -5394,7 +5394,7 @@ requires-dist = [
     { name = "scp", marker = "extra == 'pipeline'" },
     { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.12" },
     { name = "six", marker = "extra == 'pipeline'" },
-    { name = "suite2p", marker = "extra == 'pipeline'" },
+    { name = "suite2p", marker = "extra == 'pipeline'", specifier = "==1.1.0" },
     { name = "tables", specifier = ">=3.8" },
     { name = "tifffile", marker = "extra == 'pipeline'" },
 ]

@@ -46,7 +46,7 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/BrainCOGS/scanreader.git",
     "six",
-    "suite2p",
+    "suite2p==1.1.0",  # settings mapping in element-calcium-imaging suite2p_settings.py is verified against 1.1.0
     "tifffile",
 ]
 
