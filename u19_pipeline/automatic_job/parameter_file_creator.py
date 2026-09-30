@@ -21,9 +21,6 @@ from scipy.io import savemat
 #chanmap_files_filepath = 'u19_pipeline/automatic_job/ChanMapFiles'
 #default_chanmap_filename = 'chanmap_%s.mat'
 
-default_process_script_path = "scripts/automate_imaging_element.py"
-
-
 def generate_parameter_file(recording_process_id, params, type_params, program_selection_params):
     '''
     Generate and send parameter files for processing
@@ -48,6 +45,22 @@ def generate_parameter_file(recording_process_id, params, type_params, program_s
             status = config.system_process['SUCCESS']
 
     return status
+
+
+def generate_suite2p_job_file(recording_process_id, suite2p_job, program_selection_params):
+    '''
+    Write and send the suite2p job file (imaging_element_populate.build_suite2p_job) that
+    suite2p_slurm_job.py reads on the cluster
+    '''
+    from element_calcium_imaging.suite2p_settings import to_native
+
+    # Settings fetched from a DataJoint blob can hold numpy values, which json cannot write
+    write_parameter_file(to_native(suite2p_job), recording_process_id, config.default_suite2p_job_filename)
+
+    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+    user_host = cluster_vars['user']+'@'+cluster_vars['hostname']
+    return transfer_parameter_file(recording_process_id, config.default_suite2p_job_filename,
+                                   cluster_vars['params_files_dir'], user_host)
 
 
 def write_parameter_file(params, recording_process_id, default_param_filename):

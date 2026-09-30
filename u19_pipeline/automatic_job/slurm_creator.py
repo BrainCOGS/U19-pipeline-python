@@ -16,8 +16,6 @@ from u19_pipeline.utils.file_utils import write_file
 slurms_filepath = 'u19_pipeline/automatic_job/SlurmFiles'
 default_slurm_filename = 'slurm_real.slurm'
 
-default_process_script_path = "scripts/automate_imaging_element.py"
-
 default_preprocessing_tool = 'kilosort2'
 default_matlab_ver = 'R2020b'
 
@@ -40,7 +38,12 @@ def generate_slurm_file(job_id, program_selection_params):
     print('slurm_dict', slurm_dict)
 
     if program_selection_params['process_cluster'] == 'spock':
-        slurm_text = generate_slurm_spock(slurm_dict)
+        if program_selection_params.get('recording_modality') == 'imaging':
+            suite2p_job_file = pathlib.Path(cluster_vars['params_files_dir'],
+                                            config.default_suite2p_job_filename % job_id).as_posix()
+            slurm_text = generate_slurm_spock_imaging(slurm_dict, suite2p_job_file)
+        else:
+            slurm_text = generate_slurm_spock(slurm_dict)
     else:
         slurm_text = generate_slurm_tiger(slurm_dict)
 
@@ -196,6 +199,55 @@ def generate_slurm_spock(slurm_dict):
     '''
 
     return slurm_text
+
+# Conda environment on spock that suite2p imaging jobs run in. It needs suite2p==1.1.0, a torch
+# build for the node GPUs (A100 / L40S) and element-calcium-imaging with suite2p_settings.run_suite2p.
+spock_imaging_conda_env = 'u19_pipeline_python_env3'
+
+
+def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
+    '''
+    Slurm script for a suite2p job on a spock GPU node (u19_pipeline/automatic_job/suite2p_slurm_job.py).
+
+    The job reads everything it needs from suite2p_job_file (written and transferred by the
+    handler before sbatch), so it never needs the database.
+    '''
+
+    # Imaging resources (1 GPU, cpus, memory) live in ft.slurm_dict_spock_imaging; only the
+    # per-job fields set by generate_slurm_file are carried over from the incoming dict.
+    imaging_dict = copy.deepcopy(ft.slurm_dict_spock_imaging)
+    for key in ('job-name', 'output', 'error'):
+        imaging_dict[key] = slurm_dict[key]
+
+    slurm_text = '#!/bin/bash\n'
+    slurm_text += create_slurm_params_file(imaging_dict)
+    slurm_text += '''
+    echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
+    echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
+    echo "RECORDING_PROCESS_ID: ${recording_process_id}"
+    echo "RAW_DATA_DIRECTORY: ${raw_data_directory}"
+    echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
+    echo "REPOSITORY_DIR: ${repository_dir}"
+    echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
+    echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+    nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv
+
+    source ~/.bashrc
+    module load anacondapy/2023.07-cuda -s
+
+    conda activate ''' + spock_imaging_conda_env + '''
+
+    export suite2p_job_file=''' + "'" + suite2p_job_file + "'" + '''
+    # CPU-side work (tiff reading, parts of detection) uses the cores slurm gave the job
+    export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+    export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+
+    cd ${repository_dir}
+    python -u ${process_script_path}
+    '''
+
+    return slurm_text
+
 
 def module_defininition_text():
 
