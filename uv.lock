@@ -1341,8 +1341,8 @@ dependencies = [
 
 [[package]]
 name = "element-calcium-imaging"
-version = "0.10.2"
-source = { git = "https://github.com/BrainCOGS/element-calcium-imaging.git#d087575f2ec60f913d388170c94b81dc2786a27a" }
+version = "0.10.3"
+source = { git = "https://github.com/BrainCOGS/element-calcium-imaging.git#ebf21d0a13ed571baf001c680ef1079cb4962c2e" }
 dependencies = [
     { name = "dash" },
     { name = "dash-extensions" },
