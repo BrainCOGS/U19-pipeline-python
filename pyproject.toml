@@ -81,6 +81,8 @@ pythonpath = ["tests"]
 markers = [
     "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/dbskip.py",
 ]
+# pandas 3 copy-on-write: a chained assignment is a silently ignored write; fail instead
+filterwarnings = ["error::pandas.errors.ChainedAssignmentError"]
 
 [tool.uv]
 exclude-newer = "14 days"
