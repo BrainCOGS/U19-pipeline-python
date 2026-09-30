@@ -18,10 +18,10 @@ recording_modality_dict = [
     },
     {
         'recording_modality': 'imaging',
-        'local_or_cluster': 'local',
-        'process_repository': 'element-calcium-imaging',
+        'local_or_cluster': 'cluster',
+        'process_repository': 'U19-pipeline-python', # suite2p runs from this repo's uv environment
         'process_cluster': 'spock', # Which cluster will be used to process (check clusters_paths_and_transfers.py file)
-        'process_script': 'none'
+        'process_script': 'u19_pipeline/automatic_job/suite2p_slurm_job.py'
     },
 ]
 
@@ -270,6 +270,12 @@ catgt_script = pathlib.Path(catgt_dir, 'runit.sh').as_posix()
 parameter_files_filepath = pathlib.Path(this_dir, 'ParameterFiles').as_posix()
 default_preprocess_filename = 'preprocess_paramset_%s.json'
 default_process_filename = 'process_paramset_%s.json'
+# Everything a suite2p slurm job needs, since it runs without the database
+# (written by imaging_element_populate.build_suite2p_job, read by suite2p_slurm_job.py)
+default_suite2p_job_filename = 'suite2p_job_%s.json'
+
+# Processed imaging data, as mounted on the pipeline host and on spock
+imaging_processed_root = '/mnt/cup/braininit/Data/Processed/imaging'
 
 # default xyzPicksFiles
 xyz_picks_files_dir = pathlib.Path(this_dir, 'xyzPicksFiles')

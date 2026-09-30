@@ -16,8 +16,6 @@ from u19_pipeline.utils.file_utils import write_file
 slurms_filepath = 'u19_pipeline/automatic_job/SlurmFiles'
 default_slurm_filename = 'slurm_real.slurm'
 
-default_process_script_path = "scripts/automate_imaging_element.py"
-
 default_preprocessing_tool = 'kilosort2'
 default_matlab_ver = 'R2020b'
 
@@ -40,9 +38,13 @@ def generate_slurm_file(job_id, program_selection_params):
     print('slurm_dict', slurm_dict)
 
     if program_selection_params['process_cluster'] == 'spock':
-        # Ephys (BrainCogsEphysSorters) runs on uv; imaging keeps the conda path.
+        # Ephys (BrainCogsEphysSorters) and imaging (suite2p) run on uv; anything else keeps conda.
         if program_selection_params['process_repository'] == 'BrainCogsEphysSorters':
             slurm_text = generate_slurm_spockmk2_ephys(slurm_dict)
+        elif program_selection_params.get('recording_modality') == 'imaging':
+            suite2p_job_file = pathlib.Path(cluster_vars['params_files_dir'],
+                                            config.default_suite2p_job_filename % job_id).as_posix()
+            slurm_text = generate_slurm_spock_imaging(slurm_dict, suite2p_job_file)
         else:
             slurm_text = generate_slurm_spock(slurm_dict)
     else:
@@ -71,6 +73,9 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
+# Repositories whose spock jobs run from a uv environment (see prefetch_uv_env)
+uv_process_repositories = ('BrainCogsEphysSorters', 'U19-pipeline-python')
+
 # Upper bound for the head-node `uv sync`; a cold cache (torch etc.) takes a few minutes,
 # a hung ssh must not block the pipeline loop forever.
 prefetch_uv_env_timeout_s = 30 * 60
@@ -85,7 +90,7 @@ def prefetch_uv_env(program_selection_params, modality):
     `uv sync --locked` there. `uv sync --locked` is idempotent and near-instant on a warm
     cache, so this is cheap on every submit and only does real work after a uv.lock change.
 
-    Only BrainCogsEphysSorters on spock runs on uv (tiger still uses conda, see
+    Only the uv_process_repositories on spock run on uv (tiger still uses conda, see
     generate_slurm_tiger); for anything else this is a no-op.
 
     Returns (status, error_message) like queue_slurm_file, so the handler can mark the job
@@ -94,7 +99,7 @@ def prefetch_uv_env(program_selection_params, modality):
     '''
 
     processing_repository = program_selection_params['process_repository']
-    if processing_repository != 'BrainCogsEphysSorters' or program_selection_params['process_cluster'] != 'spock':
+    if processing_repository not in uv_process_repositories or program_selection_params['process_cluster'] != 'spock':
         return config.system_process['SUCCESS'], ''
 
     cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
@@ -328,6 +333,48 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     # put every package in uv.lock into the uv cache. `--frozen` does not check uv.lock
     # against pyproject.toml; the head-node `uv sync --locked` is what enforces that.
     # Exit non-zero so the job shows FAILED with a clear reason.
+    uv sync --frozen --offline || { echo "offline uv sync failed: packages in uv.lock are missing from the uv cache (did the head-node prefetch run?)" >&2; exit 1; }
+    uv run --frozen --offline python -u ${process_script_path}
+    '''
+
+    return slurm_text
+
+
+def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
+    '''
+    Slurm script for a suite2p job on a spock GPU node (u19_pipeline/automatic_job/suite2p_slurm_job.py).
+
+    The job reads everything it needs from suite2p_job_file (written and transferred by the
+    handler before sbatch), so it never needs the database.
+    '''
+
+    # Imaging resources (1 GPU, cpus, memory) live in ft.slurm_dict_spock_imaging; only the
+    # per-job fields set by generate_slurm_file are carried over from the incoming dict.
+    imaging_dict = copy.deepcopy(ft.slurm_dict_spock_imaging)
+    for key in ('job-name', 'output', 'error'):
+        imaging_dict[key] = slurm_dict[key]
+
+    slurm_text = '#!/bin/bash\n'
+    slurm_text += create_slurm_params_file(imaging_dict)
+    slurm_text += '''
+    source ~/.bashrc
+    echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
+    echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
+    echo "RECORDING_PROCESS_ID: ${recording_process_id}"
+    echo "RAW_DATA_DIRECTORY: ${raw_data_directory}"
+    echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
+    echo "REPOSITORY_DIR: ${repository_dir}"
+    echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
+    echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+    nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv
+
+    export suite2p_job_file=''' + "'" + suite2p_job_file + "'" + '''
+    # CPU-side work (tiff reading, parts of detection) uses the cores slurm gave the job
+    export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+    export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+
+    cd ${repository_dir}
+    # Compute nodes have no network: see generate_slurm_spockmk2_ephys.
     uv sync --frozen --offline || { echo "offline uv sync failed: packages in uv.lock are missing from the uv cache (did the head-node prefetch run?)" >&2; exit 1; }
     uv run --frozen --offline python -u ${process_script_path}
     '''
