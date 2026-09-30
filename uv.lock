@@ -1341,16 +1341,21 @@ dependencies = [
 
 [[package]]
 name = "element-calcium-imaging"
-version = "0.10.1"
-source = { git = "https://github.com/BrainCOGS/element-calcium-imaging.git#3162063001345dc25b7065f7abe7fb9af104972f" }
+version = "0.10.2"
+source = { git = "https://github.com/BrainCOGS/element-calcium-imaging.git#d087575f2ec60f913d388170c94b81dc2786a27a" }
 dependencies = [
+    { name = "dash" },
     { name = "dash-extensions" },
     { name = "datajoint" },
     { name = "element-interface" },
     { name = "ipykernel" },
     { name = "ipywidgets" },
+    { name = "matplotlib" },
+    { name = "numpy" },
     { name = "plotly" },
+    { name = "pyyaml" },
     { name = "scikit-image" },
+    { name = "scipy" },
 ]
 
 [[package]]
