@@ -68,12 +68,14 @@ slurm_dict_spock_imaging = {
     'output': 'OutputLog/job_id_${job_id}".log',
     'error':  'ErrorLog/job_id_${job_id}".log'
 }
+# Used by slurm_creator.generate_slurm_spock (ephys jobs on spock).
+# mem: an ephys job (slurm 6519400, job_id 1415) peaked at 50.0 GiB MaxRSS against the old 50G limit.
 slurm_dict_spock_default = {
     'job-name': 'kilosort2',
     'nodes': 1,
     'ntasks': 1,
     'time': '30:00:00',
-    'mem': '50G',
+    'mem': '80G',
     'gres': 'gpu:2',
     'mail-user': 'alvaros@princeton.edu',
     'mail-type': ['END'],
