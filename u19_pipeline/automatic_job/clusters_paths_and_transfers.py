@@ -51,6 +51,23 @@ slurm_dict_spockmk2_ephys = {
     'output': 'OutputLog/job_id_${job_id}".log',
     'error':  'ErrorLog/job_id_${job_id}".log'
 }
+# Used by slurm_creator.generate_slurm_spock_imaging (suite2p on GPU).
+# suite2p uses one GPU; spock nodes have 2 (A100-40G or L40S-46G), so a job takes half a node's
+# GPUs and either type is accepted. Memory is set explicitly: DefMemPerCPU on spock is 10G.
+# mem/time are starting values; adjust with `seff <jobid>` after real recordings.
+slurm_dict_spock_imaging = {
+    'job-name': 'suite2p',
+    'nodes': 1,
+    'ntasks': 1,
+    'cpus-per-task': 8,
+    'time': '12:00:00',
+    'mem': '64G',
+    'gres': 'gpu:1',
+    'mail-user': 'alvaros@princeton.edu',
+    'mail-type': ['END'],
+    'output': 'OutputLog/job_id_${job_id}".log',
+    'error':  'ErrorLog/job_id_${job_id}".log'
+}
 # Used by slurm_creator.generate_slurm_spock (ephys jobs on spock).
 # mem: an ephys job (slurm 6519400, job_id 1415) peaked at 50.0 GiB MaxRSS against the old 50G limit.
 slurm_dict_spock_default = {

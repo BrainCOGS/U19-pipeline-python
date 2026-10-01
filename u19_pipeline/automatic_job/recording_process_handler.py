@@ -271,6 +271,16 @@ class RecProcessHandler():
                 update_value_dict['error_info']['error_message'] = 'Error while generating/transfering channelmap file'
                 return (status_update, update_value_dict)
 
+        # If imaging on the cluster, send what the suite2p job needs (it runs without the database)
+        if status == config.system_process['SUCCESS'] and rec_series['recording_modality'] == 'imaging' \
+                and rec_series['program_selection_params']['local_or_cluster'] == "cluster":
+            suite2p_job = ip.build_suite2p_job(rec_series['job_id'])
+            status = paramfilelib.generate_suite2p_job_file(rec_series['job_id'], suite2p_job, rec_series['program_selection_params'])
+            if status != config.system_process['SUCCESS']:
+                status_update = config.status_update_idx['ERROR_STATUS']
+                update_value_dict['error_info']['error_message'] = 'Error while generating/transfering suite2p job file'
+                return (status_update, update_value_dict)
+
         # Only queue if processing in tiger
         if rec_series['program_selection_params']['local_or_cluster'] == "cluster":
 
