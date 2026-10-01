@@ -86,7 +86,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "1415")
 
         assert status == ERROR_STATUS
-        assert message.startswith("OUT_OF_MEMORY")
+        assert message.startswith("slurm 1415 OUT_OF_MEMORY")
         assert "MaxRSS 30.0G" in message
         assert "spock-g3" in message
 
@@ -96,6 +96,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "200")
 
         assert status == ERROR_STATUS
+        assert message.startswith("slurm 200 FAILED")
         assert "ExitCode 1:0" in message
 
     def test_cancelled_by_user_is_an_error(self, fake_run):
@@ -105,7 +106,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "300")
 
         assert status == ERROR_STATUS
-        assert message.startswith("CANCELLED by uid 12345")
+        assert message.startswith("slurm 300 CANCELLED by uid 12345")
 
     @pytest.mark.parametrize("state", ["OUT_OF_MEMORY", "NODE_FAIL", "BOOT_FAIL", "DEADLINE", "PREEMPTED", "TIMEOUT"])
     def test_states_slurm_kills_jobs_with_are_errors(self, fake_run, state):
@@ -114,7 +115,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "9")
 
         assert status == ERROR_STATUS
-        assert message.startswith(state)
+        assert message.startswith(f"slurm 9 {state}")
 
     @pytest.mark.parametrize("state", ["PENDING", "RUNNING", "COMPLETING", "CONFIGURING", "REQUEUED", "SUSPENDED"])
     def test_unfinished_states_do_not_change_status(self, fake_run, state):
@@ -126,6 +127,15 @@ class TestCheckSlurmJob:
         fake_run(detailed=(0, sacct("9|COMPLETED|0:0|0:0|None|00:00:01|02:00:00||spock-c1"), ""))
 
         assert sc.check_slurm_job("u19prod", "spock", "9") == (NEXT_STATUS, "")
+
+    def test_slurm_id_kept_with_the_longest_description(self, fake_run):
+        node_list = "spock-g[" + ",".join(str(x) for x in range(500)) + "]"
+        fake_run(detailed=(0, sacct(f"6519400|OUT_OF_MEMORY|0:125|0:0|None|01:02:03|1-00:00:00||{node_list}"), ""))
+
+        _, message = sc.check_slurm_job("u19prod", "spock", "6519400")
+
+        assert message.startswith("slurm 6519400 OUT_OF_MEMORY")
+        assert len(message) <= 255
 
     def test_job_1415_completed_near_its_memory_request_is_not_an_error(self, fake_run):
         # sacct of the slurm job behind recording process job 1415 on spock: it completed
@@ -143,7 +153,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "9")
 
         assert status == ERROR_STATUS
-        assert "SOMETHING_NEW" in message
+        assert message.startswith("slurm 9 unexpected state SOMETHING_NEW")
 
     def test_command_runs_through_ssh_unless_local(self, fake_run):
         fake = fake_run(detailed=(0, RUNNING_JOB, ""))
@@ -166,7 +176,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "200")
 
         assert status == ERROR_STATUS
-        assert message.startswith("FAILED")
+        assert message == "slurm 200 FAILED"
         assert len(fake.commands) == 2
 
     def test_sacct_unreachable_is_retried_not_a_job_failure(self, fake_run):
@@ -178,7 +188,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "200")
 
         assert status == NO_CHANGE
-        assert message.startswith("Failed to retrieve slurm job status")
+        assert message.startswith("Failed to retrieve status of slurm job 200: ")
         assert "Connection timed out" in message
         assert len(message) <= 255
 
@@ -189,7 +199,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "200")
 
         assert status == NO_CHANGE
-        assert message.startswith("Failed to retrieve slurm job status")
+        assert message.startswith("Failed to retrieve status of slurm job 200: ")
 
     def test_ssh_missing_is_retried(self, fake_run):
         error = FileNotFoundError("ssh")
@@ -203,8 +213,7 @@ class TestCheckSlurmJob:
         status, message = sc.check_slurm_job("u19prod", "spock", "123")
 
         assert status == ERROR_STATUS
-        assert "123" in message
-        assert "not found" in message
+        assert message == "slurm 123 not found in sacct"
 
 
 # --------------------------------------------------------------------------------------

@@ -142,7 +142,7 @@ def build_job_error_info(slurm_message, error_log, error_log_location, output_lo
 
     # Crop the log text from the left, keeping the notes and the slurm message
     header = '\n'.join(notes) + '\n' if notes else ''
-    footer = '\nslurm: ' + slurm_message if slurm_message else ''
+    footer = '\n' + slurm_message if slurm_message else ''
     error_exception = header + log_text + footer
     if len(error_exception) > max_exception_length:
         available_length = max_exception_length - len(header) - len(footer)

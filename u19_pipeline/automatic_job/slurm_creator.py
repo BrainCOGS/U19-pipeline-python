@@ -142,7 +142,7 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
     Check the state of a slurm job
     Returns:
     state_pipeline (int) = status_update_idx (NO_CHANGE if the state could not be retrieved, to retry later)
-    error_message  (str) = how the job ended (state, exit code, node, time & memory) if it errored
+    error_message  (str) = slurm id & how the job ended (state, exit code, node, time & memory) if it errored
     '''
     jobid = str(jobid)
 
@@ -159,22 +159,23 @@ def check_slurm_job(ssh_user, host, jobid, local_user=False):
 
     if returncode != config.system_process['SUCCESS']:
         # A failed ssh/sacct call says nothing about the job, check again next time
-        error_message = 'Failed to retrieve slurm job status of job ' + jobid + ': ' + ' '.join(stderr.split())
+        error_message = 'Failed to retrieve status of slurm job ' + jobid + ': ' + ' '.join(stderr.split())
         print(error_message)
         return config.status_update_idx['NO_CHANGE'], error_message[:255]
 
     if job_info is None:
-        return config.status_update_idx['ERROR_STATUS'], 'Slurm job ' + jobid + ' not found in sacct'
+        return config.status_update_idx['ERROR_STATUS'], 'slurm ' + jobid + ' not found in sacct'
 
     # "CANCELLED by <uid>" -> "CANCELLED"
     state_slurm_job = job_info['State'].split(' ')[0].rstrip('+')
     if state_slurm_job not in config.slurm_states:
-        return config.status_update_idx['ERROR_STATUS'], 'Unexpected slurm state: ' + slurm_utils.describe_slurm_job(job_info)
+        return config.status_update_idx['ERROR_STATUS'], 'slurm ' + jobid + ' unexpected state ' + slurm_utils.describe_slurm_job(job_info)
 
     state_pipeline = config.slurm_states[state_slurm_job]['pipeline_status']
     error_message = ''
     if state_pipeline == config.status_update_idx['ERROR_STATUS']:
-        error_message = slurm_utils.describe_slurm_job(job_info)
+        # The slurm id is replaced when the job is resubmitted, keep it in the message
+        error_message = 'slurm ' + jobid + ' ' + slurm_utils.describe_slurm_job(job_info)
 
     print('state_pipeline ....', state_pipeline)
     print('error_message', error_message)

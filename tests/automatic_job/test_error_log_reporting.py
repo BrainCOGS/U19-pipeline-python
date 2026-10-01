@@ -119,8 +119,9 @@ class TestBuildJobErrorInfo:
         assert 'error log is empty' in exception
 
     def test_custom_limits(self):
-        message, exception = build_job_error_info('FAILED', 'x' * 100, '/e.log', max_message_length=80, max_exception_length=50)
+        message, exception = build_job_error_info('slurm 9 FAILED', 'x' * 100, '/e.log', max_message_length=80,
+                                                  max_exception_length=50)
 
         assert len(message) <= 80
         assert len(exception) <= 50
-        assert exception.endswith('slurm: FAILED')
+        assert exception.endswith('\nslurm 9 FAILED')
