@@ -40,7 +40,11 @@ def generate_slurm_file(job_id, program_selection_params):
     print('slurm_dict', slurm_dict)
 
     if program_selection_params['process_cluster'] == 'spock':
-        slurm_text = generate_slurm_spock(slurm_dict)
+        # Ephys (BrainCogsEphysSorters) runs on uv; imaging keeps the conda path.
+        if program_selection_params['process_repository'] == 'BrainCogsEphysSorters':
+            slurm_text = generate_slurm_spockmk2_ephys(slurm_dict)
+        else:
+            slurm_text = generate_slurm_spock(slurm_dict)
     else:
         slurm_text = generate_slurm_tiger(slurm_dict)
 
@@ -65,6 +69,70 @@ def generate_slurm_file(job_id, program_selection_params):
     print(cluster_vars)
 
     return status, slurm_destination
+
+
+# Upper bound for the head-node `uv sync`; a cold cache (torch etc.) takes a few minutes,
+# a hung ssh must not block the pipeline loop forever.
+prefetch_uv_env_timeout_s = 30 * 60
+
+
+def prefetch_uv_env(program_selection_params, modality):
+    '''
+    Sync the uv environment on the head node before submitting the job.
+
+    Compute nodes have no network access, so all packages must be present in the uv cache
+    (on the mounted $HOME) before sbatch. The head node has network, so we run
+    `uv sync --locked` there. `uv sync --locked` is idempotent and near-instant on a warm
+    cache, so this is cheap on every submit and only does real work after a uv.lock change.
+
+    Only BrainCogsEphysSorters on spock runs on uv (tiger still uses conda, see
+    generate_slurm_tiger); for anything else this is a no-op.
+
+    Returns (status, error_message) like queue_slurm_file, so the handler can mark the job
+    ERROR_STATUS with the real stderr at submit time instead of a job that dies minutes
+    later on a compute node.
+    '''
+
+    processing_repository = program_selection_params['process_repository']
+    if processing_repository != 'BrainCogsEphysSorters' or program_selection_params['process_cluster'] != 'spock':
+        return config.system_process['SUCCESS'], ''
+
+    cluster_vars = ft.get_cluster_vars(program_selection_params['process_cluster'])
+    repository_dir = pathlib.Path(cluster_vars[modality+'_process_dir'],processing_repository).as_posix()
+
+    # bash -lc so a login profile is sourced and `uv` is on PATH over non-interactive ssh.
+    # `uv sync` downloads the interpreter required by the repo's pyproject on its own, so the
+    # Python version is not pinned here and does not need updating when the repo bumps it.
+    remote = ("cd " + repository_dir + " && "
+              "uv sync --locked")
+
+    if program_selection_params['process_cluster'] == 'spock' and is_this_spock():
+        command = ['bash', '-lc', remote]        # already on spock: run locally
+    else:
+        command = ['ssh', cluster_vars['user']+"@"+cluster_vars['hostname'], 'bash', '-lc', remote]
+
+    print('prefetch_uv_env', command)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # communicate() drains both pipes while waiting; p.wait() first can deadlock once uv
+    # writes more than a pipe buffer (a cold-cache sync lists every installed package).
+    try:
+        stdout, stderr = p.communicate(timeout=prefetch_uv_env_timeout_s)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.communicate()
+        return config.system_process['ERROR'], ('uv sync on head node timed out after '
+                                                + str(prefetch_uv_env_timeout_s) + ' s')
+    print(stdout)
+    print(stderr)
+
+    if p.returncode == config.system_process['SUCCESS']:
+        error_message = ''
+    else:
+        error_message = stderr.decode('UTF-8', errors='replace')
+        if not error_message:
+            error_message = 'uv sync on head node exited with code ' + str(p.returncode)
+
+    return p.returncode, error_message
 
 
 def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_directory, modality, slurm_location):
@@ -230,10 +298,20 @@ def module_defininition_text():
 
 def generate_slurm_spockmk2_ephys(slurm_dict):
 
+    # Ephys-specific resources (cpus-per-task, walltime, gpus) live in
+    # ft.slurm_dict_spockmk2_ephys; only the per-job fields set by generate_slurm_file are
+    # carried over from the incoming dict.
+    ephys_dict = copy.deepcopy(ft.slurm_dict_spockmk2_ephys)
+    for key in ('job-name', 'output', 'error'):
+        ephys_dict[key] = slurm_dict[key]
+    slurm_dict = ephys_dict
+
+    # #SBATCH directives must come first; put `source ~/.bashrc` in the body (after the
+    # directives) so it does not swallow the first #SBATCH line, and so `uv` is on PATH.
     slurm_text = '#!/bin/bash\n'
-    slurm_text += 'source ~/.bashrc'
     slurm_text += create_slurm_params_file(slurm_dict)
     slurm_text += '''
+    source ~/.bashrc
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
     echo "RECORDING_PROCESS_ID: ${recording_process_id}"
@@ -242,14 +320,16 @@ def generate_slurm_spockmk2_ephys(slurm_dict):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 
-    module load anacondapy/2023.07-cuda -s
+    # matlab is still needed for the Kilosort2 / Kilosort3 shell-outs; uv replaces conda.
     module load matlab/R2024a -s
 
-    conda activate BraincogsEphysSorters_Env
-
     cd ${repository_dir}
-    python -u ${process_script_path}
-    #python ${process_script_path} ${recording_process_id}
+    # Compute nodes have no network: this only succeeds if the head-node prefetch already
+    # put every package in uv.lock into the uv cache. `--frozen` does not check uv.lock
+    # against pyproject.toml; the head-node `uv sync --locked` is what enforces that.
+    # Exit non-zero so the job shows FAILED with a clear reason.
+    uv sync --frozen --offline || { echo "offline uv sync failed: packages in uv.lock are missing from the uv cache (did the head-node prefetch run?)" >&2; exit 1; }
+    uv run --frozen --offline python -u ${process_script_path}
     '''
 
     return slurm_text
