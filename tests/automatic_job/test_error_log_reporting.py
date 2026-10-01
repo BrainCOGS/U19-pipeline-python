@@ -145,7 +145,7 @@ class TestBuildJobErrorInfo:
 
     def test_custom_limits(self):
         message, exception = build_job_error_info(
-            "FAILED",
+            "slurm 9 FAILED",
             "x" * 100,
             "/e.log",
             max_message_length=80,
@@ -154,4 +154,4 @@ class TestBuildJobErrorInfo:
 
         assert len(message) <= 80
         assert len(exception) <= 50
-        assert exception.endswith("slurm: FAILED")
+        assert exception.endswith("\nslurm 9 FAILED")
