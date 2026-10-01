@@ -465,12 +465,9 @@ class RecProcessHandler:
             update_value_dict["error_info"]["error_message"] = message
 
             # This updates the value
-            # If job finished copy over output and/or error log
-            if (
-                status_update == config.status_update_idx["NEXT_STATUS"]
-                or status_update == config.status_update_idx["ERROR_STATUS"]
-            ):
-                transfer_status = ft.transfer_log_file(
+            # If job finished copy over output and error log
+            if status_update == config.status_update_idx["NEXT_STATUS"]:
+                ft.transfer_log_file(
                     rec_series["job_id"],
                     program_selection_params,
                     ssh_host,
@@ -482,34 +479,15 @@ class RecProcessHandler:
                     ssh_host,
                     log_type="OUTPUT",
                 )
-                error_log = ft.get_error_log_str(rec_series["job_id"])
 
-                # If the program errored, report the actual error and where the log is.
-                # Previous method of capturing the error_log was insufficient since Kilosort wrote to stderr
-                if status_update == config.status_update_idx["ERROR_STATUS"]:
-                    # If the log could not be copied over, point to the log in the cluster instead
-                    if (
-                        transfer_status == config.system_process["SUCCESS"]
-                        and error_log
-                    ):
-                        log_location = ft.get_log_file_local_path(
-                            rec_series["job_id"], log_type="ERROR"
-                        )
-                    else:
-                        log_location = ft.get_log_file_cluster_path(
-                            rec_series["job_id"],
-                            program_selection_params,
-                            log_type="ERROR",
-                        )
-
-                    update_value_dict["error_info"]["error_message"] = (
-                        ft.build_error_message(message, error_log, log_location)
-                    )
-                    update_value_dict["error_info"]["error_exception"] = (
-                        error_log
-                        if error_log
-                        else "Error log empty or not available in " + log_location
-                    )
+            # If the program errored, report the actual error and where the log is, from the error log
+            # or from the output log (Kilosort/MATLAB write their errors to stdout)
+            elif status_update == config.status_update_idx["ERROR_STATUS"]:
+                error_message, error_exception = ft.get_job_error_info(
+                    rec_series["job_id"], program_selection_params, message
+                )
+                update_value_dict["error_info"]["error_message"] = error_message
+                update_value_dict["error_info"]["error_exception"] = error_exception
         else:
             status_update = config.status_update_idx["NEXT_STATUS"]
 
