@@ -202,7 +202,9 @@ def generate_slurm_spock(slurm_dict):
 
 # Conda environment on spock that suite2p imaging jobs run in. It needs suite2p==1.1.0, a torch
 # build for the node GPUs (A100 / L40S) and element-calcium-imaging with suite2p_settings.run_suite2p.
-spock_imaging_conda_env = 'u19_pipeline_python_env3'
+# Kept apart from u19_pipeline_python_env3 (ephys jobs), whose suite2p 0.x / cellpose 3 would have
+# to be upgraded for suite2p 1.1.0.
+spock_imaging_conda_env = 'u19_suite2p_env'
 
 
 def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
@@ -242,7 +244,8 @@ def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
     export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
 
-    cd ${repository_dir}
+    # Without the checkout the script path would resolve against the submit directory
+    cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
     python -u ${process_script_path}
     '''
 
