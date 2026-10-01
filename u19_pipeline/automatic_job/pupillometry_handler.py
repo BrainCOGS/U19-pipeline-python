@@ -344,7 +344,7 @@ class PupillometryProcessingHandler():
         Input:
         remote_path_video_file (str) = video file of the session, the job is named after it
         Returns:
-        error_log     (str) = contents of the error log ('' if it could not be read)
+        error_log     (str) = contents of the error log (None if it could not be copied)
         log_location  (str) = location of the log to report (local path or user@host:path)
         """
         log_filename = 'job_id_' + pathlib.Path(remote_path_video_file).stem + '.log'
@@ -353,15 +353,15 @@ class PupillometryProcessingHandler():
 
         local_log_file_dir = dj.config.get('custom', {}).get('error_logs_dir', None)
         if local_log_file_dir is None:
-            return '', log_file_full_path
+            return None, log_file_full_path
 
         log_file_local_path = pathlib.Path(local_log_file_dir, log_filename).as_posix()
         transfer_status = ft.scp_file_transfer(log_file_full_path, log_file_local_path)
 
         if transfer_status != config.system_process['SUCCESS'] or not os.path.exists(log_file_local_path):
-            return '', log_file_full_path
+            return None, log_file_full_path
 
-        with open(log_file_local_path, 'r') as error_log_file:
+        with open(log_file_local_path, 'r', errors='replace') as error_log_file:
             error_log = ' '.join(error_log_file.readlines())
 
         return error_log, log_file_local_path
@@ -390,8 +390,9 @@ class PupillometryProcessingHandler():
 
                 error_log, log_location = PupillometryProcessingHandler.get_error_log(session_check['remote_path_video_file'])
 
-                update_value_dict['error_info']['error_message'] = ft.build_error_message(message, error_log, log_location)
-                update_value_dict['error_info']['error_exception'] = error_log if error_log else 'Error log empty or not available in ' + log_location
+                error_message, error_exception = ft.build_job_error_info(message, error_log, log_location)
+                update_value_dict['error_info']['error_message'] = error_message
+                update_value_dict['error_info']['error_exception'] = error_exception
 
                 key_update['pupillometry_job_id'] = -1
                 pupillometry.PupillometrySessionModelData.update1(key_update)

@@ -218,38 +218,31 @@ system_process = {
 }
 
 # Possible states from slurm queued jobs results and result in pipeline status (next state, no change or error)
+# https://slurm.schedmd.com/job_state_codes.html
 slurm_states = {
     'COMPLETED': {
         'pipeline_status': status_update_idx['NEXT_STATUS'],
         'message':         ''
     },
-    'PENDING':   {
+    **{state: {
         'pipeline_status': status_update_idx['NO_CHANGE'],
         'message':         ''
-    },
-    'RUNNING':   {
-        'pipeline_status': status_update_idx['NO_CHANGE'],
-        'message':         ''
-    },
-    'FAILED':    {
+        } for state in ['PENDING', 'RUNNING', 'COMPLETING', 'CONFIGURING', 'REQUEUED', 'REQUEUE_FED',
+                        'REQUEUE_HOLD', 'RESIZING', 'SUSPENDED', 'STAGE_OUT', 'SIGNALING']},
+    **{state: {
         'pipeline_status': status_update_idx['ERROR_STATUS'],
-        'message':         ''
-    },
-    'TIMEOUT':
-    {
-        'pipeline_status': status_update_idx['ERROR_STATUS'],
-        'message':         'Timeout for job has expired'
-    },
-    'CANCELLED+':
-        {
-        'pipeline_status': status_update_idx['ERROR_STATUS'],
-        'message':         'Job was cancelled'
-        },
-    'CANCELLED':
-        {
-        'pipeline_status': status_update_idx['ERROR_STATUS'],
-        'message':         'Job was cancelled'
-        }
+        'message':         message
+        } for state, message in [
+            ('FAILED',        'Job failed'),
+            ('TIMEOUT',       'Timeout for job has expired'),
+            ('CANCELLED',     'Job was cancelled'),
+            ('OUT_OF_MEMORY', 'Job ran out of memory'),
+            ('NODE_FAIL',     'Node of the job failed'),
+            ('BOOT_FAIL',     'Node of the job failed to boot'),
+            ('DEADLINE',      'Job reached its deadline'),
+            ('PREEMPTED',     'Job was preempted'),
+            ('REVOKED',       'Job was revoked'),
+        ]},
 }
 
 

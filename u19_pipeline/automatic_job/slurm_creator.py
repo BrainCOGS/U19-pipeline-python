@@ -10,6 +10,7 @@ import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utils.file_utils import write_file
+import u19_pipeline.utils.slurm_utils as slurm_utils
 
 # Functions to create slurm jobs
 
@@ -114,33 +115,69 @@ def queue_slurm_file(job_id, program_selection_params, raw_directory, proc_direc
     return p.returncode, id_slurm_job, error_message
 
 
+def run_sacct(ssh_user, host, sacct_args, local_user=False, timeout=120):
+    '''
+    Run sacct (through ssh unless local_user)
+    Returns:
+    returncode (int) = return code of the command (-1 if it could not be run or timed out)
+    stdout     (str) = output of sacct
+    stderr     (str) = error of sacct/ssh (or why it could not be run)
+    '''
+    command = ['sacct'] + sacct_args
+    if not local_user:
+        command = ['ssh', ssh_user+'@'+host] + command
+
+    try:
+        p = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return -1, '', 'sacct did not answer in ' + str(timeout) + ' s'
+    except OSError as e:
+        return -1, '', str(e)
+
+    return p.returncode, p.stdout, p.stderr
+
+
 def check_slurm_job(ssh_user, host, jobid, local_user=False):
+    '''
+    Check the state of a slurm job
+    Returns:
+    state_pipeline (int) = status_update_idx (NO_CHANGE if the state could not be retrieved, to retry later)
+    error_message  (str) = how the job ended (state, exit code, node, time & memory) if it errored
+    '''
+    jobid = str(jobid)
 
-    if local_user:
-        command = ['sacct', '--job', jobid, '--format=state']
+    sacct_args = ['-j', jobid, '-P', '-n', '--format='+','.join(slurm_utils.sacct_format)]
+    returncode, stdout, stderr = run_sacct(ssh_user, host, sacct_args, local_user=local_user)
+    job_info = None
+    if returncode == config.system_process['SUCCESS']:
+        job_info = slurm_utils.parse_sacct_output(stdout, jobid)
     else:
-        command = ['ssh', ssh_user+'@'+host, 'sacct', '--job', jobid, '--format=state']
+        # Older sacct may not know some of the fields, retry asking only for the state
+        returncode, stdout, stderr = run_sacct(ssh_user, host, ['-j', jobid, '-P', '-n', '--format=State'], local_user=local_user)
+        if returncode == config.system_process['SUCCESS'] and stdout.strip():
+            job_info = {'State': stdout.strip().splitlines()[0].strip()}
 
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    p.wait()
-    stdout, stderr = p.communicate()
-    stdout = stdout.decode('UTF-8')
+    if returncode != config.system_process['SUCCESS']:
+        # A failed ssh/sacct call says nothing about the job, check again next time
+        error_message = 'Failed to retrieve slurm job status of job ' + jobid + ': ' + ' '.join(stderr.split())
+        print(error_message)
+        return config.status_update_idx['NO_CHANGE'], error_message[:255]
 
-    print('p.returncode !!!!!!!!!!!!', p.returncode)
-    print("config.system_process['SUCCESS']", config.system_process['SUCCESS'])
+    if job_info is None:
+        return config.status_update_idx['ERROR_STATUS'], 'Slurm job ' + jobid + ' not found in sacct'
 
-    if p.returncode == config.system_process['SUCCESS']:
-        state_slurm_job = stdout.split("\n")[2].strip()
+    # "CANCELLED by <uid>" -> "CANCELLED"
+    state_slurm_job = job_info['State'].split(' ')[0].rstrip('+')
+    if state_slurm_job not in config.slurm_states:
+        return config.status_update_idx['ERROR_STATUS'], 'Unexpected slurm state: ' + slurm_utils.describe_slurm_job(job_info)
 
-        state_pipeline = config.slurm_states[state_slurm_job]['pipeline_status']
-        error_message  = config.slurm_states[state_slurm_job]['message']
+    state_pipeline = config.slurm_states[state_slurm_job]['pipeline_status']
+    error_message = ''
+    if state_pipeline == config.status_update_idx['ERROR_STATUS']:
+        error_message = slurm_utils.describe_slurm_job(job_info)
 
-        print('state_pipeline ....', state_pipeline)
-        print('error_message', error_message)
-
-    else:
-        state_pipeline = config.status_update_idx['ERROR_STATUS']
-        error_message  = 'Failed to retrieve slurm job status'
+    print('state_pipeline ....', state_pipeline)
+    print('error_message', error_message)
 
     return state_pipeline, error_message
 
