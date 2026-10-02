@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lowest and highest versions allowed by requires-python.
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      # Base dependencies + the dev group. The heavy `pipeline` extra
+      # (suite2p, cellpose, element-* git deps) is not needed by the tests;
+      # the audit job below still covers the whole lock file.
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Tests marked `db` skip themselves when no DataJoint database is
+      # reachable (see tests/dbskip.py); CI has none.
+      - name: Run tests
+        run: uv run --locked pytest
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      # Audits the whole locked tree (all extras) against OSV and fails on any
+      # finding. `--locked` also asserts uv.lock matches pyproject.toml.
+      #
+      # Ignored on purpose:
+      # - GHSA-h35f-9h28-mq5c / PYSEC-2026-3447 (setuptools): fixed in
+      #   setuptools 83, which removed pkg_resources; datajoint<2 imports
+      #   pkg_resources at module scope, so the fix breaks `import datajoint`
+      #   (same reason as the setuptools<82 Dependabot ignore). The flaw is in
+      #   building sdists, which this project does not do in production.
+      # - jupyterlab (fixed in 4.6.4) and pyjwt (fixed in 2.15.0): the fixed
+      #   releases are newer than the 14-day `exclude-newer` quarantine in
+      #   pyproject.toml. Remove these ignores once Dependabot bumps them.
+      - name: Audit dependencies
+        run: >-
+          uv audit --locked
+          --ignore GHSA-h35f-9h28-mq5c
+          --ignore PYSEC-2026-3447
+          --ignore GHSA-6966-vjj6-99xv
+          --ignore PYSEC-2026-4055
+          --ignore GHSA-3325-v43h-43rv
+          --ignore PYSEC-2026-4056
+          --ignore PYSEC-2026-4057
+          --ignore GHSA-3jqq-pw4j-pqcj
+          --ignore PYSEC-2026-4141
