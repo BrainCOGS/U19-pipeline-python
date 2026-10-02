@@ -74,7 +74,9 @@ class TestBehavFramesConcatenation:
         files = [make_file([NO_SYNC] * 3), make_file([NO_SYNC] * 2, ts_start=0.3)]
         rec_info, _ = run(files)
         assert_one_entry_per_frame(rec_info)
-        assert all(isinstance(x, list) and not x for x in rec_info["Timing"]["BehavFrames"])
+        assert all(
+            isinstance(x, list) and not x for x in rec_info["Timing"]["BehavFrames"]
+        )
 
     def test_equal_length_parsed_entries_are_not_turned_into_2d(self):
         # If every frame of a file parses to a list of the same length, np.array
@@ -127,4 +129,6 @@ class TestFrameTimestamps:
     def test_file_with_continuing_timestamps_is_unchanged(self):
         files = [make_file([SYNC] * 3), make_file([SYNC] * 2, ts_start=0.3)]
         rec_info, _ = run(files)
-        np.testing.assert_allclose(rec_info["Timing"]["Frame_ts_sec"], [0.0, 0.1, 0.2, 0.3, 0.4])
+        np.testing.assert_allclose(
+            rec_info["Timing"]["Frame_ts_sec"], [0.0, 0.1, 0.2, 0.3, 0.4]
+        )

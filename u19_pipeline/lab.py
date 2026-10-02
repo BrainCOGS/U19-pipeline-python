@@ -229,11 +229,35 @@ class Path(dj.Lookup):
 
     contents = [
         ["/Bezos-center", "windows", "Y:", r"\\cup.pni.princeton.edu\Bezos-center", ""],
-        ["/Bezos-center", "mac", "/Volumes/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
-        ["/Bezos-center", "linux", "/mnt/Bezos-center", "//cup.pni.princeton.edu/Bezos-center", ""],
+        [
+            "/Bezos-center",
+            "mac",
+            "/Volumes/Bezos-center",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
+        [
+            "/Bezos-center",
+            "linux",
+            "/mnt/Bezos-center",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
         ["/braininit", "windows", "Z:", r"\\cup.pni.princeton.edu\braininit", ""],
-        ["/braininit", "mac", "/Volumes/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
-        ["/braininit", "linux", "/mnt/braininit", "//cup.pni.princeton.edu/Bezos-center", ""],
+        [
+            "/braininit",
+            "mac",
+            "/Volumes/braininit",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
+        [
+            "/braininit",
+            "linux",
+            "/mnt/braininit",
+            "//cup.pni.princeton.edu/Bezos-center",
+            "",
+        ],
     ]
 
     def get_local_path(self, path, local_os=None):
@@ -271,7 +295,9 @@ class Path(dj.Lookup):
         for iglob, glob in enumerate(globs.fetch("KEY")):
             mapping[iglob].append(glob["global_path"])
             for system in systems:
-                mapping[iglob].append((self & glob & {"system": system}).fetch1("local_path"))
+                mapping[iglob].append(
+                    (self & glob & {"system": system}).fetch1("local_path")
+                )
 
         mapping = np.asarray(mapping)
 
@@ -306,9 +332,13 @@ class Path(dj.Lookup):
         path_df = path_df[path_df["system"] == system]
 
         # Search in path which of the main buckets we are referring from
-        path_df["idx_global_path"] = path_df["global_path"].apply(lambda x: bucket_path.find(x))
+        path_df["idx_global_path"] = path_df["global_path"].apply(
+            lambda x: bucket_path.find(x)
+        )
         path_df = path_df[path_df["idx_global_path"] != -1]
-        path_df = path_df[path_df["idx_global_path"] == path_df["idx_global_path"].min()].squeeze()
+        path_df = path_df[
+            path_df["idx_global_path"] == path_df["idx_global_path"].min()
+        ].squeeze()
         path_df = path_df.to_dict()
 
         # Remove bucket "base" dir from path
