@@ -91,8 +91,11 @@ updates:
   #
   - package-ecosystem: "uv"
     directory: "/"
+    # Must be >= `exclude-newer` in pyproject.toml (14 days). With a shorter
+    # cooldown Dependabot proposes releases that uv's quarantine then refuses,
+    # and the whole update job fails (seen with jupyterlab 4.6.4).
     cooldown:
-      default-days: 7
+      default-days: 14
 
     schedule:
       interval: "monthly"
