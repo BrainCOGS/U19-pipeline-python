@@ -15,14 +15,29 @@ concurrency:
 
 jobs:
   tests:
-    name: pytest (Python ${{ matrix.python-version }})
+    name: pytest (Python ${{ matrix.python-version }}, ${{ matrix.deps }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # Lowest and highest versions allowed by requires-python.
-        python-version: ["3.12", "3.14"]
+        include:
+          # Base dependencies + the dev group, on the lowest and highest
+          # versions allowed by requires-python. Tests that need an optional
+          # package skip themselves via pytest.importorskip; this leg checks
+          # the package still works without the extras.
+          - python-version: "3.12"
+            deps: base
+          - python-version: "3.14"
+            deps: base
+          # The heavy `pipeline` extra (suite2p, cellpose/torch, element-* git
+          # deps), so the importorskip-guarded tests actually run.
+          # --require-extras turns those skips into failures, so a broken
+          # install fails here instead of passing with everything skipped.
+          - python-version: "3.13"
+            deps: pipeline
+            sync-args: --extra pipeline
+            pytest-args: --require-extras
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,16 +49,18 @@ jobs:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
-      # Base dependencies + the dev group. The heavy `pipeline` extra
-      # (suite2p, cellpose, element-* git deps) is not needed by the tests;
-      # the audit job below still covers the whole lock file.
+      # The audit job below covers the whole lock file regardless of leg.
       - name: Install dependencies
-        run: uv sync --locked
+        env:
+          SYNC_ARGS: ${{ matrix.sync-args }}
+        run: uv sync --locked $SYNC_ARGS
 
       # Tests marked `db` skip themselves when no DataJoint database is
-      # reachable (see tests/dbskip.py); CI has none.
+      # reachable (see tests/dbskip.py); CI has none. -rs lists skip reasons.
       - name: Run tests
-        run: uv run --locked pytest
+        env:
+          PYTEST_ARGS: ${{ matrix.pytest-args }}
+        run: uv run --locked pytest -rs $PYTEST_ARGS
 
   audit:
     runs-on: ubuntu-latest
