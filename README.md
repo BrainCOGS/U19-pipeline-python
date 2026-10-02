@@ -102,6 +102,16 @@ The `U19-pipeline_python` repository defines the DataJoint tables for the U19 pr
   + The `initial_conf.py`  script will store a global file with credentials to access DB and configuration variables/filepaths.
   + Now that the virtual modules are created to access the tables in the database, you can query and fetch from the database.
 
+## Development
+
+```bash
+uv sync                  # create .venv with the dev dependency group
+uv tool install prek     # pre-commit-compatible hook runner
+prek install             # run the hooks on every commit
+prek run --all-files     # run all hooks once (same as the Lint CI job)
+uv run pytest            # tests that need a DataJoint database skip without one
+```
+
 ## Tutorials
 
 We have created some tutorial notebooks to help you start working with DataJoint.
