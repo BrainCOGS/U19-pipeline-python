@@ -11,9 +11,12 @@ repos:
     - id: check-yaml
     - id: check-toml
     - id: debug-statements
+    # Notebooks are left alone by the whitespace fixers and by ruff.
+    - id: end-of-file-fixer
+      exclude: \.ipynb$
     - id: mixed-line-ending
-    # end-of-file-fixer and trailing-whitespace are left out for now: they
-    # would touch ~90 existing files and conflict with open PRs.
+    - id: trailing-whitespace
+      exclude: \.ipynb$
     - id: name-tests-test
       args: ["--pytest-test-first"]
       # Shared skip helper imported by the tests, not a test module.
@@ -23,10 +26,10 @@ repos:
   rev: v0.16.10
   hooks:
     # Settings (including the baseline ignores and the notebooks exclude)
-    # live in ruff.toml. ruff-format is not enabled yet; see the
-    # tabedzki/style/ruff-format branch.
+    # live in ruff.toml.
     - id: ruff-check
       args: ["--fix", "--show-fixes"]
+    - id: ruff-format
 
 - repo: https://github.com/gitleaks/gitleaks
   rev: v8.30.1
