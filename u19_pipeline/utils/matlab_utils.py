@@ -336,7 +336,7 @@ def convert_towers_block_2_df(current_block, num_block):
     valid_block = 0
 
     # "Normal" blocks are stored as numpy arrays and its length is greater than 0
-    if isinstance(current_block, np.ndarray) and current_block_trial.shape[0] > 0:
+    if isinstance(current_block, np.ndarray) and current_block.shape[0] > 0:
         current_block = current_block.tolist()
         valid_block = 1 
     # One trial blocks are stored as dictionaries
