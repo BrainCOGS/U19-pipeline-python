@@ -16,7 +16,7 @@ slack_configuration_dictionary = {
 
 def get_schedule_query():
 
-    scheduler = dj.create_virtual_module("scheduler", "u19_scheduler")
+    scheduler = dj.create_virtual_module("scheduler", dj.config["custom"]["database.prefix"] + "scheduler")
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     today = (datetime.date.today()).strftime('%Y-%m-%d')
     schedule_query = 'date >= "' + today + '" and date <= "' + tomorrow + '"'
