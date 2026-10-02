@@ -30,13 +30,12 @@ jobs:
             deps: base
           - python-version: "3.14"
             deps: base
-          # The heavy `pipeline` extra (suite2p, cellpose/torch, element-* git
-          # deps), so the importorskip-guarded tests actually run.
-          # --require-extras turns those skips into failures, so a broken
-          # install fails here instead of passing with everything skipped.
+          # The `pipeline` extra (suite2p, cellpose, element-* git deps), so
+          # the importorskip-guarded tests actually run. --require-extras
+          # turns those skips into failures, so a broken install fails here
+          # instead of passing with everything skipped.
           - python-version: "3.13"
             deps: pipeline
-            sync-args: --extra pipeline
             pytest-args: --require-extras
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,17 +49,33 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # The audit job below covers the whole lock file regardless of leg.
+      # The pipeline leg leaves out torch and its CUDA wheels (~5 GB): only
+      # suite2p and cellpose import torch, and no test imports those. A test
+      # that does will fail with ModuleNotFoundError under --require-extras;
+      # drop the --no-install-package filter then.
       - name: Install dependencies
         env:
-          SYNC_ARGS: ${{ matrix.sync-args }}
-        run: uv sync --locked $SYNC_ARGS
+          DEPS: ${{ matrix.deps }}
+        run: |
+          if [ "$DEPS" = pipeline ]; then
+            mapfile -t skip < <(
+              uv export --locked --extra pipeline --no-hashes --no-header --no-annotate \
+                | grep -oE '^(torch|torchvision|triton|nvidia-[a-z0-9-]+|cuda-[a-z0-9-]+)\b' \
+                | sort -u
+            )
+            echo "Not installing: ${skip[*]}"
+            uv sync --locked --extra pipeline "${skip[@]/#/--no-install-package=}"
+          else
+            uv sync --locked
+          fi
 
       # Tests marked `db` skip themselves when no DataJoint database is
       # reachable (see tests/dbskip.py); CI has none. -rs lists skip reasons.
       - name: Run tests
         env:
           PYTEST_ARGS: ${{ matrix.pytest-args }}
-        run: uv run --locked pytest -rs $PYTEST_ARGS
+        # --no-sync keeps `uv run` from re-syncing the environment set up above.
+        run: uv run --no-sync pytest -rs $PYTEST_ARGS
 
   audit:
     runs-on: ubuntu-latest

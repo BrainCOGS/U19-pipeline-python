@@ -94,9 +94,7 @@ ignore = [
 "u19_pipeline/alert_system/tech_alert/tech_alert.py" = ["C401"]
 "u19_pipeline/alert_system/water_weigh_alert/create_weighing_gui_ss.py" = ["DTZ002", "PERF402", "UP015"]
 "u19_pipeline/alert_system/water_weigh_alert/water_weigh_alert.py" = ["DTZ002", "PERF402", "UP015"]
-# B016 here (`raise` of a string literal) looks like a real bug; left for a
-# separate fix.
-"u19_pipeline/automatic_job/clusters_paths_and_transfers.py" = ["A001", "B016", "B905", "E741", "PLW1510", "UP015"]
+"u19_pipeline/automatic_job/clusters_paths_and_transfers.py" = ["A001", "B905", "E741", "PLW1510", "UP015"]
 "u19_pipeline/automatic_job/create_missing_lfps_script.py" = ["F811"]
 "u19_pipeline/automatic_job/ephys_element_ingest.py" = ["C416", "W605"]
 "u19_pipeline/automatic_job/imaging_element.py" = ["E722", "F541", "PLW0127", "PLW0133", "SIM112", "UP032"]
@@ -119,9 +117,7 @@ ignore = [
 "u19_pipeline/utils/ephys_fix_sync_code.py" = ["B007"]
 "u19_pipeline/utils/ephys_utils.py" = ["B028", "N801", "N817", "PIE790", "SIM113", "UP034", "UP039"]
 "u19_pipeline/utils/insert_miscelaneous_db.py" = ["TRY002"]
-# F821 here (undefined `current_block_trial`) looks like a real bug; left
-# for a separate fix.
-"u19_pipeline/utils/matlab_utils.py" = ["B905", "C416", "DTZ001", "F821", "RUF007", "UP007", "UP015", "UP035"]
+"u19_pipeline/utils/matlab_utils.py" = ["B905", "C416", "DTZ001", "RUF007", "UP007", "UP015", "UP035"]
 "u19_pipeline/utils/path_utils.py" = ["A001", "PLW1510"]
 "u19_pipeline/utils/scp_transfers.py" = ["B018", "PLC0414", "TRY201"]
 "u19_pipeline/utils/slack_utils.py" = ["EXE001", "LOG015"]

@@ -4,9 +4,6 @@
 #   BrainCOGS/tech_calendar_streamlit#111, BrainCOGS/WaterPubsGUI#4,
 #   BrainCOGS/U19-Data-Viewer#15
 #
-# No `github-actions` entry: this repo has no .github/workflows/ yet.
-# Add one (Monday slot) if workflows are introduced.
-#
 # No `pip` entry for requirements.txt: it is legacy and nothing in the repo
 # consumes it (README, Dockerfile and scripts all use pyproject.toml / uv).
 # Adding it alongside `uv` would only produce duplicate PRs.
@@ -14,6 +11,43 @@
 version: 2
 
 updates:
+  #
+  # GitHub Actions (.github/workflows/)
+  #
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    cooldown:
+      default-days: 7
+
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    commit-message:
+      prefix: "ci"
+
+    rebase-strategy: "auto"
+
+    # See the docker entry below: version and security updates are grouped
+    # independently, so both need a group.
+    groups:
+      github-actions:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
   #
   # Docker (root Dockerfile; docker-compose-local.yml uses `build: .`)
   #
@@ -57,8 +91,11 @@ updates:
   #
   - package-ecosystem: "uv"
     directory: "/"
+    # Must be >= `exclude-newer` in pyproject.toml (14 days). With a shorter
+    # cooldown Dependabot proposes releases that uv's quarantine then refuses,
+    # and the whole update job fails (seen with jupyterlab 4.6.4).
     cooldown:
-      default-days: 7
+      default-days: 14
 
     schedule:
       interval: "monthly"

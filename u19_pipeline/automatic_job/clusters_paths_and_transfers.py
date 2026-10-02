@@ -142,7 +142,7 @@ def get_cluster_vars(cluster):
     if cluster in cluster_vars:
         return cluster_vars[cluster]
     else:
-        raise ("Non existing cluster")
+        raise ValueError(f"Non existing cluster: {cluster!r}")
 
 
 def scp_file_transfer(source, dest):
