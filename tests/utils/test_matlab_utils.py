@@ -43,7 +43,9 @@ def test_block_2_df_dict():
 
 
 @pytest.mark.parametrize(
-    "block", [np.array([], dtype=object), None, [], 0], ids=["empty-ndarray", "none", "list", "zero"]
+    "block",
+    [np.array([], dtype=object), None, [], 0],
+    ids=["empty-ndarray", "none", "list", "zero"],
 )
 def test_block_2_df_invalid(block):
     valid, df = mu.convert_towers_block_2_df(block, 1)
@@ -63,7 +65,9 @@ def test_block_trial_2_df_ndarray():
     )
 
 
-@pytest.mark.parametrize("trials", [np.array([], dtype=object), None], ids=["empty-ndarray", "none"])
+@pytest.mark.parametrize(
+    "trials", [np.array([], dtype=object), None], ids=["empty-ndarray", "none"]
+)
 def test_block_trial_2_df_invalid(trials):
     valid, df = mu.convert_towers_block_trial_2_df(trials, 1)
 

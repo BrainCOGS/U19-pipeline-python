@@ -22,7 +22,9 @@ def cpt(monkeypatch):
     custom = dict(dj.config.get("custom") or {}, root_data_dir="/tmp/root")
     monkeypatch.setitem(dj.config, "custom", custom)
     monkeypatch.setitem(
-        sys.modules, "u19_pipeline.automatic_job.params_config", types.ModuleType("params_config")
+        sys.modules,
+        "u19_pipeline.automatic_job.params_config",
+        types.ModuleType("params_config"),
     )
     monkeypatch.delitem(sys.modules, MODULE, raising=False)
     module = importlib.import_module(MODULE)
