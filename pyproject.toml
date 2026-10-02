@@ -80,3 +80,6 @@ markers = [
 
 [tool.uv]
 exclude-newer = "14 days"
+# `uv audit` is still behind a preview flag. Declaring it here lets CI and
+# local runs call `uv audit` without `--preview-features audit-command`.
+preview-features = ["audit-command"]
