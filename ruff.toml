@@ -99,7 +99,6 @@ ignore = [
 "u19_pipeline/automatic_job/clusters_paths_and_transfers.py" = ["A001", "B016", "B905", "E741", "PLW1510", "UP015"]
 "u19_pipeline/automatic_job/create_missing_lfps_script.py" = ["F811"]
 "u19_pipeline/automatic_job/ephys_element_ingest.py" = ["C416", "W605"]
-"u19_pipeline/automatic_job/imaging_element.py" = ["E722", "F541", "PLW0127", "PLW0133", "SIM112", "UP032"]
 "u19_pipeline/automatic_job/imaging_element_populate.py" = ["B028"]
 "u19_pipeline/automatic_job/pupillometry_handler.py" = ["C402", "PLR2044", "SIM118", "TRY002", "UP039"]
 "u19_pipeline/automatic_job/recording_handler.py" = ["F811", "TRY201", "TRY203", "UP039"]
