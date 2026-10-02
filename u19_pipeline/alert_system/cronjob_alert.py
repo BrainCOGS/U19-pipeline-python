@@ -12,6 +12,7 @@ import u19_pipeline.alert_system.log_deletion.old_log_deletion as old
 import u19_pipeline.alert_system.live_session_stats_deletion.live_session_stats_deletion as lssd
 import u19_pipeline.alert_system.noDB_backup_creation.noDB_backup_creation_script as noDBbcs
 import u19_pipeline.alert_system.custom_alerts.disk_space_alert as dsa
+import u19_pipeline.alert_system.scheduler_nightly.scheduler_nightly as sn
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 
@@ -22,6 +23,10 @@ slack_configuration_dictionary = {
 
 
 #mas.main_alert_system()
+# Scheduler housekeeping ported from U19-pipeline-matlab scripts/populate_tables.m
+asu.run_cronjob_alert_job('reset_reweight_subjects', sn.main_reset_reweight_subjects, lab, su, slack_configuration_dictionary)
+asu.run_cronjob_alert_job('populate_schedule_for_tomorrow', sn.main_populate_schedule_for_tomorrow, lab, su, slack_configuration_dictionary)
+asu.run_cronjob_alert_job('populate_technician_schedule', sn.main_populate_technician_schedule, lab, su, slack_configuration_dictionary)
 asu.run_cronjob_alert_job('old_log_deletion', old.main_old_log_deletion, lab, su, slack_configuration_dictionary)
 asu.run_cronjob_alert_job('live_session_stats_deletion', lssd.main_live_session_stats_deletion, lab, su, slack_configuration_dictionary)
 asu.run_cronjob_alert_job('noDB_backup', noDBbcs.main_noDB_backup, lab, su, slack_configuration_dictionary)
