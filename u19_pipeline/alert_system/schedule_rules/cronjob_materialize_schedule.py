@@ -7,6 +7,6 @@ try_find_conf_file()
 
 time.sleep(0.1)
 
-import u19_pipeline.alert_system.schedule_rules.materialize_schedule_job as msj  # noqa: E402
+import u19_pipeline.alert_system.schedule_rules.materialize_schedule_job as msj
 
 msj.main_materialize_schedule()

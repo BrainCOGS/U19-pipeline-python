@@ -26,12 +26,16 @@ RULE_TABLE = "#schedule_rule"
 def build_alter_statements(database: str) -> list[str]:
     """SQL that adds ``rule_id`` to ``{database}.schedule``, matching DataJoint's FK style."""
     return [
-        f"ALTER TABLE `{database}`.`{SCHEDULE_TABLE}` "
-        "ADD COLUMN `rule_id` int DEFAULT NULL "
-        "COMMENT 'rule that generated this row; NULL for manual or copy-forward rows'",
-        f"ALTER TABLE `{database}`.`{SCHEDULE_TABLE}` "
-        f"ADD FOREIGN KEY (`rule_id`) REFERENCES `{database}`.`{RULE_TABLE}` (`rule_id`) "
-        "ON UPDATE CASCADE ON DELETE RESTRICT",
+        (
+            f"ALTER TABLE `{database}`.`{SCHEDULE_TABLE}` "
+            "ADD COLUMN `rule_id` int DEFAULT NULL "
+            "COMMENT 'rule that generated this row; NULL for manual or copy-forward rows'"
+        ),
+        (
+            f"ALTER TABLE `{database}`.`{SCHEDULE_TABLE}` "
+            f"ADD FOREIGN KEY (`rule_id`) REFERENCES `{database}`.`{RULE_TABLE}` (`rule_id`) "
+            "ON UPDATE CASCADE ON DELETE RESTRICT"
+        ),
     ]
 
 
@@ -65,7 +69,7 @@ def main(argv: list[str] | None = None) -> None:
         print(";\n".join(statements) + ";")
         return
 
-    import u19_pipeline.scheduler  # noqa: F401  (declares the new tables)
+    import u19_pipeline.scheduler  # importing declares the new tables
 
     connection = dj.conn()
     query, params = column_exists_query(database)
