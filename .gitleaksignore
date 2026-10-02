@@ -1,0 +1,13 @@
+# gitleaks false positives (history only). Each entry is a `generic-api-key`
+# match on ordinary code/notebook text, e.g. `fetch1("KEY", as_dict=True)` or
+# `insert1(..._key, allow_direct_insert=True)`, not a credential.
+# Do NOT add real findings here (Slack webhooks, database passwords): rotate
+# them instead.
+0125fca58edaf7277ca41e55fb752321320bb335:u19_pipeline/automatic_job/recording_handler.py:generic-api-key:334
+6c2a88202b36de6cfa71f0afb503518f61f4363e:notebooks/developer_notebooks/02-process-ephys-workflow.ipynb:generic-api-key:286
+6c2a88202b36de6cfa71f0afb503518f61f4363e:notebooks/tutorials/2-Analyze data with U19 pipeline and save results.ipynb:generic-api-key:1611
+6c2a88202b36de6cfa71f0afb503518f61f4363e:notebooks/tutorials/Old_tutorials/202001/3-Analyze data with U19 pipeline and save results.ipynb:generic-api-key:1129
+6c2a88202b36de6cfa71f0afb503518f61f4363e:notebooks/tutorials/Old_tutorials/202103/2-Analyze data with U19 pipeline and save results.ipynb:generic-api-key:1611
+6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/alert_system/live_monitor_alert/live_monitor_alert.py:generic-api-key:125
+6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/automatic_job/recording_handler.py:generic-api-key:489
+6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/imaging_pipeline.py:generic-api-key:170
