@@ -4,9 +4,9 @@ import time
 import datajoint as dj
 import pandas as pd
 
-import u19_pipeline.utils.slack_utils as su
 import u19_pipeline.lab as lab
-
+import u19_pipeline.utils.schedule_rules as sr
+import u19_pipeline.utils.slack_utils as su
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {
@@ -16,13 +16,28 @@ slack_configuration_dictionary = {
 
 def get_schedule_query():
 
-    scheduler = dj.create_virtual_module("scheduler", "u19_scheduler")
+    scheduler = dj.create_virtual_module("scheduler", dj.config["custom"]["database.prefix"] + "scheduler")
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     today = (datetime.date.today()).strftime('%Y-%m-%d')
     schedule_query = 'date >= "' + today + '" and date <= "' + tomorrow + '"'
     schedule_df = pd.DataFrame((scheduler.Schedule & schedule_query).fetch('date', 'location', 'subject_fullname', as_dict=True))
 
-    return schedule_df
+    return sr.drop_planned_rest(schedule_df, datetime.date.today(), get_resting_subjects(scheduler))
+
+
+def get_resting_subjects(scheduler):
+    """Subjects whose ScheduleRule runs today but deliberately not tomorrow.
+
+    Returns an empty set until the ScheduleRule migration has run.
+    """
+    if not hasattr(scheduler, 'ScheduleRule'):
+        return set()
+    today = datetime.date.today()
+    rules = sr.rules_from_rows(
+        (scheduler.ScheduleRule & {'status': sr.ACTIVE}).fetch(as_dict=True),
+        scheduler.ScheduleRule.Day.fetch(as_dict=True),
+    )
+    return sr.subjects_resting_on(rules, today, today + datetime.timedelta(days=1))
 
 
 def main_schedule_check_alert():

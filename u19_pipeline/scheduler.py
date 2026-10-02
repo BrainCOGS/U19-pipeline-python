@@ -56,7 +56,65 @@ class InputOutputProfile(dj.Manual):
 
 
 @schema
+class ScheduleRule(dj.Manual):
+    definition = """
+    # Recurring booking of a subject on a rig slot, expanded into Schedule rows
+    # by u19_pipeline.utils.schedule_rules.materialize_schedule
+    rule_id                      : int auto_increment
+    ---
+    -> subject.Subject
+    -> lab.Location
+    timeslot                     : int                   # same numbering as Schedule.timeslot
+    -> TrainingProfile
+    -> RecordingProfile
+    -> InputOutputProfile
+    experimenters_instructions = '' : varchar(4096)   # kept well under MySQL's 65535-byte row limit
+    level = 0                    : int                   # 0 means derive from past performance
+    sublevel = 0                 : int                   # 0 means derive from past performance
+    start_date                   : date                  # first date the rule may run, inclusive
+    end_date = NULL              : date                  # last date, inclusive; NULL is open-ended
+    status = 'active'            : enum('active', 'ended', 'cancelled')
+    -> lab.User.proj(created_by='user_id')
+    created_at = CURRENT_TIMESTAMP : timestamp
+    """
+
+    class Day(dj.Part):
+        definition = """
+        # Days of the week on which the rule runs
+        -> master
+        weekday                  : enum('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+        """
+
+
+@schema
+class ScheduleRuleException(dj.Manual):
+    definition = """
+    # One-off deviation from a ScheduleRule on a single date
+    -> ScheduleRule
+    date                         : date
+    ---
+    action                       : enum('skip', 'override')  # skip: no session that day; override: row edited by hand, generator leaves it
+    reason = ''                  : varchar(255)
+    -> lab.User
+    created_at = CURRENT_TIMESTAMP : timestamp
+    """
+
+
+@schema
+class LabClosure(dj.Manual):
+    definition = """
+    # Lab-wide dates on which no ScheduleRule produces sessions (holidays, shutdowns)
+    date                         : date
+    ---
+    reason                       : varchar(255)
+    -> lab.User
+    """
+
+
+@schema
 class Schedule(dj.Manual):
+    # rule_id is added to the existing table by scripts/migrations/add_schedule_rules.py;
+    # DataJoint never alters a declared table from this definition.
     definition = """
     date                         : date                  # Full date
     -> lab.Location                                      # Full rig name, e.g., 165I-Rig1-T
@@ -69,6 +127,7 @@ class Schedule(dj.Manual):
     experimenters_instructions  :varchar(64532)
     level                       : int
     sublevel                    : int
+    -> [nullable] ScheduleRule                 # rule that generated this row; NULL for manual or copy-forward rows
     """
 
 
