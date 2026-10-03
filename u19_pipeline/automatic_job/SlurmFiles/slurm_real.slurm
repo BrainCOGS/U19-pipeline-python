@@ -25,4 +25,3 @@
 
     cd ${repository_dir}
     python ${process_script_path}
-    

@@ -59,30 +59,40 @@ def behav_frames(parse, path):
 
 
 def test_packets_are_decoded_to_block_trial_iteration(parse, tmp_path):
-    frames = behav_frames(parse, write_tif(tmp_path / "a_00001_00001.tif", [ONE_PACKET]))
-    (ts, values), = frames[0]
+    frames = behav_frames(
+        parse, write_tif(tmp_path / "a_00001_00001.tif", [ONE_PACKET])
+    )
+    ((ts, values),) = frames[0]
     assert ts == pytest.approx(12.807774195)
     np.testing.assert_array_equal(values, [1, 1, 595])
 
 
 def test_frame_without_sync_is_empty_list(parse, tmp_path):
-    frames = behav_frames(parse, write_tif(tmp_path / "a_00001_00001.tif", [NO_SYNC, ONE_PACKET]))
+    frames = behav_frames(
+        parse, write_tif(tmp_path / "a_00001_00001.tif", [NO_SYNC, ONE_PACKET])
+    )
     assert frames[0] == []
     assert len(frames[1]) == 1
 
 
 def test_all_packets_of_a_frame_are_kept(parse, tmp_path):
-    frames = behav_frames(parse, write_tif(tmp_path / "a_00001_00001.tif", [TWO_PACKETS]))
+    frames = behav_frames(
+        parse, write_tif(tmp_path / "a_00001_00001.tif", [TWO_PACKETS])
+    )
     assert [ts for ts, _ in frames[0]] == pytest.approx([8.1347117, 8.15944775])
     np.testing.assert_array_equal([v for _, v in frames[0]], [[1, 2, 1], [1, 2, 2]])
 
 
 def test_malformed_packet_becomes_nan_without_failing_the_file(parse, tmp_path):
-    frames = behav_frames(parse, write_tif(tmp_path / "a_00001_00001.tif", [MALFORMED, ONE_PACKET]))
+    frames = behav_frames(
+        parse, write_tif(tmp_path / "a_00001_00001.tif", [MALFORMED, ONE_PACKET])
+    )
     assert isinstance(frames[0], float) and np.isnan(frames[0])
     assert len(frames[1]) == 1
 
 
 def test_one_entry_per_frame(parse, tmp_path):
-    frames = behav_frames(parse, write_tif(tmp_path / "a_00001_00001.tif", [NO_SYNC, ONE_PACKET, NO_SYNC]))
+    frames = behav_frames(
+        parse, write_tif(tmp_path / "a_00001_00001.tif", [NO_SYNC, ONE_PACKET, NO_SYNC])
+    )
     assert len(frames) == 3

@@ -56,7 +56,9 @@ def run(pytester, monkeypatch):
     return _run
 
 
-@pytest.mark.parametrize("source", [MODULE_LEVEL_MISSING, TEST_LEVEL_MISSING], ids=["module", "test"])
+@pytest.mark.parametrize(
+    "source", [MODULE_LEVEL_MISSING, TEST_LEVEL_MISSING], ids=["module", "test"]
+)
 def test_missing_import_skips_by_default(run, source):
     result = run(source)
     result.assert_outcomes(skipped=1)

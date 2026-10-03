@@ -23,13 +23,19 @@ def desc(i2c):
 class TestDecodeI2cBytes:
     def test_decodes_little_endian_uint16_triples(self):
         # [1,0 | 1,0 | 83,2] -> block 1, trial 1, iteration 83 + 2*256
-        np.testing.assert_array_equal(si2c.decode_i2c_bytes("1,0,1,0,83,2"), [1, 1, 595])
+        np.testing.assert_array_equal(
+            si2c.decode_i2c_bytes("1,0,1,0,83,2"), [1, 1, 595]
+        )
 
     def test_space_separated_bytes_from_older_scanimage(self):
-        np.testing.assert_array_equal(si2c.decode_i2c_bytes("1 0 1 0 83 2"), [1, 1, 595])
+        np.testing.assert_array_equal(
+            si2c.decode_i2c_bytes("1 0 1 0 83 2"), [1, 1, 595]
+        )
 
     def test_zero_and_uint16_max(self):
-        np.testing.assert_array_equal(si2c.decode_i2c_bytes("0,0,255,255,0,1"), [0, 65535, 256])
+        np.testing.assert_array_equal(
+            si2c.decode_i2c_bytes("0,0,255,255,0,1"), [0, 65535, 256]
+        )
 
     def test_odd_byte_count_raises(self):
         with pytest.raises(ValueError):

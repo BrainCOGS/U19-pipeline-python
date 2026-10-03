@@ -245,7 +245,7 @@ import datajoint as dj
 
 This also works on a query object:
 ```python
-schema = dj.create_virtual_module("some_schema","some_schema")
+schema = dj.create_virtual_module("some_schema", "some_schema")
 query_object = schema.Sample() & 'sample_name ="test"'
 query_object.heading.attributes.keys()
 ```

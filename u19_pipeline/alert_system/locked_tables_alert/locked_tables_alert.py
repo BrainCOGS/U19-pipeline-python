@@ -8,9 +8,7 @@ import u19_pipeline.utils.slack_utils as su
 import u19_pipeline.lab as lab
 
 # Slack Configuration dictionary
-slack_configuration_dictionary = {
-    'slack_notification_channel': ['dev_notifications']
-}
+slack_configuration_dictionary = {"slack_notification_channel": ["dev_notifications"]}
 
 
 def main_locked_tables_alert():
@@ -20,21 +18,25 @@ def main_locked_tables_alert():
     # place `in_use` is read. A table is reported here whenever any open
     # connection is holding a lock on it (e.g. an in-flight transaction
     # from a `.populate()`/`.update1()` call), not necessarily a stuck one.
-    locked_tables_query = 'show open tables where in_use > 0'
+    locked_tables_query = "show open tables where in_use > 0"
     conn = dj.conn()
-    locked_tables_df = pd.DataFrame(conn.query(locked_tables_query, as_dict=True).fetchall())
+    locked_tables_df = pd.DataFrame(
+        conn.query(locked_tables_query, as_dict=True).fetchall()
+    )
 
     if locked_tables_df.shape[0] == 0:
         return
     else:
         locked_tables_df = locked_tables_df.head()
-        locked_tables_df = locked_tables_df.drop('Name_locked',axis=1)
+        locked_tables_df = locked_tables_df.drop("Name_locked", axis=1)
         locked_tables_df = su.format_df_for_slack_message(locked_tables_df)
 
         active_processes_df = get_active_processes(conn)
         active_processes_str = format_active_processes(active_processes_df)
 
-        slack_json_message = slack_alert_message_format_locked_tables(locked_tables_df, active_processes_str)
+        slack_json_message = slack_alert_message_format_locked_tables(
+            locked_tables_df, active_processes_str
+        )
 
         webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
         # Send alert
@@ -63,29 +65,36 @@ def get_active_processes(conn):
     MariaDB/MySQL and requires a server config change - out of scope here.
     """
 
-    processlist_df = pd.DataFrame(conn.query('show full processlist', as_dict=True).fetchall())
+    processlist_df = pd.DataFrame(
+        conn.query("show full processlist", as_dict=True).fetchall()
+    )
     if processlist_df.shape[0] == 0:
         return processlist_df
 
-    return processlist_df[processlist_df['Command'] != 'Sleep']
+    return processlist_df[processlist_df["Command"] != "Sleep"]
 
 
 def format_active_processes(active_processes_df):
     if active_processes_df.shape[0] == 0:
-        return 'No active (non-idle) connections found.'
+        return "No active (non-idle) connections found."
 
     process_descriptions = []
     for _, this_process in active_processes_df.iterrows():
-        query_info = (this_process['Info'] or '').strip().replace('\n', ' ')
-        query_info = (query_info[:60] + '...') if len(query_info) > 60 else query_info
-        db_name = this_process['db'] if pd.notna(this_process['db']) else '<none>'
+        query_info = (this_process["Info"] or "").strip().replace("\n", " ")
+        query_info = (query_info[:60] + "...") if len(query_info) > 60 else query_info
+        db_name = this_process["db"] if pd.notna(this_process["db"]) else "<none>"
         process_descriptions.append(
-            'Id={} User={} Host={} DB={} Command={} Time={}s Query={}'.format(
-                this_process['Id'], this_process['User'], this_process['Host'],
-                db_name, this_process['Command'], this_process['Time'], query_info or '<none>'
+            "Id={} User={} Host={} DB={} Command={} Time={}s Query={}".format(
+                this_process["Id"],
+                this_process["User"],
+                this_process["Host"],
+                db_name,
+                this_process["Command"],
+                this_process["Time"],
+                query_info or "<none>",
             )
         )
-    return '\n'.join(process_descriptions)
+    return "\n".join(process_descriptions)
 
 
 def slack_alert_message_format_locked_tables(locked_tables_df, active_processes_str):
@@ -121,7 +130,9 @@ def slack_alert_message_format_locked_tables(locked_tables_df, active_processes_
     m3_1 = dict()
     m3_1["type"] = "mrkdwn"
 
-    m3_1["text"] = "*Active connections (cross-reference to find the lock holder):*" + "\n"
+    m3_1["text"] = (
+        "*Active connections (cross-reference to find the lock holder):*" + "\n"
+    )
     m3_1["text"] += "```" + active_processes_str + "```"
     m3["text"] = m3_1
 

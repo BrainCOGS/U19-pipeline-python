@@ -18,11 +18,11 @@ import re
 
 import numpy as np
 
-I2C_DTYPE = np.dtype('<u2')     # matches getSyncInfo(..., 'uint16') in MATLAB
-I2C_VALUES_PER_PACKET = 3       # [block, trial, iteration]
+I2C_DTYPE = np.dtype("<u2")  # matches getSyncInfo(..., 'uint16') in MATLAB
+I2C_VALUES_PER_PACKET = 3  # [block, trial, iteration]
 
-RE_I2C = re.compile(r'I2CData = (\{.*)')
-RE_I2C_PACKET = re.compile(r'\{([0-9.eE+-]+)\s*,\s*\[([^\]]*)\]\}')
+RE_I2C = re.compile(r"I2CData = (\{.*)")
+RE_I2C_PACKET = re.compile(r"\{([0-9.eE+-]+)\s*,\s*\[([^\]]*)\]\}")
 
 
 def decode_i2c_bytes(byte_str):
@@ -31,11 +31,13 @@ def decode_i2c_bytes(byte_str):
     ScanImage prints the raw bytes, e.g. ``1,0,1,0,83,2``; older versions use
     spaces as separators.
     """
-    raw = np.array([int(b) for b in re.split(r'[\s,]+', byte_str.strip()) if b],
-                   dtype=np.uint8)
+    raw = np.array(
+        [int(b) for b in re.split(r"[\s,]+", byte_str.strip()) if b], dtype=np.uint8
+    )
     if raw.size % I2C_DTYPE.itemsize:
-        raise ValueError(f'I2C packet has {raw.size} bytes, '
-                         f'not a multiple of {I2C_DTYPE.itemsize}')
+        raise ValueError(
+            f"I2C packet has {raw.size} bytes, not a multiple of {I2C_DTYPE.itemsize}"
+        )
     return raw.view(I2C_DTYPE).astype(np.int64)
 
 
@@ -51,5 +53,7 @@ def parse_i2c_packets(description):
     m = RE_I2C.search(description)
     if not m:
         return []
-    return [(float(ts), decode_i2c_bytes(byte_str))
-            for ts, byte_str in RE_I2C_PACKET.findall(m.group(1))]
+    return [
+        (float(ts), decode_i2c_bytes(byte_str))
+        for ts, byte_str in RE_I2C_PACKET.findall(m.group(1))
+    ]
