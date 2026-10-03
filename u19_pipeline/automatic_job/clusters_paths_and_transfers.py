@@ -10,7 +10,15 @@ from datetime import datetime
 from element_interface.utils import dict_to_uuid
 
 import u19_pipeline.automatic_job.params_config as config
+from u19_pipeline.utils.file_utils import (
+    build_error_message,
+    build_job_error_info,
+    summarize_error_log,
+)
 # Functions to transfer files (globus, scp, smbclient)
+
+# Log files of cluster jobs are named after the job id
+default_log_filename = "job_id_%s.log"
 
 # FOR PNI endpoint
 # pni_ep_id = '6ce834d6-ff8a-11e6-bad1-22000b9a448b'
@@ -285,45 +293,112 @@ def translate_globus_output(stdout_process):
     return d1
 
 
+def get_log_file_local_path(recording_process_id, log_type="ERROR"):
+    """
+    Local path where the cluster log of this job is copied to
+    """
+    if log_type == "ERROR":
+        local_log_file_dir = dj.config["custom"]["error_logs_dir"]
+    else:
+        local_log_file_dir = dj.config["custom"]["output_logs_dir"]
+
+    log_filename = default_log_filename % (recording_process_id)
+
+    return pathlib.Path(local_log_file_dir, log_filename).as_posix()
+
+
+def get_log_file_cluster_path(
+    recording_process_id, program_selection_params, log_type="ERROR"
+):
+    """
+    user@host:path of the log of this job in the processing cluster
+    """
+    this_cluster_vars = get_cluster_vars(program_selection_params["process_cluster"])
+    if log_type == "ERROR":
+        cluster_log_file_dir = this_cluster_vars["error_files_dir"]
+    else:
+        cluster_log_file_dir = this_cluster_vars["log_files_dir"]
+
+    log_filename = default_log_filename % (recording_process_id)
+    log_file_cluster_path = pathlib.Path(cluster_log_file_dir, log_filename).as_posix()
+
+    return (
+        this_cluster_vars["user"]
+        + "@"
+        + this_cluster_vars["hostname"]
+        + ":"
+        + log_file_cluster_path
+    )
+
+
 def transfer_log_file(
     recording_process_id, program_selection_params, user_host, log_type="ERROR"
 ):
     """
     Transfer and send parameter files for processing
     """
-    this_cluster_vars = get_cluster_vars(program_selection_params["process_cluster"])
-    if log_type == "ERROR":
-        cluster_log_file_dir = this_cluster_vars["error_files_dir"]
-        local_log_file_dir = dj.config["custom"]["error_logs_dir"]
-    else:
-        cluster_log_file_dir = this_cluster_vars["log_files_dir"]
-        local_log_file_dir = dj.config["custom"]["output_logs_dir"]
+    log_file_local_path = get_log_file_local_path(
+        recording_process_id, log_type=log_type
+    )
+    log_file_full_path = get_log_file_cluster_path(
+        recording_process_id, program_selection_params, log_type=log_type
+    )
 
-    user_host = this_cluster_vars["user"] + "@" + this_cluster_vars["hostname"]
-
-    default_log_filename = "job_id_%s.log"
-
-    log_filename = default_log_filename % (recording_process_id)
-    log_file_local_path = pathlib.Path(local_log_file_dir, log_filename).as_posix()
-    log_file_cluster_path = pathlib.Path(cluster_log_file_dir, log_filename).as_posix()
-    chanmap_file_full_path = user_host + ":" + log_file_cluster_path
-
-    status = scp_file_transfer(chanmap_file_full_path, log_file_local_path)
+    status = scp_file_transfer(log_file_full_path, log_file_local_path)
 
     return status
 
 
+def get_job_error_info(recording_process_id, program_selection_params, slurm_message):
+    """
+    Copy the error & output logs of a failed cluster job and build the error message
+    and exception to report, from the error log, or the output log if the error log
+    is empty, or saying the logs could not be copied (instead of reporting nothing)
+    Input:
+    recording_process_id     (int)  = job id of the recording process
+    program_selection_params (dict) = processing params of the job (process_cluster)
+    slurm_message            (str)  = how the job ended according to slurm
+    Returns:
+    error_message   (str) = single line error (fits the 255 char DB column)
+    error_exception (str) = log text (fits the 4095 char DB column)
+    """
+    logs = dict()
+    for log_type in ["ERROR", "OUTPUT"]:
+        transfer_status = transfer_log_file(
+            recording_process_id, program_selection_params, None, log_type=log_type
+        )
+
+        # Do not report an old copy of the log if it could not be copied this time
+        if transfer_status == config.system_process["SUCCESS"]:
+            log_data = get_log_str(recording_process_id, log_type=log_type)
+            log_location = get_log_file_local_path(
+                recording_process_id, log_type=log_type
+            )
+        else:
+            log_data = None
+            log_location = get_log_file_cluster_path(
+                recording_process_id, program_selection_params, log_type=log_type
+            )
+
+        logs[log_type] = (log_data, log_location)
+
+    return build_job_error_info(slurm_message, *logs["ERROR"], *logs["OUTPUT"])
+
+
 def get_error_log_str(recording_process_id):
 
-    error_log_data = ""
-    default_log_filename = "job_id_%s.log"
+    return get_log_str(recording_process_id, log_type="ERROR")
 
-    local_log_file_dir = dj.config["custom"]["error_logs_dir"]
-    log_filename = default_log_filename % (recording_process_id)
-    log_file_local_path = pathlib.Path(local_log_file_dir, log_filename).as_posix()
+
+def get_log_str(recording_process_id, log_type="ERROR"):
+
+    error_log_data = ""
+    log_file_local_path = get_log_file_local_path(
+        recording_process_id, log_type=log_type
+    )
 
     if os.path.exists(log_file_local_path):
-        with open(log_file_local_path, "r") as error_log_file:
+        with open(log_file_local_path, "r", errors="replace") as error_log_file:
             error_log_data = " ".join(error_log_file.readlines())
 
         error_log_data = error_log_data.replace(

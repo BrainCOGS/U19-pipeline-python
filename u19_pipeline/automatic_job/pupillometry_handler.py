@@ -435,6 +435,45 @@ class PupillometryProcessingHandler:
             )
 
     @staticmethod
+    def get_error_log(remote_path_video_file):
+        """
+        Copy the error log of a pupillometry job from spock and read it, so the
+        actual error (and not only "check LOG") can be reported to the user
+        Input:
+        remote_path_video_file (str) = video file of the session, the job is named after it
+        Returns:
+        error_log     (str) = contents of the error log (None if it could not be copied)
+        log_location  (str) = location of the log to report (local path or user@host:path)
+        """
+        log_filename = "job_id_" + pathlib.Path(remote_path_video_file).stem + ".log"
+        log_file_cluster_path = (
+            PupillometryProcessingHandler.spock_error_dir + log_filename
+        )
+        log_file_full_path = (
+            "u19prod@"
+            + PupillometryProcessingHandler.spock_system_name
+            + ":"
+            + log_file_cluster_path
+        )
+
+        local_log_file_dir = dj.config.get("custom", {}).get("error_logs_dir", None)
+        if local_log_file_dir is None:
+            return None, log_file_full_path
+
+        log_file_local_path = pathlib.Path(local_log_file_dir, log_filename).as_posix()
+        transfer_status = ft.scp_file_transfer(log_file_full_path, log_file_local_path)
+
+        if transfer_status != config.system_process["SUCCESS"] or not os.path.exists(
+            log_file_local_path
+        ):
+            return None, log_file_full_path
+
+        with open(log_file_local_path, errors="replace") as error_log_file:
+            error_log = " ".join(error_log_file.readlines())
+
+        return error_log, log_file_local_path
+
+    @staticmethod
     @pupillometry_exception_handler
     def check_processed_pupillometry_sessions():
         # Same SessionVideo/PupillometrySessionModelData join+update pattern
@@ -470,10 +509,15 @@ class PupillometryProcessingHandler:
 
             # If job finished copy over output and/or error log
             if status_update == config.status_update_idx["ERROR_STATUS"]:
-                update_value_dict["error_info"]["error_message"] = (
-                    "An error occured in processing (check LOG)"
+                error_log, log_location = PupillometryProcessingHandler.get_error_log(
+                    session_check["remote_path_video_file"]
                 )
-                update_value_dict["error_info"]["error_exception"] = message
+
+                error_message, error_exception = ft.build_job_error_info(
+                    message, error_log, log_location
+                )
+                update_value_dict["error_info"]["error_message"] = error_message
+                update_value_dict["error_info"]["error_exception"] = error_exception
 
                 key_update["pupillometry_job_id"] = -1
                 pupillometry.PupillometrySessionModelData.update1(key_update)
