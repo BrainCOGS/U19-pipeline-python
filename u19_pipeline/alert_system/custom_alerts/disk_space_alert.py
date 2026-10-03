@@ -6,21 +6,19 @@ import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 
 # Slack Configuration dictionary
-slack_configuration_dictionary = {
-    'slack_notification_channel': ['dev_notifications']
-}
+slack_configuration_dictionary = {"slack_notification_channel": ["dev_notifications"]}
 
 # Paths monitored for low disk space
 MONITORED_PATHS = [
-    '/',
-    '/mnt/cup/braininit',
-    '/mnt/cup/u19_dj',
+    "/",
+    "/mnt/cup/braininit",
+    "/mnt/cup/u19_dj",
 ]
 
 # A path is flagged once free space drops below whichever is smaller:
 # 1% of the filesystem's total size, or this many bytes.
 MAX_FREE_SPACE_THRESHOLD_TB = 5
-BYTES_PER_TB = 1024 ** 4
+BYTES_PER_TB = 1024**4
 PERCENT_FREE_SPACE_THRESHOLD = 0.01
 
 
@@ -29,7 +27,10 @@ def get_free_space_threshold_bytes(total_bytes):
     Alert threshold for a filesystem of size `total_bytes`: the smaller of
     1% of total capacity or MAX_FREE_SPACE_THRESHOLD_TB.
     """
-    return min(total_bytes * PERCENT_FREE_SPACE_THRESHOLD, MAX_FREE_SPACE_THRESHOLD_TB * BYTES_PER_TB)
+    return min(
+        total_bytes * PERCENT_FREE_SPACE_THRESHOLD,
+        MAX_FREE_SPACE_THRESHOLD_TB * BYTES_PER_TB,
+    )
 
 
 def get_disk_usage(path):
@@ -63,20 +64,24 @@ def get_low_disk_space_alerts(monitored_paths=MONITORED_PATHS):
         try:
             total_bytes, available_bytes = get_disk_usage(this_path)
         except OSError:
-            alert_rows.append({
-                'alert_message': 'Could not check disk space (path not found or not mounted)',
-                'path': this_path,
-            })
+            alert_rows.append(
+                {
+                    "alert_message": "Could not check disk space (path not found or not mounted)",
+                    "path": this_path,
+                }
+            )
             continue
 
         threshold_bytes = get_free_space_threshold_bytes(total_bytes)
         if available_bytes < threshold_bytes:
-            alert_rows.append({
-                'alert_message': 'Low disk space',
-                'path': this_path,
-                'available_space(tb)': round(available_bytes / BYTES_PER_TB, 2),
-                'available_space(%)': round(100 * available_bytes / total_bytes, 2),
-            })
+            alert_rows.append(
+                {
+                    "alert_message": "Low disk space",
+                    "path": this_path,
+                    "available_space(tb)": round(available_bytes / BYTES_PER_TB, 2),
+                    "available_space(%)": round(100 * available_bytes / total_bytes, 2),
+                }
+            )
 
     return alert_rows
 

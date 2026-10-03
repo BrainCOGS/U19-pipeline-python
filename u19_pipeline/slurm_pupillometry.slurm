@@ -25,4 +25,3 @@ conda activate u19_datajoint_py39_env
 cd ${repository_dir}
 python ${process_script_path} ${video_dir} ${model_dir} ${output_dir}
 #python ${process_script_path} ${recording_process_id}
-        

@@ -46,7 +46,7 @@ pipeline = [
     "scp",
     "scanreader @ git+https://github.com/BrainCOGS/scanreader.git",
     "six",
-    "suite2p",
+    "suite2p==1.1.0",  # settings mapping in element-calcium-imaging suite2p_settings.py is verified against 1.1.0
     "tifffile",
 ]
 
@@ -63,17 +63,37 @@ include = [
     "/u19_pipeline",
 ]
 
-[tool.ruff]
-# Allow lines to be as long as 120.
-line-length = 120
-
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
-    "pytest>=8.0.0",
+    "pytest>=9.1.1",
     "ruff>=0.9.10",
     "setuptools>=75.8.0"
 ]
 
+[tool.pytest.ini_options]
+minversion = "9.0"
+# pytest 9 reads pyproject.toml natively and needs "args"-type options as TOML lists.
+addopts = ["-ra", "--showlocals", "--strict-config", "--strict-markers", "--import-mode=importlib", "--doctest-modules"]
+xfail_strict = true
+log_level = "INFO"
+testpaths = ["tests"]
+pythonpath = ["tests"]
+markers = [
+    "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/dbskip.py",
+]
+filterwarnings = [
+    "error",
+    # datajoint<2 imports pkg_resources; setuptools>=81 warns about it as a
+    # UserWarning, so the category stays unpinned.
+    "ignore:pkg_resources is deprecated as an API",
+    # datajoint calls pyparsing APIs that pyparsing has deprecated
+    # (setResultsName, delimitedList, ...). Fires at import; not fixable here.
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
+]
+
 [tool.uv]
 exclude-newer = "14 days"
+# `uv audit` is still behind a preview flag. Declaring it here lets CI and
+# local runs call `uv audit` without `--preview-features audit-command`.
+preview-features = ["audit-command"]

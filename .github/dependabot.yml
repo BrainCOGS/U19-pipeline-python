@@ -1,0 +1,144 @@
+# Dependabot configuration.
+#
+# Sibling configs (keep in sync when changing policy):
+#   BrainCOGS/tech_calendar_streamlit#111, BrainCOGS/WaterPubsGUI#4,
+#   BrainCOGS/U19-Data-Viewer#15
+#
+# No `pip` entry for requirements.txt: it is legacy and nothing in the repo
+# consumes it (README, Dockerfile and scripts all use pyproject.toml / uv).
+# Adding it alongside `uv` would only produce duplicate PRs.
+
+version: 2
+
+updates:
+  #
+  # GitHub Actions (.github/workflows/)
+  #
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    cooldown:
+      default-days: 7
+
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    commit-message:
+      prefix: "ci"
+
+    rebase-strategy: "auto"
+
+    # See the docker entry below: version and security updates are grouped
+    # independently, so both need a group.
+    groups:
+      github-actions:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  #
+  # Docker (root Dockerfile; docker-compose-local.yml uses `build: .`)
+  #
+  - package-ecosystem: "docker"
+    directory: "/"
+    cooldown:
+      default-days: 7
+
+    schedule:
+      interval: "monthly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "docker"
+
+    commit-message:
+      prefix: "docker"
+
+    rebase-strategy: "auto"
+
+    # A group without `applies-to` only batches scheduled version updates.
+    # Security updates are grouped separately, so declare both or the
+    # security fixes keep arriving as one PR per package.
+    groups:
+      docker:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  #
+  # Python / uv
+  #
+  - package-ecosystem: "uv"
+    directory: "/"
+    # Must be >= `exclude-newer` in pyproject.toml (14 days). With a shorter
+    # cooldown Dependabot proposes releases that uv's quarantine then refuses,
+    # and the whole update job fails (seen with jupyterlab 4.6.4).
+    cooldown:
+      default-days: 14
+
+    schedule:
+      interval: "monthly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+
+    commit-message:
+      prefix: "deps"
+
+    rebase-strategy: "auto"
+
+    # See the docker entry above: version and security updates are grouped
+    # independently, so both need a group.
+    groups:
+      python:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      python-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+    ignore:
+      # datajoint 2.x renamed its config file to datajoint.json and ignores the
+      # dj_local_conf.json that the BrainCOGS repos ship, so a 2.x bump breaks
+      # every deployment. pyproject.toml pins datajoint<2.0.0 for the same
+      # reason. Remove once the datajoint 2.x migration lands.
+      - dependency-name: "datajoint"
+        versions:
+          - ">=2.0"
+      # datajoint <2.0 imports pkg_resources (plugin.py, pulled in by
+      # connection.py on every `import datajoint`). setuptools 83.0.0 removed
+      # pkg_resources outright and there is no installable replacement, so any
+      # bump to >=82 makes `import datajoint` fail with ModuleNotFoundError.
+      # Verified in tech_calendar_streamlit#110. Remove together with the
+      # datajoint ignore above.
+      - dependency-name: "setuptools"
+        versions:
+          - ">=82"

@@ -1,0 +1,116 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: pytest (Python ${{ matrix.python-version }}, ${{ matrix.deps }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Base dependencies + the dev group, on the lowest and highest
+          # versions allowed by requires-python. Tests that need an optional
+          # package skip themselves via pytest.importorskip; this leg checks
+          # the package still works without the extras.
+          - python-version: "3.12"
+            deps: base
+          - python-version: "3.14"
+            deps: base
+          # The `pipeline` extra (suite2p, cellpose, element-* git deps), so
+          # the importorskip-guarded tests actually run. --require-extras
+          # turns those skips into failures, so a broken install fails here
+          # instead of passing with everything skipped.
+          - python-version: "3.13"
+            deps: pipeline
+            pytest-args: --require-extras
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      # The audit job below covers the whole lock file regardless of leg.
+      # The pipeline leg leaves out torch and its CUDA wheels (~5 GB): only
+      # suite2p and cellpose import torch, and no test imports those. A test
+      # that does will fail with ModuleNotFoundError under --require-extras;
+      # drop the --no-install-package filter then.
+      - name: Install dependencies
+        env:
+          DEPS: ${{ matrix.deps }}
+        run: |
+          if [ "$DEPS" = pipeline ]; then
+            mapfile -t skip < <(
+              uv export --locked --extra pipeline --no-hashes --no-header --no-annotate \
+                | grep -oE '^(torch|torchvision|triton|nvidia-[a-z0-9-]+|cuda-[a-z0-9-]+)\b' \
+                | sort -u
+            )
+            echo "Not installing: ${skip[*]}"
+            uv sync --locked --extra pipeline "${skip[@]/#/--no-install-package=}"
+          else
+            uv sync --locked
+          fi
+
+      # Tests marked `db` skip themselves when no DataJoint database is
+      # reachable (see tests/dbskip.py); CI has none. -rs lists skip reasons.
+      - name: Run tests
+        env:
+          PYTEST_ARGS: ${{ matrix.pytest-args }}
+        # --no-sync keeps `uv run` from re-syncing the environment set up above.
+        run: uv run --no-sync pytest -rs $PYTEST_ARGS
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      # Audits the whole locked tree (all extras) against OSV and fails on any
+      # finding. `--locked` also asserts uv.lock matches pyproject.toml.
+      #
+      # Ignored on purpose:
+      # - GHSA-h35f-9h28-mq5c / PYSEC-2026-3447 (setuptools): fixed in
+      #   setuptools 83, which removed pkg_resources; datajoint<2 imports
+      #   pkg_resources at module scope, so the fix breaks `import datajoint`
+      #   (same reason as the setuptools<82 Dependabot ignore). The flaw is in
+      #   building sdists, which this project does not do in production.
+      # - jupyterlab (fixed in 4.6.4) and pyjwt (fixed in 2.15.0): the fixed
+      #   releases are newer than the 14-day `exclude-newer` quarantine in
+      #   pyproject.toml. Remove these ignores once Dependabot bumps them.
+      - name: Audit dependencies
+        run: >-
+          uv audit --locked
+          --ignore GHSA-h35f-9h28-mq5c
+          --ignore PYSEC-2026-3447
+          --ignore GHSA-6966-vjj6-99xv
+          --ignore PYSEC-2026-4055
+          --ignore GHSA-3325-v43h-43rv
+          --ignore PYSEC-2026-4056
+          --ignore PYSEC-2026-4057
+          --ignore GHSA-3jqq-pw4j-pqcj
+          --ignore PYSEC-2026-4141

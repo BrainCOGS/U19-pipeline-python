@@ -1,20 +1,126 @@
+# Ruff configuration. This file takes precedence over any [tool.ruff] table in
+# pyproject.toml, so keep all ruff settings here.
+
+# Matches requires-python in pyproject.toml.
+target-version = "py312"
+
+# Ruff's default, kept explicit. pyproject.toml used to carry
+# `line-length = 120` under [tool.ruff], but ruff never read it because this
+# file exists, so 88 has always been the effective value. E501 is ignored
+# below, so this only matters to `ruff format`.
+line-length = 88
+
+# Notebooks are exploratory and not linted.
+extend-exclude = ["notebooks"]
+
 [lint]
-select = [
-    # pycodestyle
-    "E",
-    # Pyflakes
-    "F",
-    # pyupgrade
-    "UP",
-    # flake8-bugbear
-    "B",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
+# extend-select keeps ruff's defaults (E4, E7, E9, F) and adds the BrainCOGS
+# reference set (same as tech_calendar_streamlit).
+extend-select = [
+    "A",    # flake8-builtins: shadowing built-ins
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "T100", # leftover breakpoints / debugger calls
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
 ]
 
 ignore = [
-    "E501"
+    "E501",
+    # Reference ignores: mixedCase class attributes, argument shadowing a
+    # builtin, non-lowercase local variable.
+    "N815",
+    "A002",
+    "N806",
+    # --- Baseline of pre-existing findings (Oct 2026), to burn down over time.
+    # Rules with many hits are ignored repo-wide; rules with few hits are
+    # ignored per file in [lint.per-file-ignores] so new code is still checked.
+    #
+    # Unused imports: do NOT autofix. DataJoint table definitions reference
+    # imported schema modules only inside definition strings
+    # (e.g. "-> lab.Lab"), which ruff cannot see.
+    "F401",
+    # Import sorting: would rewrite ~85 files and conflict with open PRs.
+    "I001",
+    # Imports after dj.config / sys.path setup are intentional in many modules.
+    "E402",
+    # Unused local variables (23 hits); removing them is a manual review job.
+    "F841",
+    # `== True` / `== False`: often used in DataJoint/pandas expressions where
+    # `is` would change behavior.
+    "E712",
+    # Trailing semicolons (13 hits).
+    "E703",
+    # if/else -> ternary (11 hits), style only.
+    "SIM108",
+    # Rules added with extend-select (reference set plus ruff 0.16 defaults):
+    # `dict()` calls -> literals (159 hits), style only.
+    "C408",
+    # Mutable class attributes: DataJoint Lookup tables declare `contents = [...]` this way by design.
+    "RUF012",
+    # `except Exception` (31 hits); narrowing needs per-site review.
+    "BLE001",
+    # `import a.b as b` -> `from a import b` (28 hits), style only.
+    "PLR0402",
+    # camelCase argument names (27 hits); renaming changes public call signatures.
+    "N803",
+    # `date.today()` without tz (25 hits): lab data is recorded in local time on purpose.
+    "DTZ011",
+    # `datetime.now()` without tz (20 hits): same reason as DTZ011.
+    "DTZ005",
+    # Non-lowercase function names (19 hits); renaming breaks callers and cron scripts.
+    "N802",
+    # Unused unpacked variables (15 hits), cleanup only.
+    "RUF059",
 ]
 
+[lint.per-file-ignores]
+# Baseline of pre-existing findings for low-count rules. Remove an entry once
+# the file is cleaned up.
+"initial_conf.py" = ["PIE790"]
+"scripts/ingest_hdf5_to_db.py" = ["E401", "FLY002", "UP015"]
+"tests/utils/test_tiff_header_behav_sync.py" = ["RUF100"]
+"tests/utils/test_tiff_utils.py" = ["RUF100"]
+"u19_pipeline/alert_system/behavior_metrics.py" = ["UP039"]
+"u19_pipeline/alert_system/live_monitor_alert/live_monitor_alert.py" = ["DTZ002", "SIM113", "SIM118"]
+"u19_pipeline/alert_system/main_alert_system.py" = ["SIM118"]
+"u19_pipeline/alert_system/noDB_backup_creation/noDB_backup_creation_script.py" = ["F811", "N999"]
+"u19_pipeline/alert_system/rig_maintenance/check_rig_maintenance.py" = ["B009", "RUF010", "S110", "SIM105", "SIM115", "TRY401"]
+"u19_pipeline/alert_system/schedule_check_alert/schedule_check_alert.py" = ["B018"]
+"u19_pipeline/alert_system/tech_alert/tech_alert.py" = ["C401"]
+"u19_pipeline/alert_system/water_weigh_alert/create_weighing_gui_ss.py" = ["DTZ002", "PERF402", "UP015"]
+"u19_pipeline/alert_system/water_weigh_alert/water_weigh_alert.py" = ["DTZ002", "PERF402", "UP015"]
+"u19_pipeline/automatic_job/clusters_paths_and_transfers.py" = ["A001", "B905", "E741", "PLW1510", "UP015"]
+"u19_pipeline/automatic_job/create_missing_lfps_script.py" = ["F811"]
+"u19_pipeline/automatic_job/ephys_element_ingest.py" = ["C416", "W605"]
+"u19_pipeline/automatic_job/imaging_element.py" = ["E722", "F541", "PLW0127", "PLW0133", "SIM112", "UP032"]
+"u19_pipeline/automatic_job/imaging_element_populate.py" = ["B028"]
+"u19_pipeline/automatic_job/pupillometry_handler.py" = ["C402", "PLR2044", "SIM118", "TRY002", "UP039"]
+"u19_pipeline/automatic_job/recording_handler.py" = ["F811", "TRY201", "TRY203", "UP039"]
+"u19_pipeline/automatic_job/recording_process_handler.py" = ["B018", "E722", "PIE800", "TRY201", "TRY203", "UP039"]
+"u19_pipeline/automatic_job/slurm_creator.py" = ["SIM118"]
+"u19_pipeline/automatic_job/suite2p_slurm_job.py" = ["SIM112"]
+"u19_pipeline/automatic_job/tigress2pni.py" = ["E722", "S110", "SIM105", "TRY201", "UP015", "UP032"]
+"u19_pipeline/copy_table.py" = ["SIM101", "UP032"]
+"u19_pipeline/ephys_pipeline.py" = ["C416", "E722", "PLC0206", "SIM118", "TRY002", "UP032"]
+"u19_pipeline/ephys_sync.py" = ["RUF015"]
+"u19_pipeline/imaging_pipeline.py" = ["C403", "F811"]
+"u19_pipeline/rig_maintenance.py" = ["EXE001"]
+"u19_pipeline/scheduler.py" = ["EXE001"]
+"u19_pipeline/utility.py" = ["E741", "SIM118"]
+"u19_pipeline/utils/DemoReadSGLXData/readSGLX.py" = ["N999", "PIE808", "UP009", "UP031"]
+"u19_pipeline/utils/dlc_process.py" = ["SIM115", "TRY002"]
+"u19_pipeline/utils/ephys_fix_sync_code.py" = ["B007"]
+"u19_pipeline/utils/ephys_utils.py" = ["B028", "N801", "N817", "PIE790", "SIM113", "UP034", "UP039"]
+"u19_pipeline/utils/insert_miscelaneous_db.py" = ["TRY002"]
+"u19_pipeline/utils/matlab_utils.py" = ["B905", "C416", "DTZ001", "RUF007", "UP007", "UP015", "UP035"]
+"u19_pipeline/utils/path_utils.py" = ["A001", "PLW1510"]
+"u19_pipeline/utils/scp_transfers.py" = ["B018", "PLC0414", "TRY201"]
+"u19_pipeline/utils/slack_utils.py" = ["EXE001", "LOG015"]
+"u19_pipeline/utils/subject_metadata.py" = ["UP035"]
+"u19_pipeline/utils/tiff_matlab_imaging_utils.py" = ["F811", "N816", "S110", "SIM105"]
+"u19_pipeline/utils/tiff_utils.py" = ["B007", "C403", "C414", "DTZ007", "SIM113", "SIM117"]

@@ -1,0 +1,52 @@
+# Run with prek (https://github.com/j178/prek) or pre-commit:
+#   uv tool install prek && prek install && prek run --all-files
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+    - id: check-added-large-files
+    - id: check-case-conflict
+    - id: check-merge-conflict
+    - id: check-symlinks
+    - id: check-yaml
+    - id: check-toml
+    - id: debug-statements
+    # Notebooks are left alone by the whitespace fixers and by ruff.
+    - id: end-of-file-fixer
+      exclude: \.ipynb$
+    - id: mixed-line-ending
+    - id: trailing-whitespace
+      exclude: \.ipynb$
+    - id: name-tests-test
+      args: ["--pytest-test-first"]
+      # Shared skip helper imported by the tests, not a test module.
+      exclude: ^tests/dbskip\.py$
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.16.10
+  hooks:
+    # Settings (including the baseline ignores and the notebooks exclude)
+    # live in ruff.toml.
+    - id: ruff-check
+      args: ["--fix", "--show-fixes"]
+    - id: ruff-format
+
+- repo: https://github.com/gitleaks/gitleaks
+  rev: v8.30.1
+  hooks:
+    - id: gitleaks
+
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: v1.30.1
+  hooks:
+    - id: zizmor
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.12.22
+  hooks:
+    - id: uv-lock
+
+- repo: https://github.com/abravalheri/validate-pyproject
+  rev: "0.26"
+  hooks:
+    - id: validate-pyproject
