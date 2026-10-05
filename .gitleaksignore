@@ -11,3 +11,6 @@
 6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/alert_system/live_monitor_alert/live_monitor_alert.py:generic-api-key:125
 6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/automatic_job/recording_handler.py:generic-api-key:489
 6c2a88202b36de6cfa71f0afb503518f61f4363e:u19_pipeline/imaging_pipeline.py:generic-api-key:170
+c1637dc63ea442053d3a7784027ede096dda3684:u19_pipeline/alert_system/live_monitor_alert/live_monitor_alert.py:generic-api-key:125
+c1637dc63ea442053d3a7784027ede096dda3684:u19_pipeline/imaging_pipeline.py:generic-api-key:175
+c1637dc63ea442053d3a7784027ede096dda3684:u19_pipeline/automatic_job/recording_handler.py:generic-api-key:491
