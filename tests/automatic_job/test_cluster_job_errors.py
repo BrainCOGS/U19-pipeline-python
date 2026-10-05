@@ -16,7 +16,32 @@ from unittest import mock
 
 import datajoint as dj
 import pytest
-from test_slurm_job_report import CANCELLED_JOB, FAILED_JOB, OOM_JOB, RUNNING_JOB, sacct
+
+from u19_pipeline.utils.slurm_utils import sacct_format
+
+
+SACCT_HEADER = "|".join(sacct_format)
+
+
+def sacct(*rows):
+    return "\n".join([SACCT_HEADER, *rows]) + "\n"
+
+
+# JobID|State|ExitCode|DerivedExitCode|Reason|Elapsed|Timelimit|MaxRSS|NodeList
+OOM_JOB = sacct(
+    "1415|OUT_OF_MEMORY|0:125|0:0|None|01:02:03|1-00:00:00||spock-g3",
+    "1415.batch|OUT_OF_MEMORY|0:125|||01:02:03||31457280K|spock-g3",
+    "1415.extern|COMPLETED|0:0|||01:02:03||1024K|spock-g3",
+)
+FAILED_JOB = sacct(
+    "200|FAILED|1:0|0:0|None|00:00:05|02:00:00||spock-c1",
+    "200.batch|FAILED|1:0|||00:00:05||1500M|spock-c1",
+)
+CANCELLED_JOB = sacct(
+    "300|CANCELLED by 12345|0:0|0:0|None|00:10:00|02:00:00||spock-c2",
+    "300.batch|CANCELLED|0:15|||00:10:00||2G|spock-c2",
+)
+RUNNING_JOB = sacct("500|RUNNING|0:0|0:0|None|00:01:00|02:00:00||spock-g1")
 
 
 def _import_slurm_creator():
@@ -30,13 +55,25 @@ def _import_slurm_creator():
     }
     saved_custom = dj.config.get("custom")
     dj.config["custom"] = {**(saved_custom or {}), "root_data_dir": "/tmp"}
+    saved_modules = {name: sys.modules.get(name) for name in stubs}
+    loaded_before = set(sys.modules)
+    sys.modules.update(stubs)
     try:
-        with mock.patch.dict(sys.modules, stubs):
-            from u19_pipeline.automatic_job import slurm_creator
+        from u19_pipeline.automatic_job import slurm_creator
 
-            return slurm_creator
+        return slurm_creator
     finally:
         dj.config["custom"] = saved_custom
+        # Drop what was imported against the stubs (third party modules such as numpy
+        # stay: they cannot be loaded twice in one process)
+        for name in set(sys.modules) - loaded_before:
+            if name.startswith("u19_pipeline."):
+                del sys.modules[name]
+        for name, module in saved_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
 
 
 sc = _import_slurm_creator()

@@ -468,7 +468,7 @@ class PupillometryProcessingHandler:
         ):
             return None, log_file_full_path
 
-        with open(log_file_local_path, "r", errors="replace") as error_log_file:
+        with open(log_file_local_path, errors="replace") as error_log_file:
             error_log = " ".join(error_log_file.readlines())
 
         return error_log, log_file_local_path

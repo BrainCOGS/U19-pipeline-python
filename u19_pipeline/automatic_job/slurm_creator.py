@@ -157,7 +157,9 @@ def run_sacct(ssh_user, host, sacct_args, local_user=False, timeout=120):
         command = ["ssh", ssh_user + "@" + host] + command
 
     try:
-        p = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
     except subprocess.TimeoutExpired:
         return -1, "", "sacct did not answer in " + str(timeout) + " s"
     except OSError as e:

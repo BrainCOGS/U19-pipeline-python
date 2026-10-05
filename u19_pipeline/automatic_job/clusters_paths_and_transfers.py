@@ -14,7 +14,7 @@ from u19_pipeline.utils.file_utils import (
     build_error_message,
     build_job_error_info,
     summarize_error_log,
-)  # noqa: F401
+)
 # Functions to transfer files (globus, scp, smbclient)
 
 # Log files of cluster jobs are named after the job id
