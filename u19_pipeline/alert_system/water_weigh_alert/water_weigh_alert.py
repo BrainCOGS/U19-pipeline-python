@@ -14,6 +14,7 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
+from u19_pipeline.alert_system.water_weigh_alert import alert_tiers
 from u19_pipeline.utils.subject_metadata import (
     fetch_slack_handles_for_lab_managers_by_subject,
 )
@@ -382,6 +383,7 @@ def slack_alert_message_format_weight_water(
     subjects_not_trained: pd.DataFrame,
     missing_transport: pd.DataFrame,
     individual_alert: bool = False,
+    tier: str = alert_tiers.ALL_TIER,
 ):
 
     print(missing_transport)
@@ -420,7 +422,16 @@ def slack_alert_message_format_weight_water(
     m1_1 = dict()
     m1_1["type"] = "mrkdwn"
 
-    m1_1["text"] = ":rotating_light: *Subjects Status Alert *" + lab_manager_text
+    tier_text = ""
+    if tier == alert_tiers.EARLY_TIER:
+        tier_text = (
+            f" (early check: subjects trained in slot {alert_tiers.LAST_EARLY_TIMESLOT}"
+            " or earlier, or watered only today)"
+        )
+
+    m1_1["text"] = (
+        ":rotating_light: *Subjects Status Alert *" + tier_text + lab_manager_text
+    )
     m1["text"] = m1_1
 
     # Info for subjects missing water
@@ -737,10 +748,20 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                     print("Failed to send small block")
 
 
-def main_water_weigh_alert():
+def main_water_weigh_alert(tier: str | None = None):
+    """Send the water/weigh alert.
+
+    Args:
+        tier: "early" reports only subjects trained in an early timeslot or
+            watered only today, "all" reports every subject. When None, the
+            tier is picked from the current Eastern time (see alert_tiers).
+    """
+    tier = alert_tiers.resolve_alert_tier(tier)
+
     dj.conn()
 
     subject_data = get_subject_data()
+    subject_data = alert_tiers.filter_subjects_for_tier(subject_data, tier)
 
     subject_data = get_responsible_user_slack(subject_data)
 
@@ -775,6 +796,11 @@ def main_water_weigh_alert():
     # subjects_not_trained = subjects_not_trained.head()
 
     subject_not_returned = find_unreturned_subjects()
+    if tier == alert_tiers.EARLY_TIER:
+        # subject_fullname is the index of the fetched frame
+        subject_not_returned = subject_not_returned.loc[
+            subject_not_returned.index.isin(subject_data["subject_fullname"])
+        ]
 
     # Join responsible_slack_tags from subject_data on subject_fullname
     subject_not_returned = subject_not_returned.merge(
@@ -791,6 +817,7 @@ def main_water_weigh_alert():
         subjects_not_weighted,
         subjects_not_trained,
         missing_transport=subject_not_returned,
+        tier=tier,
     )
 
     # Send each message's blocks safely (splitting large blocks as needed)

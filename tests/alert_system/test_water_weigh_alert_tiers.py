@@ -1,0 +1,233 @@
+import datetime
+
+import pandas as pd
+import pytest
+
+from u19_pipeline.alert_system.water_weigh_alert import alert_tiers as at
+
+# MySQL returns naive datetimes in the lab's local (Eastern) wall-clock time
+TODAY = datetime.datetime(2026, 10, 5)  # noqa: DTZ001
+
+
+def make_subjects(rows):
+    defaults = {
+        "subject_status": "InExperiments",
+        "schedule_today": "Train",
+        "first_timeslot": None,
+        "first_water_time": None,
+    }
+    return pd.DataFrame([{**defaults, **row} for row in rows])
+
+
+def early_names(subject_data):
+    return at.filter_subjects_for_tier(subject_data, at.EARLY_TIER)[
+        "subject_fullname"
+    ].tolist()
+
+
+class TestResolveAlertTier:
+    @pytest.mark.parametrize("hour", [0, 16, 18, 19, 20])
+    def test_before_cutoff_is_early(self, hour):
+        now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
+        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+
+    @pytest.mark.parametrize("hour", [21, 22, 23])
+    def test_after_cutoff_is_all(self, hour):
+        now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
+        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+
+    def test_one_minute_before_cutoff(self):
+        now = datetime.datetime(2026, 10, 5, 20, 59, tzinfo=at.EASTERN)
+        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+
+    def test_aware_utc_time_is_converted_to_eastern(self):
+        # 22:00 UTC is 18:00 EDT
+        now = datetime.datetime(2026, 10, 5, 22, 0, tzinfo=datetime.UTC)
+        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+        # 02:00 UTC the next day is 22:00 EDT
+        now = datetime.datetime(2026, 10, 6, 2, 0, tzinfo=datetime.UTC)
+        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+
+    def test_winter_time_is_converted_to_eastern(self):
+        # 02:30 UTC in January is 21:30 EST
+        now = datetime.datetime(2026, 1, 6, 2, 30, tzinfo=datetime.UTC)
+        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+
+    @pytest.mark.parametrize("tier", [at.EARLY_TIER, at.ALL_TIER])
+    def test_explicit_tier_overrides_clock(self, tier):
+        now = datetime.datetime(2026, 10, 5, 23, 0, tzinfo=at.EASTERN)
+        assert at.resolve_alert_tier(tier, now=now) == tier
+
+    def test_unknown_tier_raises(self):
+        with pytest.raises(ValueError):
+            at.resolve_alert_tier("late")
+
+    def test_defaults_to_current_time(self):
+        assert at.resolve_alert_tier() in at.TIERS
+
+
+class TestTrainingTimeslot:
+    def test_timeslot_boundary(self):
+        subject_data = make_subjects(
+            [
+                {"subject_fullname": f"slot{slot}", "first_timeslot": slot}
+                for slot in [0, 1, 4, 5, 6, 10]
+            ]
+        )
+        assert early_names(subject_data) == ["slot0", "slot1", "slot4", "slot5"]
+
+    def test_not_scheduled_is_excluded(self):
+        subject_data = make_subjects(
+            [{"subject_fullname": "unscheduled", "first_timeslot": None}]
+        )
+        assert early_names(subject_data) == []
+
+    def test_timeslot_returned_as_string(self):
+        # MySQL aggregates can come back as Decimal or str
+        subject_data = make_subjects(
+            [
+                {"subject_fullname": "early", "first_timeslot": "3"},
+                {"subject_fullname": "late", "first_timeslot": "7"},
+            ]
+        )
+        assert early_names(subject_data) == ["early"]
+
+    def test_trained_late_but_watered_early_is_excluded(self):
+        # Training subjects are judged by their timeslot, not their water time
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "late_trainer",
+                    "first_timeslot": 7,
+                    "first_water_time": TODAY.replace(hour=9),
+                }
+            ]
+        )
+        assert early_names(subject_data) == []
+
+
+class TestWaterOnly:
+    @pytest.mark.parametrize(
+        "status, schedule_today",
+        [
+            ("InExperiments", "Water"),
+            ("InExperiments", "water"),
+            ("WaterRestrictionOnly", None),
+            ("WaterRestrictionOnly", "Train"),
+        ],
+    )
+    def test_water_only_watered_in_the_morning(self, status, schedule_today):
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "s",
+                    "subject_status": status,
+                    "schedule_today": schedule_today,
+                    "first_water_time": TODAY.replace(hour=10),
+                }
+            ]
+        )
+        assert early_names(subject_data) == ["s"]
+
+    def test_water_cutoff_boundary(self):
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "15:59",
+                    "schedule_today": "Water",
+                    "first_water_time": TODAY.replace(hour=15, minute=59, second=59),
+                },
+                {
+                    "subject_fullname": "16:00",
+                    "schedule_today": "Water",
+                    "first_water_time": TODAY.replace(hour=16),
+                },
+                {
+                    "subject_fullname": "17:30",
+                    "schedule_today": "Water",
+                    "first_water_time": TODAY.replace(hour=17, minute=30),
+                },
+            ]
+        )
+        assert early_names(subject_data) == ["15:59"]
+
+    def test_midnight_counts_as_early(self):
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "midnight",
+                    "schedule_today": "Water",
+                    "first_water_time": TODAY,
+                }
+            ]
+        )
+        assert early_names(subject_data) == ["midnight"]
+
+    def test_not_watered_yet_waits_for_late_alert(self):
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "thirsty",
+                    "schedule_today": "Water",
+                    "first_water_time": None,
+                }
+            ]
+        )
+        assert early_names(subject_data) == []
+        all_names = at.filter_subjects_for_tier(subject_data, at.ALL_TIER)
+        assert all_names["subject_fullname"].tolist() == ["thirsty"]
+
+    def test_training_subject_without_slot_is_excluded(self):
+        subject_data = make_subjects(
+            [
+                {
+                    "subject_fullname": "trainer",
+                    "schedule_today": "Train",
+                    "first_water_time": TODAY.replace(hour=10),
+                },
+                {
+                    "subject_fullname": "no_schedule",
+                    "schedule_today": None,
+                    "first_water_time": None,
+                },
+            ]
+        )
+        assert early_names(subject_data) == []
+
+
+class TestFilterSubjectsForTier:
+    def test_all_tier_keeps_everyone(self):
+        subject_data = make_subjects(
+            [
+                {"subject_fullname": "early", "first_timeslot": 1},
+                {"subject_fullname": "late", "first_timeslot": 8},
+            ]
+        )
+        result = at.filter_subjects_for_tier(subject_data, at.ALL_TIER)
+        assert result["subject_fullname"].tolist() == ["early", "late"]
+
+    def test_early_tier_keeps_index_for_caller_to_reset(self):
+        subject_data = make_subjects(
+            [
+                {"subject_fullname": "late", "first_timeslot": 8},
+                {"subject_fullname": "early", "first_timeslot": 1},
+            ]
+        )
+        result = at.filter_subjects_for_tier(subject_data, at.EARLY_TIER)
+        assert result.index.tolist() == [1]
+
+    def test_empty_dataframe(self):
+        subject_data = make_subjects([]).reindex(
+            columns=[
+                "subject_fullname",
+                "subject_status",
+                "schedule_today",
+                "first_timeslot",
+                "first_water_time",
+            ]
+        )
+        assert at.filter_subjects_for_tier(subject_data, at.EARLY_TIER).empty
+
+    def test_unknown_tier_raises(self):
+        with pytest.raises(ValueError):
+            at.filter_subjects_for_tier(make_subjects([]), "late")

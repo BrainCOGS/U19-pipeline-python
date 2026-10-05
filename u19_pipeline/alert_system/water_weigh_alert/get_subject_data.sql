@@ -68,6 +68,7 @@ subject_fullname
 ,sum(case when administation_type= 'earned' then water_amount else 0 end) as earned
 ,sum(case when administation_type<> 'earned' then water_amount else 0 end) as supplement
 ,sum(water_amount) as received
+,min(wai.administration_time) as first_water_time
 
 
 from u19_action.water_administration_individual wai
@@ -215,7 +216,8 @@ left join
 (
 select
 subject_fullname,
-GROUP_CONCAT(CONCAT(location, ' (slot ', timeslot, ')') ORDER BY timeslot, location SEPARATOR ', ') as scheduled_rig
+GROUP_CONCAT(CONCAT(location, ' (slot ', timeslot, ')') ORDER BY timeslot, location SEPARATOR ', ') as scheduled_rig,
+min(timeslot) as first_timeslot
 
 from u19_scheduler.schedule s
 
