@@ -383,7 +383,7 @@ def slack_alert_message_format_weight_water(
     subjects_not_trained: pd.DataFrame,
     missing_transport: pd.DataFrame,
     individual_alert: bool = False,
-    tier: str = alert_tiers.ALL_TIER,
+    tier: alert_tiers.AlertTier = alert_tiers.AlertTier.ALL,
 ):
 
     print(missing_transport)
@@ -423,10 +423,10 @@ def slack_alert_message_format_weight_water(
     m1_1["type"] = "mrkdwn"
 
     tier_text = ""
-    if tier == alert_tiers.EARLY_TIER:
+    if tier == alert_tiers.AlertTier.EARLY:
         tier_text = (
             f" (early check: subjects trained in slot {alert_tiers.LAST_EARLY_TIMESLOT}"
-            " or earlier, or watered only today)"
+            " or earlier, or water-only and watered before 4 PM)"
         )
 
     m1_1["text"] = (
@@ -748,13 +748,14 @@ def _send_blocks_individually(webhook: str, blocks: list[dict], max_size: int):
                     print("Failed to send small block")
 
 
-def main_water_weigh_alert(tier: str | None = None):
+def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
     """Send the water/weigh alert.
 
     Args:
-        tier: "early" reports only subjects trained in an early timeslot or
-            watered only today, "all" reports every subject. When None, the
-            tier is picked from the current Eastern time (see alert_tiers).
+        tier: AlertTier.EARLY ("early") reports only subjects trained in an
+            early timeslot or water-only subjects watered before 4 PM,
+            AlertTier.ALL ("all") reports every subject. When None, the tier is
+            picked from the current Eastern time (see alert_tiers).
     """
     tier = alert_tiers.resolve_alert_tier(tier)
 
@@ -796,7 +797,7 @@ def main_water_weigh_alert(tier: str | None = None):
     # subjects_not_trained = subjects_not_trained.head()
 
     subject_not_returned = find_unreturned_subjects()
-    if tier == alert_tiers.EARLY_TIER:
+    if tier == alert_tiers.AlertTier.EARLY:
         # subject_fullname is the index of the fetched frame
         subject_not_returned = subject_not_returned.loc[
             subject_not_returned.index.isin(subject_data["subject_fullname"])

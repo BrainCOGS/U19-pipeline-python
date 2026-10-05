@@ -6,15 +6,21 @@ were watered before 4 PM. The late runs (10 and 11 PM ET) report every subject.
 """
 
 import datetime
+from enum import StrEnum
+from typing import assert_never
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 
 EASTERN = ZoneInfo("America/New_York")
 
-EARLY_TIER = "early"
-ALL_TIER = "all"
-TIERS = (EARLY_TIER, ALL_TIER)
+
+class AlertTier(StrEnum):
+    """Which subjects a water/weigh alert run reports."""
+
+    EARLY = "early"  # 6/7 PM: early-timeslot trainers and water-only subjects
+    ALL = "all"  # 10/11 PM: every subject
+
 
 # Subjects scheduled in this timeslot or earlier belong to the early tier
 LAST_EARLY_TIMESLOT = 5
@@ -24,19 +30,22 @@ WATERING_CUTOFF = datetime.timedelta(hours=16)
 ALL_TIER_START_HOUR = 21
 
 
-def resolve_alert_tier(tier: str | None = None, now: datetime.datetime | None = None):
-    """Return the requested tier, or pick one from the current Eastern time."""
+def resolve_alert_tier(
+    tier: str | None = None, now: datetime.datetime | None = None
+) -> AlertTier:
+    """Return the requested tier, or pick one from the current Eastern time.
+
+    Raises ValueError if tier is not an AlertTier value.
+    """
     if tier is not None:
-        if tier not in TIERS:
-            raise ValueError(f"Unknown alert tier {tier!r}, expected one of {TIERS}")
-        return tier
+        return AlertTier(tier)
 
     if now is None:
         now = datetime.datetime.now(EASTERN)
     elif now.tzinfo is not None:
         now = now.astimezone(EASTERN)
 
-    return EARLY_TIER if now.hour < ALL_TIER_START_HOUR else ALL_TIER
+    return AlertTier.EARLY if now.hour < ALL_TIER_START_HOUR else AlertTier.ALL
 
 
 def is_water_only_today(subject_data: pd.DataFrame) -> pd.Series:
@@ -65,9 +74,14 @@ def early_tier_mask(subject_data: pd.DataFrame) -> pd.Series:
 
 
 def filter_subjects_for_tier(subject_data: pd.DataFrame, tier: str) -> pd.DataFrame:
-    """Keep only the subjects reported in the given alert tier."""
-    if tier == ALL_TIER:
-        return subject_data
-    if tier == EARLY_TIER:
-        return subject_data.loc[early_tier_mask(subject_data)]
-    raise ValueError(f"Unknown alert tier {tier!r}, expected one of {TIERS}")
+    """Keep only the subjects reported in the given alert tier.
+
+    Raises ValueError if tier is not an AlertTier value.
+    """
+    match AlertTier(tier):
+        case AlertTier.ALL:
+            return subject_data
+        case AlertTier.EARLY:
+            return subject_data.loc[early_tier_mask(subject_data)]
+        case unhandled:
+            assert_never(unhandled)

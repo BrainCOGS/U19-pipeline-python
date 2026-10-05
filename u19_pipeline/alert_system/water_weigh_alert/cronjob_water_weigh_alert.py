@@ -12,7 +12,8 @@ from u19_pipeline.alert_system.water_weigh_alert import alert_tiers
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--tier",
-    choices=alert_tiers.TIERS,
+    type=alert_tiers.AlertTier,
+    choices=list(alert_tiers.AlertTier),
     default=None,
     help="Subjects to report. Defaults to 'early' before 9 PM ET, 'all' after.",
 )

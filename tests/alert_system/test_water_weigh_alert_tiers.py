@@ -20,7 +20,7 @@ def make_subjects(rows):
 
 
 def early_names(subject_data):
-    return at.filter_subjects_for_tier(subject_data, at.EARLY_TIER)[
+    return at.filter_subjects_for_tier(subject_data, at.AlertTier.EARLY)[
         "subject_fullname"
     ].tolist()
 
@@ -29,41 +29,63 @@ class TestResolveAlertTier:
     @pytest.mark.parametrize("hour", [0, 16, 18, 19, 20])
     def test_before_cutoff_is_early(self, hour):
         now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
-        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
 
     @pytest.mark.parametrize("hour", [21, 22, 23])
     def test_after_cutoff_is_all(self, hour):
         now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
-        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     def test_one_minute_before_cutoff(self):
         now = datetime.datetime(2026, 10, 5, 20, 59, tzinfo=at.EASTERN)
-        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
 
     def test_aware_utc_time_is_converted_to_eastern(self):
         # 22:00 UTC is 18:00 EDT
         now = datetime.datetime(2026, 10, 5, 22, 0, tzinfo=datetime.UTC)
-        assert at.resolve_alert_tier(now=now) == at.EARLY_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
         # 02:00 UTC the next day is 22:00 EDT
         now = datetime.datetime(2026, 10, 6, 2, 0, tzinfo=datetime.UTC)
-        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     def test_winter_time_is_converted_to_eastern(self):
         # 02:30 UTC in January is 21:30 EST
         now = datetime.datetime(2026, 1, 6, 2, 30, tzinfo=datetime.UTC)
-        assert at.resolve_alert_tier(now=now) == at.ALL_TIER
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
-    @pytest.mark.parametrize("tier", [at.EARLY_TIER, at.ALL_TIER])
+    @pytest.mark.parametrize("tier", list(at.AlertTier))
     def test_explicit_tier_overrides_clock(self, tier):
         now = datetime.datetime(2026, 10, 5, 23, 0, tzinfo=at.EASTERN)
-        assert at.resolve_alert_tier(tier, now=now) == tier
+        assert at.resolve_alert_tier(tier, now=now) is tier
+
+    @pytest.mark.parametrize("tier", list(at.AlertTier))
+    def test_plain_string_becomes_enum_member(self, tier):
+        # The cron script passes the --tier value through as a plain str
+        result = at.resolve_alert_tier(str(tier))
+        assert isinstance(result, at.AlertTier)
+        assert result is tier
+
+    @pytest.mark.parametrize("tier", ["", "EARLY", " early", "late"])
+    def test_near_miss_strings_raise(self, tier):
+        with pytest.raises(ValueError):
+            at.resolve_alert_tier(tier)
 
     def test_unknown_tier_raises(self):
         with pytest.raises(ValueError):
             at.resolve_alert_tier("late")
 
     def test_defaults_to_current_time(self):
-        assert at.resolve_alert_tier() in at.TIERS
+        assert isinstance(at.resolve_alert_tier(), at.AlertTier)
+
+    def test_clock_reaches_every_tier(self):
+        # Every AlertTier member must be selected at some hour of the day
+        tiers_by_hour = {
+            at.resolve_alert_tier(
+                now=datetime.datetime(2026, 10, 5, hour, tzinfo=at.EASTERN)
+            )
+            for hour in range(24)
+        }
+        assert tiers_by_hour == set(at.AlertTier)
 
 
 class TestTrainingTimeslot:
@@ -174,7 +196,7 @@ class TestWaterOnly:
             ]
         )
         assert early_names(subject_data) == []
-        all_names = at.filter_subjects_for_tier(subject_data, at.ALL_TIER)
+        all_names = at.filter_subjects_for_tier(subject_data, at.AlertTier.ALL)
         assert all_names["subject_fullname"].tolist() == ["thirsty"]
 
     def test_training_subject_without_slot_is_excluded(self):
@@ -203,7 +225,7 @@ class TestFilterSubjectsForTier:
                 {"subject_fullname": "late", "first_timeslot": 8},
             ]
         )
-        result = at.filter_subjects_for_tier(subject_data, at.ALL_TIER)
+        result = at.filter_subjects_for_tier(subject_data, at.AlertTier.ALL)
         assert result["subject_fullname"].tolist() == ["early", "late"]
 
     def test_early_tier_keeps_index_for_caller_to_reset(self):
@@ -213,7 +235,7 @@ class TestFilterSubjectsForTier:
                 {"subject_fullname": "early", "first_timeslot": 1},
             ]
         )
-        result = at.filter_subjects_for_tier(subject_data, at.EARLY_TIER)
+        result = at.filter_subjects_for_tier(subject_data, at.AlertTier.EARLY)
         assert result.index.tolist() == [1]
 
     def test_empty_dataframe(self):
@@ -226,7 +248,28 @@ class TestFilterSubjectsForTier:
                 "first_water_time",
             ]
         )
-        assert at.filter_subjects_for_tier(subject_data, at.EARLY_TIER).empty
+        assert at.filter_subjects_for_tier(subject_data, at.AlertTier.EARLY).empty
+
+    @pytest.mark.parametrize("tier", list(at.AlertTier))
+    def test_every_tier_is_handled(self, tier):
+        # Fails if a new AlertTier member is added without a filter rule
+        subject_data = make_subjects(
+            [
+                {"subject_fullname": "early", "first_timeslot": 1},
+                {"subject_fullname": "late", "first_timeslot": 8},
+            ]
+        )
+        result = at.filter_subjects_for_tier(subject_data, tier)
+        assert set(result["subject_fullname"]) <= {"early", "late"}
+        assert "early" in set(result["subject_fullname"])
+
+    @pytest.mark.parametrize("tier", list(at.AlertTier))
+    def test_every_tier_accepts_plain_string(self, tier):
+        subject_data = make_subjects([{"subject_fullname": "s", "first_timeslot": 1}])
+        pd.testing.assert_frame_equal(
+            at.filter_subjects_for_tier(subject_data, str(tier)),
+            at.filter_subjects_for_tier(subject_data, tier),
+        )
 
     def test_unknown_tier_raises(self):
         with pytest.raises(ValueError):
