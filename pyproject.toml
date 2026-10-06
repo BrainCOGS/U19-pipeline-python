@@ -68,7 +68,6 @@ dev = [
     "ipykernel>=6.29.5",
     "pytest>=9.1.1",
     "ruff>=0.9.10",
-    "setuptools>=75.8.0"
 ]
 
 [tool.pytest.ini_options]
@@ -84,9 +83,6 @@ markers = [
 ]
 filterwarnings = [
     "error",
-    # datajoint<2 imports pkg_resources; setuptools>=81 warns about it as a
-    # UserWarning, so the category stays unpinned.
-    "ignore:pkg_resources is deprecated as an API",
     # datajoint calls pyparsing APIs that pyparsing has deprecated
     # (setResultsName, delimitedList, ...). Fires at import; not fixable here.
     "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
@@ -94,6 +90,9 @@ filterwarnings = [
 
 [tool.uv]
 exclude-newer = "14 days"
+# Exempt from the cooldown: datajoint 0.14.10 (drops pkg_resources) and the
+# pyjwt 2.15 / werkzeug 3.1.9 security fixes.
+exclude-newer-package = { datajoint = "0 days", pyjwt = "0 days", werkzeug = "0 days" }
 # `uv audit` is still behind a preview flag. Declaring it here lets CI and
 # local runs call `uv audit` without `--preview-features audit-command`.
 preview-features = ["audit-command"]
