@@ -465,11 +465,8 @@ class RecProcessHandler:
             update_value_dict["error_info"]["error_message"] = message
 
             # This updates the value
-            # If job finished copy over output and/or error log
-            if (
-                status_update == config.status_update_idx["NEXT_STATUS"]
-                or status_update == config.status_update_idx["ERROR_STATUS"]
-            ):
+            # If job finished copy over output and error log
+            if status_update == config.status_update_idx["NEXT_STATUS"]:
                 ft.transfer_log_file(
                     rec_series["job_id"],
                     program_selection_params,
@@ -482,15 +479,15 @@ class RecProcessHandler:
                     ssh_host,
                     log_type="OUTPUT",
                 )
-                error_log = ft.get_error_log_str(rec_series["job_id"])
 
-                # If the program errored, print the log.
-                # Previous method of capturing the error_log was insufficient since Kilosort wrote to stderr
-                if status_update == config.status_update_idx["ERROR_STATUS"]:
-                    update_value_dict["error_info"]["error_message"] = (
-                        "An error occured in processing (check LOG)"
-                    )
-                    update_value_dict["error_info"]["error_exception"] = error_log
+            # If the program errored, report the actual error and where the log is, from the error log
+            # or from the output log (Kilosort/MATLAB write their errors to stdout)
+            elif status_update == config.status_update_idx["ERROR_STATUS"]:
+                error_message, error_exception = ft.get_job_error_info(
+                    rec_series["job_id"], program_selection_params, message
+                )
+                update_value_dict["error_info"]["error_message"] = error_message
+                update_value_dict["error_info"]["error_exception"] = error_exception
         else:
             status_update = config.status_update_idx["NEXT_STATUS"]
 
