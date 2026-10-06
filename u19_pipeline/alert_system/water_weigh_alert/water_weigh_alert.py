@@ -14,7 +14,7 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
-from u19_pipeline.alert_system.water_weigh_alert import alert_tiers
+from u19_pipeline.alert_system.water_weigh_alert import alert_message, alert_tiers
 from u19_pipeline.utils.subject_metadata import (
     fetch_slack_handles_for_lab_managers_by_subject,
 )
@@ -257,7 +257,6 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         (lab.LabManager().proj("lab", "lab_manager") & 'lab = "technician"')
         * lab.User().proj(lab_manager="user_id", manager_slack="slack")
     ).fetch("manager_slack", as_dict=True)
-    print(technician_manager_slack)
     technician_manager_slack = [
         item["manager_slack"] for item in technician_manager_slack
     ]
@@ -376,193 +375,6 @@ def find_unreturned_subjects() -> pd.DataFrame:
 
     # Same shape as the other alert frames: subject_fullname column, 0..n-1 index
     return unreturned_subjects.reset_index()
-
-
-def slack_alert_message_format_weight_water(
-    subjects_not_watered: pd.DataFrame,
-    subjects_not_weighted: pd.DataFrame,
-    subjects_not_trained: pd.DataFrame,
-    missing_transport: pd.DataFrame,
-    individual_alert: bool = False,
-    tier: alert_tiers.AlertTier = alert_tiers.AlertTier.ALL,
-):
-
-    notifiable_subjects = list(
-        set(
-            missing_transport["subject_fullname"].tolist()
-            + subjects_not_watered["subject_fullname"].tolist()
-            + subjects_not_weighted["subject_fullname"].tolist()
-        )
-    )
-
-    slack_handles: list[str] = fetch_slack_handles_for_lab_managers_by_subject(
-        notifiable_subjects
-    )
-    lab_manager_text = "\n\n"
-    if len(slack_handles) >= 1:
-        lab_manager_text += "Lab Manager"
-    if len(slack_handles) > 1:
-        lab_manager_text += "s"
-
-    slack_handles_formatted = ", ".join("<@" + handle + ">" for handle in slack_handles)
-    if slack_handles_formatted:
-        lab_manager_text += (
-            " "
-            + slack_handles_formatted
-            + ", please be advised that your labs' subjects are listed below."
-        )
-
-    msep = dict()
-    msep["type"] = "divider"
-
-    # Title#
-    m1 = dict()
-    m1["type"] = "section"
-    m1_1 = dict()
-    m1_1["type"] = "mrkdwn"
-
-    tier_text = ""
-    if tier == alert_tiers.AlertTier.EARLY:
-        tier_text = f" (early check: {alert_tiers.early_tier_description()})"
-
-    m1_1["text"] = (
-        ":rotating_light: *Subjects Status Alert *" + tier_text + lab_manager_text
-    )
-    m1["text"] = m1_1
-
-    # Info for subjects missing water
-    m2 = dict()
-    m2["type"] = "section"
-    m2_1 = dict()
-    m2_1["type"] = "mrkdwn"
-
-    if subjects_not_watered.empty:
-        m2_1["text"] = "*Subjects missing water:* None\n"
-    else:
-        m2_1["text"] = "*Subjects missing water:*" + "\n"
-        for i in range(subjects_not_watered.shape[0]):
-            subject_name = subjects_not_watered.loc[i, "subject_fullname"]
-            need_water_ml = str(subjects_not_watered.loc[i, "current_need_water"])
-
-            # Tag responsible user(s) if available
-            if "responsible_slack_tags" in subjects_not_watered.columns:
-                tags = subjects_not_watered.loc[i, "responsible_slack_tags"]
-            else:
-                tags = []
-
-            if isinstance(tags, (list, tuple, set)):
-                tag_str = " ".join(str(t) for t in tags)
-            else:
-                tag_str = str(tags) if tags else ""
-
-            line = f"*{subject_name}* : {need_water_ml} ml"
-            if tag_str:
-                line += f" {tag_str}"
-
-            m2_1["text"] += line + "\n"
-    m2["text"] = m2_1
-
-    # Info for subjects missing weighing
-    m4 = dict()
-    m4["type"] = "section"
-    m4_1 = dict()
-    m4_1["type"] = "mrkdwn"
-
-    if subjects_not_weighted.empty:
-        m4_1["text"] = "*Subjects missing weighing:* None\n"
-    else:
-        m4_1["text"] = "*Subjects missing weighing:*" + "\n"
-        for i in range(subjects_not_weighted.shape[0]):
-            # m4_1["text"] += "*" + subjects_not_weighted.loc[i, "subject_fullname"] + "*\n"
-
-            subject_name = subjects_not_weighted.loc[i, "subject_fullname"]
-
-            # Tag responsible user(s) if available
-            if "responsible_slack_tags" in subjects_not_weighted.columns:
-                tags = subjects_not_weighted.loc[i, "responsible_slack_tags"]
-            else:
-                tags = []
-
-            if isinstance(tags, (list, tuple, set)):
-                tag_str = " ".join(str(t) for t in tags)
-            else:
-                tag_str = str(tags) if tags else ""
-
-            line = f"*{subject_name}* : "
-            if tag_str:
-                line += f" {tag_str}"
-
-            m4_1["text"] += line + "\n"
-    m4["text"] = m4_1
-
-    # Info for subjects missing training
-    m5 = dict()
-    m5["type"] = "section"
-    m5_1 = dict()
-    m5_1["type"] = "mrkdwn"
-
-    if subjects_not_trained.empty:
-        m5_1["text"] = "*Subjects missing training:* None\n"
-    else:
-        m5_1["text"] = "*Subjects missing training:*" + "\n"
-        for i in range(subjects_not_trained.shape[0]):
-            m5_1["text"] += (
-                "*"
-                + subjects_not_trained.loc[i, "subject_fullname"]
-                + "* : "
-                + subjects_not_trained.loc[i, "scheduled_rig"]
-                + "\n"
-            )
-    m5["text"] = m5_1
-
-    # Info for missing transport
-    m6 = dict()
-    m6["type"] = "section"
-    m6_1 = dict()
-    m6_1["type"] = "mrkdwn"
-
-    if missing_transport.empty:
-        m6_1["text"] = "*Subjects missing transport:* None\n"
-    else:
-        m6_1["text"] = "*Subjects missing transport:*" + "\n"
-        for i in range(missing_transport.shape[0]):
-            subject_name = missing_transport.loc[i, "subject_fullname"]
-            # Responsible slack tags may be a string, an iterable or missing
-            tags = missing_transport.loc[i].get("responsible_slack_tags", "")
-            # Normalize tags to a string
-            if pd.isna(tags):
-                tag_str = ""
-            elif isinstance(tags, (list, tuple, set)):
-                tag_str = " ".join(str(t) for t in tags)
-            else:
-                tag_str = str(tags).strip() if tags else ""
-
-            line = f"*{subject_name}*"
-            if tag_str:
-                line += f" : {tag_str}"
-            m6_1["text"] += line + "\n"
-    m6["text"] = m6_1
-
-    message = dict()
-    message["blocks"] = [m1, msep, m2, msep, m4, msep, m5, msep, m6, msep]
-    # msg_groups = [m1, m2, m4, m5, m6]
-    msg_groups = [m2]
-    # message["blocks"] = [m6, msep]
-    message["text"] = "Subject Status Alert"
-
-    if not individual_alert:
-        message["blocks"] = [m1, msep, m2, msep, m4, msep, m5, msep, m6, msep]
-        return [message]
-    else:
-        msg = []
-        msg_copy = message.copy()
-        for msg_block in msg_groups:
-            # msg_copy["blocks"] = [m1, msep, msg_block, msep]
-            msg_copy["blocks"] = [msg_block]
-            msg.append(msg_copy.copy())
-        return msg
-
-    # return message
 
 
 SLACK_MAX_CHARS = 3_000  # conservative margin below Slack's limit
@@ -801,22 +613,25 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
         how="left",
     )
 
-    webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
+    lab_manager_handles = fetch_slack_handles_for_lab_managers_by_subject(
+        alert_message.notifiable_subjects(
+            subjects_not_watered, subjects_not_weighted, subject_not_returned
+        )
+    )
 
-    # Send alert
-    slack_json_messages = slack_alert_message_format_weight_water(
+    blocks = alert_message.format_alert_message(
         subjects_not_watered,
         subjects_not_weighted,
         subjects_not_trained,
-        missing_transport=subject_not_returned,
+        subject_not_returned,
+        lab_manager_handles=lab_manager_handles,
         tier=tier,
     )
 
-    # Send each message's blocks safely (splitting large blocks as needed)
+    # Send the blocks safely (splitting large blocks as needed)
+    webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
     for this_webhook in webhooks_list:
-        for message in slack_json_messages:
-            blocks = message.get("blocks", [])
-            send_slack_blocks_safely(this_webhook, blocks)
+        send_slack_blocks_safely(this_webhook, blocks)
 
 
 if __name__ == "__main__":
