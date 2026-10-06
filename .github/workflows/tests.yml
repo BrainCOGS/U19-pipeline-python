@@ -99,9 +99,11 @@ jobs:
       #   pkg_resources at module scope, so the fix breaks `import datajoint`
       #   (same reason as the setuptools<82 Dependabot ignore). The flaw is in
       #   building sdists, which this project does not do in production.
-      # - jupyterlab (fixed in 4.6.4) and pyjwt (fixed in 2.15.0): the fixed
-      #   releases are newer than the 14-day `exclude-newer` quarantine in
-      #   pyproject.toml. Remove these ignores once Dependabot bumps them.
+      # - jupyterlab (fixed in 4.6.4), pyjwt (fixed in 2.15.0, incl.
+      #   GHSA-x33g-cr3x-6449) and werkzeug (GHSA-g6x2-hccm-hh4m, fixed in
+      #   3.1.9, out of quarantine 2026-10-11): the fixed releases are newer
+      #   than the 14-day `exclude-newer` quarantine in pyproject.toml. Remove
+      #   these ignores once Dependabot bumps them.
       - name: Audit dependencies
         run: >-
           uv audit --locked
@@ -114,3 +116,5 @@ jobs:
           --ignore PYSEC-2026-4057
           --ignore GHSA-3jqq-pw4j-pqcj
           --ignore PYSEC-2026-4141
+          --ignore GHSA-x33g-cr3x-6449
+          --ignore GHSA-g6x2-hccm-hh4m
