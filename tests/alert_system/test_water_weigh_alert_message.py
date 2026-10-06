@@ -75,7 +75,9 @@ TRANSPORT_SECTION = section(
 
 
 class TestFormatAlertMessage:
-    """Expected blocks were captured from the message builder before the refactor."""
+    """Expected blocks were captured from the message builder before the refactor,
+    then transport was moved up to second (subjects not returned are the most
+    urgent after water)."""
 
     def test_full_early_alert_with_two_managers(self):
         blocks = am.format_alert_message(
@@ -91,11 +93,11 @@ class TestFormatAlertMessage:
             DIVIDER,
             WATER_SECTION,
             DIVIDER,
+            TRANSPORT_SECTION,
+            DIVIDER,
             WEIGHING_SECTION,
             DIVIDER,
             TRAINING_SECTION,
-            DIVIDER,
-            TRANSPORT_SECTION,
             DIVIDER,
         ]
 
@@ -111,11 +113,11 @@ class TestFormatAlertMessage:
             DIVIDER,
             WATER_SECTION,
             DIVIDER,
+            TRANSPORT_SECTION,
+            DIVIDER,
             WEIGHING_SECTION,
             DIVIDER,
             TRAINING_SECTION,
-            DIVIDER,
-            TRANSPORT_SECTION,
             DIVIDER,
         ]
 
@@ -126,11 +128,11 @@ class TestFormatAlertMessage:
             DIVIDER,
             section("*Subjects missing water:* None\n"),
             DIVIDER,
+            section("*Subjects missing transport:* None\n"),
+            DIVIDER,
             section("*Subjects missing weighing:* None\n"),
             DIVIDER,
             section("*Subjects missing training:* None\n"),
-            DIVIDER,
-            section("*Subjects missing transport:* None\n"),
             DIVIDER,
         ]
 
@@ -159,8 +161,8 @@ class TestFormatAlertMessage:
             )
         )
         assert "*jy_001* : 1.0 ml\n" in texts[1]
-        assert "*jy_001* : \n" in texts[2]
-        assert texts[4] == "*Subjects missing transport:*\n*ef_030*\n*gh_040*\n"
+        assert texts[2] == "*Subjects missing transport:*\n*ef_030*\n*gh_040*\n"
+        assert "*jy_001* : \n" in texts[3]
 
     def test_index_does_not_matter(self):
         # Callers filter rows, so frames can arrive with a non-default index

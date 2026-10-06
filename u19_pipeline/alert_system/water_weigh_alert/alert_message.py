@@ -112,12 +112,14 @@ def format_alert_message(
             line += f" : {tags}"
         transport_lines.append(line)
 
+    # Most urgent first: a subject not returned from transport is a welfare
+    # issue, and the late alert is the last chance to catch it
     sections = [
         _header_block(lab_manager_handles, AlertTier(tier)),
         _section("Subjects missing water", water_lines),
+        _section("Subjects missing transport", transport_lines),
         _section("Subjects missing weighing", weighing_lines),
         _section("Subjects missing training", training_lines),
-        _section("Subjects missing transport", transport_lines),
     ]
 
     blocks = []
