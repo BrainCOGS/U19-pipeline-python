@@ -374,7 +374,8 @@ def find_unreturned_subjects() -> pd.DataFrame:
         local_transport_data["transport_in_datetime"].isnull()
     ]
 
-    return unreturned_subjects
+    # Same shape as the other alert frames: subject_fullname column, 0..n-1 index
+    return unreturned_subjects.reset_index()
 
 
 def slack_alert_message_format_weight_water(
@@ -386,11 +387,9 @@ def slack_alert_message_format_weight_water(
     tier: alert_tiers.AlertTier = alert_tiers.AlertTier.ALL,
 ):
 
-    print(missing_transport)
-    temp_missing_transport = missing_transport.copy().reset_index()
     notifiable_subjects = list(
         set(
-            temp_missing_transport["subject_fullname"].tolist()
+            missing_transport["subject_fullname"].tolist()
             + subjects_not_watered["subject_fullname"].tolist()
             + subjects_not_weighted["subject_fullname"].tolist()
         )
@@ -530,15 +529,9 @@ def slack_alert_message_format_weight_water(
     else:
         m6_1["text"] = "*Subjects missing transport:*" + "\n"
         for i in range(missing_transport.shape[0]):
-            subject_name = missing_transport.index[i]
-            # Try to get responsible slack tags for this subject
-            tags = ""
-            try:
-                tags = missing_transport.iloc[i].get(
-                    "responsible_slack_tags", ""
-                )  # may be string or iterable
-            except Exception:
-                tags = ""
+            subject_name = missing_transport.loc[i, "subject_fullname"]
+            # Responsible slack tags may be a string, an iterable or missing
+            tags = missing_transport.loc[i].get("responsible_slack_tags", "")
             # Normalize tags to a string
             if pd.isna(tags):
                 tag_str = ""
@@ -770,7 +763,7 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
 
     subject_data = subject_data.loc[
         ~subject_data["subject_fullname"].str.contains("test"), :
-    ]
+    ].reset_index(drop=True)
     subjects_not_watered = subject_data.loc[
         subject_data["current_need_water"] > 0,
         ["subject_fullname", "current_need_water", "responsible_slack_tags"],
@@ -798,17 +791,18 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
 
     subject_not_returned = find_unreturned_subjects()
     if tier == alert_tiers.AlertTier.EARLY:
-        # subject_fullname is the index of the fetched frame
         subject_not_returned = subject_not_returned.loc[
-            subject_not_returned.index.isin(subject_data["subject_fullname"])
-        ]
+            subject_not_returned["subject_fullname"].isin(
+                subject_data["subject_fullname"]
+            )
+        ].reset_index(drop=True)
 
     # Join responsible_slack_tags from subject_data on subject_fullname
     subject_not_returned = subject_not_returned.merge(
         subject_data[["subject_fullname", "responsible_slack_tags"]],
         on="subject_fullname",
         how="left",
-    ).set_index("subject_fullname")
+    )
 
     webhooks_list = su.get_webhook_list(slack_configuration_dictionary, lab)
 

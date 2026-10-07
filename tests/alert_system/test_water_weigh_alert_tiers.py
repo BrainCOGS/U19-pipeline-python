@@ -228,15 +228,25 @@ class TestFilterSubjectsForTier:
         result = at.filter_subjects_for_tier(subject_data, at.AlertTier.ALL)
         assert result["subject_fullname"].tolist() == ["early", "late"]
 
-    def test_early_tier_keeps_index_for_caller_to_reset(self):
+    @pytest.mark.parametrize("tier", list(at.AlertTier))
+    def test_returns_range_index(self, tier):
+        # Every frame in the alert is numbered 0..n-1, even after filtering
         subject_data = make_subjects(
             [
                 {"subject_fullname": "late", "first_timeslot": 8},
                 {"subject_fullname": "early", "first_timeslot": 1},
+                {"subject_fullname": "early2", "first_timeslot": 2},
             ]
-        )
-        result = at.filter_subjects_for_tier(subject_data, at.AlertTier.EARLY)
-        assert result.index.tolist() == [1]
+        ).set_axis([10, 20, 30])
+        result = at.filter_subjects_for_tier(subject_data, tier)
+        pd.testing.assert_index_equal(result.index, pd.RangeIndex(len(result)))
+
+    def test_does_not_modify_input(self):
+        subject_data = make_subjects(
+            [{"subject_fullname": "late", "first_timeslot": 8}]
+        ).set_axis([10])
+        at.filter_subjects_for_tier(subject_data, at.AlertTier.ALL)
+        assert subject_data.index.tolist() == [10]
 
     def test_empty_dataframe(self):
         subject_data = make_subjects([]).reindex(

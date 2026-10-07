@@ -76,12 +76,14 @@ def early_tier_mask(subject_data: pd.DataFrame) -> pd.Series:
 def filter_subjects_for_tier(subject_data: pd.DataFrame, tier: str) -> pd.DataFrame:
     """Keep only the subjects reported in the given alert tier.
 
-    Raises ValueError if tier is not an AlertTier value.
+    The result is renumbered 0..n-1. Raises ValueError if tier is not an
+    AlertTier value.
     """
     match AlertTier(tier):
         case AlertTier.ALL:
-            return subject_data
+            selected = subject_data
         case AlertTier.EARLY:
-            return subject_data.loc[early_tier_mask(subject_data)]
+            selected = subject_data.loc[early_tier_mask(subject_data)]
         case unhandled:
             assert_never(unhandled)
+    return selected.reset_index(drop=True)
