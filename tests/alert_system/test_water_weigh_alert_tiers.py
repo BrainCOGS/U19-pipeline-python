@@ -284,3 +284,46 @@ class TestFilterSubjectsForTier:
     def test_unknown_tier_raises(self):
         with pytest.raises(ValueError):
             at.filter_subjects_for_tier(make_subjects([]), "late")
+
+
+class TestTimeslotStartTime:
+    @pytest.mark.parametrize(
+        "timeslot, hour",
+        [(1, 9), (2, 10), (3, 11), (4, 13), (5, 14), (6, 15), (7, 16), (8, 17)],
+    )
+    def test_matches_rig_schedule(self, timeslot, hour):
+        # Slot 1 starts at 9 AM; 12-1 PM is lunch, so slot 4 starts at 1 PM
+        assert at.timeslot_start_time(timeslot) == datetime.time(hour)
+
+    def test_last_early_timeslot_starts_at_2_pm(self):
+        assert at.timeslot_start_time(at.LAST_EARLY_TIMESLOT) == datetime.time(14)
+
+    @pytest.mark.parametrize("timeslot", [-1, 0, 9, 100])
+    def test_out_of_range_raises(self, timeslot):
+        with pytest.raises(ValueError):
+            at.timeslot_start_time(timeslot)
+
+
+class TestFormatClockTime:
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            (datetime.time(0), "12 AM"),
+            (datetime.time(9), "9 AM"),
+            (datetime.time(11, 59), "11:59 AM"),
+            (datetime.time(12), "12 PM"),
+            (datetime.time(14), "2 PM"),
+            (datetime.time(16, 30), "4:30 PM"),
+            (datetime.time(23), "11 PM"),
+        ],
+    )
+    def test_formats_12_hour_clock(self, value, expected):
+        assert at.format_clock_time(value) == expected
+
+
+class TestEarlyTierDescription:
+    def test_names_slot_start_and_watering_cutoff(self):
+        assert at.early_tier_description() == (
+            "subjects trained in slot 5 (starts 2 PM) or earlier,"
+            " or water-only and watered before 4 PM"
+        )

@@ -423,10 +423,7 @@ def slack_alert_message_format_weight_water(
 
     tier_text = ""
     if tier == alert_tiers.AlertTier.EARLY:
-        tier_text = (
-            f" (early check: subjects trained in slot {alert_tiers.LAST_EARLY_TIMESLOT}"
-            " or earlier, or water-only and watered before 4 PM)"
-        )
+        tier_text = f" (early check: {alert_tiers.early_tier_description()})"
 
     m1_1["text"] = (
         ":rotating_light: *Subjects Status Alert *" + tier_text + lab_manager_text

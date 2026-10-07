@@ -22,12 +22,52 @@ class AlertTier(StrEnum):
     ALL = "all"  # 10/11 PM: every subject
 
 
-# Subjects scheduled in this timeslot or earlier belong to the early tier
+# Rig schedule, copied from tech_calendar_streamlit
+# (streamlit_web_interface/tabs/rig_schedule.py, convert_timeslot_to_datetime).
+# Keep the two in sync if the schedule changes.
+TIMESLOTS = range(1, 9)
+SCHEDULE_START_HOUR = 8  # slot 1 starts one hour later, at 9 AM
+LUNCH_TIMESLOT = 4  # 12-1 PM is lunch, so this slot and later start an hour later
+
+# Subjects scheduled in this timeslot (starts 2 PM) or earlier belong to the
+# early tier
 LAST_EARLY_TIMESLOT = 5
 # Water-only subjects watered before this time (ET) belong to the early tier
 WATERING_CUTOFF = datetime.timedelta(hours=16)
 # Runs at or after this hour (ET) report all subjects
 ALL_TIER_START_HOUR = 21
+
+
+def timeslot_start_time(timeslot: int) -> datetime.time:
+    """Start time (ET) of a rig schedule timeslot.
+
+    Raises ValueError if timeslot is not in TIMESLOTS.
+    """
+    if timeslot not in TIMESLOTS:
+        raise ValueError(f"Timeslot {timeslot} is outside {TIMESLOTS}")
+    hour = SCHEDULE_START_HOUR + timeslot
+    if timeslot >= LUNCH_TIMESLOT:
+        hour += 1
+    return datetime.time(hour)
+
+
+def format_clock_time(value: datetime.time) -> str:
+    """Format a time on the 12-hour clock, e.g. "2 PM" or "4:30 PM"."""
+    hour = value.hour % 12 or 12
+    minutes = f":{value.minute:02d}" if value.minute else ""
+    suffix = "AM" if value.hour < 12 else "PM"
+    return f"{hour}{minutes} {suffix}"
+
+
+def early_tier_description() -> str:
+    """Who the early alert reports, for the alert title."""
+    slot_start = format_clock_time(timeslot_start_time(LAST_EARLY_TIMESLOT))
+    cutoff_hour, cutoff_minute = divmod(WATERING_CUTOFF.seconds // 60, 60)
+    watering_cutoff = format_clock_time(datetime.time(cutoff_hour, cutoff_minute))
+    return (
+        f"subjects trained in slot {LAST_EARLY_TIMESLOT} (starts {slot_start})"
+        f" or earlier, or water-only and watered before {watering_cutoff}"
+    )
 
 
 def resolve_alert_tier(
