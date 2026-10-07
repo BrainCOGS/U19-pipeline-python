@@ -15,7 +15,7 @@ parser.add_argument(
     type=alert_tiers.AlertTier,
     choices=list(alert_tiers.AlertTier),
     default=None,
-    help="Subjects to report. Defaults to 'early' before 9 PM ET, 'all' after.",
+    help="Subjects to report. Defaults to 'early' before 8 PM ET, 'all' from 8 PM on.",
 )
 args = parser.parse_args()
 

@@ -35,7 +35,7 @@ LAST_EARLY_TIMESLOT = 5
 # Water-only subjects watered before this time (ET) belong to the early tier
 WATERING_CUTOFF = datetime.timedelta(hours=16)
 # Runs at or after this hour (ET) report all subjects
-ALL_TIER_START_HOUR = 21
+ALL_TIER_START_HOUR = 20  # 8 PM
 
 
 def timeslot_start_time(timeslot: int) -> datetime.time:

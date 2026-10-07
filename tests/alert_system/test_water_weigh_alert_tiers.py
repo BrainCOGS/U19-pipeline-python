@@ -26,19 +26,23 @@ def early_names(subject_data):
 
 
 class TestResolveAlertTier:
-    @pytest.mark.parametrize("hour", [0, 16, 18, 19, 20])
+    @pytest.mark.parametrize("hour", [0, 16, 18, 19])
     def test_before_cutoff_is_early(self, hour):
         now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
         assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
 
-    @pytest.mark.parametrize("hour", [21, 22, 23])
+    @pytest.mark.parametrize("hour", [20, 21, 22, 23])
     def test_after_cutoff_is_all(self, hour):
         now = datetime.datetime(2026, 10, 5, hour, 0, tzinfo=at.EASTERN)
         assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     def test_one_minute_before_cutoff(self):
-        now = datetime.datetime(2026, 10, 5, 20, 59, tzinfo=at.EASTERN)
+        now = datetime.datetime(2026, 10, 5, 19, 59, tzinfo=at.EASTERN)
         assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
+
+    def test_cutoff_is_8_pm(self):
+        now = datetime.datetime(2026, 10, 5, 20, 0, tzinfo=at.EASTERN)
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     def test_aware_utc_time_is_converted_to_eastern(self):
         # 22:00 UTC is 18:00 EDT
@@ -49,8 +53,11 @@ class TestResolveAlertTier:
         assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     def test_winter_time_is_converted_to_eastern(self):
-        # 02:30 UTC in January is 21:30 EST
-        now = datetime.datetime(2026, 1, 6, 2, 30, tzinfo=datetime.UTC)
+        # 00:30 UTC in January is 19:30 EST (it would be 20:30 in EDT)
+        now = datetime.datetime(2026, 1, 6, 0, 30, tzinfo=datetime.UTC)
+        assert at.resolve_alert_tier(now=now) == at.AlertTier.EARLY
+        # 01:30 UTC in January is 20:30 EST
+        now = datetime.datetime(2026, 1, 6, 1, 30, tzinfo=datetime.UTC)
         assert at.resolve_alert_tier(now=now) == at.AlertTier.ALL
 
     @pytest.mark.parametrize("tier", list(at.AlertTier))
