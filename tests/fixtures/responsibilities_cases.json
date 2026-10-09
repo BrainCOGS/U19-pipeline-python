@@ -1,0 +1,458 @@
+{
+  "description": "Shared test cases for the action.ResponsibilitiesAlt.responsibilities JSON. Source of truth: U19-pipeline-python tests/fixtures/responsibilities_cases.json; a byte-identical copy is in ViRMEn experiments/utility/WeighingGUI/tests/. Each case's json is the column value; days maps a day to its expected resolution (technician/owner in enum order) or \"invalid\". canonical cases are exactly what dump_responsibilities writes. Known gap: MATLAB's jsondecode reads a one-element list of objects as the object, so a slot written as [{...}] is only rejected by Python; the writer never produces one.",
+  "cases": [
+    {
+      "name": "weekly",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Watering\", \"Weighing\"], \"owner\": [\"Training\"]}}",
+      "canonical": true,
+      "days": {
+        "Sunday": {
+          "technician": [
+            "Watering",
+            "Weighing"
+          ],
+          "owner": [
+            "Training"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Wednesday": {
+          "technician": [
+            "Watering",
+            "Weighing"
+          ],
+          "owner": [
+            "Training"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Saturday": {
+          "technician": [
+            "Watering",
+            "Weighing"
+          ],
+          "owner": [
+            "Training"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "workweek split",
+      "json": "{\"assignment_style\": \"workweek_split\", \"weekdays\": {\"technician\": [\"Watering\", \"Training\"], \"owner\": [\"Nothing\"]}, \"weekends\": {\"technician\": [\"Nothing\"], \"owner\": [\"Manual Weighing\", \"Manual Watering\"]}}",
+      "canonical": true,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering",
+            "Training"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Train",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Friday": {
+          "technician": [
+            "Watering",
+            "Training"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Train",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Saturday": {
+          "technician": [
+            "Nothing"
+          ],
+          "owner": [
+            "Manual Weighing",
+            "Manual Watering"
+          ],
+          "legacy_token": "Nothing",
+          "manual_watering": true,
+          "manual_weighing": true
+        },
+        "Sunday": {
+          "technician": [
+            "Nothing"
+          ],
+          "owner": [
+            "Manual Weighing",
+            "Manual Watering"
+          ],
+          "legacy_token": "Nothing",
+          "manual_watering": true,
+          "manual_weighing": true
+        }
+      }
+    },
+    {
+      "name": "daily",
+      "json": "{\"assignment_style\": \"daily\", \"Sunday\": {\"technician\": [\"Watering\"], \"owner\": [\"Weighing\"]}, \"Monday\": {\"technician\": [\"Weighing\"], \"owner\": [\"Manual Watering\"]}, \"Tuesday\": {\"technician\": [\"Transport Only\"], \"owner\": [\"Watering\", \"Weighing\"]}, \"Wednesday\": {\"technician\": [\"Nothing\"], \"owner\": [\"Watering\", \"Weighing\", \"Training\"]}, \"Thursday\": {\"technician\": [\"Watering\", \"Weighing\"], \"owner\": [\"Nothing\"]}, \"Friday\": {\"technician\": [\"Watering\"], \"owner\": [\"Manual Weighing\"]}, \"Saturday\": {\"technician\": [\"Nothing\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": true,
+      "days": {
+        "Sunday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [
+            "Weighing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Monday": {
+          "technician": [
+            "Weighing"
+          ],
+          "owner": [
+            "Manual Watering"
+          ],
+          "legacy_token": "Weigh",
+          "manual_watering": true,
+          "manual_weighing": false
+        },
+        "Tuesday": {
+          "technician": [
+            "Transport Only"
+          ],
+          "owner": [
+            "Watering",
+            "Weighing"
+          ],
+          "legacy_token": "Transport",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Wednesday": {
+          "technician": [
+            "Nothing"
+          ],
+          "owner": [
+            "Watering",
+            "Weighing",
+            "Training"
+          ],
+          "legacy_token": "Nothing",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Thursday": {
+          "technician": [
+            "Watering",
+            "Weighing"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Friday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [
+            "Manual Weighing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": true
+        },
+        "Saturday": {
+          "technician": [
+            "Nothing"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Nothing",
+          "manual_watering": false,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "daily with a missing day",
+      "json": "{\"assignment_style\": \"daily\", \"Monday\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Tuesday": "invalid"
+      }
+    },
+    {
+      "name": "keys from another style are ignored",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Weighing\"]}, \"Monday\": {\"technician\": [\"Training\"], \"owner\": [\"Nothing\"]}, \"weekdays\": {\"technician\": [\"Nothing\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [
+            "Weighing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "missing, empty and null parties are no duties",
+      "json": "{\"assignment_style\": \"workweek_split\", \"weekdays\": {\"technician\": [\"Watering\"]}, \"weekends\": {\"technician\": [], \"owner\": null}}",
+      "canonical": false,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        },
+        "Sunday": {
+          "technician": [],
+          "owner": [],
+          "legacy_token": "Nothing",
+          "manual_watering": false,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "order and duplicates do not matter",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Weighing\", \"Watering\", \"Weighing\"], \"owner\": [\"Manual Watering\"]}}",
+      "canonical": false,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering",
+            "Weighing"
+          ],
+          "owner": [
+            "Manual Watering"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": true,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "extra top-level keys are ignored",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}, \"note\": \"hi\"}",
+      "canonical": false,
+      "days": {
+        "Monday": {
+          "technician": [
+            "Watering"
+          ],
+          "owner": [
+            "Nothing"
+          ],
+          "legacy_token": "Water",
+          "manual_watering": false,
+          "manual_weighing": false
+        }
+      }
+    },
+    {
+      "name": "not JSON",
+      "json": "{",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "record is a list",
+      "json": "[{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}]",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "record is a string",
+      "json": "\"weekly\"",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "missing assignment_style",
+      "json": "{\"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "null assignment_style",
+      "json": "{\"assignment_style\": null, \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "unknown assignment_style",
+      "json": "{\"assignment_style\": \"fortnightly\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "assignment_style is case sensitive",
+      "json": "{\"assignment_style\": \"Weekly\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "assignment_style is the stored name, not the label",
+      "json": "{\"assignment_style\": \"Specify for the whole week\", \"weekly\": {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "missing slot",
+      "json": "{\"assignment_style\": \"weekly\"}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is a string",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": \"Watering\"}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is null",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": null}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "unknown responsibility",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Bogus\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "responsibilities are case sensitive",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"watering\"], \"owner\": [\"Nothing\"]}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "party is a string",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": \"Watering\", \"owner\": []}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "party is a number",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": 1, \"owner\": []}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "party is an object",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": {\"a\": 1}, \"owner\": []}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "party has a non-string",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [\"Watering\", 1], \"owner\": []}}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    }
+  ]
+}
