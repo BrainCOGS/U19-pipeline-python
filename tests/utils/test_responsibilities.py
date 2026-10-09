@@ -171,7 +171,7 @@ class TestAssignmentForDay:
         with pytest.raises(ValueError):
             r.assignment_for_day(record, "Monday")
 
-    @pytest.mark.parametrize("party_value", [None, "Watering", {"Watering": 1}])
+    @pytest.mark.parametrize("party_value", ["Watering", {"Watering": 1}, 1])
     def test_non_list_party_raises_type_error(self, party_value):
         record = {
             "assignment_style": "weekly",
@@ -337,3 +337,55 @@ class TestTodayName:
         for offset in range(7):
             date = datetime.date(2026, 10, 4) + datetime.timedelta(days=offset)
             assert r.DAYS_OF_WEEK.index(r.today_name(date)) == (date.weekday() + 1) % 7
+
+
+class TestDumpResponsibilities:
+    def test_keeps_only_the_styles_keys_in_order(self):
+        slots = {
+            "weekends": slot([R.NOTHING], [R.WATERING]),
+            "Monday": slot([R.TRAINING], [R.NOTHING]),
+            "weekdays": slot([R.WEIGHING, R.WATERING], [R.NOTHING]),
+            "assignment_style": "daily",
+        }
+        dumped = r.dump_responsibilities(r.AssignmentStyle.WORKWEEK_SPLIT, slots)
+        assert json.loads(dumped) == {
+            "assignment_style": "workweek_split",
+            "weekdays": {"technician": ["Watering", "Weighing"], "owner": ["Nothing"]},
+            "weekends": {"technician": ["Nothing"], "owner": ["Watering"]},
+        }
+        assert list(json.loads(dumped)) == ["assignment_style", "weekdays", "weekends"]
+
+    def test_accepts_sets_and_enum_members(self):
+        slots = {
+            "weekly": {
+                "technician": {R.WEIGHING, R.WATERING},
+                "owner": {M.MANUAL_WATERING},
+            }
+        }
+        dumped = r.dump_responsibilities(r.AssignmentStyle.WEEKLY, slots)
+        assert json.loads(dumped)["weekly"] == {
+            "technician": ["Watering", "Weighing"],
+            "owner": ["Manual Watering"],
+        }
+
+    def test_lists_are_deduplicated(self):
+        slots = {"weekly": {"technician": ["Watering", "Watering"], "owner": []}}
+        dumped = r.dump_responsibilities(r.AssignmentStyle.WEEKLY, slots)
+        assert json.loads(dumped)["weekly"] == {"technician": ["Watering"], "owner": []}
+
+    def test_missing_slot_raises(self):
+        with pytest.raises(ValueError, match="weekends"):
+            r.dump_responsibilities(
+                r.AssignmentStyle.WORKWEEK_SPLIT, {"weekdays": slot([R.WATERING], [])}
+            )
+
+    def test_unknown_responsibility_raises(self):
+        with pytest.raises(ValueError):
+            r.dump_responsibilities(
+                r.AssignmentStyle.WEEKLY, {"weekly": slot(["Bogus"], [])}
+            )
+
+    def test_daily_has_every_day_in_order(self):
+        slots = {d: slot([R.WATERING], [R.NOTHING]) for d in reversed(r.DAYS_OF_WEEK)}
+        dumped = json.loads(r.dump_responsibilities(r.AssignmentStyle.DAILY, slots))
+        assert list(dumped) == ["assignment_style", *r.DAYS_OF_WEEK]

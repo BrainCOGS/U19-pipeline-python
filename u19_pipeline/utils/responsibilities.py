@@ -9,6 +9,18 @@ There are two formats for "who does what for this subject today":
   written by tech_calendar_streamlit (tabs/assigning_responsibilities.py) that
   lists the responsibilities of the technician and of the researcher (owner).
 
+The JSON, as written by ``dump_responsibilities``::
+
+    {"assignment_style": "weekly" | "workweek_split" | "daily",
+     <slot>: {"technician": [<responsibility>, ...], "owner": [...]}, ...}
+
+where the slots are "weekly"; "weekdays" and "weekends" (Saturday, Sunday);
+or "Sunday" ... "Saturday". Responsibilities are the exact Responsibility and
+ManualResponsibility values, unique and in enum order. Readers treat a
+missing or null party as no responsibilities and ignore other keys.
+tests/fixtures/responsibilities_cases.json pins how every reader resolves
+records; the weighing GUI runs a copy of it.
+
 Which one the systems act on is the ``responsibility_format`` row of
 ``lab.FeatureFlag``: "legacy", then "preview" (experimenters fill in and check
 the explicit responsibilities; nothing acts on them yet), then "explicit". A
@@ -241,19 +253,38 @@ class DailyAssignment:
 def parse_slot(slot: Mapping[str, Any]) -> DailyAssignment:
     """Parse one {"technician": [...], "owner": [...]} entry.
 
-    A missing party means no responsibilities. Raises ValueError on unknown
-    responsibilities and TypeError if a party is not a list.
+    A missing, null or empty party means no responsibilities (MATLAB's
+    jsondecode cannot tell null from []). Raises TypeError if the slot is not
+    an object or a party is not a list of strings, and ValueError on unknown
+    responsibilities.
     """
+    if not isinstance(slot, Mapping):
+        raise TypeError(f"Expected a {{technician, owner}} object, got {slot!r}")
     parsed: dict[ResponsibleParty, frozenset[AnyResponsibility]] = {}
     for party in ResponsibleParty:
-        values = slot.get(party.json_key, [])
-        if not isinstance(values, list):
-            raise TypeError(f"{party.json_key!r} must be a list, got {values!r}")
+        values = slot.get(party.json_key)
+        if values is None:
+            values = []
+        if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+            raise TypeError(
+                f"{party.json_key!r} must be a list of strings, got {values!r}"
+            )
         parsed[party] = frozenset(parse_responsibility(v) for v in values)
     return DailyAssignment(
         technician=parsed[ResponsibleParty.TECHNICIAN],
         owner=parsed[ResponsibleParty.OWNER],
     )
+
+
+def slot_keys(style: AssignmentStyle) -> tuple[str, ...]:
+    """JSON keys holding the assignments under this style, in written order."""
+    match style:
+        case AssignmentStyle.WEEKLY:
+            return ("weekly",)
+        case AssignmentStyle.WORKWEEK_SPLIT:
+            return ("weekdays", "weekends")
+        case AssignmentStyle.DAILY:
+            return DAYS_OF_WEEK
 
 
 def slot_key(style: AssignmentStyle, day: str) -> str:
@@ -269,23 +300,59 @@ def slot_key(style: AssignmentStyle, day: str) -> str:
             return day
 
 
+def parse_assignment_style(record: Mapping[str, Any]) -> AssignmentStyle:
+    """The record's style; the stored value is the exact lowercase json_key."""
+    style_name = record.get("assignment_style")
+    for style in AssignmentStyle:
+        if style_name == style.json_key:
+            return style
+    raise ValueError(f"Unknown assignment_style {style_name!r}")
+
+
 def assignment_for_day(record: Mapping[str, Any] | str, day: str) -> DailyAssignment:
     """The assignment for a day (e.g. "Monday") from a responsibilities JSON.
 
-    Raises ValueError (or TypeError, see parse_slot) if the record is
+    Raises ValueError (including invalid JSON) or TypeError if the record is
     malformed. Keys left over from another assignment style are ignored.
     """
     if isinstance(record, str):
         record = json.loads(record)
-    style_name = record.get("assignment_style")
-    try:
-        style = AssignmentStyle[str(style_name).upper()]
-    except KeyError:
-        raise ValueError(f"Unknown assignment_style {style_name!r}") from None
-    key = slot_key(style, day)
+    if not isinstance(record, Mapping):
+        raise TypeError(f"Expected a responsibilities object, got {record!r}")
+    key = slot_key(parse_assignment_style(record), day)
     if key not in record:
         raise ValueError(f"Responsibilities have no {key!r} entry for {day}")
     return parse_slot(record[key])
+
+
+def dump_responsibilities(
+    style: AssignmentStyle, slots: Mapping[str, Mapping[str, Iterable[str]]]
+) -> str:
+    """The canonical responsibilities JSON, as stored in ResponsibilitiesAlt.
+
+    Only this style's keys are written, in slot_keys order, each as
+    {"technician": [...], "owner": [...]} with unique values in enum order.
+    Other keys in slots (e.g. from another style) are dropped. Raises
+    ValueError if a slot is missing or a responsibility is unknown.
+    """
+    order = [*Responsibility, *ManualResponsibility]
+    record: dict[str, Any] = {"assignment_style": style.json_key}
+    for key in slot_keys(style):
+        if key not in slots:
+            raise ValueError(f"Missing {key!r} for assignment style {style.json_key!r}")
+        slot = slots[key]
+        assignment = parse_slot(
+            {party: [str(v) for v in values or []] for party, values in slot.items()}
+        )
+        record[key] = {
+            ResponsibleParty.TECHNICIAN.json_key: [
+                str(v) for v in sorted(assignment.technician, key=order.index)
+            ],
+            ResponsibleParty.OWNER.json_key: [
+                str(v) for v in sorted(assignment.owner, key=order.index)
+            ],
+        }
+    return json.dumps(record)
 
 
 def legacy_schedule(record: Mapping[str, Any] | str) -> str:
