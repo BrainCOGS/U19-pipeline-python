@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from u19_pipeline.alert_system.water_weigh_alert import explicit_duties
+
 EASTERN = ZoneInfo("America/New_York")
 
 
@@ -90,8 +92,7 @@ def resolve_alert_tier(
 
 def is_water_only_today(subject_data: pd.DataFrame) -> pd.Series:
     """Subjects that are only expected to be watered (not trained) today."""
-    schedule_today = subject_data["schedule_today"].astype("string").str.lower()
-    return (schedule_today == "water").fillna(False) | (
+    return explicit_duties.water_day_mask(subject_data) | (
         subject_data["subject_status"] == "WaterRestrictionOnly"
     )
 

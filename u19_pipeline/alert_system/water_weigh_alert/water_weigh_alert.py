@@ -637,7 +637,7 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
 
     subjects_not_trained = subject_data.loc[
         (subject_data["training_status"] == 1)
-        & (subject_data["schedule_today"].str.lower() != "water"),
+        & ~explicit_duties.water_day_mask(subject_data),
         ["subject_fullname", "scheduled_rig"],
     ]
     subjects_not_trained = subjects_not_trained.reset_index(drop=True)

@@ -220,8 +220,13 @@ class TestLegacyToken:
         ("technician", "owner", "token"),
         [
             ({R.TRAINING, R.WATERING, R.WEIGHING}, {R.NOTHING}, "Train"),
-            ({R.WATERING}, {R.TRAINING}, "Train"),
-            ({R.WATERING, R.WEIGHING}, {R.NOTHING}, "Weigh"),
+            # Only the technician's duties count: the legacy schedule is theirs
+            ({R.WATERING}, {R.TRAINING}, "Water"),
+            ({R.TRANSPORT_ONLY}, {R.WATERING, R.TRAINING}, "Transport"),
+            ({R.NOTHING}, {R.TRAINING, M.MANUAL_WATERING}, "Nothing"),
+            # Water when the technician waters, so converted legacy Water days stay Water
+            ({R.WATERING, R.WEIGHING}, {R.NOTHING}, "Water"),
+            ({R.WEIGHING}, {R.WATERING}, "Weigh"),
             ({R.WEIGHING}, {M.MANUAL_WATERING}, "Weigh"),
             ({R.WATERING}, {R.WEIGHING}, "Water"),
             ({R.TRANSPORT_ONLY}, {R.WATERING}, "Transport"),

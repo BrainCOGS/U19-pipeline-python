@@ -234,17 +234,20 @@ class DailyAssignment:
         )
 
     def legacy_token(self) -> str:
-        """The closest legacy technician duty ("Train", "Weigh", ...).
+        """The technician's duty in the legacy schedule ("Train", "Water", ...).
 
-        The legacy format only describes the technician, so this is lossy: a
-        researcher's duties (manual or not) leave no trace beyond "Nothing".
+        The legacy schedule only describes the technician (the weighing GUI
+        shows technicians the subjects that are not "Transport" or "Nothing"),
+        so only their duties count, most involved first. The researcher's
+        duties, manual or not, leave no trace: check the assignment itself
+        for who trains.
         """
-        if Responsibility.TRAINING in self.all:
+        if Responsibility.TRAINING in self.technician:
             return "Train"
-        if Responsibility.WEIGHING in self.technician:
-            return "Weigh"
         if Responsibility.WATERING in self.technician:
             return "Water"
+        if Responsibility.WEIGHING in self.technician:
+            return "Weigh"
         if Responsibility.TRANSPORT_ONLY in self.technician:
             return "Transport"
         return "Nothing"

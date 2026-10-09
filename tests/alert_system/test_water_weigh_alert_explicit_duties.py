@@ -187,3 +187,46 @@ class TestParseAssignments:
         assert {"bad_json", "bad_value", "bad_party", "not_object", "null"} <= {
             r.args[0] for r in caplog.records
         }
+
+
+class TestWaterDayMask:
+    """Water-only days: legacy "Water" days, or explicit days nobody trains.
+
+    The legacy token only describes the technician, so a researcher who trains
+    leaves "Transport" or "Nothing" in schedule_today; the assignment decides.
+    """
+
+    def test_legacy_rows_use_the_schedule(self):
+        data = ed.apply_assignments(
+            make_subjects(
+                [
+                    {"subject_fullname": "a", "schedule_today": "Water"},
+                    {"subject_fullname": "b", "schedule_today": "water"},
+                    {"subject_fullname": "c", "schedule_today": "Train"},
+                    {"subject_fullname": "d", "schedule_today": None},
+                ]
+            ),
+            None,
+        )
+        assert ed.water_day_mask(data).tolist() == [True, True, False, False]
+
+    @pytest.mark.parametrize(
+        ("technician", "owner", "water_day"),
+        [
+            ({R.TRANSPORT_ONLY}, {R.WATERING, R.WEIGHING, R.TRAINING}, False),
+            ({R.NOTHING}, {R.TRAINING, M.MANUAL_WATERING}, False),
+            ({R.WATERING, R.TRAINING}, {R.NOTHING}, False),
+            ({R.WATERING, R.WEIGHING}, {R.NOTHING}, True),
+            ({R.TRANSPORT_ONLY}, {R.WATERING, R.WEIGHING}, True),
+        ],
+    )
+    def test_explicit_rows_use_who_trains(self, technician, owner, water_day):
+        data = ed.apply_assignments(
+            make_subjects([{"subject_fullname": "a"}]),
+            {"a": assignment(technician, owner)},
+        )
+        assert ed.water_day_mask(data).tolist() == [water_day]
+
+    def test_frames_without_the_assignment_column(self):
+        data = make_subjects([{"subject_fullname": "a", "schedule_today": "Water"}])
+        assert ed.water_day_mask(data).tolist() == [True]

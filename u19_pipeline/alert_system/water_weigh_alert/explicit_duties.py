@@ -112,6 +112,25 @@ def drop_untracked_duties(subject_data: pd.DataFrame) -> pd.DataFrame:
     return subject_data
 
 
+def water_day_mask(subject_data: pd.DataFrame) -> pd.Series:
+    """Subjects nobody trains today (a "water" day).
+
+    Explicit subjects: nobody is assigned Training. Others: the legacy
+    schedule_today is "Water". schedule_today alone is not enough for explicit
+    subjects, as it only describes the technician.
+    """
+    legacy = (
+        subject_data["schedule_today"].astype("string").str.lower() == "water"
+    ).fillna(False)
+    if "assignment" not in subject_data:
+        return legacy.astype(bool)
+    has_assignment = subject_data["assignment"].notna()
+    nobody_trains = subject_data["assignment"].map(
+        lambda a: a is not None and not a.tracks(Responsibility.TRAINING)
+    )
+    return legacy.where(~has_assignment, nobody_trains).astype(bool)
+
+
 def duty_uses_owners(
     assignment: DailyAssignment | None,
     duty: Responsibility,
