@@ -43,11 +43,17 @@ def notifiable_subjects(
     )
 
 
-def _header_block(lab_manager_handles: list[str], tier: AlertTier) -> dict:
+def _header_block(lab_manager_handles: Iterable[str | None], tier: AlertTier) -> dict:
     tier_text = ""
     if tier == AlertTier.EARLY:
         tier_text = f" (early check: {early_tier_description()})"
 
+    # Handles usually come straight from DataJoint's fetch as a numpy array,
+    # whose truth value is ambiguous, and managers without a Slack handle
+    # come back as None or ""
+    lab_manager_handles = [
+        handle.strip() for handle in lab_manager_handles if handle and handle.strip()
+    ]
     lab_manager_text = "\n\n"
     if lab_manager_handles:
         managers = "Lab Managers" if len(lab_manager_handles) > 1 else "Lab Manager"
@@ -78,7 +84,7 @@ def format_alert_message(
     subjects_not_weighted: pd.DataFrame,
     subjects_not_trained: pd.DataFrame,
     missing_transport: pd.DataFrame,
-    lab_manager_handles: list[str],
+    lab_manager_handles: Iterable[str | None],
     tier: AlertTier | str = AlertTier.ALL,
 ) -> list[dict]:
     """Build the alert's Slack blocks.

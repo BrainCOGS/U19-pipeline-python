@@ -24,8 +24,7 @@ def fetch_slack_handles_for_lab_managers_by_subject(
         user_id="lab_manager"
     ) * lab.User()
 
-    slack_tags = lab_managers.fetch("slack")
-    return slack_tags
+    return lab_managers.fetch("slack").tolist()
 
 
 def fetch_slack_handles_for_lab_managers_by_user(
@@ -41,5 +40,4 @@ def fetch_slack_handles_for_lab_managers_by_user(
         user_id="lab_manager"
     ) * lab.User()
 
-    slack_tags = lab_managers.fetch("slack")
-    return slack_tags
+    return lab_managers.fetch("slack").tolist()
