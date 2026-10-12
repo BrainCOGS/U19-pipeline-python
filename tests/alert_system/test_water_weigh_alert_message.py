@@ -235,3 +235,40 @@ class TestHeader:
         assert section_texts(blocks)[0] == (
             ":rotating_light: *Subjects Status Alert *" + expected
         )
+
+    # DataJoint's fetch returns a numpy array, and `if array:` raises for more
+    # than one element (production crash on 2026-10-11)
+    @pytest.mark.parametrize(
+        "handles, expected_names",
+        [
+            (np.array([], dtype=object), None),
+            (np.array(["UM1"], dtype=object), "Lab Manager <@UM1>"),
+            (np.array(["UM1", "UM2"], dtype=object), "Lab Managers <@UM1>, <@UM2>"),
+            (("UM1", "UM2"), "Lab Managers <@UM1>, <@UM2>"),
+            (iter(["UM1", "UM2"]), "Lab Managers <@UM1>, <@UM2>"),
+        ],
+    )
+    def test_accepts_any_sequence_of_handles(self, handles, expected_names):
+        header = section_texts(
+            am.format_alert_message(*empty_frames(), lab_manager_handles=handles)
+        )[0]
+        if expected_names is None:
+            assert header == ":rotating_light: *Subjects Status Alert *\n\n"
+        else:
+            assert header == (
+                f":rotating_light: *Subjects Status Alert *\n\n{expected_names},"
+                " please be advised that your labs' subjects are listed below."
+            )
+
+    # A lab manager without a Slack handle in lab.User comes back as None or ""
+    @pytest.mark.parametrize(
+        "handles, expected_names",
+        [
+            (np.array([None], dtype=object), None),
+            (np.array(["", "  "], dtype=object), None),
+            (np.array(["UM1", None], dtype=object), "Lab Manager <@UM1>"),
+            (["UM1", "", "UM2"], "Lab Managers <@UM1>, <@UM2>"),
+        ],
+    )
+    def test_skips_missing_handles(self, handles, expected_names):
+        self.test_accepts_any_sequence_of_handles(handles, expected_names)
