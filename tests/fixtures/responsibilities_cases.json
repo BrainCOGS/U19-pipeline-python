@@ -1,5 +1,5 @@
 {
-  "description": "Shared test cases for the action.ResponsibilitiesAlt.responsibilities JSON. Source of truth: U19-pipeline-python tests/fixtures/responsibilities_cases.json; a byte-identical copy is in ViRMEn experiments/utility/WeighingGUI/tests/. Each case's json is the column value; days maps a day to its expected resolution (technician/owner in enum order) or \"invalid\". canonical cases are exactly what dump_responsibilities writes. Known gap: MATLAB's jsondecode reads a one-element list of objects as the object, so a slot written as [{...}] is only rejected by Python; the writer never produces one.",
+  "description": "Shared test cases for the action.ResponsibilitiesAlt.responsibilities JSON. Source of truth: U19-pipeline-python tests/fixtures/responsibilities_cases.json; a byte-identical copy is in ViRMEn experiments/utility/WeighingGUI/tests/. Each case's json is the column value; days maps a day to its expected resolution (technician/owner in enum order) or \"invalid\". canonical cases are exactly what dump_responsibilities writes. jsondecode reads a one-element list of objects as the object, so MATLAB checks the raw text for [{ (the format has no list of objects); these cases cover it. MATLAB also rejects a record with a list of objects in a slot the day does not use, which Python resolves; that is tested in MATLAB only (test_explicit_duties_for_day_strictness).",
   "cases": [
     {
       "name": "weekly",
@@ -387,6 +387,56 @@
     {
       "name": "slot is null",
       "json": "{\"assignment_style\": \"weekly\", \"weekly\": null}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is a one-element list of objects",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": [{\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}]}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is a one-element list of objects, with whitespace",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": [\n  {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}\n]}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is a list of two objects",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": [{\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}, {\"technician\": [\"Watering\"], \"owner\": [\"Nothing\"]}]}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "slot is an empty list",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": []}",
+      "canonical": false,
+      "days": {
+        "Sunday": "invalid",
+        "Monday": "invalid",
+        "Saturday": "invalid"
+      }
+    },
+    {
+      "name": "party is a one-element list of objects",
+      "json": "{\"assignment_style\": \"weekly\", \"weekly\": {\"technician\": [{\"duty\": \"Watering\"}], \"owner\": [\"Nothing\"]}}",
       "canonical": false,
       "days": {
         "Sunday": "invalid",
