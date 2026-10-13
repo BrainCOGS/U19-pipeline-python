@@ -272,3 +272,20 @@ class TestHeader:
     )
     def test_skips_missing_handles(self, handles, expected_names):
         self.test_accepts_any_sequence_of_handles(handles, expected_names)
+
+    # A manager of several labs has one lab.LabManager row per lab, so the
+    # fetch returns their handle once per lab
+    @pytest.mark.parametrize(
+        "handles, expected_names",
+        [
+            (np.array(["UM1", "UM1"], dtype=object), "Lab Manager <@UM1>"),
+            (
+                np.array(["UM1", "UM1", "UM2"], dtype=object),
+                "Lab Managers <@UM1>, <@UM2>",
+            ),
+            (["UM2", "UM1", "UM2"], "Lab Managers <@UM1>, <@UM2>"),
+            ([" UM1", "UM1 ", None, ""], "Lab Manager <@UM1>"),
+        ],
+    )
+    def test_dedupes_handles(self, handles, expected_names):
+        self.test_accepts_any_sequence_of_handles(handles, expected_names)
