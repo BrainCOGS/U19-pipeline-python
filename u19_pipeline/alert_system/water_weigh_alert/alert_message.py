@@ -50,10 +50,15 @@ def _header_block(lab_manager_handles: Iterable[str | None], tier: AlertTier) ->
 
     # Handles usually come straight from DataJoint's fetch as a numpy array,
     # whose truth value is ambiguous, and managers without a Slack handle
-    # come back as None or ""
-    lab_manager_handles = [
-        handle.strip() for handle in lab_manager_handles if handle and handle.strip()
-    ]
+    # come back as None or "". A manager of several labs is fetched once per
+    # lab, so drop repeats (keeping the first-seen order)
+    lab_manager_handles = list(
+        dict.fromkeys(
+            handle.strip()
+            for handle in lab_manager_handles
+            if handle and handle.strip()
+        )
+    )
     lab_manager_text = "\n\n"
     if lab_manager_handles:
         managers = "Lab Managers" if len(lab_manager_handles) > 1 else "Lab Manager"
