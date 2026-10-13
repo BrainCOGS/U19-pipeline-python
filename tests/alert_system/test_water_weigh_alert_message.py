@@ -283,7 +283,7 @@ class TestHeader:
                 np.array(["UM1", "UM1", "UM2"], dtype=object),
                 "Lab Managers <@UM1>, <@UM2>",
             ),
-            (["UM2", "UM1", "UM2"], "Lab Managers <@UM2>, <@UM1>"),
+            (["UM2", "UM1", "UM2"], "Lab Managers <@UM1>, <@UM2>"),
             ([" UM1", "UM1 ", None, ""], "Lab Manager <@UM1>"),
         ],
     )

@@ -25,7 +25,7 @@ def fetch_slack_handles_for_lab_managers_by_subject(
     ) * lab.User()
 
     # One row per (lab, manager), so a manager of several labs repeats
-    return list(dict.fromkeys(lab_managers.fetch("slack").tolist()))
+    return sorted(set(lab_managers.fetch("slack").tolist()))
 
 
 def fetch_slack_handles_for_lab_managers_by_user(
@@ -42,4 +42,4 @@ def fetch_slack_handles_for_lab_managers_by_user(
     ) * lab.User()
 
     # One row per (lab, manager), so a manager of several labs repeats
-    return list(dict.fromkeys(lab_managers.fetch("slack").tolist()))
+    return sorted(set(lab_managers.fetch("slack").tolist()))
