@@ -12,6 +12,12 @@ The conversion rules are in u19_pipeline/utils/responsibilities_conversion.py.
     python scripts/convert_legacy_responsibilities.py                # dry run
     python scripts/convert_legacy_responsibilities.py --write        # insert
 
+Subjects whose researcher waters and weighs on paper on weekdays are chosen by
+cage and/or owner; there is no default. Repeat either flag, with exact names:
+
+    python scripts/convert_legacy_responsibilities.py \\
+        --manual-weekday-cage CAGE --manual-weekday-user USER_ID
+
 Uses the schema prefix from dj.config (u19_ or u19_test_).
 """
 
@@ -23,9 +29,6 @@ import re
 import datajoint as dj
 
 from u19_pipeline.utils.responsibilities_conversion import plan_conversions
-
-# Researchers water and weigh these cages' subjects on paper on weekdays
-MANUAL_WEEKDAY_CAGES = ("vr_DATcre_opto2", "vr_DATcre_opto3")
 
 REPORT_COLUMNS = (
     "subject_fullname",
@@ -68,7 +71,7 @@ def fetch_subjects(action, subject, lab, today: datetime.date) -> list[dict]:
     return sorted(rows, key=lambda row: row["subject_fullname"])
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "--write", action="store_true", help="insert the converted rows"
@@ -77,16 +80,30 @@ def main() -> None:
         "--manual-weekday-cage",
         action="append",
         dest="cages",
-        help=f"cage whose subjects are watered/weighed on paper on weekdays "
-        f"(repeatable; default {', '.join(MANUAL_WEEKDAY_CAGES)})",
+        default=[],
+        help="cage whose subjects are watered/weighed on paper on weekdays "
+        "(repeatable; exact match; no default)",
+    )
+    parser.add_argument(
+        "--manual-weekday-user",
+        action="append",
+        dest="users",
+        default=[],
+        help="user_id whose subjects are watered/weighed on paper on weekdays "
+        "(repeatable; exact match; no default)",
     )
     parser.add_argument(
         "--report",
         default=f"responsibilities_conversion_{datetime.date.today().isoformat()}.csv",
         help="CSV report path",
     )
-    args = parser.parse_args()
-    cages = set(args.cages or MANUAL_WEEKDAY_CAGES)
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+    cages = set(args.cages)
+    users = set(args.users)
 
     prefix = dj.config["custom"]["database.prefix"]
     action = dj.create_virtual_module("action", prefix + "action")
@@ -98,6 +115,7 @@ def main() -> None:
         fetch_subjects(action, subject, lab, today),
         existing=set(action.ResponsibilitiesAlt.fetch("subject_fullname")),
         manual_weekday_cages=cages,
+        manual_weekday_users=users,
         allowed_statuses=enum_values(action.ResponsibilitiesAlt, "subject_status"),
     )
 
@@ -115,7 +133,8 @@ def main() -> None:
     print(", ".join(f"{n} {key}" for key, n in sorted(counts.items())))
     manual = [p["subject_fullname"] for p in plans if p["manual_weekdays"]]
     print(
-        f"Manual weekday watering/weighing ({', '.join(sorted(cages))}): {', '.join(manual) or 'none'}"
+        f"Manual weekday watering/weighing (cages {', '.join(sorted(cages)) or 'none'}; "
+        f"users {', '.join(sorted(users)) or 'none'}): {', '.join(manual) or 'none'}"
     )
     for p in plans:
         if p["action"].startswith("error"):

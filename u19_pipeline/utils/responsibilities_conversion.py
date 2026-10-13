@@ -182,6 +182,7 @@ def plan_conversions(
     existing: set[str],
     manual_weekday_cages: set[str],
     allowed_statuses: frozenset[str],
+    manual_weekday_users: frozenset[str] | set[str] = frozenset(),
 ) -> list[dict]:
     """What to do for each subject, as rows for a review report.
 
@@ -194,6 +195,9 @@ def plan_conversions(
         manual_weekday_cages: cages (exact names) whose subjects are watered
             and weighed on paper by the researcher on weekdays.
         allowed_statuses: subject_status values ResponsibilitiesAlt accepts.
+        manual_weekday_users: user_ids (exact) whose subjects are watered and
+            weighed on paper on weekdays, like manual_weekday_cages. A subject
+            matching either is manual.
 
     Each row's action is "insert", "skip: ..." or "error: ..."; record is the
     ResponsibilitiesAlt row to insert, or None.
@@ -202,7 +206,10 @@ def plan_conversions(
     for subject in subjects:
         name = subject["subject_fullname"]
         status = subject["subject_status"]
-        manual = subject.get("cage") in manual_weekday_cages
+        manual = (
+            subject.get("cage") in manual_weekday_cages
+            or subject.get("user_id") in manual_weekday_users
+        )
         row = {
             "subject_fullname": name,
             "user_id": subject.get("user_id"),

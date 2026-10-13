@@ -242,10 +242,16 @@ def subject_row(name, schedule="Train/Train/Train/Train/Train/Train/Train", **kw
 ALLOWED = frozenset({"InExperiments", "WaterRestrictionOnly", "AdLibWater", "Dead"})
 
 
-def plan(rows, existing=frozenset(), cages=(), allowed=ALLOWED):
+def plan(rows, existing=frozenset(), cages=(), allowed=ALLOWED, users=()):
     return {
         p["subject_fullname"]: p
-        for p in conv.plan_conversions(rows, set(existing), set(cages), allowed)
+        for p in conv.plan_conversions(
+            rows,
+            set(existing),
+            set(cages),
+            allowed,
+            manual_weekday_users=set(users),
+        )
     }
 
 
@@ -297,6 +303,56 @@ class TestPlanConversions:
         assert out["ab_m1"]["manual_weekdays"] is False
         assert out["ab_m2"]["manual_weekdays"] is False
 
+    def test_manual_weekday_users(self):
+        out = plan(
+            [
+                subject_row("ab_m1", user_id="ab"),
+                subject_row("ab_m2", user_id="ab", cage="elsewhere"),
+                subject_row("cd_m1", user_id="cd"),
+            ],
+            users={"ab"},
+        )
+        assert out["ab_m1"]["manual_weekdays"] is True
+        assert out["ab_m2"]["manual_weekdays"] is True
+        assert r.assignment_for_day(
+            out["ab_m1"]["responsibilities"], "Monday"
+        ).is_manual(R.WATERING)
+        assert not r.assignment_for_day(
+            out["ab_m1"]["responsibilities"], "Sunday"
+        ).is_manual(R.WATERING)
+        assert out["cd_m1"]["manual_weekdays"] is False
+
+    def test_user_match_is_exact(self):
+        out = plan(
+            [
+                subject_row("ab_m1", user_id="AB"),
+                subject_row("ab_m2", user_id=None),
+                subject_row("ab_m3", user_id=""),
+            ],
+            users={"ab"},
+        )
+        assert out["ab_m1"]["manual_weekdays"] is False
+        assert out["ab_m2"]["manual_weekdays"] is False
+        assert out["ab_m3"]["manual_weekdays"] is False
+
+    def test_cage_or_user_makes_weekdays_manual(self):
+        out = plan(
+            [
+                subject_row("ab_m1", user_id="ab", cage="paper"),
+                subject_row("cd_m1", user_id="cd", cage="paper"),
+                subject_row("ef_m1", user_id="ef", cage="other"),
+            ],
+            cages={"paper"},
+            users={"ab"},
+        )
+        assert out["ab_m1"]["manual_weekdays"] is True
+        assert out["cd_m1"]["manual_weekdays"] is True
+        assert out["ef_m1"]["manual_weekdays"] is False
+
+    def test_no_manual_users_by_default(self):
+        out = conv.plan_conversions([subject_row("ab_m1")], set(), set(), ALLOWED)
+        assert out[0]["manual_weekdays"] is False
+
     @pytest.mark.parametrize(
         ("value", "supported"),
         [("yes", True), ("no", False), ("N/A", False), (None, False)],
@@ -346,3 +402,31 @@ class TestScriptEnumValues:
             "AdLibWater",
             "Dead",
         }
+
+
+class TestScriptArguments:
+    def test_no_manual_cages_or_users_by_default(self):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        args = build_parser().parse_args([])
+        assert args.cages == []
+        assert args.users == []
+        assert args.write is False
+
+    def test_cages_and_users_are_repeatable(self):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        args = build_parser().parse_args(
+            [
+                "--manual-weekday-cage",
+                "c1",
+                "--manual-weekday-cage",
+                "c2",
+                "--manual-weekday-user",
+                "ab",
+                "--write",
+            ]
+        )
+        assert args.cages == ["c1", "c2"]
+        assert args.users == ["ab"]
+        assert args.write is True
