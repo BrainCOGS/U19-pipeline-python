@@ -92,29 +92,5 @@ jobs:
 
       # Audits the whole locked tree (all extras) against OSV and fails on any
       # finding. `--locked` also asserts uv.lock matches pyproject.toml.
-      #
-      # Ignored on purpose:
-      # - GHSA-h35f-9h28-mq5c / PYSEC-2026-3447 (setuptools): fixed in
-      #   setuptools 83, which removed pkg_resources; datajoint<2 imports
-      #   pkg_resources at module scope, so the fix breaks `import datajoint`
-      #   (same reason as the setuptools<82 Dependabot ignore). The flaw is in
-      #   building sdists, which this project does not do in production.
-      # - jupyterlab (fixed in 4.6.4), pyjwt (fixed in 2.15.0, incl.
-      #   GHSA-x33g-cr3x-6449) and werkzeug (GHSA-g6x2-hccm-hh4m, fixed in
-      #   3.1.9, out of quarantine 2026-10-11): the fixed releases are newer
-      #   than the 14-day `exclude-newer` quarantine in pyproject.toml. Remove
-      #   these ignores once Dependabot bumps them.
       - name: Audit dependencies
-        run: >-
-          uv audit --locked
-          --ignore GHSA-h35f-9h28-mq5c
-          --ignore PYSEC-2026-3447
-          --ignore GHSA-6966-vjj6-99xv
-          --ignore PYSEC-2026-4055
-          --ignore GHSA-3325-v43h-43rv
-          --ignore PYSEC-2026-4056
-          --ignore PYSEC-2026-4057
-          --ignore GHSA-3jqq-pw4j-pqcj
-          --ignore PYSEC-2026-4141
-          --ignore GHSA-x33g-cr3x-6449
-          --ignore GHSA-g6x2-hccm-hh4m
+        run: uv audit --locked

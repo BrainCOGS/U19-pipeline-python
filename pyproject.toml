@@ -12,7 +12,9 @@ authors = [
     { name = "Christian Tabedzki", email = "ct5868@princeton.edu" },
 ]
 dependencies = [
-    "datajoint<2.0.0",
+    # Exactly 0.14.10: the first 0.14 release without pkg_resources, and 2.x
+    # cannot read dj_local_conf.json or the MATLAB-shared schemas.
+    "datajoint==0.14.10",
     "icalevents>=0.3.0",
     "numpy>=1.23",
     "pandas>=2.0",
