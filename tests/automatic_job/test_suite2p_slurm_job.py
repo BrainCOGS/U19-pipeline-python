@@ -9,6 +9,7 @@ output folders are written by hand.
 suite2p itself is not imported (it needs torch, which the CI pipeline leg leaves out):
 ``build_suite2p_inputs`` is replaced by a stand-in that returns the ``db`` keys
 ``verify_outputs`` reads and the stored params as settings.
+``test_suite2p_slurm_job_real.py`` runs the same checks against the real suite2p.
 """
 
 import json
