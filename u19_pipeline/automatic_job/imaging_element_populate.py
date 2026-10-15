@@ -180,6 +180,12 @@ def populate_element_data(
         skip_duplicates=True,
     )
 
+    if processing_task_mode == "load" and keys["processing_method"] == "suite2p":
+        # A suite2p run that did not finish over earlier output leaves planes without results
+        from u19_pipeline.automatic_job.suite2p_slurm_job import require_complete_output
+
+        require_complete_output(build_suite2p_job(job_id))
+
     if not imaging_element.Processing & process_key:
         imaging_element.Processing.populate(process_key, **populate_settings)
 
