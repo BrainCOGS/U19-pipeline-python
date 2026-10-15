@@ -1,5 +1,8 @@
 # Run with prek (https://github.com/j178/prek) or pre-commit:
 #   uv tool install prek && prek install && prek run --all-files
+# `prek install` also installs the commit-msg hook (default_install_hook_types).
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit, pre-merge-commit, manual]
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v6.0.0
@@ -53,3 +56,15 @@ repos:
   rev: "0.26"
   hooks:
     - id: validate-pyproject
+
+- repo: local
+  hooks:
+    # One spelling for AI attribution, so `git log --grep='^Assisted-by: '`
+    # finds every AI-assisted commit: `Assisted-by: ClaudeCode:<model id>`,
+    # with the exact model id (claude-opus-5-5, not claude-opus-5.5 or
+    # "Claude Code:Opus 5"). Claude is never listed as a co-author.
+    - id: ai-trailer
+      name: 'AI trailer is "Assisted-by: ClaudeCode:<model id>"'
+      language: pygrep
+      entry: '^(?:(?!Assisted-by: ClaudeCode:claude-[a-z]+(?:-[0-9]+)+$)(?i:assisted[-_ ]?by)\s*:|(?i:co-authored[-_ ]?by)\s*:.*(?i:claude|anthropic))'
+      stages: [commit-msg]
