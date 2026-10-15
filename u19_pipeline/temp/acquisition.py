@@ -2,7 +2,7 @@ import datajoint as dj
 
 from u19_pipeline import lab, task, subject
 
-schema = dj.schema('u19_acquisition')
+schema = dj.schema("u19_acquisition")
 
 
 @schema

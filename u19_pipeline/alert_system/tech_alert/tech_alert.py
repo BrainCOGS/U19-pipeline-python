@@ -24,8 +24,13 @@ def get_webhook_list(lab):
     # Get webhook lists
     slack_configuration_dictionary = {"slack_notification_channel": ["rigs_scheduling"]}
     webhooks_list = []
-    query_slack_webhooks = [{"webhook_name": x} for x in slack_configuration_dictionary["slack_notification_channel"]]
-    webhooks_list += (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
+    query_slack_webhooks = [
+        {"webhook_name": x}
+        for x in slack_configuration_dictionary["slack_notification_channel"]
+    ]
+    webhooks_list += (
+        (lab.SlackWebhooks & query_slack_webhooks).fetch("webhook_url").tolist()
+    )
     return webhooks_list
 
 
@@ -67,7 +72,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
         )
     else:
         # Ensure we don't send an empty section block to Slack (it will reject it)
-        m2_1["text"] = "- No technician is scheduled for today. Please assign someone for coverage"
+        m2_1["text"] = (
+            "- No technician is scheduled for today. Please assign someone for coverage"
+        )
     m2["text"] = m2_1
     message["blocks"].append(m2)
     message["blocks"].append(msep)
@@ -80,7 +87,11 @@ def slack_alert_message_format_tech_alert(schedule_data):
     # Today + next 4 days
     for day in range(1, 7):
         date_to_check = today + datetime.timedelta(days=day)
-        shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check and not is_off(shift)]
+        shifts_on_date = [
+            shift
+            for shift in upcoming_shifts
+            if shift["date"] == date_to_check and not is_off(shift)
+        ]
 
         if not shifts_on_date:
             alerts.append(
@@ -101,12 +112,18 @@ def slack_alert_message_format_tech_alert(schedule_data):
                         f"- Experimenters, {date_to_check.strftime('%A, %B %d')} will have no training due to lab cleanup."
                     )
                 if shift["duties"] in ["Watering Only", "Off"]:
-                    alerts.append("Experimenters, please make arrangements if you need to train.")
+                    alerts.append(
+                        "Experimenters, please make arrangements if you need to train."
+                    )
         date_to_check = datetime.date.today() + datetime.timedelta(days=day)
-        shifts_on_date = [shift for shift in upcoming_shifts if shift["date"] == date_to_check]
+        shifts_on_date = [
+            shift for shift in upcoming_shifts if shift["date"] == date_to_check
+        ]
 
         if not shifts_on_date:
-            alerts.append(f"No one is scheduled for {date_to_check.strftime('%A, %B %d')}.")
+            alerts.append(
+                f"No one is scheduled for {date_to_check.strftime('%A, %B %d')}."
+            )
         else:
             for shift in shifts_on_date:
                 if shift["duties"] in ["Watering Only"]:
@@ -120,7 +137,9 @@ def slack_alert_message_format_tech_alert(schedule_data):
         m3["type"] = "section"
         m3_1 = dict()
         m3_1["type"] = "mrkdwn"
-        m3_1["text"] = f"*:rotating_light: Upcoming Shifts: :rotating_light:*\n{alert_text}"
+        m3_1["text"] = (
+            f"*:rotating_light: Upcoming Shifts: :rotating_light:*\n{alert_text}"
+        )
         m3["text"] = m3_1
         message["blocks"].append(m3)
 
@@ -268,7 +287,12 @@ def fetch_and_parse_icalevents(weburl: str):
         (r"as\s*vr\s*water\s*at", "VR Water", "blue", "VR Watering only"),
         (r"as\s*vr\s*train\s*at", "VR Train", "orange", "VR Onboarding"),
         (r"as\s*vr\s*at", "Regular VR", "green", "All VR Duties"),
-        (r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at", "VR Brody Mice", "purple", " VR with Brody (Mice)"),
+        (
+            r"as\s*vr(?:\s*(?:with|w)\s*)?brody(?:\s*mice)?\s*at",
+            "VR Brody Mice",
+            "purple",
+            " VR with Brody (Mice)",
+        ),
     ]
 
     filtered_events: list[dict[str, str | int]] = []
@@ -276,10 +300,14 @@ def fetch_and_parse_icalevents(weburl: str):
     # Consolidate lab clean-up events
 
     lab_clean_up_events = [
-        event for event in vr_events if re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+        event
+        for event in vr_events
+        if re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     non_lab_clean_up_events = [
-        event for event in vr_events if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
+        event
+        for event in vr_events
+        if not re.search(r"as\s*lab*\s*clean*\s*up*\s*at", event.summary.lower())
     ]
     if lab_clean_up_events:
         unique_days = sorted(set(event.start.date() for event in lab_clean_up_events))
@@ -327,4 +355,6 @@ if __name__ == "__main__":
         if sys.argv[1].lower() == "test":
             test_slack_alert_message_format_tech_alert()
         else:
-            raise ValueError(f"Unrecognized argument {sys.argv[1]} -- use 'test' to run in test mode.")
+            raise ValueError(
+                f"Unrecognized argument {sys.argv[1]} -- use 'test' to run in test mode."
+            )

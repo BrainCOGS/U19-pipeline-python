@@ -51,7 +51,7 @@ for idx, param_modality_list in enumerate(params_dict_list):
         dicto['param_set_hash'] = str(dicto['param_set_hash'])
         if 'clustering_method' in dicto:
             dicto['processing_method'] = dicto.pop('clustering_method')
-    
+
         params_dict_dict['param_'+str(num_params)] = dicto
         num_params +=1
 
@@ -94,7 +94,7 @@ for idx, preparam_modality_list in enumerate(preparams_dict_list):
         dicto['param_set_hash'] = str(dicto['param_set_hash'])
         if 'precluster_method' in dicto:
             dicto['preprocess_method'] = dicto.pop('precluster_method')
-    
+
         preparams_dict_dict['param_'+str(num_preparams)] = dicto
         num_preparams +=1
 
@@ -113,7 +113,7 @@ for idx, method_list in enumerate(all_methods_data):
             dict['processing_method'] = dict.pop('clustering_method')
 
         methods_dict['method_'+str(num_preparams_steps)] = dict
-        num_methods +=1 
+        num_methods +=1
 
 #################################################Fetch all premethods from all modalities
 all_premethods_data = []
@@ -129,7 +129,7 @@ for idx, premethod_list in enumerate(all_methods_data):
             dict['preprocessing_method'] = dict.pop('precluster_method')
 
         premethods_dict['premethod_'+str(num_preparams_steps)] = dict
-        num_premethods +=1        
+        num_premethods +=1
 '''
 
 dj.conn().close()

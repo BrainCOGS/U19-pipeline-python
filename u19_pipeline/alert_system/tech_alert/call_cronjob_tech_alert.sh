@@ -11,4 +11,3 @@ cd "/home/u19prod@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/"
 python ./u19_pipeline/alert_system/tech_alert/tech_alert.py
 python ./u19_pipeline/alert_system/locked_tables_alert/cronjob_locked_tables_alert.py
 python ./u19_pipeline/alert_system/schedule_check_alert/cronjob_schedule_check.py
-
