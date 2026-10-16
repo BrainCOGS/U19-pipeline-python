@@ -145,12 +145,21 @@ def allowed_responsibilities(party: ResponsibleParty) -> set[AnyResponsibility]:
 def validate_daily_assignment(
     technician: Iterable[AnyResponsibility],
     owner: Iterable[AnyResponsibility],
-    require_watering: bool = True,
+    needs_water: bool = True,
+    require_training: bool = False,
 ) -> list[str]:
     """Problems with one day's assignment, as messages for the user.
 
-    An empty list means the assignment is valid. require_watering should be
-    True for water-restricted subjects, where someone must water every day.
+    An empty list means the assignment is valid.
+
+    Args:
+        technician: the technician's responsibilities.
+        owner: the researcher's responsibilities.
+        needs_water: the subject is water-restricted, so someone must water and
+            weigh it. Manual Watering/Weighing count as watering/weighing here,
+            as they do in the GUI. Either party may do each.
+        require_training: the subject is set to train today, so someone must
+            train it. Training also needs water, whatever needs_water says.
     """
     selections = {
         ResponsibleParty.TECHNICIAN: set(technician),
@@ -159,13 +168,16 @@ def validate_daily_assignment(
     both = selections[ResponsibleParty.TECHNICIAN] | selections[ResponsibleParty.OWNER]
     errors: list[str] = []
 
-    if require_watering and not (
-        {Responsibility.WATERING, ManualResponsibility.MANUAL_WATERING} & both
-    ):
-        errors.append(
-            f'Please ensure "{Responsibility.WATERING}" or'
-            f' "{ManualResponsibility.MANUAL_WATERING}" is assigned'
-        )
+    if needs_water or require_training:
+        for tracked, manual in (
+            (Responsibility.WATERING, ManualResponsibility.MANUAL_WATERING),
+            (Responsibility.WEIGHING, ManualResponsibility.MANUAL_WEIGHING),
+        ):
+            if not {tracked, manual} & both:
+                errors.append(f'Please ensure "{tracked}" or "{manual}" is assigned')
+
+    if require_training and Responsibility.TRAINING not in both:
+        errors.append(f'Please ensure "{Responsibility.TRAINING}" is assigned')
 
     # Both parties doing nothing is fine (e.g. a dead subject)
     if overlapping := (

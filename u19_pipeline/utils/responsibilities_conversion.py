@@ -39,6 +39,8 @@ from u19_pipeline.utils.responsibilities import (
 
 LEGACY_TOKENS = ("Train", "OnlyTrain", "Water", "Weigh", "Transport", "Nothing")
 WATER_RESTRICTED_STATUSES = frozenset({"InExperiments", "WaterRestrictionOnly"})
+# Legacy days on which a subject with training in its status duties trains
+TRAINING_TOKENS = frozenset({"Train", "OnlyTrain", "Transport"})
 INACTIVE_STATUSES = frozenset({"AdLibWater", "Dead", "Missing"})
 
 WATER_WEIGH = frozenset({Responsibility.WATERING, Responsibility.WEIGHING})
@@ -131,6 +133,7 @@ def convert_legacy(
             (lab.User.tech_responsibility == "yes").
         manual_weekdays: make weekday watering and weighing manual (paper).
     """
+    training_days: set[str] = set()
     if status in INACTIVE_STATUSES:
         days = {day: _assignment(NOTHING, NOTHING) for day in DAYS_OF_WEEK}
     elif status in STATUS_DUTIES:
@@ -146,6 +149,12 @@ def convert_legacy(
             }
         except ValueError as e:
             return Conversion(error=str(e))
+        if Responsibility.TRAINING in STATUS_DUTIES[status]:
+            training_days = {
+                day
+                for day, token in zip(DAYS_OF_WEEK, tokens, strict=True)
+                if token.strip() in TRAINING_TOKENS
+            }
         if manual_weekdays:
             days = {
                 day: a if day in WEEKEND_DAYS else make_manual(a)
@@ -154,9 +163,14 @@ def convert_legacy(
     else:
         return Conversion(error=f"unknown status {status!r}")
 
-    require_watering = status in WATER_RESTRICTED_STATUSES
+    needs_water = status in WATER_RESTRICTED_STATUSES
     for day, a in days.items():
-        if errors := validate_daily_assignment(a.technician, a.owner, require_watering):
+        if errors := validate_daily_assignment(
+            a.technician,
+            a.owner,
+            needs_water,
+            require_training=day in training_days,
+        ):
             return Conversion(error=f"{day}: {'; '.join(errors)}")
 
     style, slots = simplest_style(days)

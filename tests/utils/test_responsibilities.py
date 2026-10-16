@@ -54,7 +54,7 @@ class TestValidateDailyAssignment:
     def test_watering_not_required_when_not_restricted(self):
         assert (
             r.validate_daily_assignment(
-                {R.NOTHING}, {R.NOTHING}, require_watering=False
+                {R.NOTHING}, {R.NOTHING}, needs_water=False
             )
             == []
         )
@@ -62,6 +62,86 @@ class TestValidateDailyAssignment:
     def test_missing_watering(self):
         errors = r.validate_daily_assignment({R.WEIGHING}, {R.NOTHING})
         assert any("Watering" in e for e in errors)
+
+    def test_missing_weighing(self):
+        errors = r.validate_daily_assignment({R.WATERING}, {R.NOTHING})
+        assert any("Weighing" in e for e in errors)
+        assert not any("Watering" in e for e in errors)
+
+    @pytest.mark.parametrize(
+        ("technician", "owner"),
+        [
+            ({R.WATERING, R.WEIGHING}, {R.NOTHING}),
+            ({R.WATERING}, {R.WEIGHING}),
+            ({R.WEIGHING}, {R.WATERING}),
+            ({R.NOTHING}, {R.WATERING, R.WEIGHING}),
+            ({R.NOTHING}, {M.MANUAL_WATERING, M.MANUAL_WEIGHING}),
+            ({R.WATERING}, {M.MANUAL_WEIGHING}),
+            ({R.WEIGHING}, {M.MANUAL_WATERING}),
+            ({R.NOTHING}, {R.WATERING, M.MANUAL_WEIGHING}),
+        ],
+    )
+    def test_watering_and_weighing_each_covered_by_either_party_or_manual(
+        self, technician, owner
+    ):
+        assert r.validate_daily_assignment(technician, owner) == []
+
+    @pytest.mark.parametrize(
+        ("technician", "owner"),
+        [
+            ({R.NOTHING}, {R.NOTHING}),
+            ({R.TRANSPORT_ONLY}, {R.TRAINING}),
+            ({R.WATERING}, {R.TRAINING}),
+            ({R.WEIGHING}, {R.TRAINING}),
+            ({R.NOTHING}, {M.MANUAL_WATERING}),
+            ({R.NOTHING}, {M.MANUAL_WEIGHING}),
+        ],
+    )
+    def test_needing_water_requires_both_watering_and_weighing(self, technician, owner):
+        assert r.validate_daily_assignment(technician, owner)
+
+    def test_weighing_not_required_when_water_not_needed(self):
+        assert (
+            r.validate_daily_assignment({R.NOTHING}, {R.NOTHING}, needs_water=False)
+            == []
+        )
+
+    def test_training_requires_a_trainer(self):
+        errors = r.validate_daily_assignment(
+            {R.WATERING, R.WEIGHING}, {R.NOTHING}, require_training=True
+        )
+        assert any("Training" in e for e in errors)
+
+    @pytest.mark.parametrize(
+        ("technician", "owner"),
+        [
+            ({R.WATERING, R.WEIGHING, R.TRAINING}, {R.NOTHING}),
+            ({R.WATERING, R.WEIGHING}, {R.TRAINING}),
+            ({R.NOTHING}, {R.WATERING, R.WEIGHING, R.TRAINING}),
+            ({R.NOTHING}, {M.MANUAL_WATERING, M.MANUAL_WEIGHING, R.TRAINING}),
+        ],
+    )
+    def test_either_party_can_train(self, technician, owner):
+        assert (
+            r.validate_daily_assignment(technician, owner, require_training=True) == []
+        )
+
+    def test_training_is_optional_by_default(self):
+        assert (
+            r.validate_daily_assignment({R.WATERING, R.WEIGHING}, {R.NOTHING}) == []
+        )
+
+    def test_training_needs_water_even_when_not_otherwise_required(self):
+        errors = r.validate_daily_assignment(
+            {R.NOTHING}, {R.TRAINING}, needs_water=False, require_training=True
+        )
+        assert any("Watering" in e for e in errors)
+        assert any("Weighing" in e for e in errors)
+
+    @pytest.mark.parametrize("duty", [R.WATERING, R.WEIGHING, R.TRAINING])
+    def test_same_duty_for_both_parties_overlaps(self, duty):
+        errors = r.validate_daily_assignment({duty}, {duty}, needs_water=False)
+        assert any("both" in e for e in errors)
 
     def test_both_nothing_is_not_an_overlap(self):
         errors = r.validate_daily_assignment({R.NOTHING}, {R.NOTHING})

@@ -177,14 +177,17 @@ class TestEveryConversionIsValid:
     def test_valid_and_readable(self, status, supported, manual, token):
         schedule = week(token, "Train", "Water", "Weigh", "Transport", "Nothing", token)
         result = convert(schedule, status, supported, manual)
-        require_watering = status in conv.WATER_RESTRICTED_STATUSES
+        needs_water = status in conv.WATER_RESTRICTED_STATUSES
         for day, assignment in result.days.items():
             assert (
                 r.validate_daily_assignment(
-                    assignment.technician, assignment.owner, require_watering
+                    assignment.technician, assignment.owner, needs_water
                 )
                 == []
             )
+            if needs_water:
+                assert assignment.all & {R.WATERING, M.MANUAL_WATERING}
+                assert assignment.all & {R.WEIGHING, M.MANUAL_WEIGHING}
             assert r.assignment_for_day(result.json, day) == assignment
 
 
