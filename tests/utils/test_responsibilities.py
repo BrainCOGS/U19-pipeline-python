@@ -53,9 +53,7 @@ class TestValidateDailyAssignment:
 
     def test_watering_not_required_when_not_restricted(self):
         assert (
-            r.validate_daily_assignment(
-                {R.NOTHING}, {R.NOTHING}, needs_water=False
-            )
+            r.validate_daily_assignment({R.NOTHING}, {R.NOTHING}, needs_water=False)
             == []
         )
 
@@ -127,9 +125,7 @@ class TestValidateDailyAssignment:
         )
 
     def test_training_is_optional_by_default(self):
-        assert (
-            r.validate_daily_assignment({R.WATERING, R.WEIGHING}, {R.NOTHING}) == []
-        )
+        assert r.validate_daily_assignment({R.WATERING, R.WEIGHING}, {R.NOTHING}) == []
 
     def test_training_needs_water_even_when_not_otherwise_required(self):
         errors = r.validate_daily_assignment(
