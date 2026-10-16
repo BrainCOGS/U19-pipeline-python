@@ -334,3 +334,27 @@ class TestEarlyTierDescription:
             "subjects trained in slot 5 (starts 2 PM) or earlier,"
             " or water-only and watered before 4 PM"
         )
+
+
+class TestExplicitWaterOnly:
+    def test_researcher_training_is_not_water_only(self):
+        from u19_pipeline.alert_system.water_weigh_alert import explicit_duties
+        from u19_pipeline.utils.responsibilities import DailyAssignment, Responsibility
+
+        trains = DailyAssignment(
+            frozenset({Responsibility.TRANSPORT_ONLY}),
+            frozenset({Responsibility.WATERING, Responsibility.TRAINING}),
+        )
+        waters = DailyAssignment(
+            frozenset({Responsibility.TRANSPORT_ONLY}),
+            frozenset({Responsibility.WATERING}),
+        )
+        data = explicit_duties.apply_assignments(
+            make_subjects(
+                [{"subject_fullname": "trains"}, {"subject_fullname": "waters"}]
+            ),
+            {"trains": trains, "waters": waters},
+        )
+        # Both read "Transport" in schedule_today
+        assert data["schedule_today"].tolist() == ["Transport", "Transport"]
+        assert at.is_water_only_today(data).tolist() == [False, True]

@@ -14,7 +14,13 @@ from icalevents.icalevents import events
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
 from u19_pipeline import subject
-from u19_pipeline.alert_system.water_weigh_alert import alert_message, alert_tiers
+from u19_pipeline.alert_system.water_weigh_alert import (
+    alert_message,
+    alert_tiers,
+    explicit_duties,
+)
+from u19_pipeline.utils import responsibilities
+from u19_pipeline.utils.responsibilities import DailyAssignment, Responsibility
 from u19_pipeline.utils.subject_metadata import (
     fetch_slack_handles_for_lab_managers_by_subject,
 )
@@ -29,7 +35,33 @@ QUERY_FILE = pathlib.Path(
 ).as_posix()
 
 
-def get_subject_data():
+def get_explicit_assignments() -> dict[str, DailyAssignment] | None:
+    """Today's explicit assignment per subject, or None unless in explicit mode.
+
+    Legacy vs explicit is the lab.FeatureFlag responsibility_format row.
+    """
+    if not responsibilities.get_responsibility_format(
+        lab.FeatureFlag()
+    ).acts_on_explicit:
+        return None
+    # Virtual module: importing u19_pipeline.action would declare its tables
+    action = dj.create_virtual_module(
+        "action", dj.config["custom"]["database.prefix"] + "action"
+    )
+    rows = action.ResponsibilitiesAlt.fetch("subject_fullname", "responsibilities")
+    return explicit_duties.parse_assignments(
+        zip(*rows, strict=True), responsibilities.today_name()
+    )
+
+
+def get_subject_data(assignments: dict[str, DailyAssignment] | None = None):
+    """Today's subjects and what they still need.
+
+    Args:
+        assignments: today's explicit assignment per subject (see
+            get_explicit_assignments). Subjects missing from it, or all
+            subjects when None, use the legacy SubjectStatus.schedule.
+    """
     with open(QUERY_FILE, "r", encoding="utf-8") as file:
         subject_query = file.read()
 
@@ -54,15 +86,13 @@ def get_subject_data():
         lambda x: x[today_idx] if isinstance(x, list) and len(x) == 7 else None
     )
 
+    subject_data = explicit_duties.apply_assignments(subject_data, assignments)
+    legacy_mask = (
+        (subject_data["schedule_today"] != "Nothing")
+        & (subject_data["subject_status"] == "InExperiments")
+    ) | (subject_data["subject_status"] == "WaterRestrictionOnly")
     subject_data = subject_data.loc[
-        (
-            (
-                (subject_data["schedule_today"] != "Nothing")
-                & (subject_data["subject_status"] == "InExperiments")
-            )
-            | (subject_data["subject_status"] == "WaterRestrictionOnly")
-        ),
-        :,
+        explicit_duties.keep_mask(subject_data, legacy_mask), :
     ]
 
     subject_data = subject_data.reset_index(drop=True)
@@ -151,7 +181,7 @@ def get_subject_data():
     )
     subject_data.loc[subject_data["need_reweight"] == 1, "weight_status"] = "REWEIGHT"
 
-    return subject_data
+    return explicit_duties.drop_untracked_duties(subject_data)
 
 
 def fetch_and_parse_icalevents(weburl: str):
@@ -239,6 +269,9 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
     - If schedule_today is None or 'Transport', tag co-owners (lab managers).
     - Otherwise, tag the on-duty technician for that schedule token/day if available,
       falling back to co-owners when no tech is found.
+    - Subjects with an explicit assignment also get water_slack_tags and
+      weigh_slack_tags, tagging whoever is assigned Watering/Weighing. For other
+      subjects those columns equal responsible_slack_tags.
 
     We fetch user <-> slack info only once and then map by user_id.
     """
@@ -309,16 +342,21 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    def resolve_responsible_slack(row):
+    def legacy_use_coowners(row) -> bool:
         schedule_today = row.get("schedule_today")
-        lab_name = row.get("lab")
-
         token = str(schedule_today).strip() if schedule_today is not None else None
-        use_coowners = (
+        return (
             (token is None)
             or (token.lower() == "transport")
             or (token.lower() == "nothing")
         )
+
+    def resolve_responsible_slack(row, duty: Responsibility | None = None):
+        use_coowners = legacy_use_coowners(row)
+        if duty is not None:
+            use_coowners = explicit_duties.duty_uses_owners(
+                row.get("assignment"), duty, use_coowners
+            )
 
         slack_tags = []
 
@@ -347,6 +385,13 @@ def get_responsible_user_slack(subject_data: pd.DataFrame) -> pd.DataFrame:
     subject_data["responsible_slack_tags"] = subject_data.apply(
         resolve_responsible_slack, axis=1
     )
+    for column, duty in (
+        ("water_slack_tags", Responsibility.WATERING),
+        ("weigh_slack_tags", Responsibility.WEIGHING),
+    ):
+        subject_data[column] = subject_data.apply(
+            resolve_responsible_slack, axis=1, duty=duty
+        )
     return subject_data
 
 
@@ -563,7 +608,7 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
 
     dj.conn()
 
-    subject_data = get_subject_data()
+    subject_data = get_subject_data(get_explicit_assignments())
     subject_data = alert_tiers.filter_subjects_for_tier(subject_data, tier)
 
     subject_data = get_responsible_user_slack(subject_data)
@@ -575,8 +620,8 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
     ].reset_index(drop=True)
     subjects_not_watered = subject_data.loc[
         subject_data["current_need_water"] > 0,
-        ["subject_fullname", "current_need_water", "responsible_slack_tags"],
-    ]
+        ["subject_fullname", "current_need_water", "water_slack_tags"],
+    ].rename(columns={"water_slack_tags": "responsible_slack_tags"})
     subjects_not_watered = subjects_not_watered.reset_index(drop=True)
     subjects_not_watered["current_need_water"] = subjects_not_watered[
         "current_need_water"
@@ -585,14 +630,14 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
 
     subjects_not_weighted = subject_data.loc[
         subject_data["need_weight"],
-        ["subject_fullname", "need_weight", "responsible_slack_tags"],
-    ]
+        ["subject_fullname", "need_weight", "weigh_slack_tags"],
+    ].rename(columns={"weigh_slack_tags": "responsible_slack_tags"})
     subjects_not_weighted = subjects_not_weighted.reset_index(drop=True)
     # subjects_not_weighted = subjects_not_weighted.head()
 
     subjects_not_trained = subject_data.loc[
         (subject_data["training_status"] == 1)
-        & (subject_data["schedule_today"].str.lower() != "water"),
+        & ~explicit_duties.water_day_mask(subject_data),
         ["subject_fullname", "scheduled_rig"],
     ]
     subjects_not_trained = subjects_not_trained.reset_index(drop=True)
