@@ -94,7 +94,11 @@ filterwarnings = [
 exclude-newer = "14 days"
 # Exempt from the cooldown: datajoint 0.14.10 (drops pkg_resources) and the
 # pyjwt 2.15 / werkzeug 3.1.9 security fixes.
-exclude-newer-package = { datajoint = "0 days", pyjwt = "0 days", werkzeug = "0 days" }
+# Also the releases that fix what `uv audit` flags, uploaded inside the window:
+# certifi 2026.10.19 (PYSEC-2026-4320, compromised emSign roots), Pillow 13.0.0
+# (TiffDecode / multi-frame loader advisories), filelock 4.2.1, gitpython 3.2.1
+# and setuptools 84.1.0. Drop each once that release is older than the window.
+exclude-newer-package = { datajoint = "0 days", pyjwt = "0 days", werkzeug = "0 days", certifi = "2026-10-21T00:00:00Z", pillow = "2026-10-17T00:00:00Z", filelock = "2026-10-18T00:00:00Z", gitpython = "2026-10-15T00:00:00Z", setuptools = "2026-10-20T00:00:00Z" }
 # `uv audit` is still behind a preview flag. Declaring it here lets CI and
 # local runs call `uv audit` without `--preview-features audit-command`.
 preview-features = ["audit-command"]
