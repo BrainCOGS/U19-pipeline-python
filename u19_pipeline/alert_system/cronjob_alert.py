@@ -14,12 +14,20 @@ import u19_pipeline.alert_system.noDB_backup_creation.noDB_backup_creation_scrip
 import u19_pipeline.alert_system.custom_alerts.disk_space_alert as dsa
 import u19_pipeline.lab as lab
 import u19_pipeline.utils.slack_utils as su
+import u19_pipeline.utils.planned_responsibilities as pr
 
 # Slack Configuration dictionary
 slack_configuration_dictionary = {"slack_notification_channel": ["dev_notifications"]}
 
 
 # mas.main_alert_system()
+asu.run_cronjob_alert_job(
+    "apply_planned_responsibilities",
+    pr.main_apply_planned_responsibilities,
+    lab,
+    su,
+    slack_configuration_dictionary,
+)
 asu.run_cronjob_alert_job(
     "old_log_deletion",
     old.main_old_log_deletion,
