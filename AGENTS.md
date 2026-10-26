@@ -31,5 +31,5 @@ uv run pytest -rs             # what CI's base legs run (3.12, 3.14)
 ## Agent workflow
 
 - Bugs: always log them. Before fixing an error, whether the user reported it in Slack or you found it while working, file an agent bug report issue from the user's account (`gh issue create -R BrainCOGS/U19-pipeline-python`, template `.github/ISSUE_TEMPLATE/agent_bug_report.md`). Put the error exactly as the user pasted it under **Reported error**; don't ask for or invent a Slack link. Then fix it with the `bugfix-from-slack` skill (`.claude/skills/bugfix-from-slack/`, vendored from [agent-tooling](https://github.com/BrainCOGS/agent-tooling)); the PR says `Fixes #<issue>`. Commits, pushes, issues and PRs all go through the user's account.
-- Commits end with one `Assisted-by: <Harness>:<model>` trailer per agent, e.g. `Assisted-by: ClaudeCode:claude-opus-5-5`. No AI co-authors, and no `Generated with` lines. `prek install` sets up the `ai-attribution` commit-msg hook (`.github/scripts/check_ai_attribution.py`, vendored from agent-tooling), and CI checks every commit of a PR.
+- Commits end with one `Assisted-by: <Harness>:<model>` trailer per agent, e.g. `Assisted-by: ClaudeCode:claude-opus-5-5`. No AI co-authors, and no `Generated with` lines.
 - PRs target `master` on `BrainCOGS/U19-pipeline-python`, opened from the user's own account.
