@@ -193,6 +193,31 @@ def _as_list(x):
     return [x] if np.ndim(x) == 0 else list(x)
 
 
+def _trial_fully_imaged(trial, frames, frame_time, sync_time, sync_iter,
+                        frame_acq, frame_period):
+    """Whether one acquisition's frames cover the whole of a behavior trial.
+
+    ``frames`` are the (0-based) frames labelled with the trial. Its packets,
+    matched to the logged iteration times, place the trial on the imaging
+    clock; the median offset ignores the late first and end-of-trial packets.
+    The trial counts as imaged if the acquisition its packets fall in ran from
+    its first to its last iteration, give or take one frame. A trial whose
+    log has no iteration times cannot be judged and counts as imaged.
+    """
+    t = np.atleast_1d(np.asarray(trial.time, dtype=float))
+    itr = sync_iter[frames]
+    has = ~np.isnan(sync_time[frames]) & (itr >= 1) & (itr <= t.size)
+    if not has.any():
+        return t.size == 0
+    offset = np.median(sync_time[frames][has] - t[itr[has] - 1])
+    acqs = np.unique(frame_acq[frames])
+    if acqs.size > 1:
+        return False
+    acq_time = frame_time[frame_acq == acqs[0]]
+    return (acq_time[0] - frame_period <= offset + t[0]
+            and offset + t[-1] <= acq_time[-1] + frame_period)
+
+
 def sync_imaging_behavior(tif_files, log=None, min_behavior_secs=MIN_BEHAVIOR_SECS):
     """Synchronize a sequence of ScanImage TIFFs with a ViRMEn behavior log.
 
@@ -342,6 +367,8 @@ def sync_imaging_behavior(tif_files, log=None, min_behavior_secs=MIN_BEHAVIOR_SE
     # ---- Spans: first/last frame (1-based, over the concatenated frame axis)
     # for each behavior block, trial and iteration
     img_block, blk_brackets = split_vec(sync_block)
+    frame_acq = np.concatenate([np.full(f.num_frames, f.acquisition) for f in files])
+    frame_period = np.median(np.diff(frame_time)) if frame_time.size > 1 else 0.0
 
     n_blocks = len(blocks) if blocks is not None else int(sync_block.max())
     span_by_block = [np.zeros((0, 2), dtype=np.int64)] * n_blocks
@@ -364,6 +391,19 @@ def sync_imaging_behavior(tif_files, log=None, min_behavior_secs=MIN_BEHAVIOR_SE
         for t_val, (ta, tb) in zip(trial_vals, trial_brackets):
             if t_val > 0:
                 trial_span[t_val - 1] = np.array([ta + 1, tb + 1])  # 1-based
+
+        # trials that imaging only partly covered (it started or stopped
+        # during them, or they fall in a gap between acquisitions) get no span,
+        # like trials that were not imaged at all
+        if blocks is not None:
+            trials = _as_list(blocks[i_block - 1].trial)
+            for i_trial, tspan in enumerate(trial_span):
+                if tspan.size and not _trial_fully_imaged(
+                        trials[i_trial], np.arange(tspan[0] - 1, tspan[1]),
+                        frame_time, sync_time, sync_iter, frame_acq, frame_period):
+                    warnings.warn(f'Block {i_block} trial {i_trial + 1} was only '
+                                  'partly imaged; it gets no frame span.', stacklevel=2)
+                    trial_span[i_trial] = np.zeros((0, 2), dtype=np.int64)
 
         for i_trial in range(n_trials):
             tspan = trial_span[i_trial]

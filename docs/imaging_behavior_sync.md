@@ -135,6 +135,13 @@ variants exist in `+imaging/` and `+meso/`) does, per FOV (`TiffSplit`):
 6. **Spans**: with `SplitVec` (runs of equal values), compute first/last
    frame per behavior block, per trial, and per iteration (iterations that
    fell between frames inherit the previous iteration's span).
+   A trial only gets a span if imaging covered all of it. Its packets,
+   matched to the logged iteration times, place the trial on the imaging
+   clock, and one acquisition's frames must run from its first to its last
+   iteration (give or take a frame). A trial where imaging started or
+   stopped partway through, or that falls in the gap between two
+   acquisitions, gets an empty span, like a trial that was never imaged. Its
+   frames keep their block/trial/iteration labels.
 7. **Insert** into `u19_imaging_pipeline.SyncImagingBehavior`:
 
 | field | content |
@@ -198,7 +205,8 @@ reimplements the whole offline chain without MATLAB:
   for *all* frames (including un-synced lead-in) on the ViRMEn clock — this
   is the "clock vector" needed for NWB.
 
-Verified on the sample session (2000 frames, 3 trials imaged):
+Verified on the sample session (2000 frames; imaging stops during trial 3,
+so trial 3 gets no span):
 
 ```
 $ uv run python -m u19_pipeline.utils.imaging_behavior_sync \
@@ -209,7 +217,9 @@ frames with behavior info: 1357 (67.8%)
   block 1: trials 1-3, frames 644-2000
   trial 1 frame span: [644, 1176]
   trial 2 frame span: [1177, 1690]
-  trial 3 frame span: [1691, 2000]
+  trial 3 frame span: (not imaged)
+  trial 4 frame span: (not imaged)
+  trial 5 frame span: (not imaged)
 behavior-clock fit: slope=0.999997709, offset=-11.027s, residual std=1.2 ms
 ```
 
