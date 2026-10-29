@@ -141,7 +141,9 @@ variants exist in `+imaging/` and `+meso/`) does, per FOV (`TiffSplit`):
    iteration (give or take a frame). A trial where imaging started or
    stopped partway through, or that falls in the gap between two
    acquisitions, gets an empty span, like a trial that was never imaged. Its
-   frames keep their block/trial/iteration labels.
+   block/trial/iteration labels are set to 0, and its iteration spans are empty.
+   Block spans are trimmed to the first and last retained behavioral frames
+   (or empty when no complete trial remains). Imaging frames are preserved.
 7. **Insert** into `u19_imaging_pipeline.SyncImagingBehavior`:
 
 | field | content |

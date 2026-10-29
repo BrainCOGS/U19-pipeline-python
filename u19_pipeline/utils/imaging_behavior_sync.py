@@ -403,7 +403,16 @@ def sync_imaging_behavior(tif_files, log=None, min_behavior_secs=MIN_BEHAVIOR_SE
                         frame_time, sync_time, sync_iter, frame_acq, frame_period):
                     warnings.warn(f'Block {i_block} trial {i_trial + 1} was only '
                                   'partly imaged; it gets no frame span.', stacklevel=2)
+                    erase = (sync_block == i_block) & (sync_trial == i_trial + 1)
+                    sync_block[erase] = 0
+                    sync_trial[erase] = 0
+                    sync_iter[erase] = 0
                     trial_span[i_trial] = np.zeros((0, 2), dtype=np.int64)
+
+        # Block spans cover only frames retained for behavioral analysis.
+        retained = np.flatnonzero(sync_block == i_block)
+        span_by_block[i_block - 1] = (retained[[0, -1]] + 1 if retained.size
+                                      else np.zeros((0, 2), dtype=np.int64))
 
         for i_trial in range(n_trials):
             tspan = trial_span[i_trial]
