@@ -6,7 +6,7 @@ imaging stopped got a normal-looking frame span (on the sample session, 51 of
 its 676 iterations were imaged), so it would be analysed as an imaged trial.
 The same happens when imaging starts mid-trial or a trial straddles the gap
 between two acquisitions. Those trials, like trials with no imaging at all, get
-an empty span; the per-frame block/trial/iteration labels are left alone.
+an empty span and zero per-frame block/trial/iteration labels.
 
 The synthetic session has one frame per behavior iteration, with the imaging
 and behavior clocks equal, so frame ``k`` carries the packet of iteration ``k``.
@@ -101,8 +101,7 @@ def test_imaging_stopped_mid_trial_drops_that_trial_and_later_ones(run_sync):
     assert _imaged(sync) == [True, True, False, False, False]
     assert _spans(sync)[2] == EMPTY
     assert sync["sync_im_frame_span_by_behav_iter"][2].shape == EMPTY
-    # the frames themselves still say which trial they belong to
-    assert np.count_nonzero(sync["sync_behav_trial_by_im_frame"] == 3) == 10
+    assert np.count_nonzero(sync["sync_behav_trial_by_im_frame"] == 3) == 0
 
 
 def test_imaging_started_mid_trial_drops_that_trial(run_sync):
@@ -176,3 +175,40 @@ def test_trial_without_iteration_times_is_kept(run_sync):
     log.block.trial[2].time = np.array([])
     sync = run_sync([_file(rows)], log)
     assert _imaged(sync)[:3] == [True, True, True]
+
+
+@pytest.mark.parametrize("case", ["stop", "start", "restart", "only_partial"])
+def test_partial_trial_labels_and_block_spans_are_consistent(run_sync, case):
+    log = _log()
+    rows = _frames(log, lead=30, trail=30)
+    if case == "stop":
+        rows = rows[:140]
+        files = [_file(rows)]
+        dropped = [3]
+    elif case == "start":
+        rows = rows[50:]
+        files = [_file(rows)]
+        dropped = [1]
+    elif case == "restart":
+        files = [_file(rows[:140], 1), _file(rows[170:], 2)]
+        rows = np.concatenate((rows[:140], rows[170:]))
+        dropped = [3]
+    else:
+        rows = rows[50:60]
+        files = [_file(rows)]
+        dropped = [1]
+    sync = run_sync(files, log)
+    rejected = np.isin(rows[:, 3], dropped)
+    for column, field in [(2, "block"), (3, "trial"), (4, "iter")]:
+        expected = rows[:, column].astype(np.int64)
+        expected[rejected] = 0
+        np.testing.assert_array_equal(sync[f"sync_behav_{field}_by_im_frame"], expected)
+    for trial in dropped:
+        assert sync["sync_im_frame_span_by_behav_trial"][trial - 1].size == 0
+        assert sync["sync_im_frame_span_by_behav_iter"][trial - 1].size == 0
+    retained = np.flatnonzero(sync["sync_behav_block_by_im_frame"] == 1)
+    span = sync["sync_im_frame_span_by_behav_block"][0]
+    if retained.size:
+        np.testing.assert_array_equal(span, [retained[0] + 1, retained[-1] + 1])
+    else:
+        assert span.size == 0
