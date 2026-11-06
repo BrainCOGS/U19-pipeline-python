@@ -247,9 +247,7 @@ def transfer_slurm_file(slurm_file_local_path, slurm_destination, cluster_vars):
 
     user_host = cluster_vars["user"] + "@" + cluster_vars["hostname"]
     slurm_destination = user_host + ":" + slurm_destination
-    status = ft.scp_file_transfer(slurm_file_local_path, slurm_destination)
-
-    return status
+    return ft.scp_file_transfer_or_raise(slurm_file_local_path, slurm_destination)
 
 
 def create_slurm_params_file(slurm_dict):
