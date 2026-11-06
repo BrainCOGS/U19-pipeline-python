@@ -153,15 +153,41 @@ def get_cluster_vars(cluster):
         raise ValueError(f"Non existing cluster: {cluster!r}")
 
 
+class ScpTransferError(RuntimeError):
+    """A file could not be copied to or from a cluster, the message says why"""
+
+
+def run_scp(source, dest):
+    """
+    Copy a file with scp
+    Returns:
+    returncode (int) = exit code of scp
+    stderr     (str) = what scp wrote to stderr (also printed, for the cron log)
+    """
+    command = ["scp", "-i", public_key_location, source, dest]
+    print(command)
+
+    p = subprocess.run(command, stderr=subprocess.PIPE, text=True)
+    stderr = p.stderr.strip()
+    if stderr:
+        print(stderr)
+    return p.returncode, stderr
+
+
 def scp_file_transfer(source, dest):
+    """Copy a file with scp and return the exit code, for callers that tolerate a failure"""
+    return run_scp(source, dest)[0]
 
-    print("scp", source, dest)
 
-    print(["scp", "-i", public_key_location, source, dest])
-
-    p = subprocess.Popen(["scp", "-i", public_key_location, source, dest])
-    transfer_status = p.wait()
-    return transfer_status
+def scp_file_transfer_or_raise(source, dest):
+    """Copy a file with scp, a failure raises ScpTransferError with the reason"""
+    returncode, stderr = run_scp(source, dest)
+    if returncode != config.system_process["SUCCESS"]:
+        raise ScpTransferError(
+            f"scp of {pathlib.Path(source).name} to {dest} failed "
+            f"(exit code {returncode}): {stderr or 'scp wrote no error'}"
+        )
+    return returncode
 
 
 def scp_file_transfer_big_files(source, dest, source_filepath, dest_filepath):

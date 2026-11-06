@@ -118,9 +118,7 @@ def transfer_parameter_file(
 
     print("transfer_parameter_file", params_file_local_path, param_file_full_path)
 
-    status = ft.scp_file_transfer(params_file_local_path, param_file_full_path)
-
-    return status
+    return ft.scp_file_transfer_or_raise(params_file_local_path, param_file_full_path)
 
 
 def generate_chanmap_file(recording_process_id, program_selection_params):
@@ -170,6 +168,6 @@ def transfer_chanmap_file(
     chanmap_file_cluster_path = str(pathlib.Path(cluster_chanmap_dir, chanmap_filename))
     chanmap_file_full_path = user_host + ":" + chanmap_file_cluster_path
 
-    status = ft.scp_file_transfer(chanmap_file_local_path, chanmap_file_full_path)
-
-    return status
+    return ft.scp_file_transfer_or_raise(
+        chanmap_file_local_path, chanmap_file_full_path
+    )
