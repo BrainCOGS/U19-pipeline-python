@@ -1,6 +1,7 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['custom']['database.prefix'] + 'microscope')
+schema = dj.schema(dj.config["custom"]["database.prefix"] + "microscope")
+
 
 @schema
 class Center(dj.Lookup):
@@ -9,9 +10,8 @@ class Center(dj.Lookup):
     ---
     description = ""                  :   varchar(500)
     """
-    contents = [
-        ["Bezos Center",""],["McDonnell Center",""]
-        ]
+    contents = [["Bezos Center", ""], ["McDonnell Center", ""]]
+
 
 @schema
 class Microscope(dj.Lookup):
@@ -24,6 +24,7 @@ class Microscope(dj.Lookup):
     loc_on_table                :   varchar(16)
     microscope_description=''   :   varchar(2047)
     """
+
 
 @schema
 class Laser(dj.Manual):
@@ -138,9 +139,9 @@ class DaqSystemType(dj.Lookup):
     daq_notes='':   varchar(255)
     """
     contents = [
-        ['National Instrument PXI', ''],
-        ['National Instrument PCI', ''],
-        ['Vidrio hardware', '']
+        ["National Instrument PXI", ""],
+        ["National Instrument PCI", ""],
+        ["Vidrio hardware", ""],
     ]
 
 
@@ -255,6 +256,7 @@ class AcquisitionSoftwareStatus(dj.Manual):
     ---
     -> AcquisitionSoftware
     """
+
 
 @schema
 class PsfStackData(dj.Manual):

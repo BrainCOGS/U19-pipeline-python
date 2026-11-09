@@ -1,6 +1,5 @@
 """This module defines tables in the schema U19_subject"""
 
-
 import datajoint as dj
 
 prefix = dj.config["custom"]["database.prefix"]
@@ -22,9 +21,7 @@ class Species(dj.Lookup):
     ---
     species_nickname     : varchar(32)                  # nickname
     """
-    contents = [
-        ['Mus musculus', 'Laboratory mouse']
-    ]
+    contents = [["Mus musculus", "Laboratory mouse"]]
 
 
 @schema
@@ -34,11 +31,7 @@ class Source(dj.Lookup):
     ---
     source_description="" : varchar(255)
     """
-    contents = [
-        ['Jax Lab', ''],
-        ['Princeton', ''],
-        ['Allen Institute', '']
-    ]
+    contents = [["Jax Lab", ""], ["Princeton", ""], ["Allen Institute", ""]]
 
 
 @schema
@@ -48,9 +41,7 @@ class Strain(dj.Lookup):
     ---
     strain_description="" : varchar(255)                 # description
     """
-    contents = [
-        ['C57BL6/J', '']
-    ]
+    contents = [["C57BL6/J", ""]]
 
 
 @schema
@@ -64,16 +55,40 @@ class Allele(dj.Lookup):
     allele_description="" : varchar(1023)
     """
     contents = [
-        ['Thy1-GP5.3', 'Thy1-GCaMP6f', 'Jax Lab', 'David W. Tank, Princeton University', ''],
-        ['Ai93', '(TITL-GCaMP6f)-D', 'Jax Lab', 'Allen Institute', ''],
-        ['Ai148', '(TIT2L-GC6f-ICL-tTA2)-D', 'Jax Lab', 'Allen Institute', ''],
-        ['Thy1-YFP', '', 'Jax Lab', 'Joshua R Sanes, Harvard University', ''],
-        ['VGAT-ChR2-EYFP', 'Slc32a1-COP4*H134R/EYFP', 'Jax Lab', 'Guoping Feng, Massachusetts Institute of Technology', ''],
-        ['Emx1-Cre', 'Emx-IRES-Cre', 'Jax Lab', 'Kevin R. Jones, University of Colorado- Boulder', ''],
-        ['D1-Cre', 'Drd1-cre', 'Jax Lab', 'Ming Xu, University of Chicago', ''],
-        ['D2-Cre', 'Drd2-cre', 'Jax Lab', 'Unknown', ''],
-        ['DAT-IRES-Cre', 'Slc6a3tm1.1(cre)Bkmn', 'Jax Lab', 'Cristina M Backman, National Institute on Drug Abuse (NIH)', ''],
-        ['Slc17a7-IRES2-Cre', '', 'Jax Lab', 'Allen Institute', '']
+        [
+            "Thy1-GP5.3",
+            "Thy1-GCaMP6f",
+            "Jax Lab",
+            "David W. Tank, Princeton University",
+            "",
+        ],
+        ["Ai93", "(TITL-GCaMP6f)-D", "Jax Lab", "Allen Institute", ""],
+        ["Ai148", "(TIT2L-GC6f-ICL-tTA2)-D", "Jax Lab", "Allen Institute", ""],
+        ["Thy1-YFP", "", "Jax Lab", "Joshua R Sanes, Harvard University", ""],
+        [
+            "VGAT-ChR2-EYFP",
+            "Slc32a1-COP4*H134R/EYFP",
+            "Jax Lab",
+            "Guoping Feng, Massachusetts Institute of Technology",
+            "",
+        ],
+        [
+            "Emx1-Cre",
+            "Emx-IRES-Cre",
+            "Jax Lab",
+            "Kevin R. Jones, University of Colorado- Boulder",
+            "",
+        ],
+        ["D1-Cre", "Drd1-cre", "Jax Lab", "Ming Xu, University of Chicago", ""],
+        ["D2-Cre", "Drd2-cre", "Jax Lab", "Unknown", ""],
+        [
+            "DAT-IRES-Cre",
+            "Slc6a3tm1.1(cre)Bkmn",
+            "Jax Lab",
+            "Cristina M Backman, National Institute on Drug Abuse (NIH)",
+            "",
+        ],
+        ["Slc17a7-IRES2-Cre", "", "Jax Lab", "Allen Institute", ""],
     ]
 
 
@@ -85,11 +100,11 @@ class SequenceType(dj.Lookup):
     seq_type_description="" : varchar(255)
     """
     contents = [
-        ['calcium sensor', ''],
-        ['optogenetics', ''],
-        ['promoter', ''],
-        ['recombinase', ''],
-        ['fluorescent protein', '']
+        ["calcium sensor", ""],
+        ["optogenetics", ""],
+        ["promoter", ""],
+        ["recombinase", ""],
+        ["fluorescent protein", ""],
     ]
 
 
@@ -103,15 +118,15 @@ class Sequence(dj.Lookup):
     sequence_description="" : varchar(255)
     """
     contents = [
-        ['GCaMP6f', 'calcium sensor', '', ''],
-        ['GCaMP6s', 'calcium sensor', '', ''],
-        ['ChR2', 'optogenetics', '', ''],
-        ['EYFP', 'fluorescent protein', '', ''],
-        ['Thy1', 'promoter', '', ''],
-        ['Emx1', 'promoter', '', ''],
-        ['Cre', 'recombinase', '', ''],
-        ['D1', 'promoter', '', 'dopamine receptor type 1'],
-        ['D2', 'promoter', '', 'dopamine receptor type 2']
+        ["GCaMP6f", "calcium sensor", "", ""],
+        ["GCaMP6s", "calcium sensor", "", ""],
+        ["ChR2", "optogenetics", "", ""],
+        ["EYFP", "fluorescent protein", "", ""],
+        ["Thy1", "promoter", "", ""],
+        ["Emx1", "promoter", "", ""],
+        ["Cre", "recombinase", "", ""],
+        ["D1", "promoter", "", "dopamine receptor type 1"],
+        ["D2", "promoter", "", "dopamine receptor type 2"],
     ]
 
 
@@ -122,19 +137,19 @@ class AlleleSequence(dj.Lookup):
     -> Sequence
     """
     contents = [
-        ['Thy1-YFP', 'Thy1'],
-        ['Thy1-YFP', 'EYFP'],
-        ['Thy1-GP5.3', 'GCaMP6f'],
-        ['VGAT-ChR2-EYFP', 'EYFP'],
-        ['VGAT-ChR2-EYFP', 'ChR2'],
-        ['Emx1-Cre', 'Emx1'],
-        ['Emx1-Cre', 'Cre'],
-        ['D1-Cre', 'D1'],
-        ['D1-Cre', 'Cre'],
-        ['D2-Cre', 'D2'],
-        ['D2-Cre', 'Cre'],
-        ['DAT-IRES-Cre', 'Cre'],
-        ['Slc17a7-IRES2-Cre', 'Cre']
+        ["Thy1-YFP", "Thy1"],
+        ["Thy1-YFP", "EYFP"],
+        ["Thy1-GP5.3", "GCaMP6f"],
+        ["VGAT-ChR2-EYFP", "EYFP"],
+        ["VGAT-ChR2-EYFP", "ChR2"],
+        ["Emx1-Cre", "Emx1"],
+        ["Emx1-Cre", "Cre"],
+        ["D1-Cre", "D1"],
+        ["D1-Cre", "Cre"],
+        ["D2-Cre", "D2"],
+        ["D2-Cre", "Cre"],
+        ["DAT-IRES-Cre", "Cre"],
+        ["Slc17a7-IRES2-Cre", "Cre"],
     ]
 
 
@@ -150,17 +165,17 @@ class Line(dj.Lookup):
     is_active=1          : tinyint                      # is active
     """
     contents = [
-        ['Unknown', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['C57BL6/J', 'Mus musculus', 'C57BL6/J', 'wild-type mice', '', 1],
-        ['VGAT-ChR2-EYFP', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['Ai93-Emx1', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['Thy1-GP5.3', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['Thy1-YFP', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['DAT-IRES-CRE', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['DAT-Ai148', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['Slc17a7-Ai148', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['D1-CRE', 'Mus musculus', 'C57BL6/J', '', '', 1],
-        ['D2-CRE', 'Mus musculus', 'C57BL6/J', '', '', 1]
+        ["Unknown", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["C57BL6/J", "Mus musculus", "C57BL6/J", "wild-type mice", "", 1],
+        ["VGAT-ChR2-EYFP", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["Ai93-Emx1", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["Thy1-GP5.3", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["Thy1-YFP", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["DAT-IRES-CRE", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["DAT-Ai148", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["Slc17a7-Ai148", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["D1-CRE", "Mus musculus", "C57BL6/J", "", "", 1],
+        ["D2-CRE", "Mus musculus", "C57BL6/J", "", "", 1],
     ]
 
 
@@ -171,18 +186,18 @@ class LineAllele(dj.Lookup):
     -> Allele
     """
     contents = [
-        ['VGAT-ChR2-EYFP', 'VGAT-ChR2-EYFP'],
-        ['Ai93-Emx1', 'Ai93'],
-        ['Ai93-Emx1', 'Emx1-Cre'],
-        ['Thy1-GP5.3', 'Thy1-GP5.3'],
-        ['Thy1-YFP', 'Thy1-YFP'],
-        ['DAT-IRES-CRE', 'DAT-IRES-Cre'],
-        ['DAT-Ai148', 'DAT-IRES-Cre'],
-        ['DAT-Ai148', 'Ai148'],
-        ['Slc17a7-Ai148', 'Ai148'],
-        ['Slc17a7-Ai148', 'Slc17a7-IRES2-Cre'],
-        ['D1-CRE', 'D1-Cre'],
-        ['D2-CRE', 'D2-Cre']
+        ["VGAT-ChR2-EYFP", "VGAT-ChR2-EYFP"],
+        ["Ai93-Emx1", "Ai93"],
+        ["Ai93-Emx1", "Emx1-Cre"],
+        ["Thy1-GP5.3", "Thy1-GP5.3"],
+        ["Thy1-YFP", "Thy1-YFP"],
+        ["DAT-IRES-CRE", "DAT-IRES-Cre"],
+        ["DAT-Ai148", "DAT-IRES-Cre"],
+        ["DAT-Ai148", "Ai148"],
+        ["Slc17a7-Ai148", "Ai148"],
+        ["Slc17a7-Ai148", "Slc17a7-IRES2-Cre"],
+        ["D1-CRE", "D1-Cre"],
+        ["D2-CRE", "D2-Cre"],
     ]
 
 
@@ -210,11 +225,15 @@ class ActItem(dj.Lookup):
     definition = """
     act_item             : varchar(64)                  # possible act item
     """
-    contents = zip(['Post-op painkillers',
-                    'Post-op monitoring',
-                    'Acclimatize to humans',
-                    'Topical antibiotics for headplate scab',
-                    'Needs fattening'])
+    contents = zip(
+        [
+            "Post-op painkillers",
+            "Post-op monitoring",
+            "Acclimatize to humans",
+            "Topical antibiotics for headplate scab",
+            "Needs fattening",
+        ]
+    )
 
 
 @schema
@@ -224,6 +243,7 @@ class SubjectActionManual(dj.Manual):
     -> ActItem
     """
 
+
 @schema
 class SubjectActionAutomatic(dj.Manual):
     definition = """
@@ -232,6 +252,7 @@ class SubjectActionAutomatic(dj.Manual):
     ---
     notification_message     : varchar(255)                     # Notification message e.g. low bodyweight warning
     """
+
 
 @schema
 class SubjectProject(dj.Manual):
@@ -295,6 +316,7 @@ class CagingStatus(dj.Manual):
     -> Cage
     """
 
+
 @schema
 class HealthStatus(dj.Manual):
     definition = """
@@ -309,7 +331,6 @@ class HealthStatus(dj.Manual):
     turgor=-1            : tinyint                      # score from 0 (skin retracts within 0.5s) to 3 (skin retracts in more than 2 s) -1 unknown
     comments=null        : varchar(255)
     """
-
 
     class Action(dj.Part):
         definition = """
@@ -374,6 +395,7 @@ class Zygosity(dj.Manual):
     ---
     zygosity             : enum('Present','Absent','Homozygous','Heterozygous')
     """
+
 
 @schema
 class HeadMotorPosition(dj.Manual):

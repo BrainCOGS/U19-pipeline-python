@@ -1,29 +1,29 @@
 
 
-select 
+select
 
 *,
 ss.subject_fullname as new_subject_fullname,
-case when  received is null then ss.water_per_day  
+case when  received is null then ss.water_per_day
 	 when  ss.water_per_day > received then ROUND(ss.water_per_day - received,1)
 	 else 0 end as suggested_water
 
 
-from u19_action.subject_status ss 
+from u19_action.subject_status ss
 
 
-left join u19_subject.subject_rfid sr 
+left join u19_subject.subject_rfid sr
 on sr.subject_fullname = ss.subject_fullname
 
 
 inner join
 (
-select 
+select
 
 subject_fullname,
 max(effective_date) as last_status
 
-from u19_action.subject_status ss 
+from u19_action.subject_status ss
 
 group by subject_fullname
 ) max_status
@@ -34,14 +34,14 @@ and max_status.last_status = ss.effective_date
 inner join u19_subject.subject s
 on s.subject_fullname = ss.subject_fullname
 
-inner join u19_subject.caging_status cs 
+inner join u19_subject.caging_status cs
 on cs.subject_fullname = ss.subject_fullname
 
 
 
 inner join
 (
-select 
+select
 user_id as new_user_id,
 slack
 from u19_lab.user
@@ -59,7 +59,7 @@ on hs.subject_fullname = ss.subject_fullname
 
 left join
 (
-select 
+select
 
 subject_fullname
 ,date(wai.administration_time) as administration_date_individual
@@ -80,7 +80,7 @@ on water_admin_ind.subject_fullname = ss.subject_fullname
 
 left join
 (
-select 
+select
 
 subject_fullname
 ,case when already_received = 0 then prescribed_extra_supplement_amount else 0 end as prescribed_extra_supplement_amount
@@ -98,7 +98,7 @@ on esw.subject_fullname = ss.subject_fullname
 
 left join
 (
-select 
+select
 w.subject_fullname,
 w.weight
 
@@ -107,7 +107,7 @@ from u19_action.weighing w
 
 inner join
 (
-select 
+select
 
 w.subject_fullname,
 max(w.weighing_time) as last_weigh
@@ -128,7 +128,7 @@ on weighing_full.subject_fullname = ss.subject_fullname
 
 left join
 (
-select 
+select
 w.subject_fullname,
 w.weighing_time as last_weighing_time,
 w.weight as last_weight,
@@ -138,7 +138,7 @@ from u19_action.weighing w
 
 inner join
 (
-select 
+select
 
 w.subject_fullname,
 max(w.weighing_time) as last_weigh
@@ -159,13 +159,13 @@ on weighing_full2.subject_fullname = ss.subject_fullname
 
 
 left join(
-select 
+select
 
 sam.subject_fullname,
 GROUP_CONCAT(sam.act_item ORDER BY sam.act_item SEPARATOR '\n') as current_actions
 
 
-from u19_subject.subject_action_manual sam 
+from u19_subject.subject_action_manual sam
 
 where date(notification_date) < curdate() and date(valid_until_date) >= curdate()
 
@@ -175,13 +175,13 @@ group by subject_fullname
 on actions_subject.subject_fullname = ss.subject_fullname
 
 left join(
-select 
+select
 
 ar.subject_fullname,
 GROUP_CONCAT(ar.action ORDER BY ar.action SEPARATOR '\n') as done_actions
 
 
-from u19_action.action_registry ar  
+from u19_action.action_registry ar
 
 where date(action_datetime) = curdate()
 
@@ -191,7 +191,7 @@ group by subject_fullname
 on actions_done_subject.subject_fullname = ss.subject_fullname
 
 
-left join 
+left join
 (
 select
 subject_fullname,
@@ -209,14 +209,14 @@ group by subject_fullname
 on session_subject.subject_fullname = ss.subject_fullname
 
 
-left join 
+left join
 (
-select 
+select
 subject_fullname,
 timeslot,
 location as scheduled_rig
 
-from u19_scheduler.schedule s 
+from u19_scheduler.schedule s
 
 where date = curdate()
 ) schedule_subject
@@ -227,4 +227,3 @@ on schedule_subject.subject_fullname = ss.subject_fullname
 where ss.subject_status not in ("Dead","Missing", "AdLibWater")
 
 order by s.user_id, UPPER(cs.cage), ss.subject_fullname
-

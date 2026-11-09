@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('U19_lightsheet') 
+schema = dj.schema("U19_lightsheet")
 
 
 @schema
@@ -11,13 +11,14 @@ class User(dj.Lookup):
     ---
     princeton_email       : varchar(50)
     """
-    
+
+
 @schema
 class Experiment(dj.Manual):
     definition = """ # Experiments performed using the light sheet microscope
     experiment_id                :   smallint auto_increment    # allowed here are sql datatypes.
     ----
-    -> User 
+    -> User
     labname                      :   varchar(50)
     correspondence_email = ''    :   varchar(100)
     title                        :   varchar(100)
@@ -29,21 +30,24 @@ class Experiment(dj.Manual):
     antibody1                    :   varchar(100)
     antibody2                    :   varchar(100)
     image_resolution             :   enum("1.3x","4x")
-    channel488                   :   enum("","registration","cell_detection","probe_detection","injection_detection")                    
+    channel488                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
     channel555                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
     channel647                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
     channel790                   :   enum("","registration","cell_detection","probe_detection","injection_detection")
-    """  
+    """
+
 
 @schema
-class IdiscoPlusClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoPlusClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Periodic calibration data of the light sheet microscope
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
     -> User                    # username, the researcher's netid from the User() table
     clearer                                                  :   varchar(20)   # the netid of the person who did the clearing
     exp_notes = ""                                           :   varchar(500)  # Note anything unusual that happened during experiment that could affect clearing
-    perfusion_date = NULL                                    :   date 
+    perfusion_date = NULL                                    :   date
     time_dehydr_pbs_wash1 = NULL                             :   datetime
     dehydr_pbs_wash1_notes = ""                              :   varchar(250)
     time_dehydr_pbs_wash2 = NULL                             :   datetime
@@ -147,14 +151,16 @@ class IdiscoPlusClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table
 
 
 @schema
-class IdiscoAbbreviatedClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoAbbreviatedClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Periodic calibration data of the light sheet microscope
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
     -> User                    # username, the researcher's netid from the User() table
     clearer                                                  :   varchar(20)   # the netid of the person who did the clearing
     exp_notes = ""                                           :   varchar(500)  # Note anything unusual that happened during experiment that could affect clearing
-    perfusion_date = NULL                                    :   date 
+    perfusion_date = NULL                                    :   date
     time_pbs_wash1 = NULL                                    :   datetime
     pbs_wash1_notes = ""                                     :   varchar(250)
     time_pbs_wash2 = NULL                                    :   datetime
@@ -186,15 +192,18 @@ class IdiscoAbbreviatedClearing(dj.Manual): # dj.Manual is one of the 4 datajoin
     clearing_notes = ""                                      :   varchar(500)
     """
 
+
 @schema
-class IdiscoAbbreviatedRatClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class IdiscoAbbreviatedRatClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # Abbreviated Rat clearing table
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
     -> User                    # username, the researcher's netid from the User() table
     clearer                                                  :   varchar(20)   # the netid of the person who did the clearing
     exp_notes = ""                                           :   varchar(500)  # Note anything unusual that happened during experiment that could affect clearing
-    perfusion_date = NULL                                    :   date 
+    perfusion_date = NULL                                    :   date
     time_pbs_wash1 = NULL                                    :   datetime
     pbs_wash1_notes = ""                                     :   varchar(250)
     time_pbs_wash2 = NULL                                    :   datetime
@@ -240,15 +249,18 @@ class IdiscoAbbreviatedRatClearing(dj.Manual): # dj.Manual is one of the 4 dataj
     clearing_notes = ""                                      : varchar(500)
     """
 
+
 @schema
-class UdiscoClearing(dj.Manual): # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
+class UdiscoClearing(
+    dj.Manual
+):  # dj.Manual is one of the 4 datajoint table types - Manual corresponds to externally inputted data
     definition = """ # uDISCO clearing table
     -> Experiment              # experiment_id, the primary key from the Experiment() table
     ----
     -> User                    # username, the researcher's netid from the User() table
     clearer                                                  :   varchar(20)   # the netid of the person who did the clearing
     exp_notes = ""                                           :   varchar(500)  # Note anything unusual that happened during experiment that could affect clearing
-    perfusion_date = NULL                                    :   date 
+    perfusion_date = NULL                                    :   date
     time_dehydr_pbs_wash1 = NULL                             :   datetime
     dehydr_pbs_wash1_notes = ""                              :   varchar(250)
     time_dehydr_butanol_30percent = NULL                     :   datetime

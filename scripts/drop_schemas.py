@@ -1,4 +1,16 @@
-from u19_pipeline import lab, subject, acquisition, behavior, task, reference, recording, recording_process, ephys_pipeline, imaging_pipeline, ephys_sync
+from u19_pipeline import (
+    lab,
+    subject,
+    acquisition,
+    behavior,
+    task,
+    reference,
+    recording,
+    recording_process,
+    ephys_pipeline,
+    imaging_pipeline,
+    ephys_sync,
+)
 from u19_pipeline.imaging_pipeline import scan_element, imaging_element
 from u19_pipeline.ephys_pipeline import probe_element, ephys_element
 

@@ -20,4 +20,3 @@
     conda activate /usr/people/alvaros/.conda/envs/u19_datajoint_py39_env
 
     python ${process_script_path} ${raw_data_directory} ${model_path} ${processed_data_directory}
-    

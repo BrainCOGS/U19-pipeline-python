@@ -30,9 +30,9 @@ class Cage(dj.Lookup):
 @schema
 class SequenceType(dj.Lookup):
     definition = """
-    sequence_type        : varchar(63)                  
+    sequence_type        : varchar(63)
     ---
-    seq_type_description="" : varchar(255)                 
+    seq_type_description="" : varchar(255)
     """
 
 
@@ -43,7 +43,7 @@ class Sequence(dj.Lookup):
     ---
     -> SequenceType
     base_pairs=""        : varchar(1023)                # base pairs
-    sequence_description="" : varchar(255)                 
+    sequence_description="" : varchar(255)
     """
 
 
@@ -90,7 +90,7 @@ class Subject(dj.Manual):
     -> [nullable] vmod0.Protocol
     -> [nullable] Line
     subject_description="" : varchar(255)                 # description
-    initial_weight=null  : float                        
+    initial_weight=null  : float
     """
 
 
@@ -99,7 +99,7 @@ class Weaning(dj.Manual):
     definition = """
     -> Subject
     ---
-    wean_date            : date                         
+    wean_date            : date
     """
 
 
@@ -123,15 +123,15 @@ class SubjectActItem(dj.Manual):
 class HealthStatus(dj.Manual):
     definition = """
     -> Subject
-    status_date          : date                         
+    status_date          : date
     ---
-    normal_behavior=1    : tinyint                      
+    normal_behavior=1    : tinyint
     bcs=-1               : tinyint                      # Body Condition Score, from 1 (emaciated i.e. very malnourished) to 5 (obese), 3 being normal
     activity=-1          : tinyint                      # score from 0 (moves normally) to 3 (does not move) -1 unknown
     posture_grooming=-1  : tinyint                      # score from 0 (normal posture + smooth fur) to 3 (hunched + scruffy) -1 unknown
     eat_drink=-1         : tinyint                      # score from 0 (normal amounts of feces and urine) to 3 (no evidence of feces or urine) -1 unknown
     turgor=-1            : tinyint                      # score from 0 (skin retracts within 0.5s) to 3 (skin retracts in more than 2 s) -1 unknown
-    comments=null        : varchar(255)                 
+    comments=null        : varchar(255)
     """
 
 
@@ -140,7 +140,7 @@ class HealthStatus(dj.Manual):
         -> HealthStatus
         action_id            : tinyint                      # id of the action
         ---
-        action               : varchar(255)                 
+        action               : varchar(255)
         """
 
 
@@ -149,9 +149,9 @@ class GenotypeTest(dj.Manual):
     definition = """
     -> Subject
     -> Sequence
-    genotype_test_id     : varchar(63)                  
+    genotype_test_id     : varchar(63)
     ---
-    test_result          : enum('Present','Absent')     
+    test_result          : enum('Present','Absent')
     """
 
 
@@ -160,7 +160,7 @@ class Death(dj.Manual):
     definition = """
     -> Subject
     ---
-    death_date           : date                         
+    death_date           : date
     """
 
 
@@ -182,20 +182,20 @@ class BreedingPair(dj.Manual):
     -> Subject
     bp_description=""    : varchar(2047)                # description
     bp_start_date=null   : date                         # start date
-    bp_end_date=null     : date                         
+    bp_end_date=null     : date
     """
 
 
 @schema
 class Litter(dj.Manual):
     definition = """
-    litter               : varchar(63)                  
+    litter               : varchar(63)
     ---
     -> BreedingPair
     -> Line
     litter_descriptive_name="" : varchar(255)                 # descriptive name
     litter_description="" : varchar(255)                 # description
-    litter_birth_date=null : date                         
+    litter_birth_date=null : date
     """
 
 
@@ -213,7 +213,7 @@ class Source(dj.Lookup):
     definition = """
     source               : varchar(32)                  # name of source
     ---
-    source_description="" : varchar(255)                 
+    source_description="" : varchar(255)
     """
 
 
@@ -225,7 +225,7 @@ class Allele(dj.Lookup):
     standard_name=""     : varchar(255)                 # standard name
     -> Source
     original_allele_source : varchar(255)                 # original source of the allele
-    allele_description="" : varchar(1023)                
+    allele_description="" : varchar(1023)
     """
 
 
@@ -235,7 +235,7 @@ class Zygosity(dj.Manual):
     -> Subject
     -> Allele
     ---
-    zygosity             : enum('Present','Absent','Homozygous','Heterozygous') 
+    zygosity             : enum('Present','Absent','Homozygous','Heterozygous')
     """
 
 
