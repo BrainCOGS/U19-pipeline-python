@@ -12,12 +12,12 @@ from pathlib import Path, PureWindowsPath
 import numpy as np
 
 # Verdicts for a single block.
-OK = "ok"                    # db value is the rounded/truncated file value
-UNCHANGED = "unchanged"      # file value already stored exactly, nothing to do
-FALLBACK = "fallback"        # db holds 0 from the `catch` branch in TowersBlock.m:89
-MISMATCH = "mismatch"        # db value is not derivable from the file value
-NO_VALUE = "no_value"        # rewardScale absent or unusable in the log
-NO_BLOCK = "no_block"        # log has no block at this index
+OK = "ok"  # db value is the rounded/truncated file value
+UNCHANGED = "unchanged"  # file value already stored exactly, nothing to do
+FALLBACK = "fallback"  # db holds 0 from the `catch` branch in TowersBlock.m:89
+MISMATCH = "mismatch"  # db value is not derivable from the file value
+NO_VALUE = "no_value"  # rewardScale absent or unusable in the log
+NO_BLOCK = "no_block"  # log has no block at this index
 
 # SessionStarted.session_start_time is written when ViRMEn starts, the log's
 # session.start a moment later, so they can straddle a minute boundary.
@@ -90,8 +90,11 @@ def classify(db_scale, db_first_trial, file_scale, file_first_trial):
 
     # Independent check that we are looking at the same block the DB row came
     # from, using a field the ingestion copied verbatim (TowersBlock.m:80).
-    if (file_first_trial is not None and db_first_trial is not None
-            and int(file_first_trial) != int(db_first_trial)):
+    if (
+        file_first_trial is not None
+        and db_first_trial is not None
+        and int(file_first_trial) != int(db_first_trial)
+    ):
         return MISMATCH
 
     db_scale = float(db_scale)
@@ -130,7 +133,9 @@ def _log_start(log):
     if parts.size < 5 or not np.all(np.isfinite(parts[:5])):
         return None
     try:
-        return datetime(*(int(p) for p in parts[:5]))
+        # Naive on purpose: the ViRMEn clock vector and the MySQL datetime it
+        # is compared against are both rig-local time with no zone.
+        return datetime(*(int(p) for p in parts[:5]))  # noqa: DTZ001
     except ValueError:
         return None
 
@@ -164,7 +169,10 @@ def check_identity(log, subject_fullname, session_start_time, require):
         if require:
             return False, "log has no session.start to confirm the session"
     elif abs(start - session_start_time) > START_TIME_TOLERANCE:
-        return False, f"log session.start is {start}, session started {session_start_time}"
+        return (
+            False,
+            f"log session.start is {start}, session started {session_start_time}",
+        )
 
     return True, None
 
@@ -203,17 +211,24 @@ def load_path_map(csv_path):
     mapping = {}
     with open(csv_path, newline="") as handle:
         reader = csv.DictReader(handle)
-        missing = [col for col in PATH_MAP_COLUMNS if col not in (reader.fieldnames or [])]
+        missing = [
+            col for col in PATH_MAP_COLUMNS if col not in (reader.fieldnames or [])
+        ]
         if missing:
             raise ValueError(f"{csv_path} is missing column(s): {', '.join(missing)}")
         for line, row in enumerate(reader, start=2):
             path = (row["path"] or "").strip()
             if not path:
                 continue
-            key = session_key(row["subject_fullname"].strip(), row["session_date"].strip(),
-                              row["session_number"].strip())
+            key = session_key(
+                row["subject_fullname"].strip(),
+                row["session_date"].strip(),
+                row["session_number"].strip(),
+            )
             if key in mapping:
-                raise ValueError(f"{csv_path}:{line} lists session {key} more than once")
+                raise ValueError(
+                    f"{csv_path}:{line} lists session {key} more than once"
+                )
             mapping[key] = Path(path)
     return mapping
 
