@@ -22,64 +22,66 @@ class TowersSession(dj.Imported):
     ---
     stimulus_set         : tinyint                      # an integer that describes a particular set of stimuli in a trial
     ball_squal           : float                        # quality measure of ball data
-    rewarded_side        : blob                         # Left or Right X number trials
-    chosen_side          : blob                         # Left or Right X number trials
-    maze_id              : blob                         # level X number trials
-    num_towers_r         : blob                         # Number of towers shown to the right x number of trials
-    num_towers_l         : blob                         # Number of towers shown to the left x tumber of trials
+    rewarded_side=null   : blob                         # Left or Right X number trials
+    chosen_side=null     : blob                         # Left or Right X number trials
+    maze_id=null         : blob                         # level X number trials
+    num_towers_r=null    : blob                         # Number of towers shown to the right x number of trials
+    num_towers_l=null    : blob                         # Number of towers shown to the left x tumber of trials
     """
 
 
 @schema
 class TowersBlock(dj.Imported):
     definition = """
+    -> acquisition.SessionBlock
     -> TowersSession
-    block                : tinyint                      # block number
     ---
+    main_level           : int                          # main level on current block
     -> task.TaskLevelParameterSet
-    sublevel             : int                          # sublevel data in this block
+    sublevel=null        : int                          # sublevel info of current block
     n_trials             : int                          # number of trials in this block
     first_trial          : int                          # trial_idx of the first trial in this block
     block_duration       : float                        # in secs, duration of the block
     block_start_time     : datetime                     # absolute start time of the block
     reward_mil           : float                        # in mL, reward volume in this block
-    reward_scale         : tinyint                      # scale of the reward in this block
+    reward_scale         : float                        # scale of the reward in this block
     easy_block           : tinyint                      # true if the difficulty reduces during the session
     block_performance    : float                        # performance in the current block
+    trial_duration_median : float                       # median duration of all the trials in the block
     """
 
     class Trial(dj.Part):
         definition = """
         -> master
-        trial_idx            : int                          # trial index, keep the original number in the file
+        -> acquisition.SessionBlockTrial
         ---
         trial_type           : enum('L','R')                # answer of this trial, left or right
         choice               : enum('L','R','nil')          # choice of this trial, left or right
-        trial_time           : longblob                     # time series of this trial, start from zero for each trial
         trial_abs_start      : float                        # absolute start time of the trial realtive to the beginning of the session
-        collision            : longblob                     # boolean vector indicating whether the subject hit the maze on each time point
-        cue_presence_left    : blob                         # boolean vector for the presence of the towers on the left
-        cue_presence_right   : blob                         # boolean vector for the presence of the towers on the right
+        cue_presence_left=null : blob                       # boolean vector for the presence of the towers on the left
+        cue_presence_right=null : blob                      # boolean vector for the presence of the towers on the right
         cue_onset_left=null  : blob                         # onset time of the cues on the left (only for the present ones)
         cue_onset_right=null : blob                         # onset time of the cues on the right (only for the present ones)
         cue_offset_left=null : blob                         # offset time of the cues on the left (only for the present ones)
-        cue_offset_right=null : blob                         # offset time of the cues on the right (only for the present ones)
+        cue_offset_right=null : blob                        # offset time of the cues on the right (only for the present ones)
         cue_pos_left=null    : blob                         # position of the cues on the left (only for the present ones)
         cue_pos_right=null   : blob                         # position of the cues on the right (only for the present ones)
         trial_duration       : float                        # duration of the entire trial
-        excess_travel        : float
+        excess_travel        : float                        # metric that indicates if mice travelled on a straight line
         i_arm_entry          : int                          # the index of the time series when the mouse enters the arm part
         i_blank              : int                          # the index of the time series when the mouse enters the blank zone
         i_cue_entry          : int                          # the index of the time series when the mouse neters the cue zone
         i_mem_entry          : int                          # the index of the time series when the mouse enters the memory zone
         i_turn_entry         : int                          # the index of the time series when the mouse enters turns
         iterations           : int                          # length of the meaningful recording
-        position             : longblob                     # 3d recording of the position of the mouse, length equals to interations
-        velocity             : longblob                     # 3d recording of the velocity of the mouse, length equals to interations
-        sensor_dots          : longblob                     # raw recordings of the ball
         trial_id             : int
         trial_prior_p_left   : float                        # prior probablity of this trial for left
         vi_start             : int
+        trial_time           : blob@extstorage              # time series of this trial, start from zero for each trial
+        collision            : blob@extstorage              # boolean vector indicating whether the subject hit the maze on each time point
+        position             : blob@extstorage              # 3d recording of the position of the mouse, length equals to interations
+        velocity             : blob@extstorage              # 3d recording of the velocity of the mouse, length equals to interations
+        sensor_dots          : blob@extstorage              # raw recordings of the ball
         """
 
 
