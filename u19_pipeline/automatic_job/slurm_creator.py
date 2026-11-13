@@ -4,6 +4,8 @@ import subprocess
 import pathlib
 import json
 import re
+import shlex
+import datajoint as dj
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 from u19_pipeline.utility import create_str_from_dict, is_this_spock
 import u19_pipeline.automatic_job.params_config as config
@@ -122,6 +124,12 @@ def queue_slurm_file(
 
     if program_selection_params["process_cluster"] == "spock" and is_this_spock():
         command = command[2:]
+
+    # The job's uv environment has to be complete before sbatch: nodes have no internet
+    if ephys_job_uses_uv(program_selection_params):
+        status, error_message = sync_uv_env(cluster_vars, repository_dir)
+        if status != config.system_process["SUCCESS"]:
+            return status, id_slurm_job, error_message
 
     print(command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -273,7 +281,148 @@ def create_slurm_params_file(slurm_dict):
     return text_dict
 
 
-def generate_slurm_spock(slurm_dict):
+# Which python environment ephys jobs on spock run in. Set in dj_local_conf.json:
+#   "custom": {"spock_ephys_env": "uv"}
+# "conda" (the default): the hand-maintained conda environment u19_pipeline_python_env3.
+# "uv": the environment uv builds from the processing repository's uv.lock, in
+#       <repository_dir>/.venv. sync_uv_env brings it up to date on the login node before
+#       every sbatch, and the job stops before it starts if it does not match the lock.
+# Imaging jobs (generate_slurm_spock_imaging) and tiger jobs are not affected.
+spock_ephys_env_key = "spock_ephys_env"
+spock_ephys_envs = ("conda", "uv")
+
+# A first uv sync downloads torch and the CUDA libraries (several minutes); after that it
+# takes about a second. A hung ssh must not block the handler forever.
+uv_sync_timeout_s = 30 * 60
+
+
+def spock_ephys_env():
+    """
+    Python environment for ephys jobs on spock: "conda" or "uv" (see spock_ephys_env_key)
+    """
+
+    custom = dj.config.get("custom") or {}
+    env = str(custom.get(spock_ephys_env_key, "conda")).strip().lower()
+    if env not in spock_ephys_envs:
+        raise ValueError(
+            "dj.config['custom']['"
+            + spock_ephys_env_key
+            + "'] must be one of "
+            + str(spock_ephys_envs)
+            + f", got {custom.get(spock_ephys_env_key)!r}"
+        )
+
+    return env
+
+
+def ephys_job_uses_uv(program_selection_params):
+    """
+    True for the jobs generate_slurm_file writes with the uv version of generate_slurm_spock
+    """
+
+    return (
+        program_selection_params["process_cluster"] == "spock"
+        and program_selection_params.get("recording_modality") != "imaging"
+        and spock_ephys_env() == "uv"
+    )
+
+
+def sync_uv_env(cluster_vars, repository_dir):
+    """
+    Bring the uv environment of repository_dir up to date on the cluster login node
+
+    Compute nodes have no internet, so python, the packages and the environment itself
+    (<repository_dir>/.venv) have to be in place before sbatch. "uv sync --locked" installs
+    exactly what uv.lock lists, does nothing when the environment already matches, and
+    fails when uv.lock no longer matches pyproject.toml.
+
+    Returns:
+    status        (int) = system_process SUCCESS, or what uv/ssh returned
+    error_message (str) = why the sync failed ('' if it did not)
+    """
+
+    remote = "cd " + shlex.quote(repository_dir) + " && uv sync --locked"
+    if is_this_spock():
+        # A login shell, so uv is on PATH as it is for the user
+        command = ["bash", "-lc", remote]
+    else:
+        # ssh joins its arguments with spaces for the remote shell: quote the script, or
+        # only "cd" would run under bash -lc
+        command = [
+            "ssh",
+            cluster_vars["user"] + "@" + cluster_vars["hostname"],
+            "bash -lc " + shlex.quote(remote),
+        ]
+
+    print("sync_uv_env", command)
+    failed = "uv sync --locked failed in " + repository_dir + ": "
+    try:
+        p = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=uv_sync_timeout_s,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return config.system_process["ERROR"], (
+            failed + "no answer in " + str(uv_sync_timeout_s) + " s"
+        )
+    except OSError as e:
+        return config.system_process["ERROR"], failed + str(e)
+
+    print(p.stdout)
+    print(p.stderr)
+
+    if p.returncode == config.system_process["SUCCESS"]:
+        return p.returncode, ""
+
+    reason = " ".join(p.stderr.split()) or "exit code " + str(p.returncode)
+    return p.returncode, failed + reason
+
+
+# How an ephys job on spock gets its python, for each value of spock_ephys_env().
+# matlab is for the Kilosort 2 / 3 sorters, which run in MATLAB.
+spock_ephys_env_setup = {
+    "conda": """
+    source ~/.bashrc
+    module load anacondapy/2023.07-cuda -s
+    module load matlab/R2024a -s
+
+    conda activate u19_pipeline_python_env3
+
+    cd ${repository_dir}
+    python -u ${process_script_path}
+    #python ${process_script_path} ${recording_process_id}
+    """,
+    "uv": """
+    source ~/.bashrc
+    module load matlab/R2024a -s
+
+    # Without the checkout the script path would resolve against the submit directory
+    cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
+
+    # The node has no internet and other jobs share this environment, so nothing is
+    # installed here: the job only runs if .venv already matches uv.lock.
+    uv sync --frozen --offline --check || { echo "the uv environment ${repository_dir}/.venv is missing or does not match uv.lock (or uv is not on PATH): run 'uv sync --locked' in ${repository_dir} on the login node" >&2; exit 1; }
+
+    source .venv/bin/activate
+    python -c 'import sys; print("PYTHON:", sys.executable, sys.version.split()[0])'
+    python -u ${process_script_path}
+    """,
+}
+
+
+def generate_slurm_spock(slurm_dict, python_env=None):
+    """
+    Slurm script for an ephys job on spock
+
+    python_env: "conda" or "uv"; by default what spock_ephys_env() reads from dj.config
+    """
+
+    if python_env is None:
+        python_env = spock_ephys_env()
 
     slurm_text = "#!/bin/bash\n"
     # slurm_text += module_defininition_text()
@@ -286,17 +435,8 @@ def generate_slurm_spock(slurm_dict):
     echo "PROCESSED_DATA_DIRECTORY: ${processed_data_directory}"
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
-
-    source ~/.bashrc
-    module load anacondapy/2023.07-cuda -s
-    module load matlab/R2024a -s
-
-    conda activate u19_pipeline_python_env3
-
-    cd ${repository_dir}
-    python -u ${process_script_path}
-    #python ${process_script_path} ${recording_process_id}
-    """
+"""
+    slurm_text += spock_ephys_env_setup[python_env]
 
     return slurm_text
 
