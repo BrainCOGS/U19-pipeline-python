@@ -14,7 +14,13 @@ SI_KS4 = {
     "si_params": {"save_preprocessed_copy": True},
     "preprocessing": SI_STEPS,
 }
-SPOCK_DEFAULT = {"nodes": 1, "ntasks": 1, "time": "30:00:00", "mem": "80G", "gres": "gpu:2"}
+SPOCK_DEFAULT = {
+    "nodes": 1,
+    "ntasks": 1,
+    "time": "30:00:00",
+    "mem": "80G",
+    "gres": "gpu:2",
+}
 
 
 # ------------------------------------------------------------- jobs that stay as they were
@@ -120,13 +126,17 @@ def test_without_resources_the_cluster_defaults_stay():
     merged = esr.apply_overrides(
         SPOCK_DEFAULT, esr.ephys_slurm_overrides(SI_KS4, NOTHING)
     )
-    assert (merged["gres"], merged["mem"], merged["time"]) == ("gpu:2", "80G", "30:00:00")
+    assert (merged["gres"], merged["mem"], merged["time"]) == (
+        "gpu:2",
+        "80G",
+        "30:00:00",
+    )
 
 
 def test_apply_overrides_does_not_touch_the_shared_default():
     before = dict(SPOCK_DEFAULT)
     esr.apply_overrides(SPOCK_DEFAULT, {"gres": None, "cpus-per-task": 4})
-    assert SPOCK_DEFAULT == before
+    assert before == SPOCK_DEFAULT
 
 
 @pytest.mark.parametrize("resources", [None, {}])
