@@ -166,3 +166,15 @@ def test_step_list_without_steps_is_not_mistaken_for_ours(script, production):
     )
     todo = script.plan(**production, date=DATE)
     assert todo["PreClusterParamSteps"][0]["precluster_param_steps_id"] == 10
+
+
+def test_descriptions_split_into_user_date_text_for_the_gui(script):
+    """RecordingProcessJobGUI (splitDescriptionColumnParams.m) splits on "_" and only
+    shows user and date when there are exactly three parts; it selects by the text."""
+    descs = [desc for desc, _ in script.clustering_paramsets(DATE)]
+    descs.append(script.precluster_paramset(DATE)[0])
+    descs.append(script.precluster_steps(DATE)[1])
+    parts = [desc.split("_") for desc in descs]
+    assert all(len(p) == 3 and p[0] == "general-user" and p[1] == DATE for p in parts)
+    texts = [p[2] for p in parts[:2]]
+    assert len(set(texts)) == len(texts)

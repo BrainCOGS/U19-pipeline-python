@@ -44,18 +44,35 @@ PREPROCESSING_STEPS = {
     ]
 }
 
+# quality_metrics on its own only gives the spike-train metrics (firing rate, ISI and
+# refractory violations, presence ratio). With waveforms, templates, noise levels and
+# spike amplitudes it adds SNR and the amplitude metrics; on a 10 min recording that cost
+# about 4 min and 1.7 GB under <method>_output/spikeinterface (slurm 7465065).
+QUALITY_METRICS_EXTENSIONS = {
+    "random_spikes": {},
+    "waveforms": {},
+    "templates": {},
+    "noise_levels": {},
+    "spike_amplitudes": {},
+    "quality_metrics": {},
+}
+
 # n_jobs is left out on purpose: BrainCogsEphysSorters takes it from the cores slurm gave
 # the job (cpus-per-task in clusters_paths_and_transfers.slurm_dict_spock_default).
 SI_KILOSORT4 = {
     "sorter_version": None,
     "sorter_params": {},
     "si_params": {"save_preprocessed_copy": True},
-    "postprocessing": {"extensions": {"quality_metrics": {}}},
+    "postprocessing": {"extensions": QUALITY_METRICS_EXTENSIONS},
 }
 
 CLUSTERING_METHOD = "kilosort4"
 PRECLUSTER_METHOD = "spikeinterface"
 PRECLUSTER_METHOD_DESC = "SpikeInterface preprocessing step list"
+
+# Descriptions are "<user>_<date>_<text>": RecordingProcessJobGUI splits them on "_" into
+# exactly those three parts to show user and date, and lists paramsets by <text>, so the
+# text must not contain an underscore and must be unique.
 
 # Column limits of the element tables (ephys_precluster.py).
 METHOD_MAX_LENGTH = 16
@@ -85,7 +102,7 @@ def precluster_paramset(date):
     """(description, params) of the ``spikeinterface`` preprocessing paramset."""
 
     return (
-        f"general-user_{date}_SpikeInterface phase_shift, highpass 300 Hz, global median reference",
+        f"general-user_{date}_SpikeInterface phase shift, highpass 300 Hz, global median reference",
         copy.deepcopy(PREPROCESSING_STEPS),
     )
 
@@ -93,7 +110,7 @@ def precluster_paramset(date):
 def precluster_steps(date):
     """(name, description) of the one-step preprocessing step list."""
 
-    return ("SpikeInterface filters", f"general-user_{date}__SpikeInterface filters")
+    return ("SpikeInterface filters", f"general-user_{date}_SpikeInterface filters")
 
 
 def next_free_index(existing):
@@ -181,7 +198,9 @@ def plan(clustering_rows, precluster_rows, precluster_methods, steps_rows, date)
         == [precluster_idx]
     }
     if not single_step_lists:
-        steps_id = next_free_index(row["precluster_param_steps_id"] for row in steps_rows)
+        steps_id = next_free_index(
+            row["precluster_param_steps_id"] for row in steps_rows
+        )
         name, steps_desc = precluster_steps(date)
         todo["PreClusterParamSteps"].append(
             {
