@@ -43,9 +43,9 @@ def test_get_cluster_vars_unknown_raises_value_error(cpt, cluster):
         cpt.get_cluster_vars(cluster)
 
 
-def test_spock_ephys_jobs_ask_for_several_cores(cpt):
-    """One core (slurm's default) starves SpikeInterface's chunked CPU steps, which
-    BrainCogsEphysSorters sizes from SLURM_CPUS_PER_TASK."""
+def test_spock_ephys_default_is_the_direct_kilosort_request(cpt):
+    """Cores are added per job by ephys_slurm_resources; the shared default stays what a
+    direct Kilosort job has always asked for."""
     slurm = cpt.cluster_vars["spock"]["slurm_default"]
-    assert slurm["cpus-per-task"] >= 4
-    assert slurm["ntasks"] == 1
+    assert "cpus-per-task" not in slurm
+    assert (slurm["ntasks"], slurm["mem"], slurm["gres"]) == (1, "80G", "gpu:2")

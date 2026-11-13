@@ -375,9 +375,21 @@ class RecProcessHandler:
 
             # Create and transfer slurm file
             if status == config.system_process["SUCCESS"]:
-                status, slurm_filepath = slurmlib.generate_slurm_file(
-                    rec_series["job_id"], rec_series["program_selection_params"]
-                )
+                try:
+                    status, slurm_filepath = slurmlib.generate_slurm_file(
+                        rec_series["job_id"],
+                        rec_series["program_selection_params"],
+                        params=rec_series["params"],
+                        preparams=rec_series["preparams"],
+                    )
+                except slurmlib.ephys_slurm_resources.EphysResourcesError as e:
+                    # A paramset asking for resources slurm would refuse: report it on
+                    # the job instead of queueing something that cannot start.
+                    status_update = config.status_update_idx["ERROR_STATUS"]
+                    update_value_dict["error_info"]["error_message"] = (
+                        f"Invalid resources in the processing paramset: {e}"
+                    )
+                    return (status_update, update_value_dict)
             else:
                 status_update = config.status_update_idx["ERROR_STATUS"]
                 update_value_dict["error_info"]["error_message"] = (
