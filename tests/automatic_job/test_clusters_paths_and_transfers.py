@@ -41,3 +41,10 @@ def test_get_cluster_vars_known(cpt, cluster):
 def test_get_cluster_vars_unknown_raises_value_error(cpt, cluster):
     with pytest.raises(ValueError, match="Non existing cluster"):
         cpt.get_cluster_vars(cluster)
+
+
+def test_spock_ephys_default_request(cpt):
+    """A few cores and one GPU: Kilosort 4 and DREDge each use a single GPU. Paramsets can
+    ask for more through ephys_slurm_resources."""
+    slurm = cpt.cluster_vars["spock"]["slurm_default"]
+    assert (slurm["ntasks"], slurm["cpus-per-task"], slurm["gres"]) == (1, 4, "gpu:1")

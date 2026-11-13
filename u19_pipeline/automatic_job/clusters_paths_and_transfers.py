@@ -80,13 +80,19 @@ slurm_dict_spock_imaging = {
 }
 # Used by slurm_creator.generate_slurm_spock (ephys jobs on spock).
 # mem: an ephys job (slurm 6519400, job_id 1415) peaked at 50.0 GiB MaxRSS against the old 50G limit.
+# cpus-per-task: Kilosort runs on the GPU, but reading and writing the recording and all
+# SpikeInterface steps are CPU work, so jobs get a few cores instead of slurm's default of one.
+# gres: Kilosort 4 and DREDge each use a single GPU; asking for both of a node's GPUs only
+# kept the second one from other jobs.
+# A paramset can ask for more (or for no GPU): see ephys_slurm_resources.
 slurm_dict_spock_default = {
     "job-name": "kilosort2",
     "nodes": 1,
     "ntasks": 1,
+    "cpus-per-task": 4,
     "time": "30:00:00",
     "mem": "80G",
-    "gres": "gpu:2",
+    "gres": "gpu:1",
     "mail-user": "alvaros@princeton.edu",
     "mail-type": ["END"],
     "output": 'OutputLog/job_id_${job_id}".log',
