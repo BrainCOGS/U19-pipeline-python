@@ -410,6 +410,8 @@ class RecProcessHandler:
                 update_value_dict["error_info"]["error_message"] = (
                     "Error while queuing job in SLURM"
                 )
+                # What sbatch (or the uv sync before it) answered
+                update_value_dict["error_info"]["error_exception"] = error_message
                 return (status_update, update_value_dict)
 
         else:
