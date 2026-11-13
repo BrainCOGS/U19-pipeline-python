@@ -2,6 +2,17 @@
 
 The `U19-pipeline_python` repository defines the DataJoint tables for the U19 projects.  There is a companion [MATLAB DataJoint pipeline](https://github.com/BrainCOGS/U19-pipeline-matlab) where much of this repository has mirrored table definitions.
 
+## Recording-transfer desktop application
+
+The independently packaged [BrainCOGS U19 Recording Transfer](apps/recording-transfer/README.md)
+provides the Windows GUI, verified copies, opt-in cleanup, and GitHub-only
+release updates for recording PCs. See its [deployment guide](apps/recording-transfer/DEPLOYMENT.md)
+for rig setup and rollback. It does not require the cluster pipeline dependencies.
+
+```powershell
+uv run --project apps/recording-transfer u19-recording-transfer --demo
+```
+
 ## Installation
 
 ### Recommended prerequisites

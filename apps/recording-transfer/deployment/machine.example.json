@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "machine_name": "182-recording",
+  "modality": "imaging",
+  "source_roots": ["C:\\Data", "D:\\NPX_DATA"],
+  "incoming_root": "\\\\cup\\braininit\\Data\\Raw\\imaging\\_incoming",
+  "catalog_path": null,
+  "github": {
+    "repository": "BrainCOGS/U19-pipeline-python",
+    "tag_prefix": "recording-transfer/v",
+    "channel": "stable",
+    "pinned_version": null
+  },
+  "auto_update_on_launch": false,
+  "quiet_minutes": 10,
+  "cleanup": {"enabled": false, "retention_days": 14}
+}

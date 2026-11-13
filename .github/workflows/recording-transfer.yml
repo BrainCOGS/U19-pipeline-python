@@ -1,0 +1,41 @@
+name: Recording transfer desktop
+
+on:
+  push:
+    branches: [master]
+    paths: ['apps/recording-transfer/**', '.github/workflows/recording-transfer.yml']
+  pull_request:
+    paths: ['apps/recording-transfer/**', '.github/workflows/recording-transfer.yml']
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.14']
+    defaults:
+      run:
+        working-directory: apps/recording-transfer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked
+      - run: uv run --no-sync pytest
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - run: uv run --no-sync u19-recording-transfer --self-test
+      - run: uv run --no-sync python tools/build_release.py --out dist
+      - name: Install, update and roll back real releases
+        if: matrix.python-version == '3.12'
+        run: uv run --no-sync python tools/smoke_deployment.py --python 3.12

@@ -1,0 +1,90 @@
+name: Release recording transfer desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Application version matching pyproject.toml (for example 0.1.0)'
+        type: string
+        required: true
+      channel:
+        description: 'Pilot publishes a prerelease; stable publishes a full release'
+        type: choice
+        options: [pilot, stable]
+        default: pilot
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recording-transfer-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/master'
+    uses: $/.github/workflows/recording-transfer.yml
+
+  build:
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.identity.outputs.tag }}
+      commit: ${{ steps.identity.outputs.commit }}
+    defaults:
+      run:
+        working-directory: apps/recording-transfer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: '3.12'
+      - name: Validate release identity
+        id: identity
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        shell: pwsh
+        run: |
+          $tag = uv run --no-project python tools/release_spec.py --version $env:RELEASE_VERSION
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+      - run: uv sync --locked --no-dev
+      - run: uv run --no-sync python tools/build_release.py --out dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: recording-transfer-release
+          if-no-files-found: error
+          path: |
+            apps/recording-transfer/dist/u19-recording-transfer-*.zip
+            apps/recording-transfer/dist/*.sha256
+            apps/recording-transfer/dist/release-*.json
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: recording-transfer-release
+          path: release-assets
+      - name: Create a draft release and attach verified build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.commit }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          ARTIFACT_DIR: release-assets
+        shell: bash
+        run: bash .github/scripts/publish-recording-transfer.sh
