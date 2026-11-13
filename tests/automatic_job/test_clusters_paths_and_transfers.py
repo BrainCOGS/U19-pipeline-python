@@ -43,9 +43,8 @@ def test_get_cluster_vars_unknown_raises_value_error(cpt, cluster):
         cpt.get_cluster_vars(cluster)
 
 
-def test_spock_ephys_default_is_the_direct_kilosort_request(cpt):
-    """Cores are added per job by ephys_slurm_resources; the shared default stays what a
-    direct Kilosort job has always asked for."""
+def test_spock_ephys_default_request(cpt):
+    """A few cores and one GPU: Kilosort 4 and DREDge each use a single GPU. Paramsets can
+    ask for more through ephys_slurm_resources."""
     slurm = cpt.cluster_vars["spock"]["slurm_default"]
-    assert "cpus-per-task" not in slurm
-    assert (slurm["ntasks"], slurm["mem"], slurm["gres"]) == (1, "80G", "gpu:2")
+    assert (slurm["ntasks"], slurm["cpus-per-task"], slurm["gres"]) == (1, 4, "gpu:1")

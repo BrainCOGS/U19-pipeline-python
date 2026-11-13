@@ -17,9 +17,10 @@ SI_KS4 = {
 SPOCK_DEFAULT = {
     "nodes": 1,
     "ntasks": 1,
+    "cpus-per-task": 4,
     "time": "30:00:00",
     "mem": "80G",
-    "gres": "gpu:2",
+    "gres": "gpu:1",
 }
 
 
@@ -45,16 +46,14 @@ def test_odd_params_do_not_break_slurm_generation(params):
 # --------------------------------------------------------------------------------- cores
 
 
-def test_spikeinterface_job_gets_the_default_cores():
-    assert esr.ephys_slurm_overrides(SI_KS4, NOTHING) == {
-        "cpus-per-task": esr.DEFAULT_SPIKEINTERFACE_CPUS
-    }
+def test_spikeinterface_job_that_asks_for_nothing_keeps_the_cluster_default():
+    assert esr.ephys_slurm_overrides(SI_KS4, NOTHING) == {}
+    assert esr.apply_overrides(SPOCK_DEFAULT, {})["cpus-per-task"] == 4
 
 
 @pytest.mark.parametrize("method", ["spikeinterface", "dredge"])
-def test_spikeinterface_preprocessing_in_front_of_direct_kilosort_gets_cores(method):
-    overrides = esr.ephys_slurm_overrides(LEGACY_KS4, [{method: {}}])
-    assert overrides == {"cpus-per-task": esr.DEFAULT_SPIKEINTERFACE_CPUS}
+def test_spikeinterface_preprocessing_without_n_jobs_keeps_the_default(method):
+    assert esr.ephys_slurm_overrides(LEGACY_KS4, [{method: {}}]) == {}
 
 
 def test_n_jobs_in_the_paramset_is_the_core_request():
@@ -79,12 +78,9 @@ def test_n_jobs_of_a_spikeinterface_step_counts_for_a_legacy_sorter():
 
 
 @pytest.mark.parametrize("n_jobs", [-1, 0, 0.5, "8", None, True])
-def test_n_jobs_that_is_not_a_core_count_falls_back_to_the_default(n_jobs):
+def test_n_jobs_that_is_not_a_core_count_is_not_a_request(n_jobs):
     params = {**SI_KS4, "si_params": {"n_jobs": n_jobs}}
-    assert (
-        esr.ephys_slurm_overrides(params, NOTHING)["cpus-per-task"]
-        == esr.DEFAULT_SPIKEINTERFACE_CPUS
-    )
+    assert esr.ephys_slurm_overrides(params, NOTHING) == {}
 
 
 def test_resources_cpus_wins_over_n_jobs():
@@ -96,22 +92,31 @@ def test_resources_cpus_wins_over_n_jobs():
 
 
 def test_gpu_memory_and_time_come_from_resources():
-    params = {**SI_KS4, "resources": {"gpus": 1, "mem": "120G", "time": "12:00:00"}}
+    params = {**SI_KS4, "resources": {"gpus": 2, "mem": "120G", "time": "12:00:00"}}
     overrides = esr.ephys_slurm_overrides(params, NOTHING)
-    assert overrides == {
-        "cpus-per-task": esr.DEFAULT_SPIKEINTERFACE_CPUS,
-        "gres": "gpu:1",
-        "mem": "120G",
-        "time": "12:00:00",
-    }
+    assert overrides == {"gres": "gpu:2", "mem": "120G", "time": "12:00:00"}
     assert esr.apply_overrides(SPOCK_DEFAULT, overrides) == {
         "nodes": 1,
         "ntasks": 1,
+        "cpus-per-task": 4,
         "time": "12:00:00",
         "mem": "120G",
-        "gres": "gpu:1",
-        "cpus-per-task": esr.DEFAULT_SPIKEINTERFACE_CPUS,
+        "gres": "gpu:2",
     }
+
+
+def test_all_four_resources_together():
+    resources = {"cpus": 6, "gpus": 1, "mem": "60G", "time": "02:00:00"}
+    merged = esr.apply_overrides(
+        SPOCK_DEFAULT,
+        esr.ephys_slurm_overrides({**SI_KS4, "resources": resources}, NOTHING),
+    )
+    assert (merged["cpus-per-task"], merged["gres"], merged["mem"], merged["time"]) == (
+        6,
+        "gpu:1",
+        "60G",
+        "02:00:00",
+    )
 
 
 def test_zero_gpus_drops_the_gres_line():
@@ -127,7 +132,7 @@ def test_without_resources_the_cluster_defaults_stay():
         SPOCK_DEFAULT, esr.ephys_slurm_overrides(SI_KS4, NOTHING)
     )
     assert (merged["gres"], merged["mem"], merged["time"]) == (
-        "gpu:2",
+        "gpu:1",
         "80G",
         "30:00:00",
     )
@@ -142,9 +147,7 @@ def test_apply_overrides_does_not_touch_the_shared_default():
 @pytest.mark.parametrize("resources", [None, {}])
 def test_empty_resources(resources):
     params = {**SI_KS4, "resources": resources}
-    assert esr.ephys_slurm_overrides(params, NOTHING) == {
-        "cpus-per-task": esr.DEFAULT_SPIKEINTERFACE_CPUS
-    }
+    assert esr.ephys_slurm_overrides(params, NOTHING) == {}
 
 
 @pytest.mark.parametrize(

@@ -1,17 +1,16 @@
 """Slurm resources of an ephys job, worked out from its parameter sets.
 
-The defaults in ``clusters_paths_and_transfers`` fit a direct Kilosort job: one core, the
-GPU does the work. A job that runs through SpikeInterface (BrainCogsEphysSorters) also
-does CPU work in parallel chunks, and a paramset can say what it needs:
+The defaults in ``clusters_paths_and_transfers`` (4 cores, 1 GPU on spock) fit most jobs.
+A job that runs through SpikeInterface (BrainCogsEphysSorters) does CPU work in parallel
+chunks and may want more, and a paramset can say what it needs:
 
     {"clustering_method": ..., "sorter_params": {...},
      "resources": {"cpus": 16, "gpus": 1, "mem": "120G", "time": "12:00:00"}}
 
 Every field of ``resources`` is optional. Without ``cpus`` the largest ``n_jobs`` named in
-the job's paramsets is used; a SpikeInterface job that names none gets
-``DEFAULT_SPIKEINTERFACE_CPUS``. BrainCogsEphysSorters reads the granted cores back from
-SLURM_CPUS_PER_TASK, so the request and the worker count cannot drift apart. A job that
-does not use SpikeInterface gets no override at all and is queued exactly as before.
+the job's paramsets is used; if there is none the cluster default stays. BrainCogsEphysSorters
+reads the granted cores back from SLURM_CPUS_PER_TASK, so the request and the worker count
+cannot drift apart. A job that does not use SpikeInterface gets no override at all.
 
 Only ``resources`` of a namespaced clustering paramset (one with ``sorter_params``) is
 read: in a legacy paramset every key is a sorter setting.
@@ -20,10 +19,6 @@ No imports beyond the standard library, so this can be used and tested without a
 """
 
 import re
-
-# Cores for a SpikeInterface job whose paramsets name neither resources.cpus nor n_jobs.
-# With 8, SpikeInterface preprocessing of a 62 min NP2 recording took 41 min (slurm 7462100).
-DEFAULT_SPIKEINTERFACE_CPUS = 8
 
 # Preprocessing methods that run SpikeInterface code on the CPU.
 SPIKEINTERFACE_PREPROCESS_METHODS = {"spikeinterface", "dredge"}
@@ -138,7 +133,7 @@ def ephys_slurm_overrides(params, preparams):
     ``params`` is the clustering paramset, ``preparams`` the preprocessing step list
     (``[{method: params}, ...]``), both as written to the job's parameter files. A value
     of None means "remove this option" (``gres`` when the paramset asks for no GPU).
-    Returns {} for a job that does not use SpikeInterface.
+    Returns {} for a job that does not use SpikeInterface, or that asks for nothing.
     """
 
     if not uses_spikeinterface(params, preparams):
@@ -150,7 +145,8 @@ def ephys_slurm_overrides(params, preparams):
 
     overrides = {}
     cpus = resources.get("cpus") or requested_n_jobs(params, preparams)
-    overrides["cpus-per-task"] = cpus or DEFAULT_SPIKEINTERFACE_CPUS
+    if cpus:
+        overrides["cpus-per-task"] = cpus
     if "gpus" in resources:
         overrides["gres"] = f"gpu:{resources['gpus']}" if resources["gpus"] else None
     for key in ("mem", "time"):
