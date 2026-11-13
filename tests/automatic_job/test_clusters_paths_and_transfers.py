@@ -41,3 +41,11 @@ def test_get_cluster_vars_known(cpt, cluster):
 def test_get_cluster_vars_unknown_raises_value_error(cpt, cluster):
     with pytest.raises(ValueError, match="Non existing cluster"):
         cpt.get_cluster_vars(cluster)
+
+
+def test_spock_ephys_jobs_ask_for_several_cores(cpt):
+    """One core (slurm's default) starves SpikeInterface's chunked CPU steps, which
+    BrainCogsEphysSorters sizes from SLURM_CPUS_PER_TASK."""
+    slurm = cpt.cluster_vars["spock"]["slurm_default"]
+    assert slurm["cpus-per-task"] >= 4
+    assert slurm["ntasks"] == 1
