@@ -427,7 +427,10 @@ def sync_uv_env(cluster_vars, repository_dir):
 
 
 # How an ephys job on spock gets its python, for each value of spock_ephys_env().
-# matlab is for the Kilosort 2 / 3 sorters, which run in MATLAB.
+# conda loads matlab for the Kilosort 2 / 3 sorters that run in MATLAB on the node. uv does not:
+# there Kilosort 2 / 2.5 / 3 run in their Apptainer images (a container "sorter_version" in the
+# process paramset, BrainCogsEphysSorters), and a paramset that asks for native MATLAB Kilosort
+# 2 / 3 needs the conda environment. No ephys job since job_id 602 has used anything but kilosort4.
 spock_ephys_env_setup = {
     "conda": """
     source ~/.bashrc
@@ -442,7 +445,6 @@ spock_ephys_env_setup = {
     """,
     "uv": """
     source ~/.bashrc
-    module load matlab/R2024a -s
 
     # Without the checkout the script path would resolve against the submit directory
     cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
