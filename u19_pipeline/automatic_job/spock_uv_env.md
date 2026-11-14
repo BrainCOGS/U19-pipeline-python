@@ -29,12 +29,14 @@ pipeline's `dj_local_conf.json` control it:
    `uv sync --frozen --offline --check`, which installs nothing and stops the job within
    seconds when `.venv` is missing or does not match `uv.lock`. Then `source .venv/bin/activate`
    and `python -u main_script.py`.
-3. No `module load`: no anacondapy, no matlab. Kilosort 4 is in `.venv`; the IBL atlas step runs
-   with `.venv`'s python (BrainCogsEphysSorters); Kilosort 2 / 2.5 / 3 run in Apptainer images
-   through a container `sorter_version` (BrainCogsEphysSorters, SpikeInterface path; Kilosort 2
-   and 2.5 were run on spock, Kilosort 3 was not). A paramset that asks for native MATLAB
-   Kilosort 2 / 3 fails under `"uv"` (`matlab: command not found`) and needs `"conda"`; in the
-   database no ephys job since job_id 602 has used anything but kilosort4.
+3. The only module loaded is `matlab/R2024a`, as in the conda job, so a paramset that asks
+   for native MATLAB Kilosort 2 / 3 still finds `matlab`. No anacondapy. Kilosort 4 is in
+   `.venv`; the IBL atlas step runs with `.venv`'s python (BrainCogsEphysSorters). Kilosort
+   2 / 2.5 / 3 can also run in Apptainer images through a container `sorter_version`
+   (BrainCogsEphysSorters, SpikeInterface path), which needs no MATLAB on the node: Kilosort 2
+   and 2.5 were run that way on spock, Kilosort 3 was not. A native MATLAB Kilosort sort under
+   `"uv"` has not been run; in the database no ephys job since job_id 602 has used anything
+   but kilosort4.
 
 ## Shared uv cache
 

@@ -180,10 +180,11 @@ def test_uv_script_runs_from_the_venv_without_conda(sc, custom):
     commands = body_commands(sc.generate_slurm_spock(SLURM_DICT))
 
     assert not any("conda" in command for command in commands)
-    # no modules at all: python comes from .venv, and Kilosort 2 / 2.5 / 3 run in their
-    # Apptainer images (a container sorter_version), not in MATLAB on the node
-    assert not any(command.startswith("module ") for command in commands)
-    assert not any("matlab" in command for command in commands)
+    # the only module is matlab, for the Kilosort 2 / 3 sorters that run in MATLAB on the
+    # node: python comes from .venv, not from anacondapy
+    assert [c for c in commands if c.startswith("module ")] == [
+        "module load matlab/R2024a -s"
+    ]
     # umask and PATH (uv) of the account come from its .bashrc
     assert "source ~/.bashrc" in commands
 
