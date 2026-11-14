@@ -53,7 +53,7 @@ def cleanup(
     skip_outside_root=False,
 ):
     # Import lazily to share exactly the same inventory/hash implementation.
-    from .app import digest, inventory, now
+    from .app import completion_marker, digest, inventory, now
 
     source_root, destination_root = source_root.resolve(), destination_root.resolve()
     if retention_days < 0:
@@ -65,18 +65,19 @@ def cleanup(
     try:
         jobs = store.read()
         for job in jobs:
-            if job["status"] != "Complete":
+            if job["status"] not in ("Complete", "Registered"):
                 continue
             try:
-                if skip_outside_root and not Path(
-                    job["source"]
-                ).resolve().is_relative_to(source_root):
+                if skip_outside_root and (
+                    not Path(job["source"]).resolve().is_relative_to(source_root)
+                    or not Path(job["destination"])
+                    .resolve()
+                    .is_relative_to(destination_root)
+                ):
                     continue
                 source, destination = checked_paths(job, source_root, destination_root)
                 manifest = json.loads(
-                    (destination.parent / "transfer_complete.json").read_text(
-                        encoding="utf-8"
-                    )
+                    completion_marker(job).read_text(encoding="utf-8")
                 )
                 if (
                     manifest["transfer_id"] != job["id"]

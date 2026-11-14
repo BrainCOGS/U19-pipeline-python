@@ -102,7 +102,15 @@ class Store:
     def save(self, jobs):
         atomic_json(self.path, jobs)
 
-    def enqueue(self, source, root, modality, quiet_minutes, registration=None):
+    def enqueue(
+        self,
+        source,
+        root,
+        modality,
+        quiet_minutes,
+        registration=None,
+        registration_plan=None,
+    ):
         source, root = source.resolve(), root.resolve()
         if not source.is_dir():
             raise ValueError("Choose an existing recording folder.")
@@ -123,9 +131,32 @@ class Store:
         lock = self.lock()
         try:
             jobs = self.read()
-            if any(
-                j["source"] == str(source) and j["status"] != "Cancelled" for j in jobs
+            matches = [
+                job
+                for job in jobs
+                if job["source"] == str(source) and job["status"] != "Cancelled"
+            ]
+            if (
+                registration_plan is not None
+                and len(matches) == 1
+                and matches[0]["status"] == "Complete"
+                and "registration_plan" not in matches[0]
             ):
+                job = matches[0]
+                job["staged_copy"] = dict(
+                    destination=job["destination"],
+                    completion_marker=str(completion_marker(job)),
+                )
+                job.update(
+                    registration_plan=registration_plan,
+                    registration=registration or {},
+                    status="Queued",
+                    quiet_minutes=quiet_minutes,
+                    message="Confirmed final-path registration; incoming copy retained",
+                )
+                self.save(jobs)
+                return job
+            if matches:
                 raise ValueError(
                     "This folder is already queued. Use Run pending to retry it."
                 )
@@ -144,6 +175,8 @@ class Store:
                 quiet_minutes=quiet_minutes,
                 registration=registration or {},
             )
+            if registration_plan is not None:
+                job["registration_plan"] = registration_plan
             jobs.append(job)
             self.save(jobs)
             return job
@@ -195,12 +228,29 @@ def digest(path, stop):
     return value.hexdigest()
 
 
+def completion_marker(job):
+    destination = Path(job["destination"])
+    if "completion_marker" not in job:
+        return destination.parent / "transfer_complete.json"
+    identifier = str(job["id"])
+    if len(identifier) != 32 or any(
+        char not in "0123456789abcdef" for char in identifier
+    ):
+        raise ValueError("Invalid transfer ID for registration manifest.")
+    expected = destination.parent / f".u19-{identifier}-complete.json"
+    if Path(job["completion_marker"]).resolve() != expected.resolve():
+        raise ValueError(
+            "Registration manifest must stay beside its final recording directory."
+        )
+    return expected
+
+
 def copy_job(job, report, stop, delay=0):
     source, destination = Path(job["source"]), Path(job["destination"])
     reject_linked_ancestors(destination)
     # A crash can publish completion before queue.json records it. Never leave
     # that old success signal visible while retrying or deferring this job.
-    marker = destination.parent / "transfer_complete.json"
+    marker = completion_marker(job)
     marker.unlink(missing_ok=True)
     before = inventory(source)
     newest = max(stamp for _, stamp in before.values()) / 1e9
@@ -281,13 +331,17 @@ def copy_job(job, report, stop, delay=0):
     return True, f"Verified {len(files)} files • Ready to register"
 
 
-def run_pending(store, report, stop, delay=0):
+def run_pending(store, report, stop, delay=0, adapter_factory=None, only_job_id=None):
     lock = store.lock()
     try:
         jobs = store.read()
         errors = 0
         for job in jobs:
-            if job["status"] in ("Complete", "Local deleted") or stop.is_set():
+            if (
+                job["status"] in ("Complete", "Registered", "Local deleted")
+                or stop.is_set()
+                or (only_job_id is not None and job["id"] != only_job_id)
+            ):
                 continue
             job.update(status="Copying", message="Checking source")
             store.save(jobs)
@@ -299,12 +353,27 @@ def run_pending(store, report, stop, delay=0):
                     incoming = Path(store.machine["incoming_root"]).resolve()
                     if not any(
                         source != p and source.is_relative_to(p) for p in roots
-                    ) or not destination.is_relative_to(incoming):
+                    ) or (
+                        "registration_plan" not in job
+                        and not destination.is_relative_to(incoming)
+                    ):
                         raise ValueError(
                             "Queued transfer is outside this machine's approved storage roots."
                         )
-                complete, message = copy_job(job, report, stop, delay)
-                job.update(status="Complete" if complete else "Queued", message=message)
+                if "registration_plan" in job:
+                    from .registration_queue import run_registered_job
+
+                    kwargs = (
+                        dict(adapter_factory=adapter_factory) if adapter_factory else {}
+                    )
+                    complete, message = run_registered_job(
+                        store, job, report, stop, delay, **kwargs
+                    )
+                    state = "Registered"
+                else:
+                    complete, message = copy_job(job, report, stop, delay)
+                    state = "Complete"
+                job.update(status=state if complete else "Queued", message=message)
             except InterruptedError as exc:
                 job.update(status="Queued", message=str(exc))
             except Exception as exc:
@@ -314,6 +383,21 @@ def run_pending(store, report, stop, delay=0):
         return errors
     finally:
         lock.unlock()
+
+
+class PreviewWorker(QThread):
+    result = pyqtSignal(object)
+    failed = pyqtSignal(str)
+
+    def __init__(self, operation):
+        super().__init__()
+        self.operation = operation
+
+    def run(self):
+        try:
+            self.result.emit(self.operation())
+        except Exception as exc:
+            self.failed.emit(str(exc))
 
 
 class Worker(QThread):
@@ -338,7 +422,7 @@ class Worker(QThread):
             self.outcome.emit(
                 "Finished with errors; see queue."
                 if errors
-                else "Queue checked. Completed recordings are ready for website registration."
+                else "Queue checked. Review each recording's transfer or registration status."
             )
         except Exception as exc:
             self.outcome.emit(str(exc))
@@ -368,6 +452,7 @@ class Window(QMainWindow):
     def __init__(self, store, demo=False, catalog=None):
         super().__init__()
         self.store, self.demo, self.worker = store, demo, None
+        self.planner = None
         self.catalog = catalog or dict(sessions=[], processing=[], preprocessing=[])
         self.setWindowTitle(
             f"BrainCOGS U19 • Recording transfer {__version__}"
@@ -454,8 +539,14 @@ class Window(QMainWindow):
         self.session_hint = QLabel()
         self.session_hint.setWordWrap(True)
         registration_form.addRow("", self.session_hint)
+        self.suggest_button = QPushButton("Suggest session from SpikeGLX metadata")
+        self.suggest_button.clicked.connect(self.suggest_sessions)
+        registration_form.addRow("", self.suggest_button)
         self.add_surgery = QCheckBox("Add surgery when registering on the website")
         self.add_surgery.setChecked(False)
+        self.add_surgery.setToolTip(
+            "A preference for deferred website registration. Live registration requires existing surgery metadata."
+        )
         registration_form.addRow("", self.add_surgery)
         self.processing = QComboBox()
         self.processing.setSizeAdjustPolicy(
@@ -501,6 +592,19 @@ class Window(QMainWindow):
         self.copy_button = QPushButton("Copy now")
         self.copy_button.setObjectName("primary")
         self.copy_button.clicked.connect(lambda: self.enqueue(True))
+        self.register_button = QPushButton("Copy + register…")
+        self.registration_enabled = not demo and bool(
+            (store.machine or {}).get("registration", {}).get("enabled")
+        )
+        self.register_button.setEnabled(self.registration_enabled)
+        self.register_button.setToolTip(
+            "Optional live registration: configure local DB access and confirm the final plan."
+        )
+        self.register_button.clicked.connect(self.preview_registration)
+        if self.registration_enabled:
+            self.registration_note.setText(
+                "Copy now / Queue for later defer association. Copy + register previews live details and starts pipeline ingestion after confirmation."
+            )
         self.run_button = QPushButton("Run pending")
         self.run_button.clicked.connect(self.start)
         self.stop_button = QPushButton("Stop after current block")
@@ -509,6 +613,7 @@ class Window(QMainWindow):
         for button in [
             self.queue_button,
             self.copy_button,
+            self.register_button,
             self.run_button,
             self.stop_button,
         ]:
@@ -542,6 +647,116 @@ class Window(QMainWindow):
         self.fill_parameters()
         self.update_preview()
         self.refresh()
+
+    def background_preview(self, operation, completed):
+        if (self.worker and self.worker.isRunning()) or (
+            self.planner and self.planner.isRunning()
+        ):
+            return
+        self.message.setText(
+            "Reading recording/database metadata; no copying or database writes yet…"
+        )
+        self.centralWidget().setEnabled(False)
+        self.planner = PreviewWorker(operation)
+
+        def success(result):
+            self.centralWidget().setEnabled(True)
+            completed(result)
+
+        def failed(message):
+            self.centralWidget().setEnabled(True)
+            self.message.setText(message)
+            QMessageBox.warning(self, "Preview could not be prepared", message)
+
+        self.planner.result.connect(success)
+        self.planner.failed.connect(failed)
+        self.planner.start()
+
+    def suggest_sessions(self):
+        from .session_suggestions import rank_sessions
+
+        options, matched = matching_sessions(
+            self.source.text(), self.catalog["sessions"]
+        )
+        if not matched:
+            self.session_hint.setText(
+                "No subject/date match. Timing alone will not associate a recording with another subject."
+            )
+            return
+        source = Path(self.source.text())
+
+        def show(result):
+            suggestions, evidence = result
+            for item in suggestions:
+                for index in range(1, self.session.count()):
+                    if self.session.itemData(index) == item["session"]:
+                        self.session.setItemText(
+                            index,
+                            "Suggested • "
+                            + self.session.itemText(index).removeprefix("Suggested • "),
+                        )
+                        self.session.setItemData(
+                            index, item["reason"], Qt.ItemDataRole.ToolTipRole
+                        )
+            self.session_hint.setText(
+                "\n".join(
+                    [
+                        *evidence,
+                        *(item["reason"] for item in suggestions),
+                        "Suggestions only: choose the session explicitly.",
+                    ]
+                )
+            )
+            self.message.setText(
+                "Metadata suggestions prepared. No session was selected automatically."
+            )
+
+        self.background_preview(lambda: rank_sessions(source, options), show)
+
+    def preview_registration(self):
+        from .registration_queue import preview
+
+        source = Path(self.source.text())
+        modality = self.modality.currentText()
+        preferences = self.registration_preferences()
+        self.background_preview(
+            lambda: preview(self.store.machine, source, modality, preferences),
+            self.approve_registration,
+        )
+
+    def approve_registration(self, plan):
+        from .registration import describe
+
+        if plan["existing_recording_id"] is not None:
+            self.message.setText(
+                f"Already registered as recording_id {plan['existing_recording_id']}; nothing queued."
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            "Confirm copy and pipeline registration",
+            describe(plan) + "\n\nCopy and register this exact plan?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            self.message.setText(
+                "Registration cancelled; no transfer or database writes started."
+            )
+            return
+        try:
+            self.store.enqueue(
+                Path(plan["source"]),
+                Path(self.root.text()),
+                plan["modality"],
+                self.quiet.value(),
+                self.registration_preferences(),
+                registration_plan=plan,
+            )
+            self.refresh()
+            self.start()
+        except Exception as exc:
+            QMessageBox.warning(self, "Unable to queue registration", str(exc))
 
     def choose_catalog(self):
         selected, _ = QFileDialog.getOpenFileName(
@@ -692,6 +907,7 @@ class Window(QMainWindow):
         self.worker.finished.connect(self.finished)
         for button in [self.queue_button, self.copy_button, self.run_button]:
             button.setEnabled(False)
+        self.register_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.worker.start()
 
@@ -703,6 +919,7 @@ class Window(QMainWindow):
         for button in [self.queue_button, self.copy_button, self.run_button]:
             button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.register_button.setEnabled(self.registration_enabled)
         self.refresh()
 
     def refresh(self):
@@ -719,6 +936,12 @@ class Window(QMainWindow):
                 self.table.setItem(row, col, item)
 
     def closeEvent(self, event):
+        if self.planner and self.planner.isRunning():
+            self.message.setText(
+                "Metadata preview is still running; close after it finishes."
+            )
+            event.ignore()
+            return
         if self.worker and self.worker.isRunning():
             self.message.setText(
                 "Copy running. Keep this window open, or stop and close after it finishes."
@@ -863,10 +1086,13 @@ def main():
                     Path(p).resolve() for p in machine["source_roots"]
                 ]:
                     raise ValueError("Cleanup root is not configured for this machine.")
-                if (
-                    args.destination_root.resolve()
-                    != Path(machine["incoming_root"]).resolve()
-                ):
+                if args.destination_root.resolve() not in [
+                    Path(root).resolve()
+                    for root in [
+                        machine["incoming_root"],
+                        *machine.get("cleanup", {}).get("destination_roots", []),
+                    ]
+                ]:
                     raise ValueError(
                         "Cleanup destination is not configured for this machine."
                     )

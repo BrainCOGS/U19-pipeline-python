@@ -36,6 +36,9 @@ def export(dj_config, since_days):
         "session_date",
         "session_number",
         "session_location",
+        "session_start_time",
+        "session_end_time",
+        "num_trials",
         as_dict=True,
     )
     catalog = dict(

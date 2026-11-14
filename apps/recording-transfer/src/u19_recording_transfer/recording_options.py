@@ -32,6 +32,11 @@ def load_catalog(path):
 def matching_sessions(source, sessions):
     """Restrict only when both subject and date match; otherwise show all."""
     parts = [part.lower() for part in PureWindowsPath(str(source)).parts]
+    # SpikeGLX run names embed nickname/date/gate in one directory component.
+    for part in list(parts):
+        run = re.fullmatch(r"([a-z]+\d+)_(\d{8})_g\d+", part)
+        if run:
+            parts.append(run.group(1))
     dates = set()
     for part in parts:
         for token in re.findall(r"(?<!\d)(?:\d{4}-\d{2}-\d{2}|\d{8})(?!\d)", part):
@@ -48,7 +53,7 @@ def matching_sessions(source, sessions):
             or (any(c.isdigit() for c in part) and subject.endswith("_" + part))
             for part in parts
         )
-        if subject_match and session["session_date"] in dates:
+        if subject_match and str(session["session_date"]) in dates:
             matches.append(session)
     return (matches, True) if matches else (list(sessions), False)
 

@@ -123,6 +123,12 @@ def config_for(root):
                 "Source, incoming, state and uv paths must all be absolute."
             )
     cleanup = config.get("cleanup", {})
+    destinations = cleanup.get("destination_roots", [])
+    if not isinstance(destinations, list) or any(
+        not isinstance(path, str) or not Path(path).is_absolute()
+        for path in destinations
+    ):
+        raise ValueError("Cleanup destination roots must be a list of absolute paths.")
     if (
         not isinstance(cleanup.get("retention_days", 14), int)
         or cleanup.get("retention_days", 14) < 0
@@ -438,6 +444,8 @@ def install_release(root, config, source, allow_downgrade=False):
                     "--frozen",
                     "--no-dev",
                     "--no-editable",
+                    "--extra",
+                    "registration",
                     "--python",
                     config.get("python", "3.12"),
                 ],
@@ -509,19 +517,22 @@ def launch(root, config, mode, demo=False, output=None):
         if not Path(source_root).is_dir():
             LOGGER.info("Cleanup skipped absent source root %s", source_root)
             continue
-        command = [
-            *base,
-            "--cleanup",
-            "--source-root",
-            source_root,
-            "--destination-root",
-            config["incoming_root"],
-            "--retention-days",
-            str(cleanup.get("retention_days", 14)),
-        ]
-        if mode == "cleanup" and cleanup.get("enabled") is True:
-            command.append("--apply-cleanup")
-        errors |= execute(command)
+        for destination_root in dict.fromkeys(
+            [config["incoming_root"], *cleanup.get("destination_roots", [])]
+        ):
+            command = [
+                *base,
+                "--cleanup",
+                "--source-root",
+                source_root,
+                "--destination-root",
+                destination_root,
+                "--retention-days",
+                str(cleanup.get("retention_days", 14)),
+            ]
+            if mode == "cleanup" and cleanup.get("enabled") is True:
+                command.append("--apply-cleanup")
+            errors |= execute(command)
     return errors
 
 

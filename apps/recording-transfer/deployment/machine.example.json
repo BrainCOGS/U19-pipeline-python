@@ -13,5 +13,11 @@
   },
   "auto_update_on_launch": false,
   "quiet_minutes": 10,
-  "cleanup": {"enabled": false, "retention_days": 14}
+  "registration": {
+    "enabled": false,
+    "dj_config": null,
+    "system": "182-recording",
+    "behavior_rigs": ["182-Imaging-Rig1"]
+  },
+  "cleanup": {"enabled": false, "retention_days": 14, "destination_roots": []}
 }

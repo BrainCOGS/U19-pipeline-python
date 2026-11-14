@@ -89,10 +89,15 @@ preserves originals. Surgery starts unchecked; processing appears before
 preprocessing; the named imaging default is selected only when present in the
 loaded catalog. Subject/date matches restrict sessions; no match shows all loaded
 sessions. Choices travel in the completion manifest and still require website
-confirmation. This app does not write registrations to DataJoint or move staged
-files into final registered paths.
+confirmation in copy-only mode. Operators can separately enable the optional
+[direct registration workflow](REGISTRATION.md), which copies verified data to
+the canonical final path and writes the three registration rows transactionally.
+It requires local DB credentials and explicit researcher confirmation; it does
+not move existing staged files or create surgery records.
 
 The read-only catalog exporter is optional and separate from the deployed GUI.
+Release environments include the DataJoint dependency for optional registration;
+copy-only mode does not connect to the database.
 Credentials remain outside releases. Refresh the catalog to see recent sessions.
 The nighttime copier handles queued folders only, not automatic discovery of all
 recordings. Quiet time is a heuristic, not an acquisition-completion signal.
