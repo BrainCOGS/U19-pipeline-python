@@ -291,6 +291,15 @@ def create_slurm_params_file(slurm_dict):
 spock_ephys_env_key = "spock_ephys_env"
 spock_ephys_envs = ("conda", "uv")
 
+# uv cache for the "uv" environment, shared by the accounts that sync it. Optional:
+#   "custom": {"spock_ephys_env": "uv", "spock_uv_cache_dir": "/mnt/bucket/scratch/u19prod/uv_cache"}
+# Without it uv uses the cache of the account (~/.cache/uv). With it, the login-node sync and
+# the job both use that directory (UV_CACHE_DIR), the sync with umask 002 so the files it adds
+# stay writable for the directory's group, and with UV_LINK_MODE=copy so .venv holds its own
+# copies instead of hard links into a cache other accounts can write to. The directory has to
+# exist, owned by a group of every account that uses it, with setgid (chmod 2775).
+spock_uv_cache_dir_key = "spock_uv_cache_dir"
+
 # A first uv sync downloads torch and the CUDA libraries (several minutes); after that it
 # takes about a second. A hung ssh must not block the handler forever.
 uv_sync_timeout_s = 30 * 60
@@ -313,6 +322,38 @@ def spock_ephys_env():
         )
 
     return env
+
+
+def spock_uv_cache_dir():
+    """
+    Shared uv cache directory for spock ephys jobs (see spock_uv_cache_dir_key), or None
+    """
+
+    custom = dj.config.get("custom") or {}
+    value = custom.get(spock_uv_cache_dir_key)
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+
+    cache_dir = value.strip() if isinstance(value, str) else value
+    if not isinstance(cache_dir, str) or not cache_dir.startswith("/"):
+        raise ValueError(
+            "dj.config['custom']['"
+            + spock_uv_cache_dir_key
+            + f"'] must be an absolute path on the cluster, got {value!r}"
+        )
+
+    return cache_dir.rstrip("/") or "/"
+
+
+def uv_cache_env_command():
+    """
+    Shell words that point uv at the shared cache, or '' when none is configured
+    """
+
+    cache_dir = spock_uv_cache_dir()
+    if cache_dir is None:
+        return ""
+    return "export " + shlex.quote("UV_CACHE_DIR=" + cache_dir)
 
 
 def ephys_job_uses_uv(program_selection_params):
@@ -342,6 +383,9 @@ def sync_uv_env(cluster_vars, repository_dir):
     """
 
     remote = "cd " + shlex.quote(repository_dir) + " && uv sync --locked"
+    cache_env = uv_cache_env_command()
+    if cache_env:
+        remote = "umask 002 && " + cache_env + " UV_LINK_MODE=copy && " + remote
     if is_this_spock():
         # A login shell, so uv is on PATH as it is for the user
         command = ["bash", "-lc", remote]
@@ -403,9 +447,11 @@ spock_ephys_env_setup = {
     # Without the checkout the script path would resolve against the submit directory
     cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
 
+    command -v uv >/dev/null || { echo "uv is not on PATH: the job takes PATH from ~/.bashrc of $(whoami) on $(hostname)" >&2; exit 1; }
+{uv_cache_env}
     # The node has no internet and other jobs share this environment, so nothing is
     # installed here: the job only runs if .venv already matches uv.lock.
-    uv sync --frozen --offline --check || { echo "the uv environment ${repository_dir}/.venv is missing or does not match uv.lock (or uv is not on PATH): run 'uv sync --locked' in ${repository_dir} on the login node" >&2; exit 1; }
+    uv sync --frozen --offline --check || { echo "the uv environment ${repository_dir}/.venv is missing or does not match uv.lock: run 'uv sync --locked' in ${repository_dir} on the login node" >&2; exit 1; }
 
     source .venv/bin/activate
     python -c 'import sys; print("PYTHON:", sys.executable, sys.version.split()[0])'
@@ -436,7 +482,14 @@ def generate_slurm_spock(slurm_dict, python_env=None):
     echo "REPOSITORY_DIR: ${repository_dir}"
     echo "PROCESS_SCRIPT_PATH: ${process_script_path}"
 """
-    slurm_text += spock_ephys_env_setup[python_env]
+    setup = spock_ephys_env_setup[python_env]
+    if python_env == "uv":
+        # The check reads the cache (and writes a little to it): the same one the sync filled
+        cache_env = uv_cache_env_command()
+        if cache_env:
+            cache_env = "    umask 002\n    " + cache_env + "\n"
+        setup = setup.replace("{uv_cache_env}\n", cache_env)
+    slurm_text += setup
 
     return slurm_text
 

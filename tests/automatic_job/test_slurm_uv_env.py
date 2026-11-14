@@ -78,6 +78,7 @@ def custom(monkeypatch):
     dj = pytest.importorskip("datajoint")
     custom = dict(dj.config.get("custom") or {}, root_data_dir="/tmp/root")
     custom.pop("spock_ephys_env", None)
+    custom.pop("spock_uv_cache_dir", None)
     monkeypatch.setitem(dj.config, "custom", custom)
     return custom
 
@@ -210,6 +211,69 @@ def test_uv_script_stops_without_the_checkout(sc, custom):
     assert cd.endswith("exit 1; }")
 
 
+def test_uv_script_says_when_uv_is_not_on_path(sc, custom):
+    custom["spock_ephys_env"] = "uv"
+    commands = body_commands(sc.generate_slurm_spock(SLURM_DICT))
+
+    (which,) = [c for c in commands if c.startswith("command -v uv ")]
+    assert "uv is not on PATH" in which
+    assert which.endswith("exit 1; }")
+    assert commands.index(which) < commands.index(
+        next(c for c in commands if c.startswith("uv sync "))
+    )
+
+
+def test_uv_script_uses_the_default_cache_unless_configured(sc, custom):
+    custom["spock_ephys_env"] = "uv"
+    assert "UV_CACHE_DIR" not in sc.generate_slurm_spock(SLURM_DICT)
+
+
+SHARED_CACHE = "/mnt/bucket/scratch/u19prod/uv_cache"
+
+
+def test_uv_script_checks_against_the_shared_cache(sc, custom):
+    custom["spock_ephys_env"] = "uv"
+    custom["spock_uv_cache_dir"] = SHARED_CACHE
+    commands = body_commands(sc.generate_slurm_spock(SLURM_DICT))
+
+    export = commands.index("export UV_CACHE_DIR=" + SHARED_CACHE)
+    check = commands.index(next(c for c in commands if c.startswith("uv sync ")))
+    assert export < check
+
+
+def test_uv_script_quotes_the_cache_dir(sc, custom):
+    custom["spock_ephys_env"] = "uv"
+    custom["spock_uv_cache_dir"] = "/scratch/my cache"
+    commands = body_commands(sc.generate_slurm_spock(SLURM_DICT))
+
+    (export,) = [c for c in commands if "UV_CACHE_DIR=" in c]
+    assert shlex.split(export) == ["export", "UV_CACHE_DIR=/scratch/my cache"]
+
+
+def test_conda_script_ignores_the_cache_dir(sc, custom):
+    custom["spock_uv_cache_dir"] = SHARED_CACHE
+    assert sc.generate_slurm_spock(SLURM_DICT) == CONDA_SLURM_TEXT
+
+
+@pytest.mark.parametrize("value", [None, "", "  "])
+def test_cache_dir_is_unset_by_default(sc, custom, value):
+    if value is not None:
+        custom["spock_uv_cache_dir"] = value
+    assert sc.spock_uv_cache_dir() is None
+
+
+def test_cache_dir_read_from_dj_config(sc, custom):
+    custom["spock_uv_cache_dir"] = " " + SHARED_CACHE + "/\n"
+    assert sc.spock_uv_cache_dir() == SHARED_CACHE
+
+
+@pytest.mark.parametrize("value", ["uv_cache", "~/uv_cache", 3])
+def test_cache_dir_must_be_an_absolute_path(sc, custom, value):
+    custom["spock_uv_cache_dir"] = value
+    with pytest.raises(ValueError, match="spock_uv_cache_dir"):
+        sc.spock_uv_cache_dir()
+
+
 def test_python_env_argument_overrides_the_config(sc, custom):
     custom["spock_ephys_env"] = "uv"
     assert sc.generate_slurm_spock(SLURM_DICT, python_env="conda") == CONDA_SLURM_TEXT
@@ -284,6 +348,29 @@ def test_sync_runs_locally_on_spock(sc, runs, monkeypatch):
     sc.sync_uv_env(CLUSTER_VARS, REPO_DIR)
 
     assert runs.commands == [["bash", "-lc", "cd " + REPO_DIR + " && uv sync --locked"]]
+
+
+def test_sync_uses_the_shared_cache(sc, custom, runs):
+    custom["spock_uv_cache_dir"] = "/scratch/my cache"
+    sc.sync_uv_env(CLUSTER_VARS, REPO_DIR)
+
+    (script,) = shlex.split(" ".join(runs.commands[0][2:]))[2:]
+    # group-writable files in the shared cache; copies in .venv, no links into the cache
+    assert shlex.split(script) == [
+        "umask",
+        "002",
+        "&&",
+        "export",
+        "UV_CACHE_DIR=/scratch/my cache",
+        "UV_LINK_MODE=copy",
+        "&&",
+        "cd",
+        REPO_DIR,
+        "&&",
+        "uv",
+        "sync",
+        "--locked",
+    ]
 
 
 def test_sync_failure_reports_what_uv_said(sc, runs):
