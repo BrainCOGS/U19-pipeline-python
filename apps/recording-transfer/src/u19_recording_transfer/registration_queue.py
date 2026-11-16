@@ -30,12 +30,12 @@ def preview(machine, source, modality, preferences, adapter_factory=DataJointAda
         modality,
         settings["system"],
         settings["behavior_rigs"],
-        preferences,
+        dict(preferences, source_rig=machine.get("rig")),
     )
 
 
 def signature(plan):
-    return {
+    result = {
         key: plan[key]
         for key in (
             "source",
@@ -52,6 +52,9 @@ def signature(plan):
             "allow_duplicate_session",
         )
     }
+    if plan.get("source_rig") is not None:
+        result["source_rig"] = plan["source_rig"]
+    return result
 
 
 def verify_completed(job):
@@ -97,6 +100,10 @@ def run_registered_job(
 
     settings = settings_for(store.machine)
     approved = job["registration_plan"]
+    if approved.get("source_rig") != job.get("source_rig"):
+        raise ValueError(
+            "Rig identity changed after preview; preview and confirm again."
+        )
     adapter = adapter_factory(settings["dj_config"])
     fresh = prepare(
         adapter,

@@ -29,6 +29,11 @@ def main(argv=None, adapter_factory=DataJointAdapter):
     )
     args = parser.parse_args(argv)
     machine = json.loads(args.machine_config.read_text(encoding="utf-8-sig"))
+    from .rigs import load_machine_profile
+
+    load_machine_profile(
+        machine, machine.get("state_dir", args.machine_config.parent / "state")
+    )
     preferences = dict(
         behavior_session=dict(
             subject_fullname=args.subject,

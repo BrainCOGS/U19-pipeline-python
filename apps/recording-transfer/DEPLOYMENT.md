@@ -38,6 +38,7 @@ Git commands to receive features. Normal launches do not require internet access
   versions\0.1.0\.venv\       permanent, non-editable release environment
   versions\0.1.1\.venv\       next environment; old versions are preserved
   state\queue.json            shared persistent transfer queue
+  state\rig.json              selected lab.Location, role, acquisition type and PC
   logs\launcher.log           bounded launcher/update logs
   logs\install-<version>.log  dependency installation output
   logs\application.log        GUI/copy/cleanup output, rotated between runs
@@ -107,6 +108,10 @@ See [REGISTRATION.md](REGISTRATION.md) for login, forget and CLI instructions.
 Leave the intended account signed in for nightly work. **Log out** removes its
 saved credentials and stops remote transfers/cleanup until sign-in; changing
 users does not transfer ownership of queued recordings.
+After login, use **Select rig…** to confirm this PC's source location from
+`lab.Location`. Grant the database account read access to that table. The saved
+selection survives updates and is loaded for nightly copying; never reuse another
+PC's `rig.json`. Changing selection pauses jobs queued under the previous identity.
 The nighttime copier handles queued folders only, not automatic discovery of all
 recordings. Quiet time is a heuristic, not an acquisition-completion signal.
 Interrupted large files restart from the beginning; verified complete files are

@@ -25,6 +25,10 @@ account; passwords do not go in machine settings, queue files or manifests.
 The account bar provides **Change user**, **Change password** and **Log out**.
 Only one researcher is active; signing out pauses remote jobs, and new queued
 recordings can only run while their owner is signed in.
+All other actions are grayed out while signed out. **Select rig…** reads
+`lab.Location` and filters by machine role and acquisition type. The selection
+persists in `state/rig.json`, drives the source location/modality, and travels with
+new jobs and copy receipts. See [REGISTRATION.md](REGISTRATION.md) for setup.
 
 The first screen defaults surgery to unchecked, shows processing parameters before
 preprocessing, selects `PNI182-1plane-30fs-PPC` when present in the loaded catalog,

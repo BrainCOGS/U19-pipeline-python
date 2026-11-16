@@ -97,6 +97,9 @@ def prepare(adapter, source, modality, system, behavior_rigs, preferences):
     if session["session_location"] not in behavior_rigs:
         raise ValueError("Selected session belongs to a different behavior rig.")
     adapter.validate_subject_and_system(key["subject_fullname"], system)
+    from .rigs import validate_live_profile
+
+    validate_live_profile(adapter, preferences.get("source_rig"), modality, system)
     user_id = adapter.subject_user(key["subject_fullname"])
     default_pre, default_processing = adapter.defaults(modality)
     ids = {}
@@ -155,6 +158,7 @@ def prepare(adapter, source, modality, system, behavior_rigs, preferences):
         destination=str(destination),
         warnings=warnings,
         allow_duplicate_session=bool(preferences.get("allow_duplicate_session")),
+        source_rig=preferences.get("source_rig"),
     )
     plan["existing_recording_id"] = adapter.check_duplicates(plan)
     return plan
@@ -168,6 +172,7 @@ def request_for(plan):
         preprocessing=dict(id=plan["preprocessing"]),
         add_surgery=False,
         allow_duplicate_session=plan["allow_duplicate_session"],
+        source_rig=plan.get("source_rig"),
     )
 
 
@@ -366,6 +371,11 @@ class DataJointAdapter:
 
     def commit(self, plan):
         with self.locks(plan), self.conn.transaction:
+            from .rigs import validate_live_profile
+
+            validate_live_profile(
+                self, plan.get("source_rig"), plan["modality"], plan["system"]
+            )
             # Repeat live validation after locks and inside the transaction.
             session = self.session(plan["session"])
             if session["session_location"] not in plan["behavior_rigs"]:

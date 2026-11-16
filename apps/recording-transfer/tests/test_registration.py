@@ -229,6 +229,37 @@ def test_plan_is_read_only_and_uses_live_defaults_and_final_layout(setup):
     assert source.exists()
 
 
+def test_saved_rig_type_is_revalidated_before_database_commit(setup, monkeypatch):
+    from u19_recording_transfer.rigs import profile_for
+
+    source, adapter, machine, preferences, _, store = setup
+    row = dict(location="PC", system_type="recording", acquisition_type="2photon")
+    adapter.data["locations"][0].update(row)
+    machine["rig"] = profile_for(row)
+    plan = preview(machine, source, "imaging", preferences, lambda path: adapter)
+    assert plan["source_rig"] == machine["rig"]
+    store.enqueue(
+        source,
+        Path(machine["incoming_root"]),
+        "imaging",
+        0,
+        preferences,
+        registration_plan=plan,
+    )
+    original_copy = app.copy_job
+
+    def copy_then_location_changes(*args, **kwargs):
+        result = original_copy(*args, **kwargs)
+        adapter.data["locations"][0]["acquisition_type"] = "electrophysiology"
+        return result
+
+    monkeypatch.setattr(app, "copy_job", copy_then_location_changes)
+    assert run(setup) == 1
+    assert "type changed in lab.Location" in store.read()[0]["message"]
+    assert not adapter.data["recordings"]
+    assert Path(plan["destination"]).exists()
+
+
 def test_verified_copy_then_atomic_registration_and_safe_rerun(setup):
     job = enqueue(setup)
     assert run(setup) == 0

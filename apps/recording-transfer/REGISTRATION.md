@@ -53,6 +53,39 @@ copy-only UNC rigs use the saved storage login. Database and storage credentials
 can differ because they authenticate different services, not two app sessions.
 Local-only demonstrations do not need an account.
 
+Outside explicit demo mode, all action buttons and recording inputs are disabled
+while signed out; only **Sign in** is enabled. This includes browsing, catalog
+loading, metadata suggestions, connection settings and rig selection.
+
+The **Select rig…** button below the account bar reads only `location`,
+`system_type` and `acquisition_type` from `lab.Location`, using the saved database
+login. Copy-only rigs also need a local `registration.dj_config` and saved database
+login for this read-only lookup; registration can stay disabled. Use **Connection
+logins…** to set up that database account after signing into storage.
+
+Filter **Rig type** between Recording computer (`system_type=recording`) and
+Acquisition rig (`system_type=rig`), then optionally filter **Acquisition type**.
+Only supported imaging/ephys types are selectable. Behavior-only, housing and
+unclassified rows are excluded rather than guessed from names. Choose an explicit
+location and Save; an empty filter result cannot be saved.
+
+Selection is stored in `state/rig.json`, outside versioned release directories,
+and loaded by the GUI, scheduled copier and registration CLI on subsequent runs.
+It records the database location, machine role, acquisition type, recording
+modality and source PC hostname. The selected acquisition type controls the
+Recording type field, and its location becomes `Recording.location` for direct
+registration. Existing `registration.system` remains a legacy fallback until a
+rig is selected. The configured `registration.behavior_rigs` list still defines
+allowed behavior-session locations; source and behavior rigs are separate records.
+
+New jobs and completion manifests preserve the selected rig identity. A pending
+job cannot run or be cleaned up under a different selection; restore its original
+selection before retrying. Live registration checks its role/acquisition type
+again before copying and inside the insert transaction. A rig profile belongs to
+one PC; do not copy another PC's `rig.json`. For a replacement PC, remove that
+profile and select its rig afresh. The role describes what the machine is used
+for; quiet-time checks still govern copying and do not prove acquisition has stopped.
+
 Use **Change user** to sign out before another researcher signs in. Saving a
 different username over an existing login is rejected. **Change password** keeps
 the username fixed and tests/replaces its saved password; it does not change the

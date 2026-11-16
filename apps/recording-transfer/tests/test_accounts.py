@@ -145,6 +145,23 @@ def test_gui_account_controls_and_password_username_lock(account, tmp_path):
     application.processEvents()
 
 
+def test_signed_out_disables_every_button_except_sign_in(account, tmp_path):
+    from PyQt6.QtWidgets import QApplication, QPushButton
+
+    application = QApplication.instance() or QApplication([])
+    machine, vault, _ = account
+    vault.items.clear()
+    window = app.Window(app.Store(tmp_path / "state", machine))
+    enabled = [
+        button.text()
+        for button in window.findChildren(QPushButton)
+        if button is not window.sign_in_button and button.isEnabled()
+    ]
+    window.close()
+    application.processEvents()
+    assert enabled == [], f"Signed-out buttons still enabled: {enabled}"
+
+
 @pytest.mark.parametrize("code", [0, 2250, 2401])
 def test_native_logout_never_forces_open_files_closed(monkeypatch, code):
     class Cancel:

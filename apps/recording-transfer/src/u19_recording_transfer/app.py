@@ -81,6 +81,9 @@ class Store:
         directory.mkdir(parents=True, exist_ok=True)
         self.path = directory / "queue.json"
         self.machine = machine
+        from .rigs import load_profile
+
+        load_profile(self)
 
     def lock(self):
         lock = QLockFile(str(self.directory / "transfer.lock"))
@@ -114,6 +117,9 @@ class Store:
         from .accounts import require_user
 
         queued_by = require_user(self.machine)
+        rig = (self.machine or {}).get("rig")
+        if rig and modality != rig["modality"]:
+            raise ValueError("Recording modality must match the selected rig.")
         source, root = source.resolve(), root.resolve()
         if not source.is_dir():
             raise ValueError("Choose an existing recording folder.")
@@ -147,6 +153,9 @@ class Store:
             ):
                 job = matches[0]
                 require_user(self.machine, job.get("queued_by"))
+                from .rigs import require_matching_job
+
+                require_matching_job(self.machine, job)
                 job["staged_copy"] = dict(
                     destination=job["destination"],
                     completion_marker=str(completion_marker(job)),
@@ -155,6 +164,7 @@ class Store:
                     registration_plan=registration_plan,
                     registration=registration or {},
                     queued_by=queued_by,
+                    source_rig=rig,
                     status="Queued",
                     quiet_minutes=quiet_minutes,
                     message="Confirmed final-path registration; incoming copy retained",
@@ -180,6 +190,7 @@ class Store:
                 quiet_minutes=quiet_minutes,
                 registration=registration or {},
                 queued_by=queued_by,
+                source_rig=(self.machine or {}).get("rig"),
             )
             if registration_plan is not None:
                 job["registration_plan"] = registration_plan
@@ -327,6 +338,7 @@ def copy_job(job, report, stop, delay=0):
             version=1,
             transfer_id=job["id"],
             source_pc=socket.gethostname(),
+            source_rig=job.get("source_rig"),
             original_path=str(source),
             destination=str(destination),
             modality=job["modality"],
@@ -358,6 +370,9 @@ def run_pending(store, report, stop, delay=0, adapter_factory=None, only_job_id=
                 from .accounts import require_user
 
                 require_user(store.machine, job.get("queued_by"))
+                from .rigs import require_matching_job
+
+                require_matching_job(store.machine, job)
                 if store.machine:
                     source = Path(job["source"]).resolve()
                     roots = [Path(p).resolve() for p in store.machine["source_roots"]]
@@ -531,6 +546,13 @@ class Window(QMainWindow):
         for button in self.account_buttons:
             account_row.addWidget(button)
         layout.addLayout(account_row)
+        rig_row = QHBoxLayout()
+        self.rig_label = QLabel()
+        rig_row.addWidget(self.rig_label, 1)
+        self.rig_button = QPushButton("Select rig…")
+        self.rig_button.clicked.connect(self.select_rig)
+        rig_row.addWidget(self.rig_button)
+        layout.addLayout(rig_row)
         if demo:
             layout.addWidget(
                 QLabel(
@@ -685,14 +707,29 @@ class Window(QMainWindow):
         self.fill_sessions()
         self.fill_parameters()
         self.update_preview()
+        self.session_buttons = [
+            button
+            for button in self.findChildren(QPushButton)
+            if button not in self.account_buttons and button is not self.stop_button
+        ]
+        self.session_fields = [
+            self.source,
+            self.root,
+            self.modality,
+            self.quiet,
+            self.session,
+            self.processing,
+            self.preprocessing,
+            self.add_surgery,
+        ]
         self.refresh()
         self.refresh_account_controls()
 
     def refresh_account_controls(self):
-        from .accounts import active_user, primary_identity
+        from .accounts import active_user
 
         try:
-            required = bool(primary_identity(self.store.machine)) and not self.demo
+            required = not self.demo
             username = active_user(self.store.machine) if required else None
         except Exception:
             required, username = True, None
@@ -715,11 +752,48 @@ class Window(QMainWindow):
         ]:
             button.setEnabled(bool(username) and not busy)
         allowed = not required or bool(username)
-        for button in [self.queue_button, self.copy_button, self.run_button]:
+        for button in self.session_buttons:
             button.setEnabled(allowed and not busy)
+        for field in self.session_fields:
+            field.setEnabled(allowed and not busy)
+        self.login_button.setEnabled(allowed and not busy and not self.demo)
+        self.rig_button.setEnabled(
+            allowed and not busy and not self.demo and bool(self.store.machine)
+        )
+        self.modality.setEnabled(
+            allowed and not busy and not bool((self.store.machine or {}).get("rig"))
+        )
+        from .rigs import label
+
+        self.rig_label.setText(label(self.store.machine))
         self.register_button.setEnabled(
             allowed and self.registration_enabled and not busy
         )
+
+    def select_rig(self):
+        from .rigs import location_rows
+
+        self.background_preview(
+            lambda: location_rows(self.store.machine), self.choose_rig
+        )
+
+    def choose_rig(self, rows):
+        from PyQt6.QtWidgets import QDialog
+        from .rig_ui import RigDialog
+        from .rigs import save_profile
+
+        dialog = RigDialog(self, rows, self.store.machine)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        try:
+            profile = save_profile(self.store, dialog.location.currentData())
+            self.modality.setCurrentText(profile["modality"])
+            self.message.setText(
+                f"Rig saved on this PC: {profile['location']} ({profile['system_type']})."
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Unable to save rig", str(exc))
+        self.refresh_account_controls()
 
     def manage_logins(self, mode="settings"):
         from .login_ui import LoginDialog

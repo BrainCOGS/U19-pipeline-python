@@ -73,6 +73,9 @@ def cleanup(
                 continue
             try:
                 require_user(store.machine, job.get("queued_by"))
+                from .rigs import require_matching_job
+
+                require_matching_job(store.machine, job)
                 if skip_outside_root and (
                     not Path(job["source"]).resolve().is_relative_to(source_root)
                     or not Path(job["destination"])
