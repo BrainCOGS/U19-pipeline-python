@@ -22,14 +22,24 @@ from .credentials import (
 
 
 class LoginDialog(QDialog):
-    def __init__(self, parent, machine):
+    def __init__(self, parent, machine, mode="settings"):
         super().__init__(parent)
-        self.setWindowTitle("Saved logins")
+        self.mode = mode
+        self.setWindowTitle(
+            "Change password"
+            if mode == "password"
+            else "Sign in"
+            if mode == "signin"
+            else "Connection logins"
+        )
         self.worker = None
         self.machine = machine or {}
         layout = QFormLayout(self)
         self.kind = QComboBox()
         self.kind.addItems(["Storage share", "Database"])
+        if (machine or {}).get("registration", {}).get("enabled"):
+            self.kind.setCurrentIndex(1)
+        self.kind.setEnabled(mode == "settings")
         self.address = QLabel()
         self.username = QLineEdit()
         self.password = QLineEdit()
@@ -57,6 +67,16 @@ class LoginDialog(QDialog):
         self.save_button.clicked.connect(self.save_login)
         self.forget_button.clicked.connect(self.forget_login)
         self.load_identity()
+        if mode == "password":
+            self.username.setReadOnly(True)
+            self.save_button.setText("Test and update password")
+            self.forget_button.hide()
+            self.note.setText(
+                "Update the saved password for this user. This updates the app's login; it does not change the password on the server."
+            )
+        elif mode == "signin":
+            self.save_button.setText("Sign in and save securely")
+            self.forget_button.hide()
 
     def identity(self):
         if self.kind.currentIndex() == 1:
@@ -144,11 +164,19 @@ class LoginDialog(QDialog):
     def forget_login(self):
         try:
             kind, address, _, _ = self.identity()
-            WindowsVault().forget(target(kind, address))
+            from .accounts import primary_identity, logout, disconnect_share
+
+            vault = WindowsVault()
+            if (kind, address) == primary_identity(self.machine):
+                message = logout(self.machine, vault)
+            else:
+                saved = vault.read(target(kind, address))
+                vault.forget(target(kind, address))
+                if saved and kind == "storage":
+                    disconnect_share(address)
+                message = "Saved connection login removed."
             self.password.clear()
-            self.note.setText(
-                "Saved login removed. Existing Windows share connections remain open; manage those in Windows."
-            )
+            self.note.setText(message)
             self.forget_button.setEnabled(False)
         except Exception:
             self.note.setText(

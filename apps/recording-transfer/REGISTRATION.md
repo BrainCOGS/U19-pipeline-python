@@ -47,8 +47,32 @@ to use the Windows session's existing access. If no storage credential is saved,
 the app uses the current Windows session normally. It never disconnects existing
 share connections to replace another account; resolve Windows error 1219 in Windows.
 
-**Forget saved login** deletes the app's vault entry. It does not close existing
-Windows share connections or erase legacy config passwords. Password fields are
+The account bar below the BrainCOGS header shows one active researcher. On rigs
+with registration enabled, the saved database login identifies that researcher;
+copy-only UNC rigs use the saved storage login. Database and storage credentials
+can differ because they authenticate different services, not two app sessions.
+Local-only demonstrations do not need an account.
+
+Use **Change user** to sign out before another researcher signs in. Saving a
+different username over an existing login is rejected. **Change password** keeps
+the username fixed and tests/replaces its saved password; it does not change the
+password on the database or storage server. Account changes hold the same rig
+transfer lock as copying and are disabled while a transfer is running.
+
+**Log out** removes the configured database and storage vault entries, leaves
+queued recordings in place, and blocks manual transfers, scheduled transfers,
+registration and cleanup until sign-in. New jobs record their owner and can only
+run or be cleaned up while that owner is signed in. Older jobs without an owner
+remain compatible but still require a signed-in user. Nightly work is deliberately
+paused after logout; leave the intended researcher signed in for unattended work.
+
+**Forget saved login** for the primary account also signs out. Logout attempts to
+close the app's saved storage connection without forcing other applications to
+close files. If Windows reports open files or another problem, the app remains
+signed out and reports how to disconnect it in Windows. Connections for which the
+app has no saved credential are not disconnected. No legacy config backups are
+erased. This uses the [native non-forced disconnect API](https://learn.microsoft.com/en-us/windows/win32/api/winnetwk/nf-winnetwk-wnetcancelconnection2w).
+Password fields are
 masked and cleared after submission/cancel; login failures report safe messages.
 There is no plaintext fallback store. Passwords must exist in process memory while
 authenticating; the app does not persist them in its queue, manifests or logs.
@@ -115,6 +139,10 @@ The login command requires an interactive terminal and uses a hidden password
 prompt. It never accepts a password argument. Add `--forget` to remove an entry
 without prompting for a password. The GUI's Logins dialog provides the same setup.
 Catalog export uses the same saved database login for its configured host.
+
+For CLI account changes, add `--change-user` to sign out before entering the new
+login, or use `u19-recording-login --machine-config <path> --logout` to sign out
+without opening the GUI. Primary-account `--forget` also signs out.
 
 Add `--yes` to copy and register that selected job. `--processing-id` and
 `--preprocessing-id` override modality defaults; run `--help` for available options.

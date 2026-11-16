@@ -205,12 +205,17 @@ def ensure_share(path, vault=None, connector=connect_share):
 def save_database_login(
     path, username, password, vault=None, connector=connect_database
 ):
+    vault = vault or WindowsVault()
+    config = database_config(path)
+    previous = vault.read(target("database", config["database.host"]))
+    if previous and previous[0] != username:
+        raise LoginError(
+            "One user may be signed in at a time. Use Change user or log out first."
+        )
     # Validate before replacing the last working saved login.
     _, connection, config = connector(path, login=(username, password))
     connection.close()
-    (vault or WindowsVault()).save(
-        target("database", config["database.host"]), username, password
-    )
+    vault.save(target("database", config["database.host"]), username, password)
     # Explicit Save migrates the legacy config; the password is never written back.
     from .app import atomic_json
 
@@ -225,5 +230,11 @@ def save_storage_login(path, username, password, vault=None, connector=connect_s
         raise LoginError(
             "Storage login needs a configured UNC path such as \\\\server\\share."
         )
+    vault = vault or WindowsVault()
+    previous = vault.read(target("storage", share))
+    if previous and previous[0].casefold() != username.casefold():
+        raise LoginError(
+            "One storage account may be saved at a time. Use Change user or log out first."
+        )
     connector(share, (username, password))
-    (vault or WindowsVault()).save(target("storage", share), username, password)
+    vault.save(target("storage", share), username, password)

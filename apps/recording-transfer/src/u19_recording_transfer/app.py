@@ -111,6 +111,9 @@ class Store:
         registration=None,
         registration_plan=None,
     ):
+        from .accounts import require_user
+
+        queued_by = require_user(self.machine)
         source, root = source.resolve(), root.resolve()
         if not source.is_dir():
             raise ValueError("Choose an existing recording folder.")
@@ -143,6 +146,7 @@ class Store:
                 and "registration_plan" not in matches[0]
             ):
                 job = matches[0]
+                require_user(self.machine, job.get("queued_by"))
                 job["staged_copy"] = dict(
                     destination=job["destination"],
                     completion_marker=str(completion_marker(job)),
@@ -150,6 +154,7 @@ class Store:
                 job.update(
                     registration_plan=registration_plan,
                     registration=registration or {},
+                    queued_by=queued_by,
                     status="Queued",
                     quiet_minutes=quiet_minutes,
                     message="Confirmed final-path registration; incoming copy retained",
@@ -174,6 +179,7 @@ class Store:
                 created_at=now(),
                 quiet_minutes=quiet_minutes,
                 registration=registration or {},
+                queued_by=queued_by,
             )
             if registration_plan is not None:
                 job["registration_plan"] = registration_plan
@@ -349,6 +355,9 @@ def run_pending(store, report, stop, delay=0, adapter_factory=None, only_job_id=
             job.update(status="Copying", message="Checking source")
             store.save(jobs)
             try:
+                from .accounts import require_user
+
+                require_user(store.machine, job.get("queued_by"))
                 if store.machine:
                     source = Path(job["source"]).resolve()
                     roots = [Path(p).resolve() for p in store.machine["source_roots"]]
@@ -499,6 +508,29 @@ class Window(QMainWindow):
         )
         header.addWidget(logo, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addLayout(header)
+        account_row = QHBoxLayout()
+        self.account_label = QLabel()
+        self.account_label.setObjectName("brand")
+        account_row.addWidget(self.account_label, 1)
+        self.sign_in_button = QPushButton("Sign in")
+        self.change_user_button = QPushButton("Change user")
+        self.change_password_button = QPushButton("Change password")
+        self.logout_button = QPushButton("Log out")
+        self.sign_in_button.clicked.connect(lambda: self.manage_logins("signin"))
+        self.change_user_button.clicked.connect(lambda: self.log_out(change_user=True))
+        self.change_password_button.clicked.connect(
+            lambda: self.manage_logins("password")
+        )
+        self.logout_button.clicked.connect(lambda: self.log_out())
+        self.account_buttons = [
+            self.sign_in_button,
+            self.change_user_button,
+            self.change_password_button,
+            self.logout_button,
+        ]
+        for button in self.account_buttons:
+            account_row.addWidget(button)
+        layout.addLayout(account_row)
         if demo:
             layout.addWidget(
                 QLabel(
@@ -610,9 +642,9 @@ class Window(QMainWindow):
             )
         self.run_button = QPushButton("Run pending")
         self.run_button.clicked.connect(self.start)
-        self.login_button = QPushButton("Logins…")
+        self.login_button = QPushButton("Connection logins…")
         self.login_button.setEnabled(not demo)
-        self.login_button.clicked.connect(self.manage_logins)
+        self.login_button.clicked.connect(lambda: self.manage_logins("settings"))
         self.stop_button = QPushButton("Stop after current block")
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(lambda: self.worker.stop.set())
@@ -654,11 +686,81 @@ class Window(QMainWindow):
         self.fill_parameters()
         self.update_preview()
         self.refresh()
+        self.refresh_account_controls()
 
-    def manage_logins(self):
+    def refresh_account_controls(self):
+        from .accounts import active_user, primary_identity
+
+        try:
+            required = bool(primary_identity(self.store.machine)) and not self.demo
+            username = active_user(self.store.machine) if required else None
+        except Exception:
+            required, username = True, None
+        busy = bool(self.worker and self.worker.isRunning())
+        self.account_label.setText(
+            f"Signed in as {username}  ·  One user at a time"
+            if username
+            else (
+                "Signed out · Sign in to copy or register"
+                if required
+                else "Demo / local copy · No remote account"
+            )
+        )
+        self.sign_in_button.setVisible(not username)
+        self.sign_in_button.setEnabled(required and not busy)
+        for button in [
+            self.change_user_button,
+            self.change_password_button,
+            self.logout_button,
+        ]:
+            button.setEnabled(bool(username) and not busy)
+        allowed = not required or bool(username)
+        for button in [self.queue_button, self.copy_button, self.run_button]:
+            button.setEnabled(allowed and not busy)
+        self.register_button.setEnabled(
+            allowed and self.registration_enabled and not busy
+        )
+
+    def manage_logins(self, mode="settings"):
         from .login_ui import LoginDialog
 
-        LoginDialog(self, self.store.machine).exec()
+        try:
+            lock = self.store.lock()
+            try:
+                LoginDialog(self, self.store.machine, mode=mode).exec()
+            finally:
+                lock.unlock()
+        except Exception as exc:
+            QMessageBox.warning(self, "Account unavailable", str(exc))
+        self.refresh_account_controls()
+
+    def log_out(self, change_user=False):
+        from .accounts import logout
+
+        if (
+            QMessageBox.question(
+                self,
+                "Change user" if change_user else "Log out",
+                "Sign out and remove this user's saved logins? Queued recordings stay on this PC and wait for their owner to sign in again.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        succeeded = False
+        try:
+            lock = self.store.lock()
+            try:
+                self.message.setText(logout(self.store.machine))
+                succeeded = True
+            finally:
+                lock.unlock()
+        except Exception as exc:
+            QMessageBox.warning(self, "Sign-out status", str(exc))
+        self.refresh_account_controls()
+        if change_user and succeeded:
+            self.manage_logins("signin")
 
     def background_preview(self, operation, completed):
         if (self.worker and self.worker.isRunning()) or (
@@ -921,6 +1023,8 @@ class Window(QMainWindow):
             button.setEnabled(False)
         self.register_button.setEnabled(False)
         self.login_button.setEnabled(False)
+        for button in self.account_buttons:
+            button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.worker.start()
 
@@ -934,6 +1038,7 @@ class Window(QMainWindow):
         self.stop_button.setEnabled(False)
         self.register_button.setEnabled(self.registration_enabled)
         self.login_button.setEnabled(not self.demo)
+        self.refresh_account_controls()
         self.refresh()
 
     def refresh(self):
@@ -948,6 +1053,7 @@ class Window(QMainWindow):
                     job["source"] + "\n→ " + job["destination"] + "\n" + job["message"]
                 )
                 self.table.setItem(row, col, item)
+        self.refresh_account_controls()
 
     def closeEvent(self, event):
         if self.planner and self.planner.isRunning():

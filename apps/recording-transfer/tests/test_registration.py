@@ -162,7 +162,16 @@ class Adapter(DataJointAdapter):
 
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, monkeypatch):
+    from u19_recording_transfer import accounts
+
+    config = tmp_path / "dj.json"
+    config.write_text(json.dumps({"database.host": "synthetic-db"}))
+    monkeypatch.setattr(
+        accounts,
+        "WindowsVault",
+        lambda: SimpleNamespace(read=lambda name: ("test-user", "synthetic")),
+    )
     source = tmp_path / "local/ef932_act131/11052026"
     source.mkdir(parents=True)
     (source / "scan.tif").write_bytes(b"synthetic recording payload")
@@ -175,7 +184,7 @@ def setup(tmp_path):
         quiet_minutes=0,
         registration=dict(
             enabled=True,
-            dj_config="local-config-not-read.json",
+            dj_config=str(config),
             system="PC",
             behavior_rigs=["RIG"],
         ),

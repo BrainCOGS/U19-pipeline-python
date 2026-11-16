@@ -55,7 +55,9 @@ def cleanup(
     # Import lazily to share exactly the same inventory/hash implementation.
     from .app import completion_marker, digest, inventory, now
     from .credentials import ensure_share
+    from .accounts import require_user
 
+    require_user(store.machine)
     source_root, destination_root = source_root.resolve(), destination_root.resolve()
     ensure_share(destination_root)
     if retention_days < 0:
@@ -70,6 +72,7 @@ def cleanup(
             if job["status"] not in ("Complete", "Registered"):
                 continue
             try:
+                require_user(store.machine, job.get("queued_by"))
                 if skip_outside_root and (
                     not Path(job["source"]).resolve().is_relative_to(source_root)
                     or not Path(job["destination"])

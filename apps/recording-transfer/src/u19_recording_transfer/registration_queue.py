@@ -19,6 +19,9 @@ def settings_for(machine):
 
 
 def preview(machine, source, modality, preferences, adapter_factory=DataJointAdapter):
+    from .accounts import require_user
+
+    require_user(machine)
     settings = settings_for(machine)
     adapter = adapter_factory(settings["dj_config"])
     return prepare(

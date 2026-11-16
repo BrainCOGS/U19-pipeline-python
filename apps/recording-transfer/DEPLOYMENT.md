@@ -104,6 +104,9 @@ pilot. Native Windows Credential Manager holds passwords for the current Windows
 account on this rig. Database config files hold nonsecret connection settings;
 successful login setup migrates an existing plaintext password out of that file.
 See [REGISTRATION.md](REGISTRATION.md) for login, forget and CLI instructions.
+Leave the intended account signed in for nightly work. **Log out** removes its
+saved credentials and stops remote transfers/cleanup until sign-in; changing
+users does not transfer ownership of queued recordings.
 The nighttime copier handles queued folders only, not automatic discovery of all
 recordings. Quiet time is a heuristic, not an acquisition-completion signal.
 Interrupted large files restart from the beginning; verified complete files are

@@ -22,6 +22,9 @@ DataJoint validation and transactional registration; see [REGISTRATION.md](REGIS
 Use **Logins…** to test/save database and storage-share accounts in native Windows
 Credential Manager. Scheduled runs reuse credentials saved by the same Windows
 account; passwords do not go in machine settings, queue files or manifests.
+The account bar provides **Change user**, **Change password** and **Log out**.
+Only one researcher is active; signing out pauses remote jobs, and new queued
+recordings can only run while their owner is signed in.
 
 The first screen defaults surgery to unchecked, shows processing parameters before
 preprocessing, selects `PNI182-1plane-30fs-PPC` when present in the loaded catalog,
