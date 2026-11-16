@@ -178,3 +178,36 @@ def test_descriptions_split_into_user_date_text_for_the_gui(script):
     assert all(len(p) == 3 and p[0] == "general-user" and p[1] == DATE for p in parts)
     texts = [p[2] for p in parts[:2]]
     assert len(set(texts)) == len(texts)
+
+
+def _as_fetched(production, np):
+    """The tables as DataJoint's fetch returns them: integer columns are numpy integers."""
+
+    for table in ("clustering_rows", "precluster_rows", "steps_rows"):
+        for row in production[table]:
+            for key in ("paramset_idx", "precluster_param_steps_id"):
+                if row.get(key) is not None:
+                    row[key] = np.int64(row[key])
+    return production
+
+
+def test_planned_rows_print_with_fetched_integer_types(script, production):
+    """main() prints every planned row with json.dumps, also on a dry run."""
+
+    np = pytest.importorskip("numpy")
+    todo = script.plan(**_as_fetched(production, np), date=DATE)
+    json.dumps(todo)
+    assert type(todo["ClusteringParamSet"][0]["paramset_idx"]) is int
+    assert type(todo["PreClusterParamSet"][0]["paramset_idx"]) is int
+
+
+def test_reused_precluster_paramset_prints_with_fetched_integer_types(
+    script, production
+):
+    np = pytest.importorskip("numpy")
+    production["precluster_rows"].append(
+        {"paramset_idx": 7, "params": script.PREPROCESSING_STEPS}
+    )
+    todo = script.plan(**_as_fetched(production, np), date=DATE)
+    json.dumps(todo)
+    assert todo["PreClusterParamSteps.Step"][0]["paramset_idx"] == 7

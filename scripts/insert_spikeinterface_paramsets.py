@@ -114,9 +114,13 @@ def precluster_steps(date):
 
 
 def next_free_index(existing):
-    """The index after the highest one in use (0 for an empty table)."""
+    """The index after the highest one in use (0 for an empty table).
 
-    return max(existing, default=-1) + 1
+    A plain int: DataJoint fetches integer columns as numpy integers, which json.dumps
+    (used to print the planned rows) refuses.
+    """
+
+    return int(max(existing, default=-1)) + 1
 
 
 def find_params(rows, params):
@@ -124,7 +128,7 @@ def find_params(rows, params):
 
     for row in rows:
         if _same(row["params"], params):
-            return row["paramset_idx"]
+            return int(row["paramset_idx"])
     return None
 
 
