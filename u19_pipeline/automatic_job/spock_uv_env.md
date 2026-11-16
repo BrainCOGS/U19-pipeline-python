@@ -34,9 +34,11 @@ pipeline's `dj_local_conf.json` control it:
    `.venv`; the IBL atlas step runs with `.venv`'s python (BrainCogsEphysSorters). Kilosort
    2 / 2.5 / 3 can also run in Apptainer images through a container `sorter_version`
    (BrainCogsEphysSorters, SpikeInterface path), which needs no MATLAB on the node: Kilosort 2
-   and 2.5 were run that way on spock, Kilosort 3 was not. A native MATLAB Kilosort sort under
-   `"uv"` has not been run; in the database no ephys job since job_id 602 has used anything
-   but kilosort4.
+   and 2.5 were run that way on spock, Kilosort 3 was not. Native MATLAB Kilosort 2 and
+   3 were both run under `"uv"` on spock; they need BrainCOGS/BrainCogsEphysSorters#30 (without
+   it the job can hang after the sort), and Kilosort 2 needs its mex files built once
+   (`matlab -batch mexGPUall` in `sorters/Kilosort2/CUDA` on a GPU node). In the database no
+   ephys job since job_id 602 has used anything but kilosort4.
 
 ## Shared uv cache
 
