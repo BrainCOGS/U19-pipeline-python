@@ -19,6 +19,9 @@ and preserves the source. Registration preferences travel in a completion manife
 for later website confirmation. Copy-only needs no database connection.
 An opt-in **Copy + register…** action combines the verified copy queue with live
 DataJoint validation and transactional registration; see [REGISTRATION.md](REGISTRATION.md).
+Use **Logins…** to test/save database and storage-share accounts in native Windows
+Credential Manager. Scheduled runs reuse credentials saved by the same Windows
+account; passwords do not go in machine settings, queue files or manifests.
 
 The first screen defaults surgery to unchecked, shows processing parameters before
 preprocessing, selects `PNI182-1plane-30fs-PPC` when present in the loaded catalog,

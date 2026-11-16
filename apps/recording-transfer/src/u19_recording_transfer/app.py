@@ -246,7 +246,10 @@ def completion_marker(job):
 
 
 def copy_job(job, report, stop, delay=0):
+    from .credentials import ensure_share
+
     source, destination = Path(job["source"]), Path(job["destination"])
+    ensure_share(destination)
     reject_linked_ancestors(destination)
     # A crash can publish completion before queue.json records it. Never leave
     # that old success signal visible while retrying or deferring this job.
@@ -607,6 +610,9 @@ class Window(QMainWindow):
             )
         self.run_button = QPushButton("Run pending")
         self.run_button.clicked.connect(self.start)
+        self.login_button = QPushButton("Logins…")
+        self.login_button.setEnabled(not demo)
+        self.login_button.clicked.connect(self.manage_logins)
         self.stop_button = QPushButton("Stop after current block")
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(lambda: self.worker.stop.set())
@@ -614,6 +620,7 @@ class Window(QMainWindow):
             self.queue_button,
             self.copy_button,
             self.register_button,
+            self.login_button,
             self.run_button,
             self.stop_button,
         ]:
@@ -647,6 +654,11 @@ class Window(QMainWindow):
         self.fill_parameters()
         self.update_preview()
         self.refresh()
+
+    def manage_logins(self):
+        from .login_ui import LoginDialog
+
+        LoginDialog(self, self.store.machine).exec()
 
     def background_preview(self, operation, completed):
         if (self.worker and self.worker.isRunning()) or (
@@ -908,6 +920,7 @@ class Window(QMainWindow):
         for button in [self.queue_button, self.copy_button, self.run_button]:
             button.setEnabled(False)
         self.register_button.setEnabled(False)
+        self.login_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.worker.start()
 
@@ -920,6 +933,7 @@ class Window(QMainWindow):
             button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.register_button.setEnabled(self.registration_enabled)
+        self.login_button.setEnabled(not self.demo)
         self.refresh()
 
     def refresh(self):

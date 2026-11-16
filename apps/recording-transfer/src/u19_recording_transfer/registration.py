@@ -187,11 +187,10 @@ class DataJointAdapter:
     """Live adapter. All writes are confined to commit(), under advisory locks."""
 
     def __init__(self, config_path):
-        import datajoint as dj
+        from .credentials import connect_database
 
-        dj.config.load(str(config_path))
-        self.conn = dj.conn()
-        prefix = dj.config.get("custom", {}).get("database.prefix", "u19_")
+        dj, self.conn, config = connect_database(config_path)
+        prefix = config.get("custom", {}).get("database.prefix", "u19_")
         for name in ("recording", "acquisition", "subject", "lab", "action"):
             setattr(
                 self, name, dj.VirtualModule(name, prefix + name, connection=self.conn)

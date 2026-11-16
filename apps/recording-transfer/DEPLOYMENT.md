@@ -99,6 +99,11 @@ The read-only catalog exporter is optional and separate from the deployed GUI.
 Release environments include the DataJoint dependency for optional registration;
 copy-only mode does not connect to the database.
 Credentials remain outside releases. Refresh the catalog to see recent sessions.
+Configure database and optional UNC share access through **Logins…** before the
+pilot. Native Windows Credential Manager holds passwords for the current Windows
+account on this rig. Database config files hold nonsecret connection settings;
+successful login setup migrates an existing plaintext password out of that file.
+See [REGISTRATION.md](REGISTRATION.md) for login, forget and CLI instructions.
 The nighttime copier handles queued folders only, not automatic discovery of all
 recordings. Quiet time is a heuristic, not an acquisition-completion signal.
 Interrupted large files restart from the beginning; verified complete files are

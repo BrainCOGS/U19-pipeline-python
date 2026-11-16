@@ -54,8 +54,10 @@ def cleanup(
 ):
     # Import lazily to share exactly the same inventory/hash implementation.
     from .app import completion_marker, digest, inventory, now
+    from .credentials import ensure_share
 
     source_root, destination_root = source_root.resolve(), destination_root.resolve()
+    ensure_share(destination_root)
     if retention_days < 0:
         raise ValueError("Retention days must be nonnegative.")
     if not source_root.is_dir() or not destination_root.is_dir():

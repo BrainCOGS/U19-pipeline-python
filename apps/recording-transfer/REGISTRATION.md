@@ -17,7 +17,9 @@ privileges: reads of referenced lab, subject, action, acquisition and parameter
 tables, plus inserts into recording.Recording, its BehaviorSession part and
 recording.DefaultParams. Use a pilot/test database before enabling production writes.
 
-Add this section to the installed machine.json, using real system/rig identifiers:
+Add this section to the installed machine.json, using real system/rig identifiers.
+The referenced DataJoint JSON holds the host, username, TLS and schema-prefix
+settings; passwords are obtained from Windows Credential Manager:
 
 ```json
 "registration": {
@@ -27,6 +29,37 @@ Add this section to the installed machine.json, using real system/rig identifier
   "behavior_rigs": ["182-Imaging-Rig1"]
 }
 ```
+
+Open **Logins…**, select Database, enter the researcher's database username and
+password, then **Test and save login**. A failed test leaves the previous saved
+login untouched. A successful save removes `database.password` from that local
+JSON file and retains the other settings. Existing copies/backups of an old
+configuration must be handled separately. Plaintext passwords in config files
+are no longer used by registration or catalog export. TLS is required by default;
+an existing explicit `database.use_tls` setting is honored.
+
+The same dialog supports **Storage share** for a configured UNC incoming path,
+such as `\\cup.pni.princeton.edu\braininit\Data\Incoming`. Use the share account
+(for example `DOMAIN\username`), which can differ from the database account.
+Saved storage credentials are reused for incoming and final directories on that
+same UNC share. Other shares need their own login; mapped drive letters continue
+to use the Windows session's existing access. If no storage credential is saved,
+the app uses the current Windows session normally. It never disconnects existing
+share connections to replace another account; resolve Windows error 1219 in Windows.
+
+**Forget saved login** deletes the app's vault entry. It does not close existing
+Windows share connections or erase legacy config passwords. Password fields are
+masked and cleared after submission/cancel; login failures report safe messages.
+There is no plaintext fallback store. Passwords must exist in process memory while
+authenticating; the app does not persist them in its queue, manifests or logs.
+
+The native implementation calls Windows `CredWriteW`, `CredReadW`, `CredDeleteW`
+and `WNetAddConnection2W` directly through Python's standard-library ctypes.
+Entries persist for the current Windows user on this computer. They are not
+application-wide secrets shared across Windows accounts, and software running as
+that same user can access them. Run scheduled tasks under the same Windows account
+that saved the login. Missing/expired credentials stop unattended work with an
+actionable message; the worker never opens a terminal password prompt.
 
 Use a recent read-only catalog snapshot to populate the GUI. Live preview validates
 the selected session and effective parameter IDs against the database. A stale
@@ -73,8 +106,15 @@ for registering/finalizing staged data remains separate work.
 From this project directory, preview without copying or inserting:
 
 ```powershell
+uv run --extra registration u19-recording-login --machine-config C:\BrainCOGS\machine.json --kind database --username researcher
+uv run --extra registration u19-recording-login --machine-config C:\BrainCOGS\machine.json --kind storage --username DOMAIN\researcher
 uv run --extra registration u19-recording-register --machine-config C:\BrainCOGS\machine.json --source D:\NPX_DATA\jyanar\ya070_20260901_g0 --subject jyanar_ya070 --date 2026-09-01 --session-number 1
 ```
+
+The login command requires an interactive terminal and uses a hidden password
+prompt. It never accepts a password argument. Add `--forget` to remove an entry
+without prompting for a password. The GUI's Logins dialog provides the same setup.
+Catalog export uses the same saved database login for its configured host.
 
 Add `--yes` to copy and register that selected job. `--processing-id` and
 `--preprocessing-id` override modality defaults; run `--help` for available options.

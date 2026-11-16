@@ -106,6 +106,9 @@ def run_registered_job(
     if signature(fresh) != signature(approved):
         raise ValueError("Live registration plan changed; preview and confirm again.")
     destination = Path(fresh["destination"])
+    from .credentials import ensure_share
+
+    ensure_share(destination)
     reject_linked_ancestors(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     name = hashlib.sha256(
