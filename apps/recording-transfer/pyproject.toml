@@ -13,9 +13,12 @@ dependencies = ["PyQt6==6.10.0"]
 [project.scripts]
 u19-recording-transfer = "u19_recording_transfer.app:main"
 u19-recording-catalog = "u19_recording_transfer.export_catalog:main"
+u19-recording-register = "u19_recording_transfer.registration_cli:main"
+u19-recording-login = "u19_recording_transfer.login_cli:main"
 
 [project.optional-dependencies]
 catalog = ["datajoint==0.14.10"]
+registration = ["datajoint==0.14.10"]
 
 [dependency-groups]
 dev = ["pytest>=9,<10"]

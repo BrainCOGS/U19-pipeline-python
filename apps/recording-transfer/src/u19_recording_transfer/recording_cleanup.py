@@ -53,9 +53,13 @@ def cleanup(
     skip_outside_root=False,
 ):
     # Import lazily to share exactly the same inventory/hash implementation.
-    from .app import digest, inventory, now
+    from .app import completion_marker, digest, inventory, now
+    from .credentials import ensure_share
+    from .accounts import require_user
 
+    require_user(store.machine)
     source_root, destination_root = source_root.resolve(), destination_root.resolve()
+    ensure_share(destination_root)
     if retention_days < 0:
         raise ValueError("Retention days must be nonnegative.")
     if not source_root.is_dir() or not destination_root.is_dir():
@@ -65,18 +69,23 @@ def cleanup(
     try:
         jobs = store.read()
         for job in jobs:
-            if job["status"] != "Complete":
+            if job["status"] not in ("Complete", "Registered"):
                 continue
             try:
-                if skip_outside_root and not Path(
-                    job["source"]
-                ).resolve().is_relative_to(source_root):
+                require_user(store.machine, job.get("queued_by"))
+                from .rigs import require_matching_job
+
+                require_matching_job(store.machine, job)
+                if skip_outside_root and (
+                    not Path(job["source"]).resolve().is_relative_to(source_root)
+                    or not Path(job["destination"])
+                    .resolve()
+                    .is_relative_to(destination_root)
+                ):
                     continue
                 source, destination = checked_paths(job, source_root, destination_root)
                 manifest = json.loads(
-                    (destination.parent / "transfer_complete.json").read_text(
-                        encoding="utf-8"
-                    )
+                    completion_marker(job).read_text(encoding="utf-8")
                 )
                 if (
                     manifest["transfer_id"] != job["id"]

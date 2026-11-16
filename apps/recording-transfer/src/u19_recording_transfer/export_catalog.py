@@ -20,12 +20,14 @@ def json_value(value):
 
 
 def export(dj_config, since_days):
-    import datajoint as dj
+    from .credentials import connect_database
 
-    dj.config.load(str(dj_config))
-    prefix = dj.config.get("custom", {}).get("database.prefix", "u19_")
-    acquisition = dj.VirtualModule("acquisition", prefix + "acquisition")
-    subject = dj.VirtualModule("subject", prefix + "subject")
+    dj, connection, config = connect_database(dj_config)
+    prefix = config.get("custom", {}).get("database.prefix", "u19_")
+    acquisition = dj.VirtualModule(
+        "acquisition", prefix + "acquisition", connection=connection
+    )
+    subject = dj.VirtualModule("subject", prefix + "subject", connection=connection)
     since = (date.today() - timedelta(days=since_days)).isoformat()
     sessions = (
         (acquisition.Session * subject.Subject.proj("user_id"))
@@ -36,6 +38,9 @@ def export(dj_config, since_days):
         "session_date",
         "session_number",
         "session_location",
+        "session_start_time",
+        "session_end_time",
+        "num_trials",
         as_dict=True,
     )
     catalog = dict(
@@ -63,7 +68,7 @@ def export(dj_config, since_days):
             "precluster_param_steps_name",
         ),
     ]:
-        element = dj.VirtualModule(schema, prefix + schema)
+        element = dj.VirtualModule(schema, prefix + schema, connection=connection)
         for row in getattr(element, processing_table).fetch(as_dict=True):
             catalog["processing"].append(
                 dict(

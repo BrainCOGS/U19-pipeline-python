@@ -38,6 +38,7 @@ Git commands to receive features. Normal launches do not require internet access
   versions\0.1.0\.venv\       permanent, non-editable release environment
   versions\0.1.1\.venv\       next environment; old versions are preserved
   state\queue.json            shared persistent transfer queue
+  state\rig.json              selected lab.Location, role, acquisition type and PC
   logs\launcher.log           bounded launcher/update logs
   logs\install-<version>.log  dependency installation output
   logs\application.log        GUI/copy/cleanup output, rotated between runs
@@ -89,11 +90,28 @@ preserves originals. Surgery starts unchecked; processing appears before
 preprocessing; the named imaging default is selected only when present in the
 loaded catalog. Subject/date matches restrict sessions; no match shows all loaded
 sessions. Choices travel in the completion manifest and still require website
-confirmation. This app does not write registrations to DataJoint or move staged
-files into final registered paths.
+confirmation in copy-only mode. Operators can separately enable the optional
+[direct registration workflow](REGISTRATION.md), which copies verified data to
+the canonical final path and writes the three registration rows transactionally.
+It requires local DB credentials and explicit researcher confirmation; it does
+not move existing staged files or create surgery records.
 
 The read-only catalog exporter is optional and separate from the deployed GUI.
+Release environments include the DataJoint dependency for optional registration;
+copy-only mode does not connect to the database.
 Credentials remain outside releases. Refresh the catalog to see recent sessions.
+Configure database and optional UNC share access through **Logins…** before the
+pilot. Native Windows Credential Manager holds passwords for the current Windows
+account on this rig. Database config files hold nonsecret connection settings;
+successful login setup migrates an existing plaintext password out of that file.
+See [REGISTRATION.md](REGISTRATION.md) for login, forget and CLI instructions.
+Leave the intended account signed in for nightly work. **Log out** removes its
+saved credentials and stops remote transfers/cleanup until sign-in; changing
+users does not transfer ownership of queued recordings.
+After login, use **Select rig…** to confirm this PC's source location from
+`lab.Location`. Grant the database account read access to that table. The saved
+selection survives updates and is loaded for nightly copying; never reuse another
+PC's `rig.json`. Changing selection pauses jobs queued under the previous identity.
 The nighttime copier handles queued folders only, not automatic discovery of all
 recordings. Quiet time is a heuristic, not an acquisition-completion signal.
 Interrupted large files restart from the beginning; verified complete files are

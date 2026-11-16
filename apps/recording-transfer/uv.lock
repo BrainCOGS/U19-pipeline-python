@@ -1156,6 +1156,9 @@ dependencies = [
 catalog = [
     { name = "datajoint" },
 ]
+registration = [
+    { name = "datajoint" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1165,9 +1168,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "datajoint", marker = "extra == 'catalog'", specifier = "==0.14.10" },
+    { name = "datajoint", marker = "extra == 'registration'", specifier = "==0.14.10" },
     { name = "pyqt6", specifier = "==6.10.0" },
 ]
-provides-extras = ["catalog"]
+provides-extras = ["catalog", "registration"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=9,<10" }]

@@ -16,7 +16,19 @@ uv --directory apps/recording-transfer run pytest
 
 The GUI copies selected recording folders into an incoming area, verifies hashes,
 and preserves the source. Registration preferences travel in a completion manifest
-for later website confirmation. It does not register datasets in DataJoint.
+for later website confirmation. Copy-only needs no database connection.
+An opt-in **Copy + register…** action combines the verified copy queue with live
+DataJoint validation and transactional registration; see [REGISTRATION.md](REGISTRATION.md).
+Use **Logins…** to test/save database and storage-share accounts in native Windows
+Credential Manager. Scheduled runs reuse credentials saved by the same Windows
+account; passwords do not go in machine settings, queue files or manifests.
+The account bar provides **Change user**, **Change password** and **Log out**.
+Only one researcher is active; signing out pauses remote jobs, and new queued
+recordings can only run while their owner is signed in.
+All other actions are grayed out while signed out. **Select rig…** reads
+`lab.Location` and filters by machine role and acquisition type. The selection
+persists in `state/rig.json`, drives the source location/modality, and travels with
+new jobs and copy receipts. See [REGISTRATION.md](REGISTRATION.md) for setup.
 
 The first screen defaults surgery to unchecked, shows processing parameters before
 preprocessing, selects `PNI182-1plane-30fs-PPC` when present in the loaded catalog,
@@ -37,6 +49,8 @@ Optional local cleanup defaults to preview and 14-day retention. It requires exa
 source/copy inventories and hashes, a matching completion manifest and PC identity,
 and explicit allowed roots. It only handles recordings copied by this application.
 Cleanup remains disabled in the machine configuration unless deliberately enabled.
-Website registration and moving incoming data to final paths remain separate work.
+Website registration and moving existing incoming data to final paths remain
+separate work. Optional direct registration copies from the original source into
+the canonical final path and leaves any earlier incoming copy in place.
 
 The BrainCOGS logo is reused from the lab's existing Streamlit application.
