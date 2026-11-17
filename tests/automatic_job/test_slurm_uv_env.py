@@ -789,3 +789,30 @@ def test_queue_does_not_sync_for_conda_imaging_jobs(
 
     assert runs.commands == []
     assert len(sbatch) == 1
+
+
+# --- the imaging checkout is pulled before the job is queued (as the sorters, #201) --------
+
+
+def test_imaging_checkout_is_pulled_before_queuing(sc, monkeypatch):
+    url = "https://github.com/BrainCOGS/U19-pipeline-python.git"
+    monkeypatch.setattr(
+        sc.config,
+        "process_repository_git_urls",
+        {"U19-pipeline-python": url},
+        raising=False,
+    )
+    pulls = []
+    monkeypatch.setattr(
+        sc.slurm_utils,
+        "update_repository",
+        lambda *args: pulls.append(args) or (True, "abc1234"),
+    )
+
+    assert sc.update_process_repository(7, IMAGING_SPOCK, "imaging") == (
+        True,
+        "abc1234",
+    )
+    assert pulls == [
+        (IMAGING_REPO_DIR, url, "u19prod@spockmk2-loginvm.pni.princeton.edu")
+    ]
