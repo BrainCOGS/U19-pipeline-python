@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["datajoint==0.14.10"]
+# ///
 """Add the lookup rows that let an ephys job run through SpikeInterface.
 
 BrainCogsEphysSorters reads a job's clustering paramset and preprocessing step list from
@@ -17,18 +21,23 @@ Rows this script adds, each only if a row with the same params is not there yet:
   PreClusterParamSet   the same preprocessing steps as a preprocessing step, for jobs that
   PreClusterParamSteps keep an existing (direct Kilosort) clustering paramset.
 
-Nothing is written unless ``--insert`` is given:
+Nothing is written unless ``--insert`` is given. The script declares its own dependencies
+(PEP 723), so uv runs it in a throwaway environment, from any directory, without this
+repository installed:
 
-    python scripts/insert_spikeinterface_paramsets.py            # show what would be added
-    python scripts/insert_spikeinterface_paramsets.py --insert   # add it
+    uv run scripts/insert_spikeinterface_paramsets.py --config dj_local_conf.json
+    uv run scripts/insert_spikeinterface_paramsets.py --config dj_local_conf.json --insert
 
+Without ``--config``, DataJoint reads ``dj_local_conf.json`` from the current directory.
 The database account needs insert rights on the ephys element schema.
 """
 
 import argparse
 import copy
 import datetime
+import hashlib
 import json
+import uuid
 
 # SpikeInterface's recipe for what CatGT does (phase_shift is CatGT's tshift, the global
 # median reference its -gblcar), plus the 300 Hz high-pass of the lab's CatGT paramset.
@@ -73,6 +82,10 @@ PRECLUSTER_METHOD_DESC = "SpikeInterface preprocessing step list"
 # Descriptions are "<user>_<date>_<text>": RecordingProcessJobGUI splits them on "_" into
 # exactly those three parts to show user and date, and lists paramsets by <text>, so the
 # text must not contain an underscore and must be unique.
+
+# The schema of element-array-ephys's ephys_precluster, after dj.config's database.prefix
+# (u19_pipeline/ephys_pipeline.py).
+SCHEMA_SUFFIX = "pipeline_ephys_element"
 
 # Column limits of the element tables (ephys_precluster.py).
 METHOD_MAX_LENGTH = 16
@@ -223,6 +236,46 @@ def plan(clustering_rows, precluster_rows, precluster_methods, steps_rows, date)
     return todo
 
 
+def dict_to_uuid(key):
+    """The paramset hash the element stores (element_interface.utils.dict_to_uuid)."""
+
+    hashed = hashlib.md5()
+    for k, v in sorted(key.items()):
+        hashed.update(str(k).encode())
+        hashed.update(str(v).encode())
+    return uuid.UUID(hex=hashed.hexdigest())
+
+
+def insert_new_params(
+    table, method_attribute, method, paramset_idx, paramset_desc, params
+):
+    """Insert a paramset row as the element's ``insert_new_params`` does.
+
+    ``method_attribute`` is the table's method column (``clustering_method`` or
+    ``precluster_method``). The same params already under this index are left alone; the
+    same params under another index are refused.
+    """
+
+    import datajoint as dj
+
+    row = {
+        method_attribute: method,
+        "paramset_idx": paramset_idx,
+        "paramset_desc": paramset_desc,
+        "params": params,
+        "param_set_hash": dict_to_uuid(params),
+    }
+    existing = table & {"param_set_hash": row["param_set_hash"]}
+    if existing:
+        existing_idx = existing.fetch1("paramset_idx")
+        if existing_idx == paramset_idx:
+            return
+        raise dj.DataJointError(
+            f"The specified param-set already exists - paramset_idx: {existing_idx}"
+        )
+    table.insert1(row)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -230,12 +283,20 @@ def main():
         action="store_true",
         help="write the rows (default: only show them)",
     )
+    parser.add_argument(
+        "--config",
+        help="DataJoint config file (default: dj_local_conf.json in the current directory)",
+    )
     args = parser.parse_args()
 
     # Imported here so the planning above can be used, and tested, without a database.
     import datajoint as dj
 
-    from u19_pipeline.ephys_pipeline import ephys_element
+    if args.config:
+        dj.config.load(args.config)
+    ephys_element = dj.VirtualModule(
+        "ephys_element", dj.config["custom"]["database.prefix"] + SCHEMA_SUFFIX
+    )
 
     date = datetime.date.today().isoformat()
     steps_table = ephys_element.PreClusterParamSteps
@@ -267,7 +328,9 @@ def main():
 
     with dj.conn().transaction:
         for row in todo["ClusteringParamSet"]:
-            ephys_element.ClusteringParamSet.insert_new_params(
+            insert_new_params(
+                ephys_element.ClusteringParamSet,
+                "clustering_method",
                 row["clustering_method"],
                 row["paramset_idx"],
                 row["paramset_desc"],
@@ -275,7 +338,9 @@ def main():
             )
         ephys_element.PreClusterMethod.insert(todo["PreClusterMethod"])
         for row in todo["PreClusterParamSet"]:
-            ephys_element.PreClusterParamSet.insert_new_params(
+            insert_new_params(
+                ephys_element.PreClusterParamSet,
+                "precluster_method",
                 row["precluster_method"],
                 row["paramset_idx"],
                 row["paramset_desc"],
