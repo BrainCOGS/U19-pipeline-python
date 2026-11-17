@@ -639,6 +639,21 @@ class RecProcessHandler:
         return df_process_jobs
 
     @staticmethod
+    def empty_params_jobs():
+        """
+        params_df for jobs with no EphysParams/ImagingParams row (e.g. a job cloned
+        without one). The left merge in get_active_process_jobs then gives them NaN
+        params instead of every active job failing on an empty, column-less frame.
+        """
+        return pd.DataFrame(
+            {
+                "job_id": pd.Series(dtype="int64"),
+                "params": pd.Series(dtype="object"),
+                "preparams": pd.Series(dtype="object"),
+            }
+        )
+
+    @staticmethod
     def get_ephys_params_jobs(rec_process_keys):
         """
         get all parameters (precluster & cluster) for each of the recording process
@@ -659,6 +674,8 @@ class RecProcessHandler:
                 & rec_process_keys
             ).fetch(as_dict=True)
         )
+        if params_df.empty:
+            return RecProcessHandler.empty_params_jobs()
         params_df = params_df.drop("paramset_idx", axis=1)
 
         # Insert clustering method in params itself (for BrainCogsEphysSorters)
@@ -720,6 +737,8 @@ class RecProcessHandler:
                 & rec_process_keys
             ).fetch(as_dict=True)
         )
+        if params_df.empty:
+            return RecProcessHandler.empty_params_jobs()
         params_df = params_df.drop("paramset_idx", axis=1)
 
         # Insert processing_method in params itself (for BrainCogsImagingSorters)
