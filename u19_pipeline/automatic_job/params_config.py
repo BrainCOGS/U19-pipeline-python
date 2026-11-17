@@ -24,6 +24,13 @@ recording_modality_dict = [
     },
 ]
 
+# Processing repositories pulled (fast-forward only, on the cluster) before each job is queued,
+# so jobs run the latest code. Public https URLs: the cluster user needs no GitHub key.
+# A failed pull only warns in Slack; the job still runs on the code already checked out.
+process_repository_git_urls = {
+    "BrainCogsEphysSorters": "https://github.com/BrainCOGS/BrainCogsEphysSorters.git",
+}
+
 recording_modality_list = [list(i.values()) for i in recording_modality_dict]
 recording_modality_df = pd.DataFrame(recording_modality_dict)
 

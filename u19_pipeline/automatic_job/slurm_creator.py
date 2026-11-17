@@ -11,6 +11,7 @@ from u19_pipeline.utility import create_str_from_dict, is_this_spock
 import u19_pipeline.automatic_job.params_config as config
 from u19_pipeline.utils.file_utils import write_file
 import u19_pipeline.utils.slurm_utils as slurm_utils
+import u19_pipeline.utils.slack_utils as slack_utils
 
 # Functions to create slurm jobs
 
@@ -82,6 +83,64 @@ def generate_slurm_file(job_id, program_selection_params):
     return status, slurm_destination
 
 
+def get_repository_dir(program_selection_params, modality):
+    """
+    Path of the processing repository checkout in the processing cluster
+    """
+    cluster_vars = ft.get_cluster_vars(program_selection_params["process_cluster"])
+    return pathlib.Path(
+        cluster_vars[modality + "_process_dir"],
+        program_selection_params["process_repository"],
+    ).as_posix()
+
+
+# Result of the repository update of this run, by checkout (pull & warn once per cron run)
+repository_updates = dict()
+
+
+def update_process_repository(job_id, program_selection_params, modality):
+    """
+    Fast-forward the processing repository in the cluster before queuing a job
+    If it can't be updated, warn in Slack (once per run) and let the job run on the code there
+    Returns:
+    updated (bool) = True if the checkout is up to date (or isn't set to be updated)
+    message (str)  = new commit if updated, otherwise why it could not be updated
+    """
+    repository = program_selection_params["process_repository"]
+    git_url = config.process_repository_git_urls.get(repository)
+    if git_url is None:
+        return True, ""
+
+    repository_dir = get_repository_dir(program_selection_params, modality)
+    if repository_dir in repository_updates:
+        return repository_updates[repository_dir]
+
+    cluster = program_selection_params["process_cluster"]
+    cluster_vars = ft.get_cluster_vars(cluster)
+    ssh_target = cluster_vars["user"] + "@" + cluster_vars["hostname"]
+    if cluster == "spock" and is_this_spock():
+        ssh_target = None
+
+    updated, message = slurm_utils.update_repository(
+        repository_dir, git_url, ssh_target
+    )
+    repository_updates[repository_dir] = (updated, message)
+    print("update_process_repository", repository_dir, updated, message)
+
+    if not updated:
+        try:
+            slack_utils.send_slack_notification(
+                config.slack_webhooks_dict["automation_pipeline_error_notification"],
+                slurm_utils.repository_update_warning(
+                    repository, repository_dir, ssh_target or cluster, job_id, message
+                ),
+            )
+        except Exception as e:
+            print("Could not send repository update warning to slack:", e)
+
+    return updated, message
+
+
 def queue_slurm_file(
     job_id,
     program_selection_params,
@@ -99,10 +158,7 @@ def queue_slurm_file(
 
     print("queue_slurm_file **********************************")
 
-    processing_repository = program_selection_params["process_repository"]
-    repository_dir = pathlib.Path(
-        cluster_vars[modality + "_process_dir"], processing_repository
-    ).as_posix()
+    repository_dir = get_repository_dir(program_selection_params, modality)
 
     command = [
         "ssh",

@@ -1,5 +1,7 @@
 import re
+import shlex
 import signal
+import subprocess
 
 # Fields queried from sacct to explain why a job ended (one row per job and per job step)
 sacct_format = [
@@ -145,3 +147,56 @@ def describe_slurm_job(job_info, max_length=150):
         description = description[: max_length - 4] + "...)"
 
     return description
+
+
+def update_repository_command(repository_dir, git_url, ssh_target=None):
+    """
+    Command that fast-forwards a checkout to the default branch of git_url, checks out the
+    submodule commits it pins (sorters like Kilosort3) and prints its new commit
+    Pulling from the URL (not origin) works even when origin is an ssh remote the user has no key for
+    """
+    quoted_dir = shlex.quote(repository_dir)
+    remote_command = (
+        f"git -C {quoted_dir} pull --ff-only --quiet {shlex.quote(git_url)} HEAD"
+        f" && git -C {quoted_dir} submodule update --init --recursive --quiet"
+        f" && git -C {quoted_dir} rev-parse --short HEAD"
+    )
+    if ssh_target:
+        return ["ssh", "-o", "BatchMode=yes", ssh_target, remote_command]
+    return ["bash", "-c", remote_command]
+
+
+def update_repository(repository_dir, git_url, ssh_target=None, timeout=120):
+    """
+    Fast-forward a processing repository checkout (through ssh if ssh_target is given)
+    Returns:
+    updated (bool) = True if the checkout is now at the latest commit of git_url
+    message (str)  = new commit if updated, otherwise why it could not be updated
+    """
+    command = update_repository_command(repository_dir, git_url, ssh_target)
+    try:
+        p = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired:
+        return False, "git pull did not finish in " + str(timeout) + " s"
+    except OSError as e:
+        return False, str(e)
+
+    if p.returncode != 0:
+        output = (p.stderr.strip() or p.stdout.strip())[-1000:]
+        return False, output or "git pull exited with code " + str(p.returncode)
+    return True, p.stdout.strip()
+
+
+def repository_update_warning(repository, repository_dir, where, job_id, message):
+    """
+    Slack message for a processing repository that could not be updated before queuing a job
+    """
+    return {
+        "text": (
+            f":warning: Could not update *{repository}* (`{repository_dir}` on {where})"
+            f" before queuing job {job_id}. The job will run on the code already checked out."
+            f"\n```{message}```"
+        )
+    }
