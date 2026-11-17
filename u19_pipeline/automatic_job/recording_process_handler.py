@@ -393,8 +393,13 @@ class RecProcessHandler:
                 )
                 return (status_update, update_value_dict)
 
-            # Queue slurm file
+            # Queue slurm file (on the latest processing code, warns in slack if it can't update)
             if status == config.system_process["SUCCESS"]:
+                slurmlib.update_process_repository(
+                    rec_series["job_id"],
+                    rec_series["program_selection_params"],
+                    rec_series["recording_modality"],
+                )
                 status, slurm_jobid, error_message = slurmlib.queue_slurm_file(
                     rec_series["job_id"],
                     rec_series["program_selection_params"],
