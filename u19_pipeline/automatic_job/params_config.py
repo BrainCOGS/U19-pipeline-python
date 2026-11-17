@@ -29,6 +29,8 @@ recording_modality_dict = [
 # A failed pull only warns in Slack; the job still runs on the code already checked out.
 process_repository_git_urls = {
     "BrainCogsEphysSorters": "https://github.com/BrainCOGS/BrainCogsEphysSorters.git",
+    # imaging: the spock checkout that holds suite2p_slurm_job.py (and its uv.lock)
+    "U19-pipeline-python": "https://github.com/BrainCOGS/U19-pipeline-python.git",
 }
 
 recording_modality_list = [list(i.values()) for i in recording_modality_dict]

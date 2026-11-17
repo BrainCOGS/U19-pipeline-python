@@ -71,10 +71,16 @@ The extra has to match on both sides: `--check` without it fails on a `.venv` sy
 would remove suite2p), and a person who runs a plain `uv sync` in the checkout removes the extra
 and makes the next job's sync reinstall it.
 
-Before turning it on in production, the checkout has to be on `master`: as of 2026-11-17
-`/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing/imaging_processing/U19-pipeline-python`
-is on the branch of #135 (commit 71493d7, 2026-09-30) and has no `.venv`. Unlike the sorters
-checkout, the handler does not pull it before queuing a job.
+Like the sorters checkout (#201), the handler fast-forwards this checkout to `master` of
+BrainCOGS/U19-pipeline-python before queuing an imaging job (once per cron run), under conda and
+uv alike; if it can't, it warns in Slack and the job runs on the code already there. The uv sync
+comes after the pull, so a changed `uv.lock` is installed before the job starts.
+
+The pull is `--ff-only` onto the checked-out branch, so the checkout has to be on `master`: as of
+2026-11-17 `/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing/imaging_processing/U19-pipeline-python`
+is on the branch of #135 (commit 71493d7, 2026-09-30, squash-merged as 8339430) and has no
+`.venv`. Until `u19prod` runs `git checkout master` there, every imaging job's pull fails and
+warns in Slack. Build `.venv` before setting `spock_imaging_env` to `"uv"`.
 
 ## Shared uv cache
 
@@ -122,11 +128,13 @@ Why this is safe, and what was and was not checked:
 - **Python.** uv's Python builds are not in the cache: `.venv/bin/python` points at the Python uv
   installed for the account that ran the sync (`~u19prod/.local/share/uv/python`, readable by all).
 
-## Updating the sorters
+## Updating the sorters (and the imaging checkout)
 
 A `git pull` that changes `uv.lock` is picked up by the next job's sync. That sync replaces
 packages in the `.venv` that running jobs use, as the `git pull` already replaces their code: pull
-when `squeue -u u19prod` shows no ephys jobs, or run `uv sync --locked` by hand right after.
+when `squeue -u u19prod` shows no ephys or imaging jobs, or run `uv sync --locked` (imaging:
+`uv sync --locked --extra pipeline`) by hand right after. #202 proposes skipping the automatic
+pull while jobs run.
 
 ## Roll back
 
