@@ -63,9 +63,17 @@ class RecProcessHandler:
 
             # Trigger process, if success update recording process record
             try:
-                status, update_dict = function_status_process(
-                    rec_process_series, next_status_series
+                # A job without a params row can't be processed: fail it now, with a
+                # message that says why, instead of later on an opaque fetch1 error
+                missing_params = RecProcessHandler.missing_params_error(
+                    rec_process_series
                 )
+                if missing_params is not None:
+                    status, update_dict = missing_params
+                else:
+                    status, update_dict = function_status_process(
+                        rec_process_series, next_status_series
+                    )
 
                 # print('update_dict', update_dict)
                 # Get dictionary of record process
@@ -637,6 +645,35 @@ class RecProcessHandler:
         print(df_process_jobs)
 
         return df_process_jobs
+
+    @staticmethod
+    def missing_params_error(rec_process_series):
+        """
+        Error (status, update_dict) for an ephys/imaging job that has no
+        Processing.EphysParams/ImagingParams row (its params are NaN after the left
+        merge in get_active_process_jobs), or None when the job has its params.
+        """
+        params_part = {
+            "electrophysiology": "EphysParams",
+            "imaging": "ImagingParams",
+        }.get(rec_process_series["recording_modality"])
+        if params_part is None or isinstance(rec_process_series.get("params"), dict):
+            return None
+
+        job_id = rec_process_series["job_id"]
+        update_dict = copy.deepcopy(config.default_update_value_dict)
+        update_dict["error_info"]["error_message"] = (
+            f"Job {job_id} has no recording_process.Processing.{params_part} row, "
+            "so it has no processing params"
+        )
+        update_dict["error_info"]["error_exception"] = (
+            f"recording_process.Processing.{params_part} has no row for job_id "
+            f"{job_id}. Insert one with the job's pre-processing steps and "
+            "paramset, or use 'Rerun with different parameters' on the job "
+            "(tech_calendar_streamlit Processing Jobs page), which writes the row. "
+            "Rerunning this job as it is fails again."
+        )
+        return config.status_update_idx["ERROR_STATUS"], update_dict
 
     @staticmethod
     def empty_params_jobs():
