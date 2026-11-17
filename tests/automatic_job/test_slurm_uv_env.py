@@ -1,4 +1,4 @@
-"""Tests for the python environment of ephys jobs on spock (conda or uv).
+"""Tests for the python environment of ephys and imaging jobs on spock (conda or uv).
 
 ``slurm_creator`` imports ``params_config`` (which declares DataJoint schemas) and
 ``clusters_paths_and_transfers`` (which reads ``dj.config["custom"]["root_data_dir"]``).
@@ -78,6 +78,7 @@ def custom(monkeypatch):
     dj = pytest.importorskip("datajoint")
     custom = dict(dj.config.get("custom") or {}, root_data_dir="/tmp/root")
     custom.pop("spock_ephys_env", None)
+    custom.pop("spock_imaging_env", None)
     custom.pop("spock_uv_cache_dir", None)
     monkeypatch.setitem(dj.config, "custom", custom)
     return custom
@@ -471,6 +472,319 @@ def test_queue_does_not_submit_when_the_sync_fails(sc, custom, runs, sbatch):
 def test_queue_does_not_sync_for_conda_jobs(sc, custom, runs, sbatch, params, env):
     if env:
         custom["spock_ephys_env"] = env
+    assert queue(sc, params) == (0, "123", "")
+
+    assert runs.commands == []
+    assert len(sbatch) == 1
+
+
+# --- imaging (suite2p) jobs: spock_imaging_env ------------------------------------------
+
+IMAGING_REPO_DIR = "/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing/imaging_processing/U19-pipeline-python"
+JOB_FILE = "/params/suite2p_job_7.json"
+
+# generate_slurm_spock_imaging's output on master before spock_imaging_env existed, but for
+# the mail-user line, which comes from clusters_paths_and_transfers.slurm_dict_spock_imaging
+CONDA_IMAGING_SLURM_TEXT = """#!/bin/bash
+#SBATCH --job-name=job_id_7
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=12:00:00
+#SBATCH --mem=64G
+#SBATCH --gres=gpu:1
+#SBATCH --mail-user={mail_user}
+#SBATCH --mail-type=END
+#SBATCH --output=/logs/job_id_7.log
+#SBATCH --error=/errors/job_id_7.log
+
+    echo "SLURM_JOB_ID: ${{SLURM_JOB_ID}}"
+    echo "SLURM_SUBMIT_DIR: ${{SLURM_SUBMIT_DIR}}"
+    echo "RECORDING_PROCESS_ID: ${{recording_process_id}}"
+    echo "RAW_DATA_DIRECTORY: ${{raw_data_directory}}"
+    echo "PROCESSED_DATA_DIRECTORY: ${{processed_data_directory}}"
+    echo "REPOSITORY_DIR: ${{repository_dir}}"
+    echo "PROCESS_SCRIPT_PATH: ${{process_script_path}}"
+    echo "CUDA_VISIBLE_DEVICES: ${{CUDA_VISIBLE_DEVICES}}"
+    nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv
+
+    source ~/.bashrc
+    module load anacondapy/2023.07-cuda -s
+
+    conda activate u19_suite2p_env
+
+    export suite2p_job_file='/params/suite2p_job_7.json'
+    # CPU-side work (tiff reading, parts of detection) uses the cores slurm gave the job
+    export OMP_NUM_THREADS=${{SLURM_CPUS_PER_TASK:-1}}
+    export MKL_NUM_THREADS=${{SLURM_CPUS_PER_TASK:-1}}
+
+    # Without the checkout the script path would resolve against the submit directory
+    cd ${{repository_dir}} || {{ echo "repository_dir not found: ${{repository_dir}}" >&2; exit 1; }}
+    python -u ${{process_script_path}}
+    """
+
+
+def conda_imaging_text(sc):
+    return CONDA_IMAGING_SLURM_TEXT.format(
+        mail_user=sc.ft.slurm_dict_spock_imaging["mail-user"]
+    )
+
+
+def imaging_text(sc, **kwargs):
+    return sc.generate_slurm_spock_imaging(SLURM_DICT, JOB_FILE, **kwargs)
+
+
+def test_imaging_env_is_conda_unless_configured(sc):
+    assert sc.spock_imaging_env() == "conda"
+
+
+@pytest.mark.parametrize(
+    "value, env", [("uv", "uv"), (" UV\n", "uv"), ("Conda", "conda")]
+)
+def test_imaging_env_read_from_dj_config(sc, custom, value, env):
+    custom["spock_imaging_env"] = value
+    assert sc.spock_imaging_env() == env
+
+
+@pytest.mark.parametrize("value", ["venv", "", None, 1])
+def test_unknown_imaging_env_is_an_error(sc, custom, value):
+    custom["spock_imaging_env"] = value
+    with pytest.raises(ValueError, match="spock_imaging_env"):
+        sc.spock_imaging_env()
+
+
+def test_imaging_env_without_custom_section(sc, monkeypatch):
+    import datajoint as dj
+
+    monkeypatch.setitem(dj.config, "custom", None)
+    assert sc.spock_imaging_env() == "conda"
+
+
+def test_ephys_and_imaging_switches_are_independent(sc, custom):
+    custom["spock_imaging_env"] = "uv"
+    assert sc.spock_ephys_env() == "conda"
+    custom["spock_imaging_env"] = "conda"
+    custom["spock_ephys_env"] = "uv"
+    assert sc.spock_imaging_env() == "conda"
+
+
+@pytest.mark.parametrize(
+    "params, ephys_env, imaging_env, uses_uv",
+    [
+        (IMAGING_SPOCK, "conda", "uv", True),
+        (IMAGING_SPOCK, "uv", "conda", False),
+        (IMAGING_SPOCK, "uv", None, False),
+        (EPHYS_SPOCK, "conda", "uv", False),
+        (dict(IMAGING_SPOCK, process_cluster="tiger"), "uv", "uv", False),
+    ],
+)
+def test_only_spock_imaging_jobs_follow_the_imaging_switch(
+    sc, custom, params, ephys_env, imaging_env, uses_uv
+):
+    custom["spock_ephys_env"] = ephys_env
+    if imaging_env:
+        custom["spock_imaging_env"] = imaging_env
+    assert sc.imaging_job_uses_uv(params) is uses_uv
+    assert sc.ephys_job_uses_uv(params) is (params is EPHYS_SPOCK and ephys_env == "uv")
+
+
+# the conda script, byte for byte
+
+
+def test_conda_imaging_script_is_unchanged(sc):
+    assert imaging_text(sc) == conda_imaging_text(sc)
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        {"spock_imaging_env": "conda"},
+        {"spock_ephys_env": "uv"},
+        {"spock_uv_cache_dir": "/mnt/bucket/scratch/u19prod/uv_cache"},
+    ],
+)
+def test_conda_imaging_script_is_unchanged_with(sc, custom, setting):
+    custom.update(setting)
+    assert imaging_text(sc) == conda_imaging_text(sc)
+
+
+def test_imaging_python_env_argument_overrides_the_config(sc, custom):
+    custom["spock_imaging_env"] = "uv"
+    assert imaging_text(sc, python_env="conda") == conda_imaging_text(sc)
+
+
+# the uv script
+
+
+@pytest.fixture
+def uv_imaging(sc, custom):
+    custom["spock_imaging_env"] = "uv"
+    return imaging_text(sc)
+
+
+def test_uv_imaging_script_keeps_the_slurm_header(sc, uv_imaging):
+    def header(text):
+        return [line for line in text.splitlines() if line.startswith("#")]
+
+    assert header(uv_imaging) == header(conda_imaging_text(sc))
+
+
+def test_uv_imaging_script_runs_from_the_venv_without_conda(uv_imaging):
+    commands = body_commands(uv_imaging)
+
+    assert not any("conda" in command for command in commands)
+    # torch brings its own CUDA libraries: no module at all
+    assert not any(command.startswith("module ") for command in commands)
+    assert "source ~/.bashrc" in commands
+
+    cd = next(i for i, c in enumerate(commands) if c.startswith("cd ${repository_dir}"))
+    which = next(i for i, c in enumerate(commands) if c.startswith("command -v uv "))
+    check = next(i for i, c in enumerate(commands) if c.startswith("uv sync "))
+    activate = commands.index("source .venv/bin/activate")
+    run = commands.index("python -u ${process_script_path}")
+    assert commands.index("source ~/.bashrc") < cd < which < check < activate < run
+    assert run == len(commands) - 1  # the job's exit code is suite2p_slurm_job's
+
+
+def test_uv_imaging_script_keeps_the_job_settings(sc, uv_imaging):
+    """Everything but how python is found is as in the conda script"""
+    commands = body_commands(uv_imaging)
+    conda_commands = body_commands(conda_imaging_text(sc))
+
+    for command in conda_commands:
+        if command.startswith(("echo ", "nvidia-smi ", "export ")):
+            assert command in commands
+    assert "export suite2p_job_file='" + JOB_FILE + "'" in commands
+
+
+def test_uv_imaging_script_checks_the_pipeline_extra_offline(uv_imaging):
+    commands = body_commands(uv_imaging)
+
+    (check,) = [c for c in commands if c.startswith("uv ")]
+    # the same extra the login-node sync installs, or --check would want to remove suite2p
+    assert check.startswith("uv sync --frozen --offline --check --extra pipeline || {")
+    assert "uv sync --locked --extra pipeline" in check  # what to run, in the message
+    assert check.endswith("exit 1; }")
+    assert "uv run" not in " ".join(commands)
+
+
+def test_uv_imaging_script_stops_without_the_checkout_or_uv(uv_imaging):
+    commands = body_commands(uv_imaging)
+
+    (cd,) = [c for c in commands if c.startswith("cd ")]
+    assert cd.endswith("exit 1; }")
+    (which,) = [c for c in commands if c.startswith("command -v uv ")]
+    assert "uv is not on PATH" in which and which.endswith("exit 1; }")
+
+
+def test_uv_imaging_script_uses_the_default_cache_unless_configured(uv_imaging):
+    assert "UV_CACHE_DIR" not in uv_imaging
+
+
+def test_uv_imaging_script_checks_against_the_shared_cache(sc, custom):
+    custom["spock_imaging_env"] = "uv"
+    custom["spock_uv_cache_dir"] = SHARED_CACHE
+    commands = body_commands(imaging_text(sc))
+
+    export = commands.index("export UV_CACHE_DIR=" + SHARED_CACHE)
+    check = commands.index(next(c for c in commands if c.startswith("uv sync ")))
+    assert commands.index("umask 002") < export < check
+
+
+def test_ephys_uv_script_checks_without_extras(sc, custom):
+    custom["spock_ephys_env"] = "uv"
+    commands = body_commands(sc.generate_slurm_spock(SLURM_DICT))
+
+    (check,) = [c for c in commands if c.startswith("uv ")]
+    assert "--extra" not in check
+
+
+# generate_slurm_file, as the handler calls it
+
+
+@pytest.fixture
+def written(sc, monkeypatch):
+    """Slurm files generate_slurm_file writes; nothing is transferred"""
+    files = {}
+    monkeypatch.setattr(
+        sc.config, "default_suite2p_job_filename", "suite2p_job_%s.json", raising=False
+    )
+    monkeypatch.setattr(sc, "write_file", lambda path, text: files.update({path: text}))
+    monkeypatch.setattr(sc, "transfer_slurm_file", lambda *args: 0)
+    return files
+
+
+@pytest.mark.parametrize("env", [None, "conda", "uv"])
+def test_generate_slurm_file_follows_the_imaging_switch(sc, custom, written, env):
+    if env:
+        custom["spock_imaging_env"] = env
+    status, _ = sc.generate_slurm_file(7, IMAGING_SPOCK)
+
+    assert status == 0
+    (text,) = written.values()
+    assert ("conda activate u19_suite2p_env" in text) is (env != "uv")
+    assert ("uv sync --frozen --offline --check --extra pipeline" in text) is (
+        env == "uv"
+    )
+
+
+# the login-node sync and sbatch
+
+
+def test_sync_installs_the_extras(sc, runs):
+    assert sc.sync_uv_env(CLUSTER_VARS, IMAGING_REPO_DIR, extras=("pipeline",)) == (
+        0,
+        "",
+    )
+
+    (script,) = shlex.split(" ".join(runs.commands[0][2:]))[2:]
+    assert script == "cd " + IMAGING_REPO_DIR + " && uv sync --locked --extra pipeline"
+
+
+def test_sync_failure_names_the_command_with_extras(sc, runs):
+    runs.result = completed(1, stderr="error: boom")
+    status, message = sc.sync_uv_env(CLUSTER_VARS, IMAGING_REPO_DIR, ("pipeline",))
+
+    assert status == 1
+    assert message == (
+        "uv sync --locked --extra pipeline failed in "
+        + IMAGING_REPO_DIR
+        + ": error: boom"
+    )
+
+
+def test_queue_syncs_the_imaging_env_before_sbatch(sc, custom, runs, sbatch):
+    custom["spock_imaging_env"] = "uv"
+    assert queue(sc, IMAGING_SPOCK) == (0, "123", "")
+
+    (sync,) = runs.commands
+    assert "cd " + IMAGING_REPO_DIR + " && uv sync --locked --extra pipeline" in sync[2]
+    assert len(sbatch) == 1 and "sbatch" in sbatch[0]
+
+
+def test_queue_does_not_submit_imaging_when_the_sync_fails(sc, custom, runs, sbatch):
+    custom["spock_imaging_env"] = "uv"
+    runs.result = completed(2, stderr="error: Failed to download `torch==2.14.0`")
+    status, slurm_jobid, message = queue(sc, IMAGING_SPOCK)
+
+    assert status == 2
+    assert slurm_jobid == -1
+    assert "Failed to download" in message
+    assert sbatch == []
+
+
+@pytest.mark.parametrize(
+    "params, setting",
+    [
+        (IMAGING_SPOCK, {}),
+        (IMAGING_SPOCK, {"spock_imaging_env": "conda", "spock_ephys_env": "uv"}),
+        (EPHYS_SPOCK, {"spock_imaging_env": "uv"}),
+    ],
+)
+def test_queue_does_not_sync_for_conda_imaging_jobs(
+    sc, custom, runs, sbatch, params, setting
+):
+    custom.update(setting)
     assert queue(sc, params) == (0, "123", "")
 
     assert runs.commands == []
