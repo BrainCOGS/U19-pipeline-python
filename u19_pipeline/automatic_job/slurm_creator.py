@@ -191,8 +191,12 @@ def queue_slurm_file(
         command = command[2:]
 
     # The job's uv environment has to be complete before sbatch: nodes have no internet
-    if ephys_job_uses_uv(program_selection_params):
-        status, error_message = sync_uv_env(cluster_vars, repository_dir)
+    if ephys_job_uses_uv(program_selection_params) or imaging_job_uses_uv(
+        program_selection_params
+    ):
+        status, error_message = sync_uv_env(
+            cluster_vars, repository_dir, uv_extras(program_selection_params)
+        )
         if status != config.system_process["SUCCESS"]:
             return status, id_slurm_job, error_message
 
@@ -352,9 +356,24 @@ def create_slurm_params_file(slurm_dict):
 # "uv": the environment uv builds from the processing repository's uv.lock, in
 #       <repository_dir>/.venv. sync_uv_env brings it up to date on the login node before
 #       every sbatch, and the job stops before it starts if it does not match the lock.
-# Imaging jobs (generate_slurm_spock_imaging) and tiger jobs are not affected.
+# Imaging jobs (generate_slurm_spock_imaging) have their own key, spock_imaging_env_key;
+# tiger jobs are not affected.
 spock_ephys_env_key = "spock_ephys_env"
 spock_ephys_envs = ("conda", "uv")
+
+# Which python environment imaging (suite2p) jobs on spock run in, the same way:
+#   "custom": {"spock_imaging_env": "uv"}
+# "conda" (the default): the conda environment spock_imaging_conda_env (u19_suite2p_env).
+# "uv": <repository_dir>/.venv of the U19-pipeline-python checkout, built from its uv.lock
+#       with the extras in uv_sync_extras (suite2p, CUDA torch and element-calcium-imaging
+#       are in the "pipeline" extra). Synced and checked as for ephys; spock_uv_cache_dir
+#       applies to both.
+spock_imaging_env_key = "spock_imaging_env"
+
+# Extras of the processing repository's pyproject.toml a uv job needs, by recording_modality.
+# The login-node sync and the job's offline check must ask for the same ones: --check fails
+# when .venv has packages the command would remove.
+uv_sync_extras = {"imaging": ("pipeline",)}
 
 # uv cache for the "uv" environment, shared by the accounts that sync it. Optional:
 #   "custom": {"spock_ephys_env": "uv", "spock_uv_cache_dir": "/mnt/bucket/scratch/u19prod/uv_cache"}
@@ -370,23 +389,39 @@ spock_uv_cache_dir_key = "spock_uv_cache_dir"
 uv_sync_timeout_s = 30 * 60
 
 
+def spock_env(key):
+    """
+    Python environment that dj.config['custom'][key] selects: "conda" (default) or "uv"
+    """
+
+    custom = dj.config.get("custom") or {}
+    env = str(custom.get(key, "conda")).strip().lower()
+    if env not in spock_ephys_envs:
+        raise ValueError(
+            "dj.config['custom']['"
+            + key
+            + "'] must be one of "
+            + str(spock_ephys_envs)
+            + f", got {custom.get(key)!r}"
+        )
+
+    return env
+
+
 def spock_ephys_env():
     """
     Python environment for ephys jobs on spock: "conda" or "uv" (see spock_ephys_env_key)
     """
 
-    custom = dj.config.get("custom") or {}
-    env = str(custom.get(spock_ephys_env_key, "conda")).strip().lower()
-    if env not in spock_ephys_envs:
-        raise ValueError(
-            "dj.config['custom']['"
-            + spock_ephys_env_key
-            + "'] must be one of "
-            + str(spock_ephys_envs)
-            + f", got {custom.get(spock_ephys_env_key)!r}"
-        )
+    return spock_env(spock_ephys_env_key)
 
-    return env
+
+def spock_imaging_env():
+    """
+    Python environment for imaging jobs on spock: "conda" or "uv" (see spock_imaging_env_key)
+    """
+
+    return spock_env(spock_imaging_env_key)
 
 
 def spock_uv_cache_dir():
@@ -433,7 +468,38 @@ def ephys_job_uses_uv(program_selection_params):
     )
 
 
-def sync_uv_env(cluster_vars, repository_dir):
+def imaging_job_uses_uv(program_selection_params):
+    """
+    True for the jobs generate_slurm_file writes with the uv version of generate_slurm_spock_imaging
+    """
+
+    return (
+        program_selection_params["process_cluster"] == "spock"
+        and program_selection_params.get("recording_modality") == "imaging"
+        and spock_imaging_env() == "uv"
+    )
+
+
+def uv_extras(program_selection_params):
+    """
+    Extras (uv_sync_extras) the uv environment of this job's repository is synced with
+    """
+
+    return uv_sync_extras.get(program_selection_params.get("recording_modality"), ())
+
+
+def uv_sync_command(options, extras=()):
+    """
+    "uv sync <options> --extra <extra> ..." as one shell string
+    """
+
+    words = ["uv", "sync", *options]
+    for extra in extras:
+        words += ["--extra", extra]
+    return shlex.join(words)
+
+
+def sync_uv_env(cluster_vars, repository_dir, extras=()):
     """
     Bring the uv environment of repository_dir up to date on the cluster login node
 
@@ -442,12 +508,15 @@ def sync_uv_env(cluster_vars, repository_dir):
     exactly what uv.lock lists, does nothing when the environment already matches, and
     fails when uv.lock no longer matches pyproject.toml.
 
+    extras: optional dependency groups of pyproject.toml to install as well (uv_extras)
+
     Returns:
     status        (int) = system_process SUCCESS, or what uv/ssh returned
     error_message (str) = why the sync failed ('' if it did not)
     """
 
-    remote = "cd " + shlex.quote(repository_dir) + " && uv sync --locked"
+    sync = uv_sync_command(["--locked"], extras)
+    remote = "cd " + shlex.quote(repository_dir) + " && " + sync
     cache_env = uv_cache_env_command()
     if cache_env:
         remote = "umask 002 && " + cache_env + " UV_LINK_MODE=copy && " + remote
@@ -464,7 +533,7 @@ def sync_uv_env(cluster_vars, repository_dir):
         ]
 
     print("sync_uv_env", command)
-    failed = "uv sync --locked failed in " + repository_dir + ": "
+    failed = sync + " failed in " + repository_dir + ": "
     try:
         p = subprocess.run(
             command,
@@ -511,7 +580,14 @@ spock_ephys_env_setup = {
     "uv": """
     source ~/.bashrc
     module load matlab/R2024a -s
+{uv_activate}
+    python -u ${process_script_path}
+    """,
+}
 
+# How a uv job on spock (ephys or imaging) gets into <repository_dir>/.venv. {uv_cache_env},
+# {uv_check} and {uv_sync} are filled in by spock_uv_activate.
+spock_uv_activate_template = """
     # Without the checkout the script path would resolve against the submit directory
     cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
 
@@ -519,13 +595,29 @@ spock_ephys_env_setup = {
 {uv_cache_env}
     # The node has no internet and other jobs share this environment, so nothing is
     # installed here: the job only runs if .venv already matches uv.lock.
-    uv sync --frozen --offline --check || { echo "the uv environment ${repository_dir}/.venv is missing or does not match uv.lock: run 'uv sync --locked' in ${repository_dir} on the login node" >&2; exit 1; }
+    {uv_check} || { echo "the uv environment ${repository_dir}/.venv is missing or does not match uv.lock: run '{uv_sync}' in ${repository_dir} on the login node" >&2; exit 1; }
 
     source .venv/bin/activate
-    python -c 'import sys; print("PYTHON:", sys.executable, sys.version.split()[0])'
-    python -u ${process_script_path}
-    """,
-}
+    python -c 'import sys; print("PYTHON:", sys.executable, sys.version.split()[0])'"""
+
+
+def spock_uv_activate(extras=()):
+    """
+    Slurm script lines that cd into ${repository_dir} and activate its .venv, after checking
+    offline that it matches uv.lock (with extras, as sync_uv_env installed it)
+    """
+
+    # The check reads the cache (and writes a little to it): the same one the sync filled
+    cache_env = uv_cache_env_command()
+    if cache_env:
+        cache_env = "    umask 002\n    " + cache_env + "\n"
+    return (
+        spock_uv_activate_template.replace("{uv_cache_env}\n", cache_env)
+        .replace(
+            "{uv_check}", uv_sync_command(["--frozen", "--offline", "--check"], extras)
+        )
+        .replace("{uv_sync}", uv_sync_command(["--locked"], extras))
+    )
 
 
 def generate_slurm_spock(slurm_dict, python_env=None):
@@ -552,11 +644,7 @@ def generate_slurm_spock(slurm_dict, python_env=None):
 """
     setup = spock_ephys_env_setup[python_env]
     if python_env == "uv":
-        # The check reads the cache (and writes a little to it): the same one the sync filled
-        cache_env = uv_cache_env_command()
-        if cache_env:
-            cache_env = "    umask 002\n    " + cache_env + "\n"
-        setup = setup.replace("{uv_cache_env}\n", cache_env)
+        setup = setup.replace("{uv_activate}", spock_uv_activate())
     slurm_text += setup
 
     return slurm_text
@@ -569,13 +657,18 @@ def generate_slurm_spock(slurm_dict, python_env=None):
 spock_imaging_conda_env = "u19_suite2p_env"
 
 
-def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
+def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file, python_env=None):
     """
     Slurm script for a suite2p job on a spock GPU node (u19_pipeline/automatic_job/suite2p_slurm_job.py).
 
     The job reads everything it needs from suite2p_job_file (written and transferred by the
     handler before sbatch), so it never needs the database.
+
+    python_env: "conda" or "uv"; by default what spock_imaging_env() reads from dj.config
     """
+
+    if python_env is None:
+        python_env = spock_imaging_env()
 
     # Imaging resources (1 GPU, cpus, memory) live in ft.slurm_dict_spock_imaging; only the
     # per-job fields set by generate_slurm_file are carried over from the incoming dict.
@@ -585,8 +678,7 @@ def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
 
     slurm_text = "#!/bin/bash\n"
     slurm_text += create_slurm_params_file(imaging_dict)
-    slurm_text += (
-        """
+    slurm_text += """
     echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
     echo "SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR}"
     echo "RECORDING_PROCESS_ID: ${recording_process_id}"
@@ -598,13 +690,22 @@ def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
     nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv
 
     source ~/.bashrc
-    module load anacondapy/2023.07-cuda -s
+"""
+    if python_env == "uv":
+        # torch's wheels bring their own CUDA libraries: no module to load
+        slurm_text += "\n"
+    else:
+        slurm_text += (
+            """    module load anacondapy/2023.07-cuda -s
 
     conda activate """
-        + spock_imaging_conda_env
-        + """
+            + spock_imaging_conda_env
+            + """
 
-    export suite2p_job_file="""
+"""
+        )
+    slurm_text += (
+        """    export suite2p_job_file="""
         + "'"
         + suite2p_job_file
         + "'"
@@ -612,12 +713,17 @@ def generate_slurm_spock_imaging(slurm_dict, suite2p_job_file):
     # CPU-side work (tiff reading, parts of detection) uses the cores slurm gave the job
     export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
     export MKL_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
-
+"""
+    )
+    if python_env == "uv":
+        slurm_text += spock_uv_activate(uv_sync_extras["imaging"]) + "\n"
+    else:
+        slurm_text += """
     # Without the checkout the script path would resolve against the submit directory
     cd ${repository_dir} || { echo "repository_dir not found: ${repository_dir}" >&2; exit 1; }
-    python -u ${process_script_path}
+"""
+    slurm_text += """    python -u ${process_script_path}
     """
-    )
 
     return slurm_text
 

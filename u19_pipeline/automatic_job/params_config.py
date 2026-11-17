@@ -18,7 +18,7 @@ recording_modality_dict = [
     {
         "recording_modality": "imaging",
         "local_or_cluster": "cluster",
-        "process_repository": "U19-pipeline-python",  # checkout holding suite2p_slurm_job.py; runs in the spock conda env
+        "process_repository": "U19-pipeline-python",  # checkout holding suite2p_slurm_job.py; conda or uv env: see slurm_creator.spock_imaging_env_key
         "process_cluster": "spock",  # Which cluster will be used to process (check clusters_paths_and_transfers.py file)
         "process_script": "u19_pipeline/automatic_job/suite2p_slurm_job.py",
     },
