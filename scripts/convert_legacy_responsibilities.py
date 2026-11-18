@@ -31,6 +31,7 @@ import re
 import datajoint as dj
 
 from u19_pipeline.utils.responsibilities_conversion import (
+    READABLE_COLUMNS,
     historic_records,
     plan_conversions,
 )
@@ -43,6 +44,7 @@ REPORT_COLUMNS = (
     "tech_responsibility",
     "manual_weekdays",
     "action",
+    *READABLE_COLUMNS,
     "schedule",
     "converted_schedule",
     "changed_days",
