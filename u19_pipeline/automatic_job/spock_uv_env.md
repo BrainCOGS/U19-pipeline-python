@@ -74,13 +74,12 @@ and makes the next job's sync reinstall it.
 Like the sorters checkout (#201), the handler fast-forwards this checkout to `master` of
 BrainCOGS/U19-pipeline-python before queuing an imaging job (once per cron run), under conda and
 uv alike; if it can't, it warns in Slack and the job runs on the code already there. The uv sync
-comes after the pull, so a changed `uv.lock` is installed before the job starts.
+comes after the pull, so a changed `uv.lock` is installed before the job starts. Neither happens
+while jobs run from the checkout (see [Updating the sorters](#updating-the-sorters-and-the-imaging-checkout)).
 
-The pull is `--ff-only` onto the checked-out branch, so the checkout has to be on `master`: as of
-2026-11-17 `/mnt/cup/braininit/Shared/repos/AutomaticPipelineProcessing/imaging_processing/U19-pipeline-python`
-is on the branch of #135 (commit 71493d7, 2026-09-30, squash-merged as 8339430) and has no
-`.venv`. Until `u19prod` runs `git checkout master` there, every imaging job's pull fails and
-warns in Slack. Build `.venv` before setting `spock_imaging_env` to `"uv"`.
+The pull is `--ff-only` onto the checked-out branch, so the checkout has to be on `master`. It is
+since 2026-11-17 (before that it was on the branch of #135, commit 71493d7, squash-merged as
+8339430). It has no `.venv` yet: build it before setting `spock_imaging_env` to `"uv"`.
 
 ## Shared uv cache
 
@@ -130,11 +129,23 @@ Why this is safe, and what was and was not checked:
 
 ## Updating the sorters (and the imaging checkout)
 
-A `git pull` that changes `uv.lock` is picked up by the next job's sync. That sync replaces
-packages in the `.venv` that running jobs use, as the `git pull` already replaces their code: pull
-when `squeue -u u19prod` shows no ephys or imaging jobs, or run `uv sync --locked` (imaging:
-`uv sync --locked --extra pipeline`) by hand right after. #202 proposes skipping the automatic
-pull while jobs run.
+A pull changes the code under jobs already running from the checkout, and a pull that changes
+`uv.lock` makes the next job's sync replace packages in the `.venv` they use. So the handler does
+not pull while jobs run from it (#202):
+
+- Before pulling it lists `u19prod`'s running jobs (`squeue -u u19prod -t RUNNING -o '%j|%k'`).
+  Processing jobs are named `job_id_<id>`, and `queue_slurm_file` tags each with its checkout
+  (`sbatch --comment=<checkout>`), so ephys jobs only hold back the sorters checkout and imaging
+  jobs only the U19 checkout. Jobs queued before the tag (no comment) hold back both.
+- If any run, the job is queued on the code already there and the next cron run tries again.
+  That is not an error: nothing goes to Slack, unless the checkout has been behind `master` that
+  way for 24 h: then one note says so (the clock is kept in
+  `u19_pipeline/automatic_job/SlurmFiles/repository_update_skips.json` and restarts at the next
+  pull).
+- If `squeue` fails, nothing is pulled and Slack gets the usual warning.
+
+To update by hand anyway, pull when `squeue -u u19prod` shows no ephys or imaging jobs, then run
+`uv sync --locked` (imaging: `uv sync --locked --extra pipeline`).
 
 ## Roll back
 

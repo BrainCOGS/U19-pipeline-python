@@ -5,6 +5,7 @@ import pathlib
 import json
 import re
 import shlex
+import time
 import datajoint as dj
 import u19_pipeline.automatic_job.clusters_paths_and_transfers as ft
 from u19_pipeline.automatic_job import ephys_slurm_resources
@@ -106,10 +107,88 @@ def get_repository_dir(program_selection_params, modality):
 # Result of the repository update of this run, by checkout (pull & warn once per cron run)
 repository_updates = dict()
 
+# Pulls skipped because jobs were running from the checkout, by checkout: since when, and
+# whether Slack was told. Kept in a file because every cron run is a new process.
+repository_skips_file = str(
+    pathlib.Path(slurms_filepath, "repository_update_skips.json")
+)
+# Tell Slack (once) when a checkout could not be pulled for this long
+repository_skip_note_after_s = 24 * 3600
+
+
+def read_repository_skips():
+    try:
+        with open(repository_skips_file) as f:
+            skips = json.load(f)
+    except (OSError, ValueError):
+        return dict()
+    return skips if isinstance(skips, dict) else dict()
+
+
+def write_repository_skips(skips):
+    try:
+        with open(repository_skips_file, "w") as f:
+            json.dump(skips, f, indent=1)
+    except OSError as e:
+        print("Could not write", repository_skips_file, e)
+
+
+def record_repository_skip(repository_dir, now):
+    """
+    Remember that repository_dir was not pulled now
+    Returns:
+    skipped_for (float) = seconds since its pull was first skipped
+    note        (bool)  = True the first time it has been skipped for repository_skip_note_after_s
+    """
+    skips = read_repository_skips()
+    skip = skips.setdefault(repository_dir, {"since": now, "noted": False})
+    skipped_for = now - skip["since"]
+    note = skipped_for >= repository_skip_note_after_s and not skip["noted"]
+    if note:
+        skip["noted"] = True
+    write_repository_skips(skips)
+    return skipped_for, note
+
+
+def clear_repository_skip(repository_dir):
+    skips = read_repository_skips()
+    if skips.pop(repository_dir, None) is not None:
+        write_repository_skips(skips)
+
+
+def skip_repository_update(
+    repository, repository_dir, git_url, ssh_target, where, jobs
+):
+    """
+    Leave a checkout as it is while jobs run from it (a pull would change their code
+    under them); say so in Slack once if that has lasted repository_skip_note_after_s
+    Returns: as update_process_repository
+    """
+    behind, message = slurm_utils.checkout_behind(repository_dir, git_url, ssh_target)
+    if not behind:
+        clear_repository_skip(repository_dir)
+        return True, message
+
+    skipped_for, note = record_repository_skip(repository_dir, time.time())
+    message = "not pulled while " + ", ".join(jobs) + " run from it (" + message + ")"
+    if note:
+        try:
+            slack_utils.send_slack_notification(
+                config.slack_webhooks_dict["automation_pipeline_error_notification"],
+                slurm_utils.repository_skip_note(
+                    repository, repository_dir, where, skipped_for / 3600, jobs
+                ),
+            )
+        except Exception as e:
+            print("Could not send repository skip note to slack:", e)
+    return False, message
+
 
 def update_process_repository(job_id, program_selection_params, modality):
     """
     Fast-forward the processing repository in the cluster before queuing a job
+    Not while jobs run from it: the job is then queued on the code there, and the next
+    cron run tries again
     If it can't be updated, warn in Slack (once per run) and let the job run on the code there
     Returns:
     updated (bool) = True if the checkout is up to date (or isn't set to be updated)
@@ -129,10 +208,27 @@ def update_process_repository(job_id, program_selection_params, modality):
     ssh_target = cluster_vars["user"] + "@" + cluster_vars["hostname"]
     if cluster == "spock" and is_this_spock():
         ssh_target = None
+    where = ssh_target or cluster
 
-    updated, message = slurm_utils.update_repository(
-        repository_dir, git_url, ssh_target
-    )
+    listed, jobs = slurm_utils.running_jobs(cluster_vars["user"], ssh_target)
+    if not listed:
+        updated, message = False, "could not list the running jobs: " + jobs
+    else:
+        busy = slurm_utils.jobs_using_checkout(jobs, repository_dir)
+        if busy:
+            updated, message = skip_repository_update(
+                repository, repository_dir, git_url, ssh_target, where, busy
+            )
+            repository_updates[repository_dir] = (updated, message)
+            print("update_process_repository", repository_dir, updated, message)
+            return updated, message
+
+        updated, message = slurm_utils.update_repository(
+            repository_dir, git_url, ssh_target
+        )
+        if updated:
+            clear_repository_skip(repository_dir)
+
     repository_updates[repository_dir] = (updated, message)
     print("update_process_repository", repository_dir, updated, message)
 
@@ -141,7 +237,7 @@ def update_process_repository(job_id, program_selection_params, modality):
             slack_utils.send_slack_notification(
                 config.slack_webhooks_dict["automation_pipeline_error_notification"],
                 slurm_utils.repository_update_warning(
-                    repository, repository_dir, ssh_target or cluster, job_id, message
+                    repository, repository_dir, where, job_id, message
                 ),
             )
         except Exception as e:
@@ -184,6 +280,8 @@ def queue_slurm_file(
         + "',process_script_path='"
         + program_selection_params["process_script"]
         + "'",
+        # which checkout the job runs from: its pull waits while the job runs
+        "--comment=" + repository_dir,
         slurm_location,
     ]
 

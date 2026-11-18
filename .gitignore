@@ -138,6 +138,8 @@ u19_pipeline/automatic_job/OutputLog/*.json
 u19_pipeline/automatic_job/ChanMapFiles/*.mat
 
 u19_pipeline/automatic_job/slurm_pupillometry.slurm
+# when the processing checkouts were last held back by running jobs (slurm_creator)
+u19_pipeline/automatic_job/SlurmFiles/repository_update_skips.json
 
 u19_pipeline/automatic_job/machine_variables.py
 

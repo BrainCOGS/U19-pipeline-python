@@ -200,3 +200,123 @@ def repository_update_warning(repository, repository_dir, where, job_id, message
             f"\n```{message}```"
         )
     }
+
+
+# Jobs the processing code queues are named job_id_<id> and carry the checkout they run
+# from as their comment (sbatch --comment). Jobs queued before that have no comment
+# ("(null)" in squeue) and could be running from any checkout.
+processing_job_prefix = "job_id_"
+untagged_job_comments = ("", "(null)")
+
+
+def running_jobs_command(user, ssh_target=None):
+    """
+    Command that lists the running jobs of user as "name|comment" lines
+    """
+    command = ["squeue", "-h", "-u", user, "-t", "RUNNING", "-o", "%j|%k"]
+    if ssh_target:
+        return ["ssh", "-o", "BatchMode=yes", ssh_target, shlex.join(command)]
+    return command
+
+
+def parse_running_jobs(stdout):
+    """
+    (name, comment) of each job in the output of running_jobs_command
+    """
+    jobs = []
+    for line in stdout.splitlines():
+        name, _, comment = line.strip().partition("|")
+        if name:
+            jobs.append((name, comment.strip()))
+    return jobs
+
+
+def running_jobs(user, ssh_target=None, timeout=60):
+    """
+    Running jobs of user (through ssh if ssh_target is given)
+    Returns:
+    ok   (bool)       = True if squeue answered
+    jobs (list | str) = (name, comment) of each running job, otherwise why squeue failed
+    """
+    command = running_jobs_command(user, ssh_target)
+    try:
+        p = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired:
+        return False, "squeue did not finish in " + str(timeout) + " s"
+    except OSError as e:
+        return False, str(e)
+
+    if p.returncode != 0:
+        output = (p.stderr.strip() or p.stdout.strip())[-1000:]
+        return False, output or "squeue exited with code " + str(p.returncode)
+    return True, parse_running_jobs(p.stdout)
+
+
+def jobs_using_checkout(jobs, repository_dir):
+    """
+    Names of the processing jobs (from running_jobs) that may be running from repository_dir
+    """
+    return [
+        name
+        for name, comment in jobs
+        if name.startswith(processing_job_prefix)
+        and (comment == repository_dir or comment in untagged_job_comments)
+    ]
+
+
+def checkout_behind_command(repository_dir, git_url, ssh_target=None):
+    """
+    Command that prints the commit of a checkout and then the latest commit of git_url
+    (only looks: nothing in the checkout changes)
+    """
+    remote_command = (
+        f"git -C {shlex.quote(repository_dir)} rev-parse HEAD"
+        f" && git ls-remote {shlex.quote(git_url)} HEAD"
+    )
+    if ssh_target:
+        return ["ssh", "-o", "BatchMode=yes", ssh_target, remote_command]
+    return ["bash", "-c", remote_command]
+
+
+def checkout_behind(repository_dir, git_url, ssh_target=None, timeout=60):
+    """
+    Whether a checkout is not at the latest commit of git_url (a pull would change it)
+    Returns:
+    behind  (bool) = True unless the checkout is at the latest commit (also if it can't tell)
+    message (str)  = the commit if it is up to date, otherwise both commits or why it can't tell
+    """
+    command = checkout_behind_command(repository_dir, git_url, ssh_target)
+    try:
+        p = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired:
+        return True, "git ls-remote did not finish in " + str(timeout) + " s"
+    except OSError as e:
+        return True, str(e)
+
+    lines = p.stdout.split()
+    if p.returncode != 0 or len(lines) < 2:
+        output = (p.stderr.strip() or p.stdout.strip())[-1000:]
+        return True, output or "git exited with code " + str(p.returncode)
+
+    local, latest = lines[0], lines[1]
+    if local == latest:
+        return False, local[:7]
+    return True, local[:7] + " is behind " + latest[:7]
+
+
+def repository_skip_note(repository, repository_dir, where, hours, jobs):
+    """
+    Slack message for a processing repository not pulled for long because jobs kept running from it
+    """
+    return {
+        "text": (
+            f":hourglass: *{repository}* (`{repository_dir}` on {where}) has not been"
+            f" updated for {hours:.0f} h: there were always jobs running from it"
+            f" (now {', '.join(jobs)}). It will be pulled before the first job queued"
+            " while none of them runs."
+        )
+    }
