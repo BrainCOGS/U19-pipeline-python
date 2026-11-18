@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import pytest
@@ -433,3 +434,32 @@ class TestScriptArguments:
         assert args.cages == ["c1", "c2"]
         assert args.users == ["ab"]
         assert args.write is True
+
+
+class TestHistoricRecords:
+    RECORD = {
+        "subject_fullname": "jdoe_1",
+        "subject_status": "InExperiments",
+        "water_per_day": 1.5,
+        "responsibilities": '{"style": "weekly"}',
+    }
+
+    def test_copies_each_record_with_the_effective_date(self):
+        historic = conv.historic_records([self.RECORD], datetime.date(2026, 11, 18))
+        assert historic == [{**self.RECORD, "effective_date": "2026-11-18"}]
+
+    def test_leaves_the_current_records_unchanged(self):
+        record = dict(self.RECORD)
+        historic = conv.historic_records([record], datetime.date(2026, 11, 18))
+        historic[0]["responsibilities"] = "changed"
+        assert record == self.RECORD
+        assert "effective_date" not in record
+
+    def test_no_records_gives_no_historic_rows(self):
+        assert conv.historic_records([], datetime.date(2026, 11, 18)) == []
+
+    def test_keeps_a_missing_water_amount(self):
+        record = {**self.RECORD, "water_per_day": None}
+        historic = conv.historic_records([record], datetime.date(2026, 1, 1))
+        assert historic[0]["water_per_day"] is None
+        assert historic[0]["effective_date"] == "2026-01-01"

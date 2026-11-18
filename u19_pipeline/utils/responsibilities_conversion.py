@@ -20,6 +20,7 @@ Optionally, weekday watering and weighing become the researcher's Manual
 Watering and Manual Weighing (done on paper; never alerted on).
 """
 
+import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
@@ -276,3 +277,14 @@ def plan_conversions(
         }
         row["action"] = "insert"
     return plans
+
+
+def historic_records(records: list[dict], effective_date: datetime.date) -> list[dict]:
+    """ResponsibilitiesAltHistoric rows matching ResponsibilitiesAlt ``records``.
+
+    Each is a copy with ``effective_date`` added, so the history starts with the
+    pre-filled value and later website saves have something to compare with.
+    """
+    return [
+        {**record, "effective_date": effective_date.isoformat()} for record in records
+    ]
