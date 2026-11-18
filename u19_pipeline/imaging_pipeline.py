@@ -1,11 +1,8 @@
 import datajoint as dj
 import pathlib
-import subprocess
 from pathlib import Path
 
 from u19_pipeline import lab, subject, recording
-import u19_pipeline.automatic_job.params_config as config
-import u19_pipeline.utils.dj_shortcuts as dj_short
 import u19_pipeline.utils.tiff_utils as tu
 
 
@@ -181,29 +178,12 @@ class AcquiredTiff(dj.Imported):
         else:
             raise ValueError("Invalid acquisition type")
 
-    def old_make(self, key):
-
-        str_key = dj_short.get_string_key(key)
-        command = [
-            config.ingest_scaninfo_script,
-            config.startup_pipeline_matlab_dir,
-            str_key,
-        ]
-        print(command)
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.wait()
-        print("aftercommand before comm")
-        stdout, stderr = p.communicate()
-        print("aftercommand after comm")
-        print(stdout.decode("UTF-8"))
-        print(stderr.decode("UTF-8"))
-
 
 @schema
 class TiffSplit(dj.Imported):
     definition = """
     # meta-info about specific FOV within mesoscope imaging session
-    # `make` function is declared in the `U19-pipeline-matlab` repository
+    # populated by `AcquiredTiff.make`, which inserts the tiff splits and their files
     -> AcquiredTiff
     tiff_split           : tinyint                      # number of the tiff split in this scan
     ---

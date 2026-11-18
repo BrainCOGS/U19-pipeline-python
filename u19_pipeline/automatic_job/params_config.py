@@ -266,14 +266,11 @@ slurm_states = {
 }
 
 
-# Look for u19_matlab_dir (Should be present on same directory as U19-Pipeline_Python)
+# Directory that holds the U19-pipeline-python checkout
 _, u19_pipeline_python_dir = get_root_directory()
 datajoint_proj_dir = u19_pipeline_python_dir.parent
-u19_matlab_dir = pathlib.Path(datajoint_proj_dir, "U19-pipeline-matlab")
-startup_pipeline_matlab_dir = pathlib.Path(u19_matlab_dir, "scripts").as_posix()
 
 this_dir = os.path.dirname(__file__)
-ingest_scaninfo_script = pathlib.Path(this_dir, "ingest_scaninfo_shell.sh").as_posix()
 
 # Look for CATGT directory (Should be present on same directory as U19-Pipeline_Python)
 catgt_dir = pathlib.Path(datajoint_proj_dir, "CatGT-linux")

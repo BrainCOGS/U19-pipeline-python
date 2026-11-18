@@ -482,11 +482,11 @@ class RecordingHandler:
         print("rec_series['query_key']")
         print(rec_series["query_key"])
 
-        # Populate ImagingPipelineSession and call matlab script that handles TiffSplits
+        # Populate ImagingPipelineSession and AcquiredTiff (AcquiredTiff.make inserts the TiffSplits)
         imaging_pipeline.ImagingPipelineSession.populate(rec_series["query_key"])
         imaging_pipeline.AcquiredTiff.populate(rec_series["query_key"])
 
-        # Retrieve all fovs records ingested in matlab Script
+        # Retrieve all fovs records ingested by AcquiredTiff.make
         fovs_ingested = (imaging_pipeline.TiffSplit & rec_series["query_key"]).fetch(
             "KEY", as_dict=True
         )
