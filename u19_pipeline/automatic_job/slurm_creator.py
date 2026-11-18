@@ -170,25 +170,28 @@ def queue_slurm_file(
     repository_dir = get_repository_dir(program_selection_params, modality)
 
     command = [
-        "ssh",
-        cluster_vars["user"] + "@" + cluster_vars["hostname"],
         "sbatch",
         "--export=recording_process_id="
         + job_id
-        + ",raw_data_directory='"
+        + ",raw_data_directory="
         + raw_directory
-        + "',processed_data_directory='"
+        + ",processed_data_directory="
         + proc_directory
-        + "',repository_dir='"
+        + ",repository_dir="
         + repository_dir
-        + "',process_script_path='"
-        + program_selection_params["process_script"]
-        + "'",
+        + ",process_script_path="
+        + program_selection_params["process_script"],
         slurm_location,
     ]
 
-    if program_selection_params["process_cluster"] == "spock" and is_this_spock():
-        command = command[2:]
+    # Run directly on spock there is no shell, and quotes would reach the job (#203).
+    # Through ssh the remote shell parses the command: quote each word for it.
+    if not (program_selection_params["process_cluster"] == "spock" and is_this_spock()):
+        command = [
+            "ssh",
+            cluster_vars["user"] + "@" + cluster_vars["hostname"],
+            *(shlex.quote(word) for word in command),
+        ]
 
     # The job's uv environment has to be complete before sbatch: nodes have no internet
     if ephys_job_uses_uv(program_selection_params):
