@@ -13,8 +13,15 @@ import subprocess
 
 import pytest
 
+from u19_pipeline.utils import slurm_utils
 from u19_pipeline.utils.slurm_utils import (
+    checkout_behind,
+    jobs_using_checkout,
+    parse_running_jobs,
+    repository_skip_note,
     repository_update_warning,
+    running_jobs,
+    running_jobs_command,
     update_repository,
     update_repository_command,
 )
@@ -164,3 +171,133 @@ def test_warning_names_repository_host_and_job():
     assert "u19prod@spock" in text
     assert "job 42" in text
     assert "Read-only file system" in text
+
+
+# --- jobs running from the checkout (#202) ---------------------------------------------
+
+REPO = "/mnt/repos/U19-pipeline-python"
+OTHER = "/mnt/repos/BrainCogsEphysSorters"
+
+
+def test_running_jobs_are_listed_with_squeue_over_ssh():
+    command = running_jobs_command("u19prod", "u19prod@host")
+
+    assert command[:4] == ["ssh", "-o", "BatchMode=yes", "u19prod@host"]
+    assert shlex.split(command[4]) == [
+        "squeue", "-h", "-u", "u19prod", "-t", "RUNNING", "-o", "%j|%k",
+    ]  # fmt: skip
+
+
+def test_running_jobs_are_listed_locally_without_ssh_target():
+    assert running_jobs_command("u19prod") == [
+        "squeue", "-h", "-u", "u19prod", "-t", "RUNNING", "-o", "%j|%k",
+    ]  # fmt: skip
+
+
+def test_squeue_lines_are_name_and_comment():
+    stdout = f"job_id_1477|{REPO}\n pupil_3|(null)\n\njob_id_8|\n"
+
+    assert parse_running_jobs(stdout) == [
+        ("job_id_1477", REPO),
+        ("pupil_3", "(null)"),
+        ("job_id_8", ""),
+    ]
+
+
+@pytest.mark.parametrize(
+    "jobs, using",
+    [
+        ([], []),
+        ([("job_id_1", REPO)], ["job_id_1"]),
+        ([("job_id_1", OTHER)], []),
+        # queued before sbatch tagged jobs with their checkout: could be using it
+        ([("job_id_2", "(null)"), ("job_id_3", "")], ["job_id_2", "job_id_3"]),
+        # other u19prod jobs (pupillometry, interactive) don't run from the checkout
+        ([("pupil_9", REPO), ("bash", "(null)")], []),
+        ([("job_id_1", OTHER), ("job_id_4", REPO)], ["job_id_4"]),
+    ],
+)
+def test_jobs_using_the_checkout(jobs, using):
+    assert jobs_using_checkout(jobs, REPO) == using
+
+
+def fake_run(monkeypatch, result):
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(slurm_utils.subprocess, "run", run)
+    return calls
+
+
+def test_running_jobs_parses_squeue(monkeypatch):
+    calls = fake_run(
+        monkeypatch, subprocess.CompletedProcess([], 0, f"job_id_5|{REPO}\n", "")
+    )
+
+    assert running_jobs("u19prod", "u19prod@host") == (True, [("job_id_5", REPO)])
+    assert calls == [running_jobs_command("u19prod", "u19prod@host")]
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        subprocess.CompletedProcess([], 1, "", "slurm_load_jobs error: timeout"),
+        subprocess.CompletedProcess([], 255, "", ""),
+        subprocess.TimeoutExpired("ssh", 60),
+        OSError("ssh not found"),
+    ],
+)
+def test_running_jobs_failure_is_reported(monkeypatch, result):
+    fake_run(monkeypatch, result)
+
+    ok, message = running_jobs("u19prod", "u19prod@host")
+
+    assert not ok
+    assert message
+
+
+def test_checkout_at_the_latest_commit_is_not_behind(upstream_and_checkout):
+    upstream, checkout = upstream_and_checkout
+
+    behind, message = checkout_behind(str(checkout), upstream.as_uri())
+
+    assert not behind
+    assert message == git(checkout, "rev-parse", "--short", "HEAD")
+
+
+def test_checkout_without_the_latest_commit_is_behind(upstream_and_checkout):
+    upstream, checkout = upstream_and_checkout
+    before = git(checkout, "rev-parse", "--short", "HEAD")
+    latest = commit(upstream, "second")
+
+    behind, message = checkout_behind(str(checkout), upstream.as_uri())
+
+    assert behind
+    assert before in message and latest in message
+    # only looked: nothing was pulled
+    assert git(checkout, "rev-parse", "--short", "HEAD") == before
+
+
+def test_checkout_that_cannot_be_compared_counts_as_behind(tmp_path):
+    behind, message = checkout_behind(str(tmp_path / "nope"), "https://x/y.git")
+
+    assert behind
+    assert message
+
+
+def test_skip_note_names_repository_host_age_and_jobs():
+    note = repository_skip_note(
+        "U19-pipeline-python", REPO, "u19prod@spock", 26.4, ["job_id_1", "job_id_2"]
+    )
+
+    text = note["text"]
+    assert "U19-pipeline-python" in text
+    assert REPO in text
+    assert "u19prod@spock" in text
+    assert "26 h" in text
+    assert "job_id_1, job_id_2" in text
