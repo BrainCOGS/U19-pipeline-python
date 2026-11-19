@@ -4,8 +4,10 @@ Dry run by default: writes a CSV report of what would be inserted. With
 --write, inserts the converted rows. Subjects that already have explicit
 responsibilities are never touched, so it is safe to run again.
 
-Only ResponsibilitiesAlt is written, not ResponsibilitiesAltHistoric: a
-Historic row means a person saved the subject on the website.
+Each inserted ResponsibilitiesAlt row also gets a matching
+ResponsibilitiesAltHistoric row dated the day of the run, in the same
+transaction, so the two tables agree and the history starts with the
+pre-filled value.
 
 The conversion rules are in u19_pipeline/utils/responsibilities_conversion.py.
 
@@ -28,7 +30,11 @@ import re
 
 import datajoint as dj
 
-from u19_pipeline.utils.responsibilities_conversion import plan_conversions
+from u19_pipeline.utils.responsibilities_conversion import (
+    READABLE_COLUMNS,
+    historic_records,
+    plan_conversions,
+)
 
 REPORT_COLUMNS = (
     "subject_fullname",
@@ -38,6 +44,7 @@ REPORT_COLUMNS = (
     "tech_responsibility",
     "manual_weekdays",
     "action",
+    *READABLE_COLUMNS,
     "schedule",
     "converted_schedule",
     "changed_days",
@@ -145,7 +152,11 @@ def main() -> None:
         return
     with dj.conn().transaction:
         action.ResponsibilitiesAlt.insert(inserts)
-    print(f"Inserted {len(inserts)} rows into {prefix}action.responsibilities_alt")
+        action.ResponsibilitiesAltHistoric.insert(historic_records(inserts, today))
+    print(
+        f"Inserted {len(inserts)} rows into {prefix}action.responsibilities_alt "
+        f"and {prefix}action.responsibilities_alt_historic (effective {today})"
+    )
 
 
 if __name__ == "__main__":
