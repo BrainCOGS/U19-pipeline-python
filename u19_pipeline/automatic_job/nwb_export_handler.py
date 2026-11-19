@@ -15,11 +15,13 @@ from pathlib import Path
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.slack_utils as slack_utils
 from u19_pipeline import acquisition, nwb_production
+from u19_pipeline.nwb_export.conversion import with_imaging_modality
 from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 from u19_pipeline.nwb_production_utils import (
     recording_ids_for_session,
     validate_behavior_data_exists,
     validate_ephys_data_exists,
+    validate_imaging_data_exists,
 )
 
 
@@ -245,14 +247,24 @@ class NwbExportHandler:
                             )
 
                 elif modality_name == "imaging":
-                    # TODO: the imaging_element.Scan <-> acquisition.Session linkage
-                    # is not reliably known. Do NOT fabricate a scan key (an empty
-                    # restriction matches all rows and passes vacuously). Fail loud
-                    # until the linkage is confirmed and wired here.
-                    raise ValueError(
-                        f"Imaging validation failed: could not resolve imaging Scan "
-                        f"for session {session_key}; imaging export not yet wired."
-                    )
+                    # Same session -> recording hop as ephys above; the imaging
+                    # tables hang off recording.Recording, not off a separate
+                    # Scan key.
+                    recording_ids = recording_ids_for_session(session_key)
+                    if not recording_ids:
+                        raise ValueError(
+                            f"Imaging validation failed: no recording linked to "
+                            f"session {session_key}"
+                        )
+                    fov_numbers = _parse_number_list(modality.get("fov_numbers"))
+                    for rid in recording_ids:
+                        valid, error_msg = validate_imaging_data_exists(
+                            {"recording_id": rid}, fov_numbers
+                        )
+                        if not valid:
+                            raise ValueError(
+                                f"Imaging validation failed for recording {rid}: {error_msg}"
+                            )
 
             print(f"Data validation passed for job {job['nwb_job_id']}")
             return True, error_info
@@ -268,7 +280,8 @@ class NwbExportHandler:
         """
         Convert source data to an NWB file using the shared converter.
 
-        Resolves input paths, runs TowersNWBConverter via the shared
+        Resolves input paths and runs the converter (tank_lab_to_nwb's imaging
+        conversion for imaging jobs, TowersNWBConverter otherwise) via the shared
         u19_pipeline.nwb_export.conversion module (same code path as the CLI in
         scripts/run_nwb_export.py), writes the NWB file and records the actual
         file size on the job.
@@ -289,7 +302,12 @@ class NwbExportHandler:
         try:
             print(f"Converting data to NWB for job {job['nwb_job_id']}...")
 
-            export_params = _parse_export_params(job.get("export_parameters"))
+            export_params = with_imaging_modality(
+                _parse_export_params(job.get("export_parameters")),
+                (
+                    nwb_production.NwbExportModality & {"nwb_job_id": job["nwb_job_id"]}
+                ).fetch(as_dict=True),
+            )
             session_key = {
                 "subject_fullname": job["subject_fullname"],
                 "session_date": str(job["session_date"]),

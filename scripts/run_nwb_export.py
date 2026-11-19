@@ -23,9 +23,8 @@ Dry run (print plan, no DB writes):
 Prerequisites
 -------------
 1. `dj_local_conf.json` must exist (or `DJ_CONN_STR` / `DJ_USER+DJ_PASS` env vars set).
-2. `tank-lab-to-nwb` must be importable:
-       pip install -e /path/to/tank-lab-to-nwb-clean
-   or add it to PYTHONPATH.
+2. `tank-lab-to-nwb` must be importable. It is the pinned `nwb` extra:
+       uv sync --extra nwb
 3. The NWB output directory named in `output_filepath` must exist and be writable.
 """
 
@@ -159,6 +158,15 @@ def run(
                     f"Could not parse export_parameters: {raw_params!r}; proceeding with empty params"
                 )
 
+    from u19_pipeline.nwb_export.conversion import with_imaging_modality
+
+    export_params = with_imaging_modality(
+        export_params,
+        (nwb_production.NwbExportModality & {"nwb_job_id": job["nwb_job_id"]}).fetch(
+            as_dict=True
+        ),
+    )
+
     session_key = {
         "subject_fullname": job["subject_fullname"],
         "session_date": str(job["session_date"]),
@@ -200,9 +208,8 @@ def run(
         )
     except ImportError:
         log.error(
-            "tank-lab-to-nwb is not importable. Install it with:\n"
-            "    pip install -e /path/to/tank-lab-to-nwb-clean\n"
-            "or add it to PYTHONPATH."
+            "tank-lab-to-nwb is not importable. Install the pinned converter with:\n"
+            "    uv sync --extra nwb"
         )
         _fail(
             nwb_production,
