@@ -49,6 +49,11 @@ pipeline = [
     "suite2p",
     "tifffile",
 ]
+# The NWB converter. It aligns imaging to behavior from the TIFF headers' I2C
+# packets and verifies what it writes; the export handler only finds inputs.
+nwb = [
+    "tank-lab-to-nwb; python_version < '3.14'",
+]
 
 [tool.setuptools]
 packages = {find = {include = ["u19_pipeline*", "scripts*"]}}
@@ -77,3 +82,14 @@ dev = [
 
 [tool.uv]
 exclude-newer = "14 days"
+# neuroconv needs the zarr 2 API at import (catalystneuro/neuroconv#2062), as
+# tank-lab-to-nwb's own constraint says; uv doesn't take a dependency's constraints.
+constraint-dependencies = ["zarr<3"]
+
+[tool.uv.sources]
+# Pinned to a commit. Bump it when the converter changes; the export calls
+# tank_lab_to_nwb.imaging.convert.convert_session and .suite2p.convert_suite2p.
+tank-lab-to-nwb = { git = "https://github.com/BrainCOGS/tank-lab-to-nwb", rev = "61aab99b0385c5f6a1bd32fed05a025038f15dc0" }
+# tank-lab-to-nwb installs this from its tag until it's on PyPI, and uv doesn't
+# take a dependency's sources, so it's repeated here.
+ndx-tank-metadata = { git = "https://github.com/BrainCOGS/ndx-tank-metadata", tag = "v0.5.0" }

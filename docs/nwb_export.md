@@ -157,182 +157,101 @@ already fully wired; the general shape, using them as examples:
    `recording_ids_for_session` first if needed, mirroring the ephys
    branch at `:226-245`).
 
-### State at the time of this read
+### Imaging is wired differently
 
-Reading the branch live during the imaging work (2026-08-26), the pieces
-above are wired for imaging **unevenly** — worth flagging explicitly since
-these files are being edited concurrently and may look different by the time
-you read this:
+Imaging doesn't go through `build_source_data` and `TowersNWBConverter`. The
+converter, `tank-lab-to-nwb`, has its own imaging conversion, which reads the
+TIFFs and the behavior log, aligns them itself and checks the file it writes
+against the sources. This repo only finds the inputs and calls it:
 
-- `validate_imaging_data_exists` and `estimate_imaging_size_gb` in
-  `nwb_production_utils.py` are fully implemented against the real imaging
-  tables (`imaging_pipeline.TiffSplit` / `TiffSplit.File`), not the stale
-  `imaging_element.Scan`/`FieldOfView` references an earlier version had.
-- `estimate_total_size`'s imaging branch (`nwb_production_utils.py:222-236`)
-  correctly resolves `recording_ids_for_session` and calls the estimator.
-- `NwbExportHandler.process_data_validation`'s imaging branch resolves the
-  session's recordings and calls `validate_imaging_data_exists` for each.
-- `conversion.py` resolves TIFFs per field of view
-  (`resolve_imaging_paths_by_fov`) and `build_source_data` emits one
-  `ScanImageImagingFOV{f}Plane{k}` interface per field of view and plane, each
-  with a unique `metadata_key`. `imaging_alignment` computes each one's
-  timestamps and the sample range to keep, passed to the converter as
-  `aligned_timestamps` and `sample_ranges`.
-- `tank-lab-to-nwb` (`feat/scanimage-per-interface-alignment`) registers
-  `ScanImageImaging*` keys dynamically, aligns per interface, and names each
-  interface's objects `TwoPhotonSeries{suffix}` / `ImagingPlane{suffix}` from
-  its key.
-
-Not yet covered: multi-ROI mesoscope sessions (the legacy per-ROI split TIFFs
-lack ScanImage metadata and have clipped pixel values, and neuroconv cannot
-read the raw multi-ROI stack), and Suite2p output (`imaging-processed`). See
-`docs/imaging_behavior_sync.md` and the Suite2p design report tracked on #111.
+```text
+process_data_validation          validate_imaging_data_exists (TiffSplit rows)
+process_nwb_conversion
+  with_imaging_modality          IMAGING_RAW -> "raw", IMAGING_PROCESSED -> "suite2p"
+  run_conversion_to_file
+    run_imaging_conversion
+      resolve_imaging_tiffs      TiffSplit.File -> paths; originalStacks for per-ROI splits
+      resolve_suite2p_dirs       ProcessingTask.processing_output_dir, finished runs only
+      converter_metadata         experimenter, subject sex and date of birth from the DB
+      tank_lab_to_nwb.imaging.convert.convert_session      raw TIFFs + behavior
+      tank_lab_to_nwb.imaging.suite2p.convert_suite2p      Suite2p + behavior
+```
 
 ## 3. Imaging specifics
 
-The full mechanism — how ScanImage frames get I2C-stamped with
-`[block, trial, iteration]`, how the Python port
-(`u19_pipeline/utils/imaging_behavior_sync.py`) decodes and aligns them, and
-the verified numbers from the sample session — is documented in
-`docs/imaging_behavior_sync.md`. This section only summarizes the parts
-relevant to wiring imaging into this pipeline; **read
-`docs/imaging_behavior_sync.md` §5 (the NWB recipe) and §6 (the clock
-convention) for the actual mechanics and derivations** rather than relying on
-the summary below.
+**Alignment is the converter's.** It matches each I2C `[block, trial, iteration]`
+packet in the TIFF headers to its logged iteration, fits a line from ViRMEn's
+clock to ScanImage's, and puts every frame on the file's clock. Its method,
+limits and the checks against the production MATLAB sync are in the
+converter's `docs/imaging-timing.md`. Nothing here computes frame times.
+`u19_pipeline/utils/imaging_behavior_sync.py` stays for the DataJoint sync
+table; the export doesn't use it.
 
-In brief: imaging data arrives as ScanImage BigTIFFs, read by
-`neuroconv.datainterfaces.ScanImageImagingInterface` into a
-`TwoPhotonSeries`. Per-frame timestamps on the behavior clock come from
-`u19_pipeline/utils/imaging_behavior_sync.py`
-(`sync_imaging_behavior` + `frame_times_on_behavior_clock`), not from the
-TIFF's own clock (see §4 below for why).
+**What a file holds.** Behavior plus one acquisition: every field of view and
+plane, each its own `TwoPhotonSeries` on its own frame times, and every frame,
+including those before the first trial and after the last. The
+`scanimage_frames` table labels each frame with its block, trial and iteration
+as `SyncImagingBehavior` does, 0 for none. That includes trials imaging
+started or stopped partway through, which the alignment table lists as
+`labels.partly_imaged_trials`.
 
-**One series per plane.** A fastZ acquisition interleaves its planes page by
-page: page p belongs to plane `p % n_planes`. The export writes each plane as
-its own `TwoPhotonSeries` (`ScanImageImagingInterface(plane_index=k)`), named
-`TwoPhotonSeriesFOV{f}Plane{k}` on `ImagingPlaneFOV{f}Plane{k}`, and gives it
-its own page times: `plane_timestamps(page_ts, k, n_planes)`, i.e.
-`page_ts[k::n_planes]` over complete volumes. Two details matter:
+**Raw or Suite2p.** The job's imaging modality picks one, and both carry the
+same frame times. Raw and processed together are two files, so they are two
+jobs. The Suite2p conversion also needs the TIFFs: it proves that Suite2p's
+registered frames are the raw pages it claims before writing any trace.
 
-- **Recordings rarely end on a volume boundary.** The sample session has 89,508
-  pages = 5 x 17,901 + 3. neuroconv's per-plane reader keeps complete volumes
-  only, and so does `plane_timestamps`, giving 17,901 samples per plane. An
-  earlier version subset one volumetric series with `[::5]` and required an
-  exact multiple, which raised `ValueError` on the full session.
-- **Planes within a volume are not simultaneous.** At 50.2 Hz the five planes
-  of one volume span 80 ms; per-plane series keep that, where one timestamp
-  per volume could not.
+**Inputs.** `resolve_imaging_tiffs` takes the files `TiffSplit.File` lists. For
+a mesoscope recording those are the lab's per-ROI copies (`ROI<r>_z<d>`
+folders); when the recording folder still has `originalStacks`, the original
+stack is used instead, because the copies lost the ScanImage settings and
+clipped negative pixels. The converter refuses inputs it can't show are the
+whole acquisition unless `export_parameters["allow_incomplete_imaging"]` is
+set, and the file then says so. `fov_numbers` can't pick a subset of fields:
+the converter writes them all.
 
-**Only frames recorded during behavior are exported.** Imaging usually runs
-before the first trial and after the last (on the sample session, 12.8 s
-before and 43.4 s after, including all of the last file). Those frames cannot
-be tied to anything in the experiment, so each plane keeps only the samples
-from the frame in which the first logged iteration falls through the frame in
-which the last one falls, located by time on the fitted clock
-(`behavior_page_window`). The window is deliberately not bounded by packet
-arrival: a trial's first packet is sent after trial setup and routinely lands a
-frame late, which would drop the frames in which behavior began. The converter
-cuts each interface to its range (`sample_ranges`) before writing. Set
-`export_parameters["trim_imaging_to_behavior"] = False` to keep every frame,
-e.g. to use pre-behavior imaging as a fluorescence baseline.
-
-The plane count comes from the TIFF header (`scanimage_plane_count`, using
-`SI.hStackManager.actualNumSlices`), and only single-channel, fast-stack files
-are accepted.
+**Overrides in `export_parameters`:** `tiff_paths`, `suite2p_dirs`,
+`recording_ids` (exactly one), `paramset_idx` (when a split has Suite2p runs
+under several parameter sets), `imaging_data` (`"raw"` or `"suite2p"`) and
+`allow_incomplete_imaging`.
 
 ## 4. The clock convention
 
-This was investigated (`docs/imaging_behavior_sync.md` §6) and is settled
-policy — record it here as the rule, not as an open design question:
-
-- **Imaging-only sessions use the ViRMEn behavior clock.** The NWB file's
-  `session_start_time` is `log.session.start`.
-- **All `vr.timeElapsed`-based quantities are zeroed at block start, not
-  session start.** This includes trial start times, per-iteration times
-  within a trial, and — because `frame_times_on_behavior_clock` fits against
-  `trial.start + trial.time` — the imaging frame timestamps too. All of them
-  must be shifted onto the NWB timeline by
-  `epoch_offset = (block[0].start - session.start).total_seconds()`
-  before being written. On the sample session, `epoch_offset` is +27.0 ms.
-- **That offset is not a constant.** It is the wall-clock cost of MATLAB
-  struct allocation plus behavior-log file I/O between two `clock()` calls
-  during ViRMEn startup, so it scales with trial count and machine load. It
-  must be computed from each session's own log, never hardcoded to 27 ms or
-  any other value.
-- **Never align imaging to behavior through wall clocks.** The TIFF header's
-  absolute `epoch` timestamp (ScanImage PC clock) and the ViRMEn PC's clock
-  disagree by roughly 958 ms on the sample session — three orders of
-  magnitude larger than the alignment precision needed. Alignment must stay
-  content-based, through the I2C `[block, trial, iteration]` packets, exactly
-  as `imaging_behavior_sync.py` does it.
-- **Ephys and imaging are separate modalities and are not combined in one
-  session.** Ephys exports align behavior onto the ephys clock (via
-  `nwb_production.BehaviorSync`, consumed in `conversion.py:query_metadata`,
-  `:223-236`); imaging exports use the ViRMEn clock as described above. The two
-  rules would conflict in a session carrying both, but no such session is
-  acquired, so there is no combined rule and none is needed. If that ever
-  changes, decide and write the rule down *before* the first DANDI upload of
-  such a session — published timestamps are effectively immutable.
+- **Imaging sessions use the ViRMEn behavior clock.** The converter starts the
+  file at `log.session.start`, moved earlier by whole microseconds if imaging
+  began before it, so that no frame has a negative time. The ViRMEn clock
+  restarting within a session is refused.
+- **Never align through wall clocks.** The ScanImage and ViRMEn PCs disagreed by
+  0.15 to 0.96 s across the sessions checked. Alignment is content-based,
+  through the I2C packets.
+- **Ephys exports align behavior onto the ephys clock** (`BehaviorSync`, read
+  in `query_metadata`). A job with both imaging and ephys is refused with
+  `NotImplementedError`: one clock for both hasn't been decided. Decide and
+  write that rule down before the first DANDI upload of such a session, since
+  published timestamps are effectively permanent.
 
 ## 5. The `tank-lab-to-nwb` dependency
 
-The actual NWB-writing code — `TowersNWBConverter` and all its per-modality
-`DataInterface`s — lives in a separate repository, `tank-lab-to-nwb`, not in
-this one. This repo only builds `source_data` dicts and calls into it
-(`u19_pipeline/nwb_export/conversion.py:264-276`).
+The NWB-writing code lives in `tank-lab-to-nwb`. It is the optional `nwb`
+extra, pinned to a commit in `[tool.uv.sources]`:
 
-This is an operational hazard worth taking seriously:
+```bash
+uv sync --extra nwb
+```
 
-- **The live branch is `building-nwb-converter`**, not `main`. `main` is
-  stale and known broken (its `__init__` references `se.` without importing
-  the module it comes from). Whatever branch you install must match the
-  `TowersNWBConverter(source_data, sync_timestamps=...)` signature the
-  handler calls — check the branch's `towersnwbconverter.py` signature
-  against `conversion.py:273-276` if conversion starts failing with a
-  `TypeError` on construction.
-- **It is path-installed and version-unpinned.** Nothing in this repo
-  records a commit SHA, tag, or lockfile entry for `tank-lab-to-nwb`; it is
-  installed as a local editable package
-  (`pip install -e /path/to/tank-lab-to-nwb-clean`, per the docstrings in
-  `scripts/run_nwb_export.py:26-28` and the CLI's own `ImportError` message
-  at `:202-206`). Two clones of this repo pointed at different
-  `tank-lab-to-nwb` checkouts can silently behave differently.
-- **Installing it needs `--no-deps`.** `tank-lab-to-nwb`'s own
-  `pyproject.toml` declares
-  `[tool.uv.sources]` entries pointing at sibling directories —
-  `../ndx-tank-metadata-clean` and `../U19-pipeline_python` — that assume a
-  specific multi-repo checkout layout next to it. In a worktree (or any
-  layout that doesn't have those exact sibling paths), a plain
-  `uv pip install -e <path>` fails trying to resolve those sources. Install
-  it with `uv pip install --no-deps -e <path>` and separately bring in the
-  NWB/neuroconv stack it needs
-  (`neuroconv[kilosort,openephys,spikeglx]`, `pynwb>=3`, `hdmf>=4`,
-  `spikeinterface`, `ndx-tank-metadata`, ...) — see
-  `docs/HANDOFF_nwb_imaging_export.md` for a working incantation.
-- **The two repos must move in lockstep.** Any change to the `source_data`
-  keys or converter signature on either side breaks the other silently at
-  runtime (an unexpected key, or a missing one, doesn't raise until
-  conversion actually runs). There is no CI cross-check between them today.
-- **It isn't pinned today because the converter is still under active,
-  fast-moving development** for this integration (imaging support, the
-  per-interface-timestamps fix, the MATLAB-hard-dependency fix below are
-  all landing on it concurrently as of this writing). Pin it — to a specific
-  commit SHA via `uv`'s git source syntax, or vendor a lockfile entry — once
-  the imaging work stabilizes; until then a moving pin would just have to be
-  bumped constantly and would give false confidence.
-
-**Known constraint to work around until fixed upstream:**
-`VirmenDataInterface` (in `tank-lab-to-nwb`) calls
-`convert_function_handle_to_str` (ported into this repo too, at
-`u19_pipeline/utils/matlab_utils.py:145`) to shell out to MATLAB and convert
-a few metadata fields (`experiment_name`, `protocol_name`, `trial_choice`,
-`trial_type`) that were stored as MATLAB function handles. That helper
-**raises if MATLAB is not on `PATH`**, which takes down the *entire*
-conversion — even though all four values it produces are already treated as
-optional by their only caller. A fix (making the helper warn and return `{}`
-instead of raising) is planned for `tank-lab-to-nwb`, but until it lands, any
-export host without a MATLAB installation cannot run a conversion at all,
-regardless of whether the session actually needs those four fields.
+- **Bump the pin deliberately.** The export calls
+  `tank_lab_to_nwb.imaging.convert.convert_session` and
+  `tank_lab_to_nwb.imaging.suite2p.convert_suite2p` with
+  `(log, tiffs, [suite2p,] output, metadata=..., allow_incomplete=...)`. Check
+  those signatures when moving the pin, and rerun
+  `tests/nwb_export/test_imaging_conversion.py`.
+- **The converter supports Python 3.12 and 3.13 only**, so the extra is skipped
+  on 3.14.
+- **uv doesn't inherit a dependency's sources or constraints.** The pin
+  therefore repeats the converter's `ndx-tank-metadata` git tag and its
+  `zarr<3` constraint. Drop each when the converter drops it.
+- **Behavior and ephys still go through `TowersNWBConverter`**, whose
+  multi-modal version is being reworked in the converter. Its signature must
+  match `run_conversion_to_file`.
 
 ## Reference: relevant files
 
@@ -347,5 +266,5 @@ regardless of whether the session actually needs those four fields.
 | Validators / size estimators | `u19_pipeline/nwb_production_utils.py` |
 | Schema / job submission API | `u19_pipeline/nwb_production.py` |
 | DANDI upload client | `u19_pipeline/nwb_export/dandi/upload_client.py` |
-| Imaging-behavior sync mechanism | `docs/imaging_behavior_sync.md` |
-| Imaging wiring handoff notes | `docs/HANDOFF_nwb_imaging_export.md`, `docs/nwb_imaging_export_plan.md` |
+| Imaging-behavior sync for the DataJoint table | `docs/imaging_behavior_sync.md` |
+| Imaging alignment used by the export | `docs/imaging-timing.md` in `tank-lab-to-nwb` |

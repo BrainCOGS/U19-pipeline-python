@@ -15,6 +15,7 @@ from pathlib import Path
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.utils.slack_utils as slack_utils
 from u19_pipeline import acquisition, nwb_production
+from u19_pipeline.nwb_export.conversion import with_imaging_modality
 from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 from u19_pipeline.nwb_production_utils import (
     recording_ids_for_session,
@@ -279,7 +280,8 @@ class NwbExportHandler:
         """
         Convert source data to an NWB file using the shared converter.
 
-        Resolves input paths, runs TowersNWBConverter via the shared
+        Resolves input paths and runs the converter (tank_lab_to_nwb's imaging
+        conversion for imaging jobs, TowersNWBConverter otherwise) via the shared
         u19_pipeline.nwb_export.conversion module (same code path as the CLI in
         scripts/run_nwb_export.py), writes the NWB file and records the actual
         file size on the job.
@@ -300,7 +302,12 @@ class NwbExportHandler:
         try:
             print(f"Converting data to NWB for job {job['nwb_job_id']}...")
 
-            export_params = _parse_export_params(job.get("export_parameters"))
+            export_params = with_imaging_modality(
+                _parse_export_params(job.get("export_parameters")),
+                (
+                    nwb_production.NwbExportModality & {"nwb_job_id": job["nwb_job_id"]}
+                ).fetch(as_dict=True),
+            )
             session_key = {
                 "subject_fullname": job["subject_fullname"],
                 "session_date": str(job["session_date"]),

@@ -222,6 +222,12 @@ of baseline cannot resolve a few ppm, and the long-baseline figure is about
 
 ## 5. Building an NWB file from this
 
+> **The export no longer works this way.** NWB export calls `tank-lab-to-nwb`'s
+> imaging conversion, which aligns frames from the same I2C packets with its own
+> code and verifies the file (see `docs/nwb_export.md` §3). This section records
+> the earlier neuroconv recipe and its measurements, which the converter's
+> results were checked against.
+
 **Ecosystem note**: *spikeinterface* is for extracellular ephys and has no
 role here. For imaging the relevant NWB stack is **roiextractors** (raw
 imaging extractors) + **neuroconv** (interfaces, metadata, temporal

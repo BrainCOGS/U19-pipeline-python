@@ -3,7 +3,7 @@ No-db tests for estimate_imaging_size_gb (u19_pipeline.nwb_production_utils).
 
 Companion to tests/nwb_export/test_modality_validators.py's imaging validator
 tests -- covers the size-estimation half of the same imaging wiring (see
-docs/nwb_imaging_export_plan.md Phase B).
+the imaging export work).
 
 The estimator is expected to derive size from real frame count and pixel
 geometry (imaging_pipeline.TiffSplit.fov_pixel_resolution_xy and

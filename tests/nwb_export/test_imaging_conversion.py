@@ -1,55 +1,29 @@
 """
-No-db tests for imaging TIFF path resolution and source-data wiring in
-u19_pipeline.nwb_export.conversion (imaging export wiring, see
-docs/nwb_imaging_export_plan.md Phase B and
-docs/HANDOFF_nwb_imaging_export.md Step 3, item D).
+No-db tests for the imaging export in u19_pipeline.nwb_export.conversion.
 
-Covers:
-- resolve_imaging_paths: maps imaging_pipeline.TiffSplit / TiffSplit.File rows
-  to absolute filesystem paths under dj.config's imaging root dir.
-- build_source_data: adds an imaging entry when the job requests imaging and
-  TIFF paths resolve, omits it cleanly otherwise, and leaves the existing
-  behavior/ephys entries untouched either way.
-
-As of writing, neither piece has landed in conversion.py yet (task D is
-in-flight in parallel with this test file) -- these tests are written against
-the contract described in the handoff doc, not against a stub. Where the
-exact function signature is a guess, it is marked with a `# contract:`
-comment. A failure here because the function does not exist yet is expected
-and should be reported, not weakened.
+The pipeline only finds inputs and calls tank_lab_to_nwb, which aligns imaging
+to behavior itself and verifies what it writes. These tests cover the finding
+(TiffSplit and ProcessingTask rows to paths on disk), the routing (imaging jobs
+go to the converter's imaging conversion with the DB metadata), and the
+refusals. DataJoint tables and tank_lab_to_nwb are replaced by mocks.
 """
 
 from __future__ import annotations
 
+import sys
+from datetime import datetime
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-
-@pytest.fixture(autouse=True)
-def _single_plane_tiffs():
-    """The source-data tests use made-up paths; build_source_data reads the
-    plane count from the first TIFF's header, so default it to one plane.
-    Tests that need several planes patch it again inside the test."""
-    with patch(
-        "u19_pipeline.nwb_export.conversion.scanimage_plane_count",
-        create=True,
-        return_value=1,
-    ):
-        yield
+from u19_pipeline.nwb_export import conversion
 
 
-def _make_dj_table(rows: list):
-    """
-    Mirrors the helper in tests/nwb_export/test_modality_validators.py.
-
-    ``__mul__`` is defined too: tiff_split_directory lives on the TiffSplit
-    master and tiff_split_filename on the Part table, so resolving a path needs
-    the join, not just a restriction.
-    """
+def _table(rows: list):
+    """A DataJoint table stand-in whose restrictions and joins keep ``rows``."""
     mock = MagicMock()
-    mock.__bool__ = lambda self: bool(rows)
     mock.__and__ = lambda self, _: self
     mock.__mul__ = lambda self, _: self
     mock.__rmul__ = lambda self, _: self
@@ -57,286 +31,339 @@ def _make_dj_table(rows: list):
     return mock
 
 
-# ---------------------------------------------------------------------------
-# resolve_imaging_paths
-# ---------------------------------------------------------------------------
+@pytest.fixture()
+def imaging_root(tmp_path, monkeypatch):
+    import datajoint as dj
+
+    monkeypatch.setitem(
+        dj.config,
+        "custom",
+        {**dj.config.get("custom", {}), "imaging_root_data_dir": [str(tmp_path)]},
+    )
+    return tmp_path
 
 
-@pytest.mark.no_db
-class TestResolveImagingPaths:
-    """
-    contract: resolve_imaging_paths(recording_key, fov_numbers) -> list[str]
-    lives in u19_pipeline.nwb_export.conversion. It queries
-    imaging_pipeline.TiffSplit / TiffSplit.File and joins
-    tiff_split_directory/tiff_split_filename onto
-    dj.config['custom']['imaging_root_data_dir'], mirroring the existing
-    imaging_pipeline.get_scan_image_files / get_calcium_imaging_files helpers
-    (u19_pipeline/imaging_pipeline.py:277-311).
-    """
-
-    def test_maps_tiffsplit_rows_to_absolute_paths_under_imaging_root(
-        self, tmp_path, monkeypatch
-    ):
-        import importlib
-
-        conversion = importlib.import_module("u19_pipeline.nwb_export.conversion")
-        if not hasattr(conversion, "resolve_imaging_paths"):
-            pytest.fail(
-                "u19_pipeline.nwb_export.conversion.resolve_imaging_paths does not "
-                "exist yet -- expected per docs/HANDOFF_nwb_imaging_export.md "
-                "Step 3/D.2 (TIFF path resolution helper)."
-            )
-
-        # Realistic on-disk layout: <root>/<tiff_split_directory>/<tiff_split_filename>
-        relative_dir = "subj1/2026-08-07_1/tiff_split_0"
-        filename = "split_0_00001.tif"
-        split_dir = tmp_path / relative_dir
-        split_dir.mkdir(parents=True)
-        (split_dir / filename).write_bytes(b"\x00")
-
-        import datajoint as dj
-
-        monkeypatch.setitem(
-            dj.config,
-            "custom",
-            {**dj.config.get("custom", {}), "imaging_root_data_dir": [str(tmp_path)]},
-        )
-
-        file_rows = [
-            {
-                "recording_id": 1,
-                "tiff_split": 0,
-                "file_number": 0,
-                "tiff_split_directory": relative_dir,
-                "tiff_split_filename": filename,
-            }
-        ]
-
-        tiffsplit_mock = _make_dj_table([{"recording_id": 1, "tiff_split": 0}])
-        file_mock = _make_dj_table(file_rows)
-        file_mock.fetch.return_value = file_rows
-        tiffsplit_mock.File = file_mock
-
-        img_m = MagicMock()
-        img_m.TiffSplit = tiffsplit_mock
-
-        with patch.dict("sys.modules", {"u19_pipeline.imaging_pipeline": img_m}):
-            paths = conversion.resolve_imaging_paths({"recording_id": 1}, [0])
-
-        assert len(paths) == 1
-        resolved = Path(paths[0])
-        assert resolved.is_absolute()
-        assert resolved.name == filename
-        assert str(tmp_path) in str(resolved)
+def _touch(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x00")
+    return path
 
 
-# ---------------------------------------------------------------------------
-# build_source_data — imaging wiring
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.no_db
-class TestBuildSourceDataImaging:
-    """
-    contract: build_source_data(job, export_params, virmen_file, kilosort_dir)
-    gains an imaging branch analogous to the existing ephys branch: when
-    export_params['include_imaging'] is truthy, it resolves TIFF paths (via
-    resolve_imaging_paths_by_fov) and adds one imaging source_data entry per
-    field of view, named ScanImageImagingFOV<n>; when TIFF paths do not resolve, or imaging was not requested,
-    imaging is simply absent from source_data -- and the other entries are
-    unaffected either way.
-    """
-
-    @pytest.fixture()
-    def virmen_file(self, tmp_path):
-        f = tmp_path / "session.mat"
-        f.write_bytes(b"\x00")
-        return f
-
-    @pytest.fixture()
-    def base_job(self):
-        return {
-            "subject_fullname": "subj1",
-            "session_date": "2026-08-07",
-            "session_number": 1,
+def _tiffsplit_rows(directory_by_split: dict, names_by_split: dict, recording_id=1):
+    return [
+        {
+            "recording_id": recording_id,
+            "tiff_split": split,
+            "file_number": number,
+            "tiff_split_directory": directory_by_split[split],
+            "tiff_split_filename": name,
         }
+        for split, names in names_by_split.items()
+        for number, name in enumerate(names, start=1)
+    ]
 
-    @staticmethod
-    def _imaging_like_keys(source_data: dict) -> list:
-        return [
-            k
-            for k in source_data
-            if any(tag in k.lower() for tag in ("imag", "scanimage", "tiff"))
-        ]
 
-    def test_no_imaging_modality_omits_imaging_entry_cleanly(
-        self, virmen_file, base_job
-    ):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        export_params: dict = {}  # no include_imaging flag at all
-        source_data = build_source_data(base_job, export_params, virmen_file, None)
-
-        assert "VirmenData" in source_data
-        assert self._imaging_like_keys(source_data) == []
-
-    def test_behavior_entry_unaffected_by_imaging_wiring(self, virmen_file, base_job):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        export_params = {"include_imaging": True}
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value={0: ["/data/root/subj1/split_0.tif"]},
-        ):
-            source_data = build_source_data(base_job, export_params, virmen_file, None)
-
-        assert source_data["VirmenData"] == {"file_path": str(virmen_file)}
-
-    def test_ephys_entry_unaffected_by_imaging_wiring(
-        self, virmen_file, base_job, tmp_path
-    ):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        kilosort_dir = tmp_path / "kilosort"
-        probe_dir = kilosort_dir / "probeA_imec0" / "job_id_1" / "kilosort2_output"
-        probe_dir.mkdir(parents=True)
-
-        export_params = {"include_ephys": True, "include_imaging": True}
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value={0: ["/data/root/subj1/split_0.tif"]},
-        ):
-            source_data = build_source_data(
-                base_job, export_params, virmen_file, kilosort_dir
-            )
-
-        assert "KilosortProbe0" in source_data
-        assert source_data["KilosortProbe0"] == {"folder_path": str(probe_dir)}
-
-    def test_adds_imaging_entry_when_included_and_paths_resolve(
-        self, virmen_file, base_job
-    ):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        export_params = {"include_imaging": True}
-        resolved_paths = ["/data/root/subj1/split_0.tif"]
-
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value={0: resolved_paths},
-        ):
-            source_data = build_source_data(base_job, export_params, virmen_file, None)
-
-        imaging_keys = self._imaging_like_keys(source_data)
-        assert imaging_keys, (
-            f"expected an imaging source_data entry when include_imaging=True "
-            f"and TIFF paths resolve, got keys={list(source_data)}"
-        )
-
-    def test_omits_imaging_when_paths_do_not_resolve(self, virmen_file, base_job):
-        from u19_pipeline.nwb_export.conversion import build_source_data
-
-        export_params = {"include_imaging": True}
-        with patch(
-            "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-            create=True,
-            return_value={},
-        ):
-            source_data = build_source_data(base_job, export_params, virmen_file, None)
-
-        assert self._imaging_like_keys(source_data) == []
+def _with_tiffsplit(rows):
+    module = MagicMock()
+    module.TiffSplit = _table(rows)
+    module.TiffSplit.File = _table(rows)
+    return patch.dict(sys.modules, {"u19_pipeline.imaging_pipeline": module})
 
 
 @pytest.mark.no_db
-class TestBuildSourceDataMultipleFovs:
-    """
-    One interface per (field of view, plane). Fields of view are separate
-    regions, and fastZ planes are separate depths; each gets its own
-    TwoPhotonSeries, so every interface needs a unique key and metadata_key
-    (sharing one made the NWB build fail on the second series).
-    """
+class TestResolveImagingTiffs:
+    def test_two_photon_files_are_taken_as_listed_in_order(self, imaging_root):
+        folder = "efonseca/ef932/20260807_g1/08072026"
+        names = [f"ef932_08072026_00001_{n:05d}.tif" for n in (2, 1)]
+        for name in names:
+            _touch(imaging_root / folder / name)
+        rows = _tiffsplit_rows({0: folder}, {0: names})
+        rows[0]["file_number"], rows[1]["file_number"] = 2, 1
+        with _with_tiffsplit(rows):
+            tiffs = conversion.resolve_imaging_tiffs({"recording_id": 1})
+        assert [t.name for t in tiffs] == sorted(names)
+        assert all(t.is_absolute() for t in tiffs)
 
-    @pytest.fixture()
-    def virmen_file(self, tmp_path):
-        f = tmp_path / "session.mat"
-        f.write_bytes(b"\x00")
-        return f
-
-    @pytest.fixture()
-    def base_job(self):
-        return {
-            "subject_fullname": "subj1",
-            "session_date": "2026-08-07",
-            "session_number": 1,
+    def test_roi_splits_are_replaced_by_the_original_stack(self, imaging_root):
+        recording = imaging_root / "emdia/teto6s_12/20211114"
+        stem = "teto6s_12_20211114_mainrecording_00001"
+        split_dirs = {s: f"emdia/teto6s_12/20211114/ROI0{s + 1}_z1" for s in (0, 1)}
+        split_names = {
+            s: [f"{stem}_ROI0{s + 1}_z1_{n:05d}.tif" for n in (1, 2)] for s in (0, 1)
         }
+        for s, names in split_names.items():
+            for name in names:
+                _touch(imaging_root / split_dirs[s] / name)
+        stack = [
+            _touch(recording / "originalStacks" / f"{stem}_{n:05d}.tif") for n in (1, 2)
+        ]
+        # Another acquisition in the same folder must not be taken.
+        _touch(recording / "originalStacks" / "teto6s_12_20211114_test_00001_00001.tif")
+        with _with_tiffsplit(_tiffsplit_rows(split_dirs, split_names)):
+            tiffs = conversion.resolve_imaging_tiffs({"recording_id": 1})
+        assert tiffs == stack
 
-    @staticmethod
-    def _build(base_job, virmen_file, export_params, by_fov=None, n_planes=1):
-        from u19_pipeline.nwb_export.conversion import build_source_data
+    def test_roi_splits_without_an_original_stack_are_kept(self, imaging_root):
+        stem = "s_20211114_main_00001"
+        split_dirs = {0: "s/20211114/ROI01_z1"}
+        split_names = {0: [f"{stem}_ROI01_z1_00001.tif"]}
+        path = _touch(imaging_root / split_dirs[0] / split_names[0][0])
+        with _with_tiffsplit(_tiffsplit_rows(split_dirs, split_names)):
+            assert conversion.resolve_imaging_tiffs({"recording_id": 1}) == [path]
 
+    def test_several_imaging_recordings_are_refused(self, imaging_root):
+        rows = _tiffsplit_rows({0: "a"}, {0: ["x_00001.tif"]}, recording_id=1)
+        rows += _tiffsplit_rows({0: "b"}, {0: ["y_00001.tif"]}, recording_id=2)
         with (
-            patch(
-                "u19_pipeline.nwb_export.conversion.resolve_imaging_paths_by_fov",
-                create=True,
-                return_value=by_fov or {},
-            ),
-            patch(
-                "u19_pipeline.nwb_export.conversion.scanimage_plane_count",
-                create=True,
-                return_value=n_planes,
-            ),
+            _with_tiffsplit(rows),
+            pytest.raises(ValueError, match="2 imaging recordings"),
         ):
-            return build_source_data(base_job, export_params, virmen_file, None)
+            conversion.resolve_imaging_tiffs({"recording_id": 1})
 
-    def test_each_fov_and_plane_gets_its_own_interface(self, virmen_file, base_job):
-        by_fov = {
-            0: ["/root/fov0_00001.tif", "/root/fov0_00002.tif"],
-            1: ["/root/fov1_00001.tif", "/root/fov1_00002.tif"],
+    def test_a_subset_of_fields_is_refused(self, imaging_root):
+        rows = _tiffsplit_rows(
+            {0: "a", 1: "b"}, {0: ["x_00001.tif"], 1: ["y_00001.tif"]}
+        )
+        with _with_tiffsplit(rows), pytest.raises(ValueError, match="subset"):
+            conversion.resolve_imaging_tiffs({"recording_id": 1}, fov_numbers=[1])
+
+    def test_naming_every_field_is_accepted(self, imaging_root):
+        names = {0: ["x_00001.tif"], 1: ["y_00001.tif"]}
+        dirs = {0: "a", 1: "b"}
+        for s in names:
+            _touch(imaging_root / dirs[s] / names[s][0])
+        with _with_tiffsplit(_tiffsplit_rows(dirs, names)):
+            assert (
+                len(conversion.resolve_imaging_tiffs({"recording_id": 1}, [1, 0])) == 2
+            )
+
+    def test_a_missing_file_is_an_error(self, imaging_root):
+        rows = _tiffsplit_rows({0: "a"}, {0: ["gone_00001.tif"]})
+        with (
+            _with_tiffsplit(rows),
+            pytest.raises(FileNotFoundError, match="gone_00001.tif"),
+        ):
+            conversion.resolve_imaging_tiffs({"recording_id": 1})
+
+    def test_no_rows_is_an_error(self, imaging_root):
+        with _with_tiffsplit([]), pytest.raises(ValueError, match="No TiffSplit"):
+            conversion.resolve_imaging_tiffs({"recording_id": 1})
+
+
+def _with_processing(rows):
+    element = MagicMock()
+    element.ProcessingTask = _table(rows)
+    module = MagicMock()
+    module.imaging_element = element
+    return patch.dict(sys.modules, {"u19_pipeline.imaging_pipeline": module})
+
+
+@pytest.mark.no_db
+class TestResolveSuite2pDirs:
+    def test_takes_the_suite2p_folder_inside_each_output(self, imaging_root):
+        rows = [
+            {
+                "tiff_split": s,
+                "paramset_idx": 1,
+                "processing_output_dir": f"r/ROI0{s + 1}/suite2p_output",
+            }
+            for s in (1, 0)
+        ]
+        (imaging_root / "r/ROI01/suite2p_output/suite2p/plane0").mkdir(parents=True)
+        (imaging_root / "r/ROI02/suite2p_output/plane0").mkdir(parents=True)
+        with _with_processing(rows):
+            folders = conversion.resolve_suite2p_dirs({"recording_id": 1})
+        assert folders == [
+            imaging_root / "r/ROI01/suite2p_output/suite2p",
+            imaging_root / "r/ROI02/suite2p_output",
+        ]
+
+    def test_several_parameter_sets_need_one_chosen(self, imaging_root):
+        rows = [
+            {"tiff_split": 0, "paramset_idx": p, "processing_output_dir": f"r/{p}"}
+            for p in (1, 2)
+        ]
+        with _with_processing(rows), pytest.raises(ValueError, match="paramset_idx"):
+            conversion.resolve_suite2p_dirs({"recording_id": 1})
+
+    def test_no_finished_run_is_an_error(self, imaging_root):
+        with (
+            _with_processing([]),
+            pytest.raises(ValueError, match="No finished Suite2p"),
+        ):
+            conversion.resolve_suite2p_dirs({"recording_id": 1})
+
+
+@pytest.mark.no_db
+class TestImagingModality:
+    def test_raw_modality_turns_imaging_on(self):
+        params = conversion.with_imaging_modality(
+            {},
+            [{"modality_name": "imaging", "modality_type": 4, "fov_numbers": "[0, 1]"}],
+        )
+        assert params == {
+            "include_imaging": True,
+            "imaging_data": "raw",
+            "fov_numbers": [0, 1],
         }
-        sd = self._build(
-            base_job, virmen_file, {"include_imaging": True}, by_fov, n_planes=3
-        )
-        keys = sorted(k for k in sd if k.startswith("ScanImageImaging"))
-        assert keys == [f"ScanImageImagingFOV{f}Plane{k}" for f in (0, 1) for k in range(3)]
-        for f in (0, 1):
-            for k in range(3):
-                entry = sd[f"ScanImageImagingFOV{f}Plane{k}"]
-                assert entry["file_paths"] == by_fov[f]
-                assert entry["plane_index"] == k
 
-    def test_metadata_keys_are_unique(self, virmen_file, base_job):
-        by_fov = {0: ["/root/fov0.tif"], 1: ["/root/fov1.tif"]}
-        sd = self._build(
-            base_job, virmen_file, {"include_imaging": True}, by_fov, n_planes=5
+    def test_processed_modality_asks_for_suite2p(self):
+        params = conversion.with_imaging_modality(
+            {}, [{"modality_name": "imaging", "modality_type": 5}]
         )
-        mks = [v["metadata_key"] for k, v in sd.items() if k.startswith("ScanImageImaging")]
-        assert len(mks) == 10
-        assert len(set(mks)) == 10
+        assert params["imaging_data"] == "suite2p"
 
-    def test_fov_files_are_not_cross_contaminated(self, virmen_file, base_job):
-        by_fov = {0: ["/root/fov0.tif"], 1: ["/root/fov1.tif"]}
-        sd = self._build(base_job, virmen_file, {"include_imaging": True}, by_fov)
-        for fov in (0, 1):
-            paths = sd[f"ScanImageImagingFOV{fov}Plane0"]["file_paths"]
-            assert paths == [f"/root/fov{fov}.tif"]
+    def test_raw_and_processed_together_are_refused(self):
+        rows = [{"modality_name": "imaging", "modality_type": t} for t in (4, 5)]
+        with pytest.raises(NotImplementedError, match="two jobs"):
+            conversion.with_imaging_modality({}, rows)
 
-    def test_single_plane_omits_plane_index(self, virmen_file, base_job):
-        """A single-plane file has no plane dimension to select."""
-        sd = self._build(
-            base_job, virmen_file, {"include_imaging": True}, {0: ["/root/a.tif"]}, 1
+    def test_no_imaging_row_leaves_params_alone(self):
+        params = {"include_ephys": True}
+        assert (
+            conversion.with_imaging_modality(params, [{"modality_name": "ephys"}])
+            is params
         )
-        assert "plane_index" not in sd["ScanImageImagingFOV0Plane0"]
 
-    def test_explicit_tiff_paths_are_field_of_view_zero(self, virmen_file, base_job):
-        sd = self._build(
-            base_job,
-            virmen_file,
-            {"include_imaging": True, "tiff_paths": ["/root/a.tif", "/root/b.tif"]},
-            n_planes=2,
+    def test_export_parameters_win(self):
+        params = conversion.with_imaging_modality(
+            {"imaging_data": "suite2p", "fov_numbers": [2]},
+            [{"modality_name": "imaging", "modality_type": 4, "fov_numbers": "[0]"}],
         )
-        imaging = sorted(k for k in sd if k.startswith("ScanImageImaging"))
-        assert imaging == ["ScanImageImagingFOV0Plane0", "ScanImageImagingFOV0Plane1"]
-        assert sd["ScanImageImagingFOV0Plane1"]["file_paths"] == ["/root/a.tif", "/root/b.tif"]
+        assert params["imaging_data"] == "suite2p" and params["fov_numbers"] == [2]
+
+    def test_unknown_imaging_data_is_refused(self):
+        with pytest.raises(ValueError, match="imaging_data"):
+            conversion.imaging_data_kind(
+                {"include_imaging": True, "imaging_data": "movie"}
+            )
+
+
+@pytest.mark.no_db
+def test_converter_metadata_keeps_species_and_gives_the_dob_a_time_zone():
+    out = conversion.converter_metadata(
+        {
+            "experimenter": ["Doe, Jane"],
+            "subject_sex": "F",
+            "subject_dob": datetime(2026, 1, 2),
+        }
+    )
+    assert out["experimenter"] == ["Doe, Jane"]
+    assert out["subject"]["species"] == "Mus musculus" and out["subject"]["sex"] == "F"
+    assert out["subject"]["date_of_birth"].tzinfo is not None
+    assert "age" not in out["subject"]
+
+
+@pytest.mark.no_db
+def test_converter_metadata_without_a_dob_keeps_a_placeholder_age():
+    out = conversion.converter_metadata(
+        {"experimenter": [], "subject_sex": "U", "subject_dob": None}
+    )
+    assert "experimenter" not in out
+    assert (
+        out["subject"]["age"] == "P90D"
+        and "PLACEHOLDER" in out["subject"]["description"]
+    )
+
+
+@pytest.fixture()
+def fake_converter(tmp_path):
+    """tank_lab_to_nwb's imaging entry points, recording their calls and writing a file."""
+    calls = {}
+
+    def convert_session(log, tiffs, path, **kwargs):
+        calls["raw"] = (log, list(tiffs), Path(path), kwargs)
+        Path(path).write_bytes(b"nwb")
+
+    def convert_suite2p(log, tiffs, root, path, **kwargs):
+        calls["suite2p"] = (log, list(tiffs), root, Path(path), kwargs)
+        Path(path).write_bytes(b"nwb")
+        return "prepared"
+
+    convert = ModuleType("tank_lab_to_nwb.imaging.convert")
+    convert.convert_session = convert_session
+    convert.conversion_report = lambda prepared: {"prepared": prepared}
+    suite2p = ModuleType("tank_lab_to_nwb.imaging.suite2p")
+    suite2p.convert_suite2p = convert_suite2p
+    modules = {
+        "tank_lab_to_nwb": ModuleType("tank_lab_to_nwb"),
+        "tank_lab_to_nwb.imaging": ModuleType("tank_lab_to_nwb.imaging"),
+        "tank_lab_to_nwb.imaging.convert": convert,
+        "tank_lab_to_nwb.imaging.suite2p": suite2p,
+    }
+    metadata = {
+        "experimenter": ["Doe, Jane"],
+        "subject_sex": "M",
+        "subject_dob": None,
+        "sync_timestamps": None,
+    }
+    with (
+        patch.dict(sys.modules, modules),
+        patch.object(conversion, "query_metadata", return_value=metadata),
+    ):
+        yield calls
+
+
+@pytest.mark.no_db
+class TestRunConversionToFile:
+    SESSION = {
+        "subject_fullname": "subj1",
+        "session_date": "2026-08-07",
+        "session_number": 1,
+    }
+
+    def _run(self, tmp_path, params):
+        virmen = _touch(tmp_path / "session.mat")
+        tiff = _touch(tmp_path / "x_00001.tif")
+        params = {"include_imaging": True, "tiff_paths": [str(tiff)], **params}
+        size = conversion.run_conversion_to_file(
+            job=self.SESSION,
+            export_params=params,
+            session_key=self.SESSION,
+            virmen_file=virmen,
+            kilosort_dir=None,
+            output_path=str(tmp_path / "out" / "session.nwb"),
+        )
+        return size, virmen, tiff
+
+    def test_raw_imaging_goes_to_the_converter_with_db_metadata(
+        self, tmp_path, fake_converter
+    ):
+        size, virmen, tiff = self._run(tmp_path, {})
+        log, tiffs, path, kwargs = fake_converter["raw"]
+        assert (log, tiffs, path) == (virmen, [tiff], tmp_path / "out" / "session.nwb")
+        assert kwargs["metadata"]["experimenter"] == ["Doe, Jane"]
+        assert kwargs["metadata"]["subject"]["sex"] == "M"
+        assert kwargs["allow_incomplete"] is False
+        assert size > 0
+
+    def test_suite2p_goes_to_the_converter_and_writes_a_report(
+        self, tmp_path, fake_converter
+    ):
+        folder = tmp_path / "suite2p"
+        folder.mkdir()
+        self._run(tmp_path, {"imaging_data": "suite2p", "suite2p_dirs": [str(folder)]})
+        _, _, root, path, _ = fake_converter["suite2p"]
+        assert root == folder
+        assert path.with_suffix(".report.json").exists()
+
+    def test_allow_incomplete_is_passed_on(self, tmp_path, fake_converter):
+        self._run(tmp_path, {"allow_incomplete_imaging": True})
+        assert fake_converter["raw"][3]["allow_incomplete"] is True
+
+    def test_imaging_with_ephys_is_refused(self, tmp_path, fake_converter):
+        with pytest.raises(NotImplementedError, match="clock"):
+            self._run(tmp_path, {"include_ephys": True})
+
+    def test_several_recordings_are_refused(self, tmp_path, fake_converter):
+        with pytest.raises(ValueError, match="one recording"):
+            self._run(tmp_path, {"recording_ids": [1, 2]})
+
+
+@pytest.mark.no_db
+def test_build_source_data_has_no_imaging_interfaces(tmp_path):
+    virmen = _touch(tmp_path / "session.mat")
+    source_data = conversion.build_source_data(
+        {}, {"include_imaging": True, "tiff_paths": ["x.tif"]}, virmen, None
+    )
+    assert list(source_data) == ["VirmenData"]
