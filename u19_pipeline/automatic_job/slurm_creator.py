@@ -19,9 +19,6 @@ import u19_pipeline.utils.slack_utils as slack_utils
 slurms_filepath = "u19_pipeline/automatic_job/SlurmFiles"
 default_slurm_filename = "slurm_real.slurm"
 
-default_preprocessing_tool = "kilosort2"
-default_matlab_ver = "R2020b"
-
 
 def generate_slurm_file(job_id, program_selection_params, params=None, preparams=None):
     """
