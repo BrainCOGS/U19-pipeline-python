@@ -23,13 +23,16 @@ default_preprocessing_tool = "kilosort2"
 default_matlab_ver = "R2020b"
 
 
-def generate_slurm_file(job_id, program_selection_params, params=None, preparams=None):
+def generate_slurm_file(
+    job_id, program_selection_params, params=None, preparams=None, postparams=None
+):
     """
     Generate and send slurm file to be queued in processing cluster
 
-    params / preparams: the job's processing paramset and preprocessing step list, as
-    written to its parameter files. For an ephys job on spock they decide the cores (and
-    optionally GPUs, memory and time) it asks for; see ephys_slurm_resources.
+    params / preparams / postparams: the job's processing paramset, preprocessing step
+    list and post-processing step list, as written to its parameter files. For an ephys
+    job on spock they decide the cores (and optionally GPUs, memory and time) it asks
+    for; see ephys_slurm_resources.
     """
 
     # Get all associated directories given the selected processing cluster
@@ -57,7 +60,9 @@ def generate_slurm_file(job_id, program_selection_params, params=None, preparams
             ).as_posix()
             slurm_text = generate_slurm_spock_imaging(slurm_dict, suite2p_job_file)
         else:
-            overrides = ephys_slurm_resources.ephys_slurm_overrides(params, preparams)
+            overrides = ephys_slurm_resources.ephys_slurm_overrides(
+                params, preparams, postparams
+            )
             if overrides:
                 print("slurm overrides from the job's paramsets", overrides)
             slurm_dict = ephys_slurm_resources.apply_overrides(slurm_dict, overrides)

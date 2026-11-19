@@ -22,6 +22,8 @@ import re
 
 # Preprocessing methods that run SpikeInterface code on the CPU.
 SPIKEINTERFACE_PREPROCESS_METHODS = {"spikeinterface", "dredge"}
+# Post-processing methods (all of them build a SpikeInterface sorting analyzer).
+SPIKEINTERFACE_POSTPROCESS_METHODS = {"spikeinterface", "bombcell"}
 
 RESOURCE_KEYS = {"cpus", "gpus", "mem", "time"}
 
@@ -88,24 +90,31 @@ def _preprocess_steps(preparams):
     return steps
 
 
-def uses_spikeinterface(params, preparams):
-    """True if the job runs SpikeInterface code: a namespaced clustering paramset, or a
-    ``spikeinterface`` / ``dredge`` preprocessing step."""
+def uses_spikeinterface(params, preparams, postparams=None):
+    """True if the job runs SpikeInterface code: a namespaced clustering paramset, a
+    ``spikeinterface`` / ``dredge`` preprocessing step, or a post-processing step."""
 
-    return _is_namespaced(params) or any(
-        method in SPIKEINTERFACE_PREPROCESS_METHODS
-        for method, _ in _preprocess_steps(preparams)
+    return (
+        _is_namespaced(params)
+        or any(
+            method in SPIKEINTERFACE_PREPROCESS_METHODS
+            for method, _ in _preprocess_steps(preparams)
+        )
+        or any(
+            method in SPIKEINTERFACE_POSTPROCESS_METHODS
+            for method, _ in _preprocess_steps(postparams)
+        )
     )
 
 
-def requested_n_jobs(params, preparams):
+def requested_n_jobs(params, preparams, postparams=None):
     """The largest whole ``n_jobs`` the job's paramsets name, or None.
 
     Looked for where BrainCogsEphysSorters reads job kwargs: ``si_params`` and the
     ``job_kwargs`` of ``preprocessing`` / ``postprocessing`` in a namespaced clustering
-    paramset, and ``job_kwargs`` of SpikeInterface preprocessing steps. SpikeInterface
-    also accepts -1 (all cores) and fractions; those say nothing about how many cores to
-    ask for and are skipped.
+    paramset, and ``job_kwargs`` of SpikeInterface preprocessing steps and of
+    post-processing steps. SpikeInterface also accepts -1 (all cores) and fractions;
+    those say nothing about how many cores to ask for and are skipped.
     """
 
     found = []
@@ -124,19 +133,25 @@ def requested_n_jobs(params, preparams):
             step_params, dict
         ):
             collect(step_params.get("job_kwargs"))
+    for method, step_params in _preprocess_steps(postparams):
+        if method in SPIKEINTERFACE_POSTPROCESS_METHODS and isinstance(
+            step_params, dict
+        ):
+            collect(step_params.get("job_kwargs"))
     return max(found, default=None)
 
 
-def ephys_slurm_overrides(params, preparams):
+def ephys_slurm_overrides(params, preparams, postparams=None):
     """Slurm options (as in the ``#SBATCH --<key>=<value>`` lines) this job changes.
 
-    ``params`` is the clustering paramset, ``preparams`` the preprocessing step list
-    (``[{method: params}, ...]``), both as written to the job's parameter files. A value
-    of None means "remove this option" (``gres`` when the paramset asks for no GPU).
-    Returns {} for a job that does not use SpikeInterface, or that asks for nothing.
+    ``params`` is the clustering paramset, ``preparams`` / ``postparams`` the
+    preprocessing and post-processing step lists (``[{method: params}, ...]``), all as
+    written to the job's parameter files. A value of None means "remove this option"
+    (``gres`` when the paramset asks for no GPU). Returns {} for a job that does not use
+    SpikeInterface, or that asks for nothing.
     """
 
-    if not uses_spikeinterface(params, preparams):
+    if not uses_spikeinterface(params, preparams, postparams):
         return {}
 
     resources = validate_resources(
@@ -144,7 +159,7 @@ def ephys_slurm_overrides(params, preparams):
     )
 
     overrides = {}
-    cpus = resources.get("cpus") or requested_n_jobs(params, preparams)
+    cpus = resources.get("cpus") or requested_n_jobs(params, preparams, postparams)
     if cpus:
         overrides["cpus-per-task"] = cpus
     if "gpus" in resources:

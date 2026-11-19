@@ -31,33 +31,23 @@ def generate_parameter_file(
         params_file_cluster_path = cluster_vars["params_files_dir"]
         user_host = cluster_vars["user"] + "@" + cluster_vars["hostname"]
 
-    # Write preprocessing parameter file
-    if type_params == "preparams":
-        write_parameter_file(
-            params, recording_process_id, config.default_preprocess_filename
+    # preparams: preprocessing steps; postparams: post-processing steps (ephys);
+    # anything else: the processing paramset
+    filename = {
+        "preparams": config.default_preprocess_filename,
+        "postparams": config.default_postprocess_filename,
+    }.get(type_params, config.default_process_filename)
+
+    write_parameter_file(params, recording_process_id, filename)
+    if program_selection_params["local_or_cluster"] == "cluster":
+        status = transfer_parameter_file(
+            recording_process_id,
+            filename,
+            params_file_cluster_path,
+            user_host,
         )
-        if program_selection_params["local_or_cluster"] == "cluster":
-            status = transfer_parameter_file(
-                recording_process_id,
-                config.default_preprocess_filename,
-                params_file_cluster_path,
-                user_host,
-            )
-        else:
-            status = config.system_process["SUCCESS"]
     else:
-        write_parameter_file(
-            params, recording_process_id, config.default_process_filename
-        )
-        if program_selection_params["local_or_cluster"] == "cluster":
-            status = transfer_parameter_file(
-                recording_process_id,
-                config.default_process_filename,
-                params_file_cluster_path,
-                user_host,
-            )
-        else:
-            status = config.system_process["SUCCESS"]
+        status = config.system_process["SUCCESS"]
 
     return status
 
