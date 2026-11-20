@@ -15,6 +15,7 @@ import u19_pipeline.automatic_job.slurm_creator as slurmlib
 import u19_pipeline.automatic_job.parameter_file_creator as paramfilelib
 import u19_pipeline.automatic_job.params_config as config
 import u19_pipeline.automatic_job.ephys_element_populate as ep
+import u19_pipeline.automatic_job.ephys_postprocess_params as epp
 import u19_pipeline.automatic_job.imaging_element_populate as ip
 
 from datetime import datetime
@@ -22,6 +23,7 @@ from u19_pipeline import (
     recording,
     recording_process,
     ephys_pipeline,
+    ephys_postcluster,
     imaging_pipeline,
     utility,
 )
@@ -322,6 +324,26 @@ class RecProcessHandler:
             )
             return (status_update, update_value_dict)
 
+        # Create and transfer the postprocessing file (ephys): the job's post-processing
+        # step list, [] when it selected none
+        postparams = epp.as_step_list(rec_series.get("postparams"))
+        if (
+            status == config.system_process["SUCCESS"]
+            and rec_series["recording_modality"] == "electrophysiology"
+        ):
+            status = paramfilelib.generate_parameter_file(
+                rec_series["job_id"],
+                postparams,
+                "postparams",
+                rec_series["program_selection_params"],
+            )
+            if status != config.system_process["SUCCESS"]:
+                status_update = config.status_update_idx["ERROR_STATUS"]
+                update_value_dict["error_info"]["error_message"] = (
+                    "Error while generating/transfering postprocessing parameter file"
+                )
+                return (status_update, update_value_dict)
+
         # If electrophysiology, transfer chanmap as well
         if (
             status == config.system_process["SUCCESS"]
@@ -389,6 +411,7 @@ class RecProcessHandler:
                         rec_series["program_selection_params"],
                         params=rec_series["params"],
                         preparams=rec_series["preparams"],
+                        postparams=postparams,
                     )
                 except slurmlib.ephys_slurm_resources.EphysResourcesError as e:
                     # A paramset asking for resources slurm would refuse: report it on
@@ -706,6 +729,7 @@ class RecProcessHandler:
                 "job_id": pd.Series(dtype="int64"),
                 "params": pd.Series(dtype="object"),
                 "preparams": pd.Series(dtype="object"),
+                "postparams": pd.Series(dtype="object"),
             }
         )
 
@@ -771,7 +795,29 @@ class RecProcessHandler:
 
         params_df = params_df.merge(preparams_df)
 
+        # Post-processing step list of each job ([] for a job that selected none)
+        params_df["postparams"] = epp.postparams_for_jobs(
+            params_df["job_id"].tolist(),
+            RecProcessHandler.get_ephys_postparams_rows(rec_process_keys),
+        )
+
         return params_df
+
+    @staticmethod
+    def get_ephys_postparams_rows(rec_process_keys):
+        """
+        The post-processing steps of these jobs (see ephys_postprocess_params), one row
+        per step. None selected, or the post-processing tables not created yet: [].
+        """
+        tables = ephys_postcluster.tables()
+        if tables is None:
+            return []
+        return (
+            tables.EphysPostParams
+            * tables.PostClusterParamSteps.Step
+            * tables.PostClusterParamSet.proj("postcluster_method", "params")
+            & rec_process_keys
+        ).fetch("job_id", "step_number", "postcluster_method", "params", as_dict=True)
 
     @staticmethod
     def get_imaging_params_jobs(rec_process_keys):

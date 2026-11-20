@@ -181,3 +181,33 @@ def test_resources_slurm_would_refuse_are_rejected(resources):
 @pytest.mark.parametrize("time", ["30:00:00", "2-00:00:00", "0:30:00", "100:00:00"])
 def test_time_formats(time):
     assert esr.validate_resources({"time": time}) == {"time": time}
+
+
+# ------------------------------------------------------------ post-processing step lists
+
+
+@pytest.mark.parametrize("postparams", [None, [], [{"Nothing": {}}]])
+def test_no_post_processing_changes_nothing(postparams):
+    assert esr.ephys_slurm_overrides(LEGACY_KS4, CATGT, postparams) == {}
+
+
+def test_post_processing_job_kwargs_ask_for_cores():
+    """A direct Kilosort sort followed by bombcell runs SpikeInterface on the CPU."""
+    postparams = [
+        {"spikeinterface": {"job_kwargs": {"n_jobs": 6}}},
+        {"bombcell": {"job_kwargs": {"n_jobs": 12}}},
+    ]
+    assert esr.uses_spikeinterface(LEGACY_KS4, CATGT, postparams)
+    assert esr.ephys_slurm_overrides(LEGACY_KS4, CATGT, postparams) == {
+        "cpus-per-task": 12
+    }
+
+
+def test_post_processing_without_n_jobs_keeps_the_cluster_default():
+    assert esr.ephys_slurm_overrides(LEGACY_KS4, CATGT, [{"bombcell": {}}]) == {}
+
+
+def test_paramset_resources_win_over_post_processing_n_jobs():
+    params = {**SI_KS4, "resources": {"cpus": 8}}
+    postparams = [{"bombcell": {"job_kwargs": {"n_jobs": 32}}}]
+    assert esr.ephys_slurm_overrides(params, [], postparams) == {"cpus-per-task": 8}

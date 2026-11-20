@@ -283,6 +283,8 @@ catgt_script = pathlib.Path(catgt_dir, "runit.sh").as_posix()
 parameter_files_filepath = pathlib.Path(this_dir, "ParameterFiles").as_posix()
 default_preprocess_filename = "preprocess_paramset_%s.json"
 default_process_filename = "process_paramset_%s.json"
+# Ephys post-processing step list (ephys_postprocess_params), read by BrainCogsEphysSorters
+default_postprocess_filename = "postprocess_paramset_%s.json"
 # Everything a suite2p slurm job needs, since it runs without the database
 # (written by imaging_element_populate.build_suite2p_job, read by suite2p_slurm_job.py)
 default_suite2p_job_filename = "suite2p_job_%s.json"
