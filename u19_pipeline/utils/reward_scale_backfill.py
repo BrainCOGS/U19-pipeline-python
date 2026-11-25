@@ -83,6 +83,43 @@ def read_block_values(log, block_num):
     return reward_scale, first_trial
 
 
+def read_trial_scales(log, block_num):
+    """Return the reward scale of every trial in 1-indexed block_num.
+
+    A trial without a usable value is None, so positions stay trial numbers.
+    """
+    blocks = as_list(log.get("block"))
+    if block_num < 1 or block_num > len(blocks):
+        return []
+    block = blocks[block_num - 1]
+    if not isinstance(block, dict):
+        return []
+    return [
+        scalar(trial.get("rewardScale")) if isinstance(trial, dict) else None
+        for trial in as_list(block.get("trial"))
+    ]
+
+
+def scale_changes(scales):
+    """Return (trial, new value) wherever the scale differs from the trial before.
+
+    Trials are numbered from 1 within the block.  TowersBlock.reward_scale holds
+    only the first trial's value, so a non-empty result means the stored value
+    does not describe the whole block.
+    """
+    changes = []
+    previous = None
+    for trial, scale in enumerate(scales, start=1):
+        if scale is None:
+            continue
+        if previous is not None and not math.isclose(
+            scale, previous, rel_tol=0, abs_tol=1e-6
+        ):
+            changes.append((trial, scale))
+        previous = scale
+    return changes
+
+
 def classify(db_scale, db_first_trial, file_scale, file_first_trial):
     """Decide whether this block is safe to update."""
     if file_scale is None:

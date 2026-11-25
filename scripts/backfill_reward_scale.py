@@ -21,6 +21,12 @@ Each block is then verified before it is touched: the value in the database must
 be the rounded or truncated form of the value in the file, and the block's
 first_trial must agree.  Anything that fails is reported and left alone.
 
+WARNING: the stored value is the scale of the block's FIRST trial only, as in
+MATLAB's TowersBlock.m.  ViRMEn can change the scale mid-block, and the database
+has no per-trial column, so reward_scale does not describe every trial of such a
+block, before or after this backfill.  The script counts and lists them.  For the
+scale of each trial, read block(b).trial(t).rewardScale from the log.
+
 Runs read-only unless --commit is passed.
 
     python scripts/backfill_reward_scale.py --user efonseca
@@ -283,6 +289,7 @@ def main(argv=None):
     problems = []
     missing = []
     relocated = []
+    mid_block = []
 
     for i, key in enumerate(session_keys, start=1):
         session_rows = sessions[key]
@@ -324,6 +331,13 @@ def main(argv=None):
                     file_first_trial,
                 )
             counts[verdict] += 1
+
+            scales = rsb.read_trial_scales(log, row["block"])
+            changes = rsb.scale_changes(scales)
+            if changes:
+                mid_block.append(
+                    (label, row["block"], len(scales), file_scale, changes, verdict)
+                )
 
             if verdict == rsb.MISMATCH:
                 problems.append(
@@ -383,6 +397,24 @@ def main(argv=None):
             print(f"  {source:10s} {label}: {path}")
         if len(relocated) > 50:
             print(f"  ... and {len(relocated) - 50} more")
+
+    if mid_block:
+        to_update = sum(verdict == rsb.OK for *_, verdict in mid_block)
+        print(
+            f"\n--- WARNING: reward scale changes mid-block in {len(mid_block)} block(s), "
+            f"{to_update} of them with verdict {rsb.OK} ---\n"
+            "  reward_scale stores only the first trial's value, so it does not "
+            "describe the later trials of these blocks."
+        )
+        for label, block, n_trials, first_scale, changes, _ in mid_block[:50]:
+            first = "missing" if first_scale is None else f"{first_scale:.4g}"
+            steps = ", ".join(f"{scale:.4g} at trial {t}" for t, scale in changes)
+            print(
+                f"  {label} block {block} ({n_trials} trials): "
+                f"first trial {first}, then {steps}"
+            )
+        if len(mid_block) > 50:
+            print(f"  ... and {len(mid_block) - 50} more")
 
     if problems:
         print(f"\n--- {len(problems)} blocks/sessions needing attention ---")
