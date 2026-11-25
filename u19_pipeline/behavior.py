@@ -53,7 +53,7 @@ class TowersBlock(dj.Imported):
     class Trial(dj.Part):
         definition = """
         -> master
-        -> acquisition.SessionBlockTrial
+        -> acquisition.SessionBlock.Trial
         ---
         trial_type           : enum('L','R')                # answer of this trial, left or right
         choice               : enum('L','R','nil')          # choice of this trial, left or right
