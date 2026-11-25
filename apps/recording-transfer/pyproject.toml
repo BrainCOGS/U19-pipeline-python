@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "u19-recording-transfer"
+version = "0.1.0"
+description = "BrainCOGS U19 recording transfer desktop application"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = ["PyQt6==6.10.0"]
+
+[project.scripts]
+u19-recording-transfer = "u19_recording_transfer.app:main"
+u19-recording-catalog = "u19_recording_transfer.export_catalog:main"
+
+[project.optional-dependencies]
+catalog = ["datajoint==0.14.10"]
+
+[dependency-groups]
+dev = ["pytest>=9,<10"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/u19_recording_transfer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra"]
+
+[tool.uv]
+exclude-newer = "14 days"
+exclude-newer-package = {datajoint = "0 days"}

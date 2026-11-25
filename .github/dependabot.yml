@@ -133,3 +133,28 @@ updates:
       - dependency-name: "datajoint"
         versions:
           - ">=2.0"
+
+  # Independently deployed recording-PC application; keep its own lockfile current.
+  - package-ecosystem: "uv"
+    directory: "/apps/recording-transfer"
+    cooldown:
+      default-days: 14
+    schedule:
+      interval: "monthly"
+      day: "wednesday"
+      time: "07:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps(recording-transfer)"
+    groups:
+      recording-transfer:
+        applies-to: "version-updates"
+        patterns: ["*"]
+      recording-transfer-security:
+        applies-to: "security-updates"
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "datajoint"
+        versions: [">=2.0"]
