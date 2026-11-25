@@ -21,7 +21,9 @@ Watering and Manual Weighing (done on paper; never alerted on).
 """
 
 import datetime
-from collections.abc import Mapping
+import json
+import math
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from u19_pipeline.utils.responsibilities import (
@@ -238,12 +240,57 @@ def convert_legacy(
     )
 
 
+def unedited_rows(
+    saved: Iterable[Mapping],
+    last_saved: Mapping[str, datetime.date],
+    cutoff: datetime.date,
+) -> dict[str, dict]:
+    """The ResponsibilitiesAlt rows nobody has saved after ``cutoff``, by subject.
+
+    Args:
+        saved: ResponsibilitiesAlt rows.
+        last_saved: each subject's newest ResponsibilitiesAltHistoric
+            effective_date. The website writes a Historic row on every save, so
+            a row without one was never saved there.
+        cutoff: the day of the earlier conversion. A website save made that
+            same day cannot be told apart from it and counts as unedited.
+    """
+    return {
+        row["subject_fullname"]: dict(row)
+        for row in saved
+        if last_saved.get(row["subject_fullname"], cutoff) <= cutoff
+    }
+
+
+def same_record(a: Mapping, b: Mapping) -> bool:
+    """Whether two ResponsibilitiesAlt rows say the same thing."""
+    water_a, water_b = a["water_per_day"], b["water_per_day"]
+    if water_a is None or water_b is None:
+        same_water = water_a is water_b
+    else:
+        # A MySQL float reads back rounded
+        same_water = math.isclose(water_a, water_b, rel_tol=1e-5)
+    return (
+        same_water
+        and a["subject_status"] == b["subject_status"]
+        and _parsed(a["responsibilities"]) == _parsed(b["responsibilities"])
+    )
+
+
+def _parsed(responsibilities: str):
+    try:
+        return json.loads(responsibilities)
+    except ValueError:
+        return responsibilities
+
+
 def plan_conversions(
     subjects: list[dict],
     existing: set[str],
     manual_weekday_cages: set[str],
     allowed_statuses: frozenset[str],
     manual_weekday_users: frozenset[str] | set[str] = frozenset(),
+    replaceable: Mapping[str, Mapping] | None = None,
 ) -> list[dict]:
     """What to do for each subject, as rows for a review report.
 
@@ -252,16 +299,18 @@ def plan_conversions(
             subject_status, water_per_day, schedule (the latest
             SubjectStatus) and tech_responsibility (the owner's lab.User).
         existing: subjects that already have a ResponsibilitiesAlt row; they
-            are never overwritten.
+            are never overwritten unless they are in replaceable.
         manual_weekday_cages: cages (exact names) whose subjects are watered
             and weighed on paper by the researcher on weekdays.
         allowed_statuses: subject_status values ResponsibilitiesAlt accepts.
         manual_weekday_users: user_ids (exact) whose subjects are watered and
             weighed on paper on weekdays, like manual_weekday_cages. A subject
             matching either is manual.
+        replaceable: existing rows that may be replaced, by subject (see
+            unedited_rows). None replaces nothing.
 
-    Each row's action is "insert", "skip: ..." or "error: ..."; record is the
-    ResponsibilitiesAlt row to insert, or None.
+    Each row's action is "insert", "replace", "skip: ..." or "error: ...";
+    record is the ResponsibilitiesAlt row to insert or replace, or None.
     """
     plans = []
     for subject in subjects:
@@ -286,8 +335,13 @@ def plan_conversions(
             "record": None,
         }
         plans.append(row)
-        if name in existing:
-            row["action"] = "skip: already has explicit responsibilities"
+        saved = None if replaceable is None else replaceable.get(name)
+        if name in existing and saved is None:
+            row["action"] = (
+                "skip: already has explicit responsibilities"
+                if replaceable is None
+                else "skip: saved since the earlier conversion"
+            )
             continue
         if status not in allowed_statuses:
             row["action"] = (
@@ -319,13 +373,17 @@ def plan_conversions(
         row["summary"] = summarize_week(result.days)
         for day, day_assignment in result.days.items():
             row[day] = describe_day(day_assignment)
-        row["record"] = {
+        record = {
             "subject_fullname": name,
             "subject_status": status,
             "water_per_day": subject.get("water_per_day"),
             "responsibilities": result.json,
         }
-        row["action"] = "insert"
+        if saved is not None and same_record(saved, record):
+            row["action"] = "skip: already up to date"
+            continue
+        row["record"] = record
+        row["action"] = "insert" if saved is None else "replace"
     return plans
 
 

@@ -388,6 +388,192 @@ class TestPlanConversions:
         assert conv.plan_conversions([], set(), set(), ALLOWED) == []
 
 
+OCT16 = datetime.date(2026, 10, 16)
+
+
+def saved_row(name, schedule="Water/Water/Water/Water/Water/Water/Water", **kwargs):
+    """A ResponsibilitiesAlt row as an earlier conversion wrote it."""
+    record = plan([subject_row(name, schedule)])[name]["record"]
+    return {**record, **kwargs}
+
+
+def replan(rows, saved, last_saved=None, cutoff=OCT16, **kwargs):
+    last_saved = {s["subject_fullname"]: OCT16 for s in saved} | (last_saved or {})
+    return {
+        p["subject_fullname"]: p
+        for p in conv.plan_conversions(
+            rows,
+            {s["subject_fullname"] for s in saved},
+            set(),
+            ALLOWED,
+            replaceable=conv.unedited_rows(saved, last_saved, cutoff),
+            **kwargs,
+        )
+    }
+
+
+class TestUneditedRows:
+    @pytest.mark.parametrize(
+        ("last_saved", "unedited"),
+        [
+            (OCT16, True),
+            (datetime.date(2026, 10, 1), True),
+            (datetime.date(2026, 10, 17), False),
+            # A save planned for later is an edit too
+            (datetime.date(2030, 1, 1), False),
+        ],
+    )
+    def test_only_rows_saved_after_the_cutoff_are_edited(self, last_saved, unedited):
+        rows = conv.unedited_rows([saved_row("ab_m1")], {"ab_m1": last_saved}, OCT16)
+        assert set(rows) == ({"ab_m1"} if unedited else set())
+
+    def test_a_row_without_history_was_never_saved_on_the_website(self):
+        assert set(conv.unedited_rows([saved_row("ab_m1")], {}, OCT16)) == {"ab_m1"}
+
+    def test_no_rows(self):
+        assert conv.unedited_rows([], {}, OCT16) == {}
+
+
+class TestSameRecord:
+    @pytest.mark.parametrize(
+        ("change", "same"),
+        [
+            ({}, True),
+            # As MySQL float reads 1.5 and 1.4 back
+            ({"water_per_day": 1.5000000596}, True),
+            ({"water_per_day": 1.4}, False),
+            ({"water_per_day": None}, False),
+            ({"subject_status": "AdLibWater"}, False),
+            ({"responsibilities": "{}"}, False),
+            ({"responsibilities": "not json"}, False),
+        ],
+    )
+    def test_compares_every_field(self, change, same):
+        row = saved_row("ab_m1")
+        assert conv.same_record(row, {**row, **change}) is same
+
+    def test_json_formatting_does_not_matter(self):
+        row = saved_row("ab_m1")
+        spaced = json.dumps(json.loads(row["responsibilities"]), indent=2)
+        assert conv.same_record(row, {**row, "responsibilities": spaced})
+
+    def test_no_water_amount_on_either(self):
+        row = saved_row("ab_m1", water_per_day=None)
+        assert conv.same_record(row, dict(row))
+
+
+class TestReplaceUnedited:
+    def test_an_unedited_row_is_replaced_from_the_current_schedule(self):
+        p = replan([subject_row("ab_m1")], [saved_row("ab_m1")])["ab_m1"]
+        assert p["action"] == "replace"
+        assert p["record"]["responsibilities"] == p["responsibilities"]
+        assert (
+            r.assignment_for_day(p["record"]["responsibilities"], "Monday").technician
+            == EVERYTHING
+        )
+
+    def test_a_row_saved_since_is_kept(self):
+        p = replan(
+            [subject_row("ab_m1")],
+            [saved_row("ab_m1")],
+            {"ab_m1": datetime.date(2026, 11, 27)},
+        )["ab_m1"]
+        assert p["action"] == "skip: saved since the earlier conversion"
+        assert p["record"] is None
+
+    def test_an_unchanged_row_is_left_alone(self):
+        row = subject_row("ab_m1")
+        saved = saved_row("ab_m1", row["schedule"])
+        p = replan([row], [saved])["ab_m1"]
+        assert p["action"] == "skip: already up to date"
+        assert p["record"] is None
+
+    def test_a_status_change_alone_is_replaced(self):
+        # Ad lib on the website and in SubjectStatus, in experiments when converted
+        p = replan(
+            [subject_row("ab_m1", subject_status="AdLibWater")], [saved_row("ab_m1")]
+        )["ab_m1"]
+        assert p["action"] == "replace"
+        assert p["record"]["subject_status"] == "AdLibWater"
+
+    def test_new_subjects_are_still_inserted(self):
+        out = replan([subject_row("ab_m1"), subject_row("ab_m2")], [saved_row("ab_m1")])
+        assert out["ab_m1"]["action"] == "replace"
+        assert out["ab_m2"]["action"] == "insert"
+
+    def test_a_row_that_cannot_be_converted_is_kept(self):
+        out = replan(
+            [
+                subject_row("ab_m1", "Train/Train"),
+                subject_row("ab_m2", subject_status="Missing"),
+            ],
+            [saved_row("ab_m1"), saved_row("ab_m2")],
+        )
+        assert out["ab_m1"]["action"].startswith("error")
+        assert out["ab_m2"]["action"].startswith("skip: ResponsibilitiesAlt does not")
+        assert out["ab_m1"]["record"] is None
+        assert out["ab_m2"]["record"] is None
+
+    def test_saved_rows_of_other_subjects_are_not_touched(self):
+        assert set(replan([], [saved_row("ab_dead")])) == set()
+
+    def test_manual_weekdays_apply_to_replaced_rows(self):
+        p = replan(
+            [subject_row("ab_m1")], [saved_row("ab_m1")], manual_weekday_users={"ab"}
+        )["ab_m1"]
+        assert r.assignment_for_day(p["responsibilities"], "Monday").is_manual(
+            R.WATERING
+        )
+
+
+class TestScriptReplaceArguments:
+    def test_replaces_nothing_by_default(self):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        assert build_parser().parse_args([]).replace_unedited_since is None
+
+    def test_reads_the_date(self):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        args = build_parser().parse_args(["--replace-unedited-since", "2026-10-16"])
+        assert args.replace_unedited_since == OCT16
+
+    @pytest.mark.parametrize("days", [0, 1])
+    def test_todays_saves_can_never_be_replaced(self, days):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        date = datetime.date.today() + datetime.timedelta(days=days)
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(["--replace-unedited-since", date.isoformat()])
+
+    @pytest.mark.parametrize("value", ["yesterday", "10/16/2026", ""])
+    def test_not_a_date(self, value):
+        from scripts.convert_legacy_responsibilities import build_parser
+
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(["--replace-unedited-since", value])
+
+
+class TestScriptBackup:
+    def test_saves_every_column_and_never_overwrites(self, tmp_path):
+        import csv
+
+        from scripts.convert_legacy_responsibilities import write_backup
+
+        path = tmp_path / "backup.csv"
+        rows = [saved_row("ab_m1"), saved_row("ab_m2")]
+        write_backup(str(path), rows)
+        with path.open(newline="", encoding="utf-8") as f:
+            read = list(csv.DictReader(f))
+        assert [row["responsibilities"] for row in read] == [
+            row["responsibilities"] for row in rows
+        ]
+        assert set(read[0]) == set(rows[0])
+        with pytest.raises(FileExistsError):
+            write_backup(str(path), rows[:1])
+        assert len(path.read_text(encoding="utf-8").splitlines()) == 3
+
+
 class TestScriptEnumValues:
     def test_reads_the_declared_enum(self):
         from types import SimpleNamespace
