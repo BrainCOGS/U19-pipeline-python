@@ -111,6 +111,71 @@ class TestReadBlockValues:
         assert rsb.read_block_values({}, 1) == (None, None)
 
 
+class TestReadTrialScales:
+    @staticmethod
+    def block_of(*scales):
+        trials = [{"rewardScale": scale} for scale in scales]
+        return {"firstTrial": 1, "trial": np.array(trials, dtype=object)}
+
+    def test_one_value_per_trial(self):
+        log = make_log(np.array([make_block(), self.block_of(1.2, 1.2, 3.0)]))
+        assert rsb.read_trial_scales(log, 2) == pytest.approx([1.2, 1.2, 3.0])
+
+    def test_single_block_and_single_trial_squeezed_to_dicts(self):
+        block = {"firstTrial": 7, "trial": {"rewardScale": 0.6}}
+        assert rsb.read_trial_scales(make_log(block), 1) == pytest.approx([0.6])
+
+    def test_trials_without_a_usable_value_are_none(self):
+        block = self.block_of(1.2, np.nan, np.array([]))
+        block["trial"] = np.append(block["trial"], [{"choice": 1}, None])
+        assert rsb.read_trial_scales(make_log(block), 1) == [
+            1.2,
+            None,
+            None,
+            None,
+            None,
+        ]
+
+    @pytest.mark.parametrize("block_num", [0, 2, -1])
+    def test_block_index_out_of_range(self, block_num):
+        assert rsb.read_trial_scales(make_log(make_block()), block_num) == []
+
+    @pytest.mark.parametrize("trials", [None, np.array([]), []])
+    def test_no_trials(self, trials):
+        log = make_log({"firstTrial": 1, "trial": trials})
+        assert rsb.read_trial_scales(log, 1) == []
+
+    def test_no_blocks(self):
+        assert rsb.read_trial_scales({}, 1) == []
+
+
+class TestScaleChanges:
+    def test_constant_block_has_none(self):
+        assert rsb.scale_changes([1.2, 1.2, 1.2]) == []
+
+    def test_reports_trial_number_and_new_value(self):
+        assert rsb.scale_changes([1.5, 1.5, 1.7, 3.0, 3.0]) == [(3, 1.7), (4, 3.0)]
+
+    def test_change_on_the_last_trial_counts(self):
+        assert rsb.scale_changes([1.2, 3.0]) == [(2, 3.0)]
+
+    def test_change_back_to_the_first_value_counts(self):
+        assert rsb.scale_changes([1.0, 1.2, 1.0]) == [(2, 1.2), (3, 1.0)]
+
+    def test_float_noise_is_not_a_change(self):
+        assert rsb.scale_changes([1.2, float(np.float32(1.2))]) == []
+
+    def test_missing_values_are_skipped_but_keep_their_trial_number(self):
+        assert rsb.scale_changes([1.2, None, 1.2, None, 1.4]) == [(5, 1.4)]
+
+    def test_missing_first_value_is_not_a_change(self):
+        assert rsb.scale_changes([None, 1.2, 1.2]) == []
+
+    @pytest.mark.parametrize("scales", [[], [1.2], [None], [None, None]])
+    def test_nothing_to_compare(self, scales):
+        assert rsb.scale_changes(scales) == []
+
+
 class TestClassify:
     @pytest.mark.parametrize(
         "db, file", [(1, 1.2), (2, 1.8), (1, 1.8), (2, 1.5), (0, 0.4)]
