@@ -110,3 +110,20 @@ def test_towers_block_references_session_block_tables(modules, table, expected):
     for attribute in references[0].split("."):
         parent = getattr(parent, attribute)
     assert parent.table_name == expected
+
+
+def test_session_does_not_declare_stimulus_set(modules):
+    # The live u19_acquisition.session has no such column, and MATLAB never
+    # fills it.
+    assert not re.search(
+        r"^\s*stimulus_set\b", modules["acquisition"].Session.definition, re.MULTILINE
+    )
+
+
+def test_towers_session_still_declares_stimulus_set(modules):
+    # Unlike Session, behavior.TowersSession.stimulus_set is a real column.
+    assert re.search(
+        r"^\s*stimulus_set\b",
+        modules["behavior"].TowersSession.definition,
+        re.MULTILINE,
+    )

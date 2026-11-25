@@ -34,7 +34,6 @@ class Session(dj.Manual):
     -> task.TaskLevelParameterSet
     stimulus_bank=""     : varchar(255)                 # path to the function to generate the stimulus
     stimulus_commit=""   : varchar(64)                  # git hash for the version of the function
-    stimulus_set         : tinyint                      # an integer that describes a particular set of stimuli in a trial
     session_performance  : float                        # percentage correct on this session
     num_trials=-1        : int                          # Number of trials for the session
     num_trials_try=null  : tinyblob                     # Accumulative number of trials for each try of the session
