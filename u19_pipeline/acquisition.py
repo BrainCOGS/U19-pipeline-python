@@ -17,6 +17,7 @@ class SessionStarted(dj.Manual):
     -> task.Task
     local_path_behavior_file : varchar(255)             # Path where session file is stored in local computer
     remote_path_behavior_file : varchar(255)            # Path where session file will be stored in bucket
+    new_remote_path_behavior_file : varchar(255)        # Unified path where session file will be stored in cup
     is_finished=0        : tinyint                      # Flag that indicates if this session was finished successfully
     invalid_session=0           : tinyint                       # Flag that indicates if behavioral file couldn't be saved for the session
     """
@@ -33,14 +34,34 @@ class Session(dj.Manual):
     -> task.TaskLevelParameterSet
     stimulus_bank=""     : varchar(255)                 # path to the function to generate the stimulus
     stimulus_commit=""   : varchar(64)                  # git hash for the version of the function
+    stimulus_set         : tinyint                      # an integer that describes a particular set of stimuli in a trial
     session_performance  : float                        # percentage correct on this session
-    num_trials=null      : int                          # Number of trials for the session
+    num_trials=-1        : int                          # Number of trials for the session
     num_trials_try=null  : tinyblob                     # Accumulative number of trials for each try of the session
     session_narrative="" : varchar(512)
     session_protocol=null : varchar(255)                 # function and parameters to generate the stimulus
     session_code_version=null : blob                         # code version of the stimulus, maybe a version number, or a githash
-    is_bad_session=null  : tinyint                      # Flag that indicates if this session had any issues
-    session_comments=null : varchar(2048)                # Text to indicate some particularity of the session (e.g. state the issues in a bad session)
+    is_bad_session=0     : tinyint                      # Flag that indicates if this session had any issues
+    session_comments=""  : varchar(2048)                # Text to indicate some particularity of the session (e.g. state the issues in a bad session)
+    """
+
+
+@schema
+class SessionBlock(dj.Imported):
+    definition = """
+    -> Session
+    block                : tinyint                      # block number
+    ---
+    is_bad_block         : tinyint                      # check if block has issues
+    """
+
+
+@schema
+class SessionBlockTrial(dj.Imported):
+    definition = """
+    -> SessionBlock
+    trial_idx            : int                          # trial index, keep the original number in the file
+    ---
     """
 
 
