@@ -52,6 +52,12 @@ pipeline = [
     "tifffile",
 ]
 
+# Worker dependencies for NWB exports. Run the worker with Python 3.12 or 3.13.
+nwb = [
+    "tank-lab-to-nwb; python_version < '3.14'",
+    "nwbinspector",
+]
+
 [tool.setuptools]
 packages = {find = {include = ["u19_pipeline*", "scripts*"]}}
 
@@ -104,3 +110,10 @@ exclude-newer-package = { datajoint = "0 days", pyjwt = "0 days", werkzeug = "0 
 # `uv audit` is still behind a preview flag. Declaring it here lets CI and
 # local runs call `uv audit` without `--preview-features audit-command`.
 preview-features = ["audit-command"]
+
+# NeuroConv still needs the zarr 2 API at import.
+constraint-dependencies = ["zarr<3"]
+
+[tool.uv.sources]
+tank-lab-to-nwb = { git = "https://github.com/BrainCOGS/tank-lab-to-nwb", rev = "7ef7b649250b6d669e9214a6f51ec13a24fbe204" }
+ndx-tank-metadata = { git = "https://github.com/BrainCOGS/ndx-tank-metadata", tag = "v0.5.0" }
