@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import pytest
@@ -433,3 +434,139 @@ class TestScriptArguments:
         assert args.cages == ["c1", "c2"]
         assert args.users == ["ab"]
         assert args.write is True
+
+
+class TestHistoricRecords:
+    RECORD = {
+        "subject_fullname": "jdoe_1",
+        "subject_status": "InExperiments",
+        "water_per_day": 1.5,
+        "responsibilities": '{"style": "weekly"}',
+    }
+
+    def test_copies_each_record_with_the_effective_date(self):
+        historic = conv.historic_records([self.RECORD], datetime.date(2026, 11, 18))
+        assert historic == [{**self.RECORD, "effective_date": "2026-11-18"}]
+
+    def test_leaves_the_current_records_unchanged(self):
+        record = dict(self.RECORD)
+        historic = conv.historic_records([record], datetime.date(2026, 11, 18))
+        historic[0]["responsibilities"] = "changed"
+        assert record == self.RECORD
+        assert "effective_date" not in record
+
+    def test_no_records_gives_no_historic_rows(self):
+        assert conv.historic_records([], datetime.date(2026, 11, 18)) == []
+
+    def test_keeps_a_missing_water_amount(self):
+        record = {**self.RECORD, "water_per_day": None}
+        historic = conv.historic_records([record], datetime.date(2026, 1, 1))
+        assert historic[0]["water_per_day"] is None
+        assert historic[0]["effective_date"] == "2026-01-01"
+
+
+def assignment(technician, owner):
+    return r.DailyAssignment(frozenset(technician), frozenset(owner))
+
+
+TECH_CARES = assignment({R.WEIGHING, R.WATERING, R.TRAINING}, {R.NOTHING})
+OWNER_CARES = assignment({R.NOTHING}, {R.WATERING, R.WEIGHING})
+ON_PAPER = assignment({R.NOTHING}, {M.MANUAL_WATERING, M.MANUAL_WEIGHING})
+
+
+def whole_week(weekday, weekend):
+    return {
+        day: weekend if day in r.WEEKEND_DAYS else weekday for day in r.DAYS_OF_WEEK
+    }
+
+
+class TestDescribeDay:
+    def test_names_both_parties_in_a_fixed_duty_order(self):
+        assert (
+            conv.describe_day(TECH_CARES)
+            == "Technician: Watering, Weighing, Training; Owner: Nothing"
+        )
+
+    def test_manual_duties_say_they_are_on_paper(self):
+        assert conv.describe_day(ON_PAPER) == (
+            "Technician: Nothing; Owner: Manual Watering, Manual Weighing (on paper)"
+        )
+
+    def test_transport_only(self):
+        day = assignment({R.TRANSPORT_ONLY}, {R.WATERING, R.WEIGHING})
+        assert conv.describe_day(day) == (
+            "Technician: Transport Only; Owner: Watering, Weighing"
+        )
+
+
+class TestSummarizeWeek:
+    def test_same_every_day(self):
+        assert conv.summarize_week(whole_week(TECH_CARES, TECH_CARES)) == (
+            "Every day: " + conv.describe_day(TECH_CARES)
+        )
+
+    def test_weekdays_and_weekends_differ(self):
+        assert conv.summarize_week(whole_week(ON_PAPER, OWNER_CARES)) == (
+            "Weekdays: "
+            + conv.describe_day(ON_PAPER)
+            + " | Weekends: "
+            + conv.describe_day(OWNER_CARES)
+        )
+
+    def test_one_weekday_differs(self):
+        days = whole_week(TECH_CARES, TECH_CARES)
+        days["Wednesday"] = OWNER_CARES
+        assert conv.summarize_week(days) == "Varies by day (see the day columns)"
+
+    def test_saturday_differs_from_sunday(self):
+        days = whole_week(TECH_CARES, TECH_CARES)
+        days["Saturday"] = OWNER_CARES
+        assert conv.summarize_week(days) == "Varies by day (see the day columns)"
+
+    def test_no_days(self):
+        assert conv.summarize_week({}) == ""
+
+
+class TestReadableReportColumns:
+    SUBJECT = {
+        "subject_fullname": "jdoe_1",
+        "user_id": "jdoe",
+        "cage": "cage1",
+        "subject_status": "InExperiments",
+        "water_per_day": 1.0,
+        "schedule": week(*["Train"] * 7),
+        "tech_responsibility": "yes",
+    }
+
+    def plan(self, subject, existing=frozenset(), cages=frozenset()):
+        return conv.plan_conversions(
+            [subject],
+            existing=set(existing),
+            manual_weekday_cages=set(cages),
+            allowed_statuses=frozenset({"InExperiments", "WaterRestrictionOnly"}),
+        )[0]
+
+    def test_insert_rows_get_a_summary_and_one_column_per_day(self):
+        row = self.plan(self.SUBJECT)
+        assert row["action"] == "insert"
+        assert row["summary"] == "Every day: " + conv.describe_day(TECH_CARES)
+        for day in r.DAYS_OF_WEEK:
+            assert row[day] == conv.describe_day(TECH_CARES)
+
+    def test_manual_weekdays_show_on_the_weekday_columns(self):
+        row = self.plan(self.SUBJECT, cages={"cage1"})
+        assert "(on paper)" in row["Monday"]
+        assert "(on paper)" not in row["Sunday"]
+        assert row["summary"].startswith("Weekdays: ")
+
+    def test_skipped_rows_leave_the_readable_columns_empty(self):
+        row = self.plan(self.SUBJECT, existing={"jdoe_1"})
+        assert row["action"].startswith("skip")
+        assert row["summary"] == ""
+        assert all(row[day] == "" for day in r.DAYS_OF_WEEK)
+
+    def test_error_rows_leave_the_readable_columns_empty(self):
+        row = self.plan({**self.SUBJECT, "schedule": None})
+        assert row["action"].startswith("error"), row["action"]
+        assert row["summary"] == ""
+        assert all(row[day] == "" for day in r.DAYS_OF_WEEK)

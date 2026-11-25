@@ -20,6 +20,7 @@ Optionally, weekday watering and weighing become the researcher's Manual
 Watering and Manual Weighing (done on paper; never alerted on).
 """
 
+import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
@@ -54,6 +55,52 @@ MANUAL = {
     Responsibility.WATERING: ManualResponsibility.MANUAL_WATERING,
     Responsibility.WEIGHING: ManualResponsibility.MANUAL_WEIGHING,
 }
+
+
+# The order duties are listed in the report, most common first
+DUTY_ORDER: tuple[AnyResponsibility, ...] = (
+    Responsibility.WATERING,
+    Responsibility.WEIGHING,
+    Responsibility.TRAINING,
+    Responsibility.TRANSPORT_ONLY,
+    ManualResponsibility.MANUAL_WATERING,
+    ManualResponsibility.MANUAL_WEIGHING,
+    Responsibility.NOTHING,
+)
+# Plain-language report columns: a one-line summary, then one per day
+READABLE_COLUMNS = ("summary", *DAYS_OF_WEEK)
+VARIES_BY_DAY = "Varies by day (see the day columns)"
+
+
+def _describe_duties(duties: frozenset[AnyResponsibility]) -> str:
+    text = ", ".join(duty for duty in DUTY_ORDER if duty in duties)
+    if duties & set(ManualResponsibility):
+        text += " (on paper)"
+    return text
+
+
+def describe_day(assignment: DailyAssignment) -> str:
+    """One day in plain words, e.g. "Technician: Watering; Owner: Nothing"."""
+    return (
+        f"Technician: {_describe_duties(assignment.technician)}; "
+        f"Owner: {_describe_duties(assignment.owner)}"
+    )
+
+
+def summarize_week(days: Mapping[str, DailyAssignment]) -> str:
+    """The week in one line: every day, weekdays/weekends, or "varies"."""
+    if not days:
+        return ""
+    if len(set(days.values())) == 1:
+        return f"Every day: {describe_day(next(iter(days.values())))}"
+    weekdays = {a for day, a in days.items() if day not in WEEKEND_DAYS}
+    weekends = {a for day, a in days.items() if day in WEEKEND_DAYS}
+    if len(weekdays) == 1 and len(weekends) == 1:
+        return (
+            f"Weekdays: {describe_day(next(iter(weekdays)))} | "
+            f"Weekends: {describe_day(next(iter(weekends)))}"
+        )
+    return VARIES_BY_DAY
 
 
 @dataclass(frozen=True)
@@ -225,6 +272,7 @@ def plan_conversions(
             or subject.get("user_id") in manual_weekday_users
         )
         row = {
+            **dict.fromkeys(READABLE_COLUMNS, ""),
             "subject_fullname": name,
             "user_id": subject.get("user_id"),
             "cage": subject.get("cage"),
@@ -268,6 +316,9 @@ def plan_conversions(
             else ""
         )
         row["responsibilities"] = result.json
+        row["summary"] = summarize_week(result.days)
+        for day, day_assignment in result.days.items():
+            row[day] = describe_day(day_assignment)
         row["record"] = {
             "subject_fullname": name,
             "subject_status": status,
@@ -276,3 +327,14 @@ def plan_conversions(
         }
         row["action"] = "insert"
     return plans
+
+
+def historic_records(records: list[dict], effective_date: datetime.date) -> list[dict]:
+    """ResponsibilitiesAltHistoric rows matching ResponsibilitiesAlt ``records``.
+
+    Each is a copy with ``effective_date`` added, so the history starts with the
+    pre-filled value and later website saves have something to compare with.
+    """
+    return [
+        {**record, "effective_date": effective_date.isoformat()} for record in records
+    ]
