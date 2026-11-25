@@ -1,11 +1,8 @@
-
 #!/bin/bash
 
 echo $(pwd)
 
-source /home/u19prod@pu.win.princeton.edu/.bashrc
-source /home/u19prod@pu.win.princeton.edu/.bash_profile
-
-conda activate U19-pipeline_python_env3
-cd "/home/u19prod@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/"
-python ./u19_pipeline/alert_system/live_session_stats_deletion/cronjob_live_session_stats_deletion.py
+# Sources u19prod's ~/.bashrc and ~/.bash_profile, activates conda (default)
+# or checks the uv .venv (U19_CRON_ENV=uv), and cds into the checkout.
+source "$(dirname "${BASH_SOURCE[0]}")/../../cron_env.sh"
+u19_cron_python ./u19_pipeline/alert_system/live_session_stats_deletion/cronjob_live_session_stats_deletion.py

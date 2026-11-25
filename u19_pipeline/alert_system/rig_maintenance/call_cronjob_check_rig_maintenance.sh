@@ -2,11 +2,9 @@
 
 echo $(pwd)
 
-source /home/u19prod@pu.win.princeton.edu/.bashrc
-source /home/u19prod@pu.win.princeton.edu/.bash_profile
-
-conda activate U19-pipeline_python_env3
-cd "/home/u19prod@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/"
+# Sources u19prod's ~/.bashrc and ~/.bash_profile, activates conda (default)
+# or checks the uv .venv (U19_CRON_ENV=uv), and cds into the checkout.
+source "$(dirname "${BASH_SOURCE[0]}")/../../cron_env.sh"
 
 # Run the checker via python module to use package imports
-python -m u19_pipeline.alert_system.rig_maintenance.check_rig_maintenance
+u19_cron_python -m u19_pipeline.alert_system.rig_maintenance.check_rig_maintenance

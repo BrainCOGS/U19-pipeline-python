@@ -1,2 +1,9 @@
+# The wrappers run from the conda env U19-pipeline_python_env3 by default. To run one from the
+# checkout's uv .venv instead, put U19_CRON_ENV=uv right before its `source` (inside the quotes
+# under flock -c); delete it to go back to conda. Blocked on #54 (new u19proc VM); see
+# u19_pipeline/automatic_job/cron_uv_env.md, including the one-time .venv build.
 */30 * * * * flock -n -o /home/u19prod\@pu.win.princeton.edu/flock_dir/backup.lock -c 'source /home/u19prod\@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/call_cronjob_automatic_job.sh > /home/u19prod\@pu.win.princeton.edu/log/cronlog_automatic_job 2>&1'
 0 3 * * * source /home/u19prod\@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/u19_pipeline/alert_system/call_cronjob_alert.sh  > /home/u19prod\@pu.win.princeton.edu/log/cronlog_alert 2>&1
+# The same two from uv:
+# */30 * * * * flock -n -o /home/u19prod\@pu.win.princeton.edu/flock_dir/backup.lock -c 'U19_CRON_ENV=uv source /home/u19prod\@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/u19_pipeline/automatic_job/call_cronjob_automatic_job.sh > /home/u19prod\@pu.win.princeton.edu/log/cronlog_automatic_job 2>&1'
+# 0 3 * * * U19_CRON_ENV=uv source /home/u19prod\@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/u19_pipeline/alert_system/call_cronjob_alert.sh  > /home/u19prod\@pu.win.princeton.edu/log/cronlog_alert 2>&1

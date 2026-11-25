@@ -1,13 +1,9 @@
-
-
 #!/bin/bash
 
 echo $(pwd)
 
-source /home/u19prod@pu.win.princeton.edu/.bashrc
-source /home/u19prod@pu.win.princeton.edu/.bash_profile
-
-conda activate U19-pipeline_python_env3
-cd "/home/u19prod@pu.win.princeton.edu/Datajoint_projs/U19-pipeline_python/"
+# Sources u19prod's ~/.bashrc and ~/.bash_profile, activates conda (default)
+# or checks the uv .venv (U19_CRON_ENV=uv), and cds into the checkout.
+source "$(dirname "${BASH_SOURCE[0]}")/../cron_env.sh"
 git pull
-python ./u19_pipeline/automatic_job/pupillometry_check_handler_script.py
+u19_cron_python ./u19_pipeline/automatic_job/pupillometry_check_handler_script.py
