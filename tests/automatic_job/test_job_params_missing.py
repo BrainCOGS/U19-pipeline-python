@@ -12,6 +12,7 @@ and the pipeline extras, so it is imported once with those stubbed, and
 """
 
 import sys
+import types
 from unittest import mock
 
 import pandas as pd
@@ -345,3 +346,80 @@ def test_missing_params_error(monkeypatch, modality, params, expected_part):
         status, update_dict = result
         assert status == -1
         assert expected_part in update_dict["error_info"]["error_message"]
+
+
+# --------------------------------------------------------- ephys post-processing lists
+
+
+def ephys_with_steps(monkeypatch, jobs):
+    """Ephys tables where every job selected precluster list 1 (one CatGT step)."""
+    element = mock.MagicMock()
+    element.ClusteringParamSet = FakeQuery(
+        [dict(paramset_idx=1, params={"Th": [10, 4]}, clustering_method="kilosort4")]
+    )
+    element.PreClusterParamSteps = FakeTable(
+        [dict(precluster_param_steps_id=1)],
+        Step=FakeQuery([dict(precluster_param_steps_id=1, step_number=1, pre_idx=3)]),
+    )
+    element.PreClusterParamSet = FakeQuery(
+        [dict(pre_idx=3, precluster_method="catgt", params={"gblcar": 1})]
+    )
+    monkeypatch.setattr(rph.utility, "smart_dj_join", lambda a, b: a * b)
+    monkeypatch.setattr(rph.ephys_pipeline, "ephys_element", element)
+    ephys_params = FakeQuery(
+        [dict(job_id=j, precluster_param_steps_id=1, paramset_idx=1) for j in jobs]
+    )
+    monkeypatch.setattr(
+        rph.recording_process,
+        "Processing",
+        FakeTable([dict(job_id=j) for j in jobs], EphysParams=ephys_params),
+    )
+
+
+def postcluster_tables(selected):
+    """EphysPostParams rows {job_id: steps_id}; list 5 is SI metrics then bombcell."""
+    return types.SimpleNamespace(
+        EphysPostParams=FakeQuery(
+            [dict(job_id=j, postcluster_param_steps_id=s) for j, s in selected.items()]
+        ),
+        PostClusterParamSteps=FakeTable(
+            [dict(postcluster_param_steps_id=5)],
+            Step=FakeQuery(
+                [
+                    dict(postcluster_param_steps_id=5, step_number=2, paramset_idx=8),
+                    dict(postcluster_param_steps_id=5, step_number=1, paramset_idx=7),
+                ]
+            ),
+        ),
+        PostClusterParamSet=FakeQuery(
+            [
+                dict(paramset_idx=7, postcluster_method="spikeinterface", params={}),
+                dict(paramset_idx=8, postcluster_method="bombcell", params={"a": 1}),
+            ]
+        ),
+    )
+
+
+def test_ephys_jobs_carry_their_post_processing_list(monkeypatch):
+    ephys_with_steps(monkeypatch, [1467, 1469])
+    monkeypatch.setattr(
+        rph.ephys_postcluster, "tables", lambda: postcluster_tables({1469: 5})
+    )
+
+    params_df = Handler.get_ephys_params_jobs([dict(job_id=1467), dict(job_id=1469)])
+
+    postparams = dict(zip(params_df["job_id"], params_df["postparams"], strict=True))
+    assert postparams == {
+        1467: [],  # selected none: no post-processing, as before
+        1469: [{"spikeinterface": {}}, {"bombcell": {"a": 1}}],
+    }
+    assert params_df.loc[0, "preparams"] == [{"catgt": {"gblcar": 1}}]
+
+
+def test_ephys_jobs_before_the_tables_exist_have_no_post_processing(monkeypatch):
+    ephys_with_steps(monkeypatch, [1467])
+    monkeypatch.setattr(rph.ephys_postcluster, "tables", lambda: None)
+
+    params_df = Handler.get_ephys_params_jobs([dict(job_id=1467)])
+
+    assert params_df["postparams"].tolist() == [[]]
