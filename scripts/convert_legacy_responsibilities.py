@@ -1,10 +1,16 @@
 """Pre-fill action.ResponsibilitiesAlt from each subject's legacy schedule.
 
-Dry run by default: writes a CSV report of what would be inserted. With
---write, inserts the converted rows. Subjects that already have explicit
-responsibilities are never touched, so it is safe to run again.
+Dry run by default: writes a CSV report of what would be written. With
+--write, writes the converted rows. Subjects that already have explicit
+responsibilities are not touched, so it is safe to run again, unless
+--replace-unedited-since says when an earlier conversion ran: then subjects
+nobody has saved on the website after that day are converted again, and the
+rows being replaced are first saved to a backup CSV.
 
-Each inserted ResponsibilitiesAlt row also gets a matching
+    python scripts/convert_legacy_responsibilities.py \\
+        --replace-unedited-since 2026-10-16 --write
+
+Each written ResponsibilitiesAlt row also gets a matching
 ResponsibilitiesAltHistoric row dated the day of the run, in the same
 transaction, so the two tables agree and the history starts with the
 pre-filled value.
@@ -34,6 +40,7 @@ from u19_pipeline.utils.responsibilities_conversion import (
     READABLE_COLUMNS,
     historic_records,
     plan_conversions,
+    unedited_rows,
 )
 
 REPORT_COLUMNS = (
@@ -78,11 +85,66 @@ def fetch_subjects(action, subject, lab, today: datetime.date) -> list[dict]:
     return sorted(rows, key=lambda row: row["subject_fullname"])
 
 
+def past_date(value: str) -> datetime.date:
+    """A date before today, so that today's website saves are never replaced."""
+    date = datetime.date.fromisoformat(value)
+    if date >= datetime.date.today():
+        raise argparse.ArgumentTypeError(f"{value} is not before today")
+    return date
+
+
+def fetch_unedited(action, cutoff: datetime.date) -> dict[str, dict]:
+    """ResponsibilitiesAlt rows not saved after cutoff, by subject."""
+    last_saved = dj.U("subject_fullname").aggr(
+        action.ResponsibilitiesAltHistoric, last_saved="max(effective_date)"
+    )
+    return unedited_rows(
+        action.ResponsibilitiesAlt.fetch(as_dict=True),
+        dict(zip(*last_saved.fetch("subject_fullname", "last_saved"), strict=True)),
+        cutoff,
+    )
+
+
+def write_backup(path: str, rows: list[dict]) -> None:
+    """Save rows about to be replaced; never overwrites an earlier backup."""
+    with open(path, "x", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_records(
+    action,
+    inserts: list[dict],
+    replacements: list[dict],
+    cutoff: datetime.date | None,
+    today: datetime.date,
+) -> None:
+    """Insert and replace rows in both tables, all or nothing."""
+    with dj.conn().transaction:
+        if replacements:
+            # Someone may have saved on the website since the rows were read
+            unedited = fetch_unedited(action, cutoff)
+            edited = [
+                r["subject_fullname"]
+                for r in replacements
+                if r["subject_fullname"] not in unedited
+            ]
+            if edited:
+                raise RuntimeError(
+                    f"Saved on the website during this run, nothing written: {', '.join(edited)}"
+                )
+        action.ResponsibilitiesAlt.insert(inserts)
+        for record in replacements:
+            action.ResponsibilitiesAlt.update1(record)
+        action.ResponsibilitiesAltHistoric.insert(
+            historic_records(inserts + replacements, today)
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument(
-        "--write", action="store_true", help="insert the converted rows"
-    )
+    parser.add_argument("--write", action="store_true", help="write the converted rows")
     parser.add_argument(
         "--manual-weekday-cage",
         action="append",
@@ -98,6 +160,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="user_id whose subjects are watered/weighed on paper on weekdays "
         "(repeatable; exact match; no default)",
+    )
+    parser.add_argument(
+        "--replace-unedited-since",
+        type=past_date,
+        metavar="YYYY-MM-DD",
+        help="also replace the rows an earlier conversion wrote on this day, "
+        "except subjects saved on the website after it",
+    )
+    parser.add_argument(
+        "--backup",
+        default=f"responsibilities_alt_backup_{datetime.datetime.now():%Y-%m-%dT%H%M%S}.csv",
+        help="CSV that --write saves the replaced rows to; must not exist yet",
     )
     parser.add_argument(
         "--report",
@@ -118,12 +192,15 @@ def main() -> None:
     lab = dj.create_virtual_module("lab", prefix + "lab")
 
     today = datetime.date.today()
+    cutoff = args.replace_unedited_since
+    replaceable = fetch_unedited(action, cutoff) if cutoff else None
     plans = plan_conversions(
         fetch_subjects(action, subject, lab, today),
         existing=set(action.ResponsibilitiesAlt.fetch("subject_fullname")),
         manual_weekday_cages=cages,
         manual_weekday_users=users,
         allowed_statuses=enum_values(action.ResponsibilitiesAlt, "subject_status"),
+        replaceable=replaceable,
     )
 
     with open(args.report, "w", newline="", encoding="utf-8") as f:
@@ -132,9 +209,12 @@ def main() -> None:
         writer.writerows(plans)
 
     inserts = [p["record"] for p in plans if p["action"] == "insert"]
+    replacements = [p["record"] for p in plans if p["action"] == "replace"]
     counts: dict[str, int] = {}
     for p in plans:
-        key = p["action"].split(":")[0]
+        key = p["action"]
+        if key.startswith("error"):
+            key = "error"
         counts[key] = counts.get(key, 0) + 1
     print(f"Database prefix {prefix!r}; report written to {args.report}")
     print(", ".join(f"{n} {key}" for key, n in sorted(counts.items())))
@@ -148,14 +228,18 @@ def main() -> None:
             print(f"  {p['subject_fullname']}: {p['action']}")
 
     if not args.write:
-        print("Dry run: nothing written. Re-run with --write to insert.")
+        print("Dry run: nothing written. Re-run with --write to write.")
         return
-    with dj.conn().transaction:
-        action.ResponsibilitiesAlt.insert(inserts)
-        action.ResponsibilitiesAltHistoric.insert(historic_records(inserts, today))
+    if replacements:
+        write_backup(
+            args.backup, [replaceable[r["subject_fullname"]] for r in replacements]
+        )
+        print(f"{len(replacements)} rows about to be replaced saved to {args.backup}")
+    write_records(action, inserts, replacements, cutoff, today)
     print(
-        f"Inserted {len(inserts)} rows into {prefix}action.responsibilities_alt "
-        f"and {prefix}action.responsibilities_alt_historic (effective {today})"
+        f"Inserted {len(inserts)} and replaced {len(replacements)} rows in "
+        f"{prefix}action.responsibilities_alt, with matching rows in "
+        f"{prefix}action.responsibilities_alt_historic (effective {today})"
     )
 
 
