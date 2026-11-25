@@ -55,14 +55,12 @@ class SessionBlock(dj.Imported):
     is_bad_block         : tinyint                      # check if block has issues
     """
 
-
-@schema
-class SessionBlockTrial(dj.Imported):
-    definition = """
-    -> SessionBlock
-    trial_idx            : int                          # trial index, keep the original number in the file
-    ---
-    """
+    class Trial(dj.Part):
+        definition = """
+        -> master
+        trial_idx            : int                          # trial index, keep the original number in the file
+        ---
+        """
 
 
 @schema
