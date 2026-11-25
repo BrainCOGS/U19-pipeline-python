@@ -11,14 +11,13 @@ Per Constitution Principles:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import datajoint as dj
 
 from u19_pipeline.nwb_export.credentials_crypto import decrypt_api_key, encrypt_api_key
 from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
 from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
-from u19_pipeline import acquisition  # needed so DataJoint can resolve -> acquisition.Session FK
 
 schema = dj.schema(dj.config["custom"]["database.prefix"] + "nwb_production")
 
@@ -36,29 +35,54 @@ class NwbExportStatus(dj.Lookup):
     """
 
     contents = [
-        (int(NwbExportStatusEnum.QUEUED), "QUEUED", "Job submitted, waiting for processing", False),
+        (
+            int(NwbExportStatusEnum.QUEUED),
+            "QUEUED",
+            "Job submitted, waiting for processing",
+            False,
+        ),
         (
             int(NwbExportStatusEnum.DATA_VALIDATION),
             "DATA_VALIDATION",
             "Validating source data exists for all modalities",
             False,
         ),
-        (int(NwbExportStatusEnum.PROCESSING), "PROCESSING", "Converting data to NWB format", False),
+        (
+            int(NwbExportStatusEnum.PROCESSING),
+            "PROCESSING",
+            "Converting data to NWB format",
+            False,
+        ),
         (
             int(NwbExportStatusEnum.VALIDATION),
             "VALIDATION",
             "Validating NWB output (NWB Inspector, HDF5, metadata)",
             False,
         ),
-        (int(NwbExportStatusEnum.UPLOAD), "UPLOAD", "Uploading NWB file to DANDI", False),
+        (
+            int(NwbExportStatusEnum.UPLOAD),
+            "UPLOAD",
+            "Uploading NWB file to DANDI",
+            False,
+        ),
         (
             int(NwbExportStatusEnum.UPLOADED),
             "UPLOADED",
             "NWB file uploaded; asset ID persisted, transitioning to COMPLETED",
             False,
         ),
-        (int(NwbExportStatusEnum.COMPLETED), "COMPLETED", "Export successful and complete", True),
-        (int(NwbExportStatusEnum.FAILED), "FAILED", "Export failed; see error log for details", True),
+        (
+            int(NwbExportStatusEnum.COMPLETED),
+            "COMPLETED",
+            "Export successful and complete",
+            True,
+        ),
+        (
+            int(NwbExportStatusEnum.FAILED),
+            "FAILED",
+            "Export failed; see error log for details",
+            True,
+        ),
     ]
 
 
@@ -67,13 +91,15 @@ class NwbExportJob(dj.Manual):
     """
     Main table tracking NWB export jobs.
 
-    One job = one session exported to one NWB file with one or more modalities.
+    One job writes one NWB file. Registered session fields are optional provenance.
     """
 
     definition = """
     nwb_job_id: INT AUTO_INCREMENT   # Unique job identifier
     ---
-    -> acquisition.Session           # Reference to behavior session
+    subject_fullname=NULL: VARCHAR(64)  # Registered session provenance (optional)
+    session_date=NULL: DATE
+    session_number=NULL: INT
     job_name: VARCHAR(128)           # User-provided job name
     user_id: VARCHAR(64)             # User who submitted job
     -> NwbExportStatus               # Current job status
@@ -84,6 +110,9 @@ class NwbExportJob(dj.Manual):
     actual_file_size_gb=NULL: FLOAT  # Actual file size after conversion (GB)
     export_parameters=NULL: VARCHAR(5000)  # JSON blob with conversion parameters
     nwb_file_hash=NULL: VARCHAR(64)  # SHA256 hash of NWB file for integrity
+    request_id=NULL: CHAR(32)       # Idempotency key for path-based submissions
+    source_request=NULL: LONGBLOB   # Versioned source snapshot for the worker
+    unique index (request_id)
     """
 
 
@@ -220,13 +249,13 @@ class NwbExportValidation(dj.Manual):
 
 
 def submit_nwb_export_job(
-    session_key: Dict[str, Any],
+    session_key: dict[str, Any],
     job_name: str,
     user_id: str,
-    modalities: List[Tuple[str, str, Optional[List[int]]]],
+    modalities: list[tuple[str, str, list[int] | None]],
     output_filepath: str,
     estimated_size_gb: float,
-    export_params: Optional[Dict[str, Any]] = None,
+    export_params: dict[str, Any] | None = None,
 ) -> int:
     """
     Submit a new NWB export job.
@@ -282,8 +311,12 @@ def submit_nwb_export_job(
             "nwb_job_id": job_id,
             "modality_name": modality_name,
             "modality_type": modality_type,
-            "probe_numbers": str(numbers) if modality_name == "ephys" and numbers else None,
-            "fov_numbers": str(numbers) if modality_name == "imaging" and numbers else None,
+            "probe_numbers": str(numbers)
+            if modality_name == "ephys" and numbers
+            else None,
+            "fov_numbers": str(numbers)
+            if modality_name == "imaging" and numbers
+            else None,
         }
         NwbExportModality.insert1(mod_record)
 
@@ -291,10 +324,10 @@ def submit_nwb_export_job(
 
 
 def update_job_status(
-    job_key: Dict[str, Any],
+    job_key: dict[str, Any],
     new_status: NwbExportStatusEnum,
-    error_message: Optional[str] = None,
-    error_exception: Optional[str] = None,
+    error_message: str | None = None,
+    error_exception: str | None = None,
 ) -> None:
     """
     Update job status and log the transition.
@@ -333,7 +366,7 @@ def update_job_status(
     NwbExportLogStatus.insert1(log_entry)
 
 
-def get_job_status(job_key: Dict[str, Any]) -> Tuple[NwbExportStatusEnum, str]:
+def get_job_status(job_key: dict[str, Any]) -> tuple[NwbExportStatusEnum, str]:
     """
     Get current status of a job.
 
@@ -349,7 +382,7 @@ def get_job_status(job_key: Dict[str, Any]) -> Tuple[NwbExportStatusEnum, str]:
     return status, status_name
 
 
-def get_job_history(job_key: Dict[str, Any]) -> List[Dict[str, Any]]:
+def get_job_history(job_key: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Get full status history for a job.
 
@@ -375,15 +408,23 @@ def save_dandi_api_key(user_id: str, api_key: str) -> None:
     exists = bool(DandiCredentials & {"user_id": user_id})
     if exists:
         DandiCredentials.update1(
-            {"user_id": user_id, "dandi_api_key": encrypt_api_key(api_key), "updated_timestamp": now}
+            {
+                "user_id": user_id,
+                "dandi_api_key": encrypt_api_key(api_key),
+                "updated_timestamp": now,
+            }
         )
     else:
         DandiCredentials.insert1(
-            {"user_id": user_id, "dandi_api_key": encrypt_api_key(api_key), "created_timestamp": now}
+            {
+                "user_id": user_id,
+                "dandi_api_key": encrypt_api_key(api_key),
+                "created_timestamp": now,
+            }
         )
 
 
-def get_dandi_api_key_masked(user_id: str) -> Optional[str]:
+def get_dandi_api_key_masked(user_id: str) -> str | None:
     """
     Return a masked representation of the stored API key for safe UI display.
 
@@ -405,7 +446,7 @@ def get_dandi_api_key_masked(user_id: str) -> Optional[str]:
         return None
 
 
-def list_user_dandisets(user_id: str) -> List[Dict[str, Any]]:
+def list_user_dandisets(user_id: str) -> list[dict[str, Any]]:
     """
     Return all dandisets registered by *user_id*, default first.
 
@@ -416,13 +457,15 @@ def list_user_dandisets(user_id: str) -> List[Dict[str, Any]]:
         List of dicts with keys: dandiset_id, description, is_default, created_timestamp.
     """
     rows = (DandiRegisteredDandiset & {"user_id": user_id}).fetch(as_dict=True)
-    return sorted(rows, key=lambda r: (not r.get("is_default", False), r["dandiset_id"]))
+    return sorted(
+        rows, key=lambda r: (not r.get("is_default", False), r["dandiset_id"])
+    )
 
 
 def add_user_dandiset(
     user_id: str,
     dandiset_id: str,
-    description: Optional[str] = None,
+    description: str | None = None,
     is_default: bool = False,
 ) -> None:
     """
@@ -437,7 +480,9 @@ def add_user_dandiset(
     """
     if is_default:
         # Clear any existing default for this user
-        existing_defaults = (DandiRegisteredDandiset & {"user_id": user_id, "is_default": 1}).fetch(as_dict=True)
+        existing_defaults = (
+            DandiRegisteredDandiset & {"user_id": user_id, "is_default": 1}
+        ).fetch(as_dict=True)
         for row in existing_defaults:
             DandiRegisteredDandiset.update1({**row, "is_default": 0})
 
@@ -461,7 +506,9 @@ def remove_user_dandiset(user_id: str, dandiset_id: str) -> None:
         user_id: User identifier.
         dandiset_id: Dandiset ID to remove.
     """
-    (DandiRegisteredDandiset & {"user_id": user_id, "dandiset_id": dandiset_id}).delete_quick()
+    (
+        DandiRegisteredDandiset & {"user_id": user_id, "dandiset_id": dandiset_id}
+    ).delete_quick()
 
 
 def set_default_dandiset(user_id: str, dandiset_id: str) -> None:
@@ -473,11 +520,15 @@ def set_default_dandiset(user_id: str, dandiset_id: str) -> None:
         dandiset_id: Dandiset ID to set as default.
     """
     # Clear existing default
-    existing = (DandiRegisteredDandiset & {"user_id": user_id, "is_default": 1}).fetch(as_dict=True)
+    existing = (DandiRegisteredDandiset & {"user_id": user_id, "is_default": 1}).fetch(
+        as_dict=True
+    )
     for row in existing:
         DandiRegisteredDandiset.update1({**row, "is_default": 0})
     # Set new default
-    target = (DandiRegisteredDandiset & {"user_id": user_id, "dandiset_id": dandiset_id}).fetch1()
+    target = (
+        DandiRegisteredDandiset & {"user_id": user_id, "dandiset_id": dandiset_id}
+    ).fetch1()
     DandiRegisteredDandiset.update1({**target, "is_default": 1})
 
 
@@ -488,8 +539,8 @@ def set_default_dandiset(user_id: str, dandiset_id: str) -> None:
 
 def set_dandi_credentials(
     user_id: str,
-    api_key: Optional[str] = None,
-    dandiset_id: Optional[str] = None,
+    api_key: str | None = None,
+    dandiset_id: str | None = None,
 ) -> None:
     """
     Convenience wrapper: save an API key and optionally register a dandiset.
@@ -505,7 +556,7 @@ def set_dandi_credentials(
         add_user_dandiset(user_id, dandiset_id, is_default=True)
 
 
-def get_dandi_credentials(user_id: str) -> Tuple[Optional[str], Optional[str]]:
+def get_dandi_credentials(user_id: str) -> tuple[str | None, str | None]:
     """
     Return (plaintext_api_key, default_dandiset_id) for *user_id*.
 
@@ -518,7 +569,9 @@ def get_dandi_credentials(user_id: str) -> Tuple[Optional[str], Optional[str]]:
         api_key = None
 
     dandisets = list_user_dandisets(user_id)
-    default_ds = next((d["dandiset_id"] for d in dandisets if d.get("is_default")), None)
+    default_ds = next(
+        (d["dandiset_id"] for d in dandisets if d.get("is_default")), None
+    )
     if default_ds is None and dandisets:
         default_ds = dandisets[0]["dandiset_id"]
 

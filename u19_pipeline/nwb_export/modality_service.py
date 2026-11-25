@@ -23,7 +23,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+
 
 from u19_pipeline.nwb_export.errors import NwbExportError
 
@@ -31,7 +31,7 @@ from u19_pipeline.nwb_export.errors import NwbExportError
 # Constants
 # ---------------------------------------------------------------------------
 
-VALID_MODALITIES: Set[str] = {
+VALID_MODALITIES: set[str] = {
     "behavior",
     "ephys-raw",
     "ephys-processed",
@@ -66,7 +66,7 @@ class ParsedModality:
 
     name: str
     modality_type: str
-    numbers: Optional[List[int]] = field(default=None)
+    numbers: list[int] | None = field(default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ class ModalityParseError(NwbExportError):
 # ---------------------------------------------------------------------------
 
 
-def parse_modalities(modalities: List[str]) -> List[ParsedModality]:
+def parse_modalities(modalities: list[str]) -> list[ParsedModality]:
     """Parse and normalise a list of modality strings.
 
     Strings are lower-cased and stripped before lookup.  Duplicates are
@@ -117,8 +117,8 @@ def parse_modalities(modalities: List[str]) -> List[ParsedModality]:
         )
 
     # Normalise and deduplicate while preserving first-seen order
-    seen: Set[str] = set()
-    normalised: List[str] = []
+    seen: set[str] = set()
+    normalised: list[str] = []
     for raw in modalities:
         key = raw.strip().lower()
         if key not in seen:
@@ -133,4 +133,7 @@ def parse_modalities(modalities: List[str]) -> List[ParsedModality]:
                 invalid_value=key,
             )
 
-    return [ParsedModality(name=_MODALITY_MAP[k][0], modality_type=_MODALITY_MAP[k][1]) for k in normalised]
+    return [
+        ParsedModality(name=_MODALITY_MAP[k][0], modality_type=_MODALITY_MAP[k][1])
+        for k in normalised
+    ]

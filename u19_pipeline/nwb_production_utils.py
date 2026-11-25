@@ -25,7 +25,7 @@ def recording_ids_for_session(session_key: dict) -> list:
     Returns:
         List of recording_id ints (empty if none linked).
     """
-    from u19_pipeline import recording  # noqa: PLC0415
+    from u19_pipeline import recording
 
     return (
         (recording.Recording.BehaviorSession & session_key)
@@ -47,7 +47,7 @@ def estimate_behavior_size_gb(session_key: dict) -> float:
     Returns:
         Estimated size in GB
     """
-    from u19_pipeline import behavior  # noqa: PLC0415
+    from u19_pipeline import behavior
 
     try:
         trials = (behavior.TowersBlock.Trial & session_key).fetch("KEY")
@@ -120,7 +120,7 @@ def estimate_imaging_size_gb(recording_key: dict, fov_numbers: list) -> float:
     Returns:
         Estimated size in GB.
     """
-    from u19_pipeline import imaging_pipeline  # noqa: PLC0415
+    from u19_pipeline import imaging_pipeline
 
     bytes_per_pixel = 2  # ScanImage raw frames are int16
     fallback_gb_per_fov = 0.5  # see docstring for derivation
@@ -248,7 +248,7 @@ def validate_behavior_data_exists(session_key: dict) -> tuple[bool, str]:
     Returns:
         Tuple of (valid, error_message)
     """
-    from u19_pipeline import acquisition, behavior  # noqa: PLC0415
+    from u19_pipeline import acquisition, behavior
 
     try:
         # Check if session exists
@@ -262,7 +262,7 @@ def validate_behavior_data_exists(session_key: dict) -> tuple[bool, str]:
 
         return True, ""
     except Exception as e:
-        return False, f"Error validating behavior data: {str(e)}"
+        return False, f"Error validating behavior data: {e!s}"
 
 
 def validate_ephys_data_exists(
@@ -278,8 +278,8 @@ def validate_ephys_data_exists(
     Returns:
         Tuple of (valid, error_message)
     """
-    from u19_pipeline import recording  # noqa: PLC0415
-    from u19_pipeline.ephys_pipeline import ephys_element  # noqa: PLC0415
+    from u19_pipeline import recording
+    from u19_pipeline.ephys_pipeline import ephys_element
 
     try:
         # Check if recording exists
@@ -294,7 +294,7 @@ def validate_ephys_data_exists(
 
         return True, ""
     except Exception as e:
-        return False, f"Error validating ephys data: {str(e)}"
+        return False, f"Error validating ephys data: {e!s}"
 
 
 def validate_imaging_data_exists(
@@ -324,7 +324,7 @@ def validate_imaging_data_exists(
     Returns:
         Tuple of (valid, error_message)
     """
-    from u19_pipeline import imaging_pipeline  # noqa: PLC0415
+    from u19_pipeline import imaging_pipeline
 
     try:
         # Check if the imaging session exists for this recording
@@ -352,4 +352,4 @@ def validate_imaging_data_exists(
 
         return True, ""
     except Exception as e:
-        return False, f"Error validating imaging data: {str(e)}"
+        return False, f"Error validating imaging data: {e!s}"

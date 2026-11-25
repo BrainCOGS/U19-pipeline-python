@@ -9,14 +9,14 @@ Implement an NWB export pipeline with DataJoint-backed job orchestration, modali
 
 ## Technical Context
 
-**Language/Version**: Python 3.12+  
-**Primary Dependencies**: datajoint, pynwb>=3.0.0, neuroconv, nwbinspector, h5py, pytest  
-**Storage**: DataJoint-managed MySQL/MariaDB + NWB files on filesystem/shared storage  
-**Testing**: pytest with markers (`no_db`, `with_db`)  
-**Target Platform**: Linux/macOS research compute environments  
-**Project Type**: Python data pipeline + library integration  
-**Performance Goals**: Full pipeline completion within 15 minutes for standard sessions; DB precheck in seconds  
-**Constraints**: DataJoint-first access, Enum state modeling, no plaintext DANDI secrets, optional DANDI stage  
+**Language/Version**: Python 3.12+
+**Primary Dependencies**: datajoint, pynwb>=3.0.0, neuroconv, nwbinspector, h5py, pytest
+**Storage**: DataJoint-managed MySQL/MariaDB + NWB files on filesystem/shared storage
+**Testing**: pytest with markers (`no_db`, `with_db`)
+**Target Platform**: Linux/macOS research compute environments
+**Project Type**: Python data pipeline + library integration
+**Performance Goals**: Full pipeline completion within 15 minutes for standard sessions; DB precheck in seconds
+**Constraints**: DataJoint-first access, Enum state modeling, no plaintext DANDI secrets, optional DANDI stage
 **Scale/Scope**: Concurrent cron processing (≥10 jobs), multi-modality sessions, long-running conversion jobs
 
 ## Constitution Check

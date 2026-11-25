@@ -18,6 +18,7 @@ class TestIsEligibleForUpload:
     @pytest.fixture(autouse=True)
     def _import(self):
         from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
+
         self.eligible = is_eligible_for_upload
 
     def test_both_present_returns_true(self):
@@ -54,7 +55,13 @@ class TestEligibilitySkipBehavior:
 
     def test_never_raises(self):
         from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
-        for api_key, dandiset_id in [(None, None), (None, "123"), ("key", None), ("", "")]:
+
+        for api_key, dandiset_id in [
+            (None, None),
+            (None, "123"),
+            ("key", None),
+            ("", ""),
+        ]:
             try:
                 is_eligible_for_upload(api_key, dandiset_id)
             except Exception as exc:
@@ -63,6 +70,7 @@ class TestEligibilitySkipBehavior:
     def test_returns_false_not_none(self):
         """Must return bool False, not None."""
         from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
+
         result = is_eligible_for_upload(None, None)
         assert result is False
         assert result is not None
@@ -73,8 +81,9 @@ class TestDandiEligibilityContractShape:
     """Pure function must exist in the dandi package and be callable."""
 
     def test_function_importable(self):
-        from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload  # noqa
+        from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
 
     def test_callable(self):
         from u19_pipeline.nwb_export.dandi.eligibility import is_eligible_for_upload
+
         assert callable(is_eligible_for_upload)

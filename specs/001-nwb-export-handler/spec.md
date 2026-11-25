@@ -254,4 +254,3 @@ Before running the full NWB export pipeline, verify database connection and requ
 8. **Python Version**: 3.12+ enforced per constitution
 9. **No Breaking Changes**: Existing U19-pipeline tables remain unchanged; NwbExportJob is additive
 10. **Retry Logic**: Failed jobs can be retried manually; automatic retry on transient network errors
-

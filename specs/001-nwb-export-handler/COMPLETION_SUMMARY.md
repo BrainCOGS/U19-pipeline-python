@@ -2,8 +2,8 @@
 
 **Status**: ✅ **SPECIFICATION & TDD COMPLETE** | Foundation Ready for Implementation
 
-**Date**: 2026-02-24  
-**Constitution Version**: 1.1.1 (with TDD, DataJoint-first, Enum-based states)  
+**Date**: 2026-02-24
+**Constitution Version**: 1.1.1 (with TDD, DataJoint-first, Enum-based states)
 **Test-Driven Development**: Tests written first ✅ → Implementation in progress
 
 ---
@@ -308,6 +308,6 @@ u19_pipeline/
 
 ---
 
-**Created by**: GitHub Copilot  
-**Based on Constitution**: ndx-tank-metadata v1.1.1 (2026-02-24)  
+**Created by**: GitHub Copilot
+**Based on Constitution**: ndx-tank-metadata v1.1.1 (2026-02-24)
 **Feature Branch**: `001-nwb-export-handler`

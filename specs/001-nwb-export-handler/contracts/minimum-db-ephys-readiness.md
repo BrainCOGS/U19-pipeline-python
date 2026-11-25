@@ -46,4 +46,3 @@ messages: [string]
 
 - No imaging-session assertions.
 - No behavior-session assertions.
-

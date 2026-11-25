@@ -23,18 +23,21 @@ class TestStateMachineImport:
     """state_machine module must be importable from nwb_export package."""
 
     def test_module_importable(self):
-        from u19_pipeline.nwb_export import state_machine  # noqa: F401
+        from u19_pipeline.nwb_export import state_machine
 
     def test_is_valid_transition_callable(self):
         from u19_pipeline.nwb_export.state_machine import is_valid_transition
+
         assert callable(is_valid_transition)
 
     def test_assert_valid_transition_callable(self):
         from u19_pipeline.nwb_export.state_machine import assert_valid_transition
+
         assert callable(assert_valid_transition)
 
     def test_allowed_transitions_exported(self):
         from u19_pipeline.nwb_export.state_machine import ALLOWED_TRANSITIONS
+
         assert isinstance(ALLOWED_TRANSITIONS, dict)
         assert len(ALLOWED_TRANSITIONS) > 0
 
@@ -47,6 +50,7 @@ class TestAllowedTransitions:
     def _imports(self):
         from u19_pipeline.nwb_export.state_machine import is_valid_transition
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
+
         self.is_valid = is_valid_transition
         self.S = NwbExportStatusEnum
 
@@ -93,9 +97,13 @@ class TestBlockedTransitions:
 
     @pytest.fixture(autouse=True)
     def _imports(self):
-        from u19_pipeline.nwb_export.state_machine import is_valid_transition, assert_valid_transition
+        from u19_pipeline.nwb_export.state_machine import (
+            is_valid_transition,
+            assert_valid_transition,
+        )
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
         from u19_pipeline.nwb_export.errors import NwbStatusTransitionError
+
         self.is_valid = is_valid_transition
         self.assert_valid = assert_valid_transition
         self.S = NwbExportStatusEnum
@@ -155,17 +163,17 @@ class TestAllowedTransitionsCoverage:
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum as S
 
         required_edges = [
-            (S.QUEUED,          S.DATA_VALIDATION),
+            (S.QUEUED, S.DATA_VALIDATION),
             (S.DATA_VALIDATION, S.PROCESSING),
             (S.DATA_VALIDATION, S.FAILED),
-            (S.PROCESSING,      S.VALIDATION),
-            (S.PROCESSING,      S.FAILED),
-            (S.VALIDATION,      S.COMPLETED),
-            (S.VALIDATION,      S.UPLOAD),
-            (S.VALIDATION,      S.FAILED),
-            (S.UPLOAD,          S.UPLOADED),
-            (S.UPLOAD,          S.FAILED),
-            (S.UPLOADED,        S.COMPLETED),
+            (S.PROCESSING, S.VALIDATION),
+            (S.PROCESSING, S.FAILED),
+            (S.VALIDATION, S.COMPLETED),
+            (S.VALIDATION, S.UPLOAD),
+            (S.VALIDATION, S.FAILED),
+            (S.UPLOAD, S.UPLOADED),
+            (S.UPLOAD, S.FAILED),
+            (S.UPLOADED, S.COMPLETED),
         ]
 
         for from_s, to_s in required_edges:

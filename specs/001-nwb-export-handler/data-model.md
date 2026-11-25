@@ -110,4 +110,3 @@
 ### DandiUploadStatus
 
 - `NOT_APPLICABLE -> PENDING -> IN_PROGRESS -> COMPLETED | FAILED`
-

@@ -16,7 +16,7 @@ class TestNwbExportErrorHierarchy:
 
     def test_module_importable(self):
         """errors module is importable from nwb_export package."""
-        from u19_pipeline.nwb_export import errors  # noqa: F401
+        from u19_pipeline.nwb_export import errors
 
     def test_base_exception_exists(self):
         """NwbExportError base class exists and is an Exception subclass."""
@@ -38,7 +38,10 @@ class TestNwbExportErrorHierarchy:
 
     def test_status_transition_error_exists(self):
         """NwbStatusTransitionError is a subclass of NwbExportError."""
-        from u19_pipeline.nwb_export.errors import NwbStatusTransitionError, NwbExportError
+        from u19_pipeline.nwb_export.errors import (
+            NwbStatusTransitionError,
+            NwbExportError,
+        )
 
         assert issubclass(NwbStatusTransitionError, NwbExportError)
 

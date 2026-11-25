@@ -9,7 +9,9 @@ import ast
 import json
 import time
 import traceback
+from contextlib import closing
 from datetime import datetime
+from hashlib import sha256
 from pathlib import Path
 
 import u19_pipeline.automatic_job.params_config as config
@@ -65,6 +67,62 @@ def _parse_export_params(raw) -> dict:
             return {}
 
 
+def _source_request(job: dict) -> dict | None:
+    if job.get("request_id") is None and job.get("source_request") is None:
+        return None  # Existing jobs use the original session-based path.
+    request = job.get("source_request")
+    if not isinstance(request, dict):
+        raise TypeError("The job has no source snapshot.")
+    return request
+
+
+def _validate_registered_source(job: dict, request: dict) -> dict | None:
+    from u19_pipeline import behavior, lab, recording, subject
+
+    user_id = job["user_id"]
+    if not (lab.User & {"user_id": user_id}):
+        raise ValueError("The submitter no longer has a lab account.")
+    key = {field: job.get(field) for field in acquisition.Session.primary_key}
+    if request["source"] == "manual_paths":
+        if (
+            any(value is not None for value in key.values())
+            or request.get("session") is not None
+        ):
+            raise ValueError(
+                "Manual source requests cannot include registered session fields."
+            )
+        return None
+
+    if any(value is None for value in key.values()):
+        raise ValueError("The registered session key is incomplete.")
+    if request.get("session") != {
+        field: str(value) if field == "session_date" else value
+        for field, value in key.items()
+    }:
+        raise ValueError(
+            "The registered session key does not match the source snapshot."
+        )
+    owned = subject.Subject & {"user_id": user_id}
+    coowned = subject.SubjectCoowners & {"coowner": user_id, "active": 1}
+    if not (
+        behavior.TowersSession & key & [owned.proj(), coowned.proj("subject_fullname")]
+    ):
+        raise ValueError("The registered Towers session is no longer accessible.")
+    if selected := request.get("recording"):
+        recording_id = selected.get("recording_id")
+        if type(recording_id) is not int:
+            raise ValueError("The source snapshot is missing the linked recording ID.")
+        rec = recording.Recording & {
+            "recording_id": recording_id,
+            "recording_modality": selected["modality"],
+        }
+        if not (recording.Recording.BehaviorSession & rec & key):
+            raise ValueError(
+                "The selected recording is no longer linked to the behavior session."
+            )
+    return key
+
+
 class NwbExportHandler:
     """Handler for NWB export job processing pipeline."""
 
@@ -76,6 +134,23 @@ class NwbExportHandler:
         This function is called repeatedly by the cronjob to process all active
         NWB export jobs through their pipeline stages.
         """
+        table = nwb_production.NwbExportJob()
+        conn = table.connection
+        lock_name = "nwb:" + sha256(table.full_table_name.encode()).hexdigest()[:60]
+        with closing(
+            conn.query("SELECT GET_LOCK(%s, 0)", args=(lock_name,), reconnect=False)
+        ) as cursor:
+            if cursor.fetchone()[0] != 1:
+                return
+        try:
+            NwbExportHandler._process_active_jobs()
+        finally:
+            conn.query(
+                "SELECT RELEASE_LOCK(%s)", args=(lock_name,), reconnect=False
+            ).close()
+
+    @staticmethod
+    def _process_active_jobs():
         # Active jobs = non-terminal: status in [QUEUED .. UPLOADED], i.e.
         # status_id >= 0 AND status_id < COMPLETED(6) AND status_id != FAILED(-1).
         completed = int(NwbExportStatusEnum.COMPLETED)
@@ -205,6 +280,18 @@ class NwbExportHandler:
         try:
             print(f"Validating data for job {job['nwb_job_id']}...")
 
+            request = _source_request(job)
+            if request is not None:
+                from u19_pipeline.nwb_export.source_request import (
+                    job_output,
+                    resolve_sources,
+                )
+
+                job_output(job)
+                resolve_sources(request)
+                _validate_registered_source(job, request)
+                return True, error_info
+
             # The session that this job exports is the acquisition.Session referenced
             # by the NwbExportJob primary key. Derive its key from the job record.
             session_key = {
@@ -302,6 +389,31 @@ class NwbExportHandler:
         try:
             print(f"Converting data to NWB for job {job['nwb_job_id']}...")
 
+            request = _source_request(job)
+            if request is not None:
+                from u19_pipeline.nwb_export.conversion import (
+                    converter_metadata,
+                    query_metadata,
+                )
+                from u19_pipeline.nwb_export.source_request import (
+                    convert_sources,
+                    job_output,
+                    resolve_sources,
+                )
+
+                paths = resolve_sources(request)
+                key = _validate_registered_source(job, request)
+                size_gb = convert_sources(
+                    paths,
+                    job_output(job),
+                    metadata=converter_metadata(query_metadata(key)) if key else {},
+                    session_date=key["session_date"] if key else None,
+                )
+                nwb_production.NwbExportJob.update1(
+                    {"nwb_job_id": job["nwb_job_id"], "actual_file_size_gb": size_gb}
+                )
+                return True, error_info
+
             export_params = with_imaging_modality(
                 _parse_export_params(job.get("export_parameters")),
                 (
@@ -328,8 +440,8 @@ class NwbExportHandler:
                 output_path=str(output_path),
             )
 
-            (nwb_production.NwbExportJob & {"nwb_job_id": job["nwb_job_id"]}).update1(
-                {"actual_file_size_gb": size_gb}
+            nwb_production.NwbExportJob.update1(
+                {"nwb_job_id": job["nwb_job_id"], "actual_file_size_gb": size_gb}
             )
 
             print(f"NWB conversion completed for job {job['nwb_job_id']}")
@@ -364,6 +476,11 @@ class NwbExportHandler:
             print(f"Validating NWB file for job {job['nwb_job_id']}...")
 
             output_path = Path(job["output_filepath"])
+            source_job = _source_request(job) is not None
+            if source_job:
+                from u19_pipeline.nwb_export.source_request import job_output
+
+                output_path = job_output(job)
             if not output_path.exists():
                 raise FileNotFoundError(f"NWB file not found: {output_path}")
 
@@ -378,7 +495,7 @@ class NwbExportHandler:
                 with h5py.File(output_path, "r") as f:
                     top_keys = list(f.keys())
                 hdf5_ok = bool(top_keys)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 hdf5_ok = False
                 error_info["error_message"] = f"HDF5 integrity check failed: {exc}"[
                     :255
@@ -415,14 +532,30 @@ class NwbExportHandler:
                 print(
                     "nwbinspector not importable; skipping NWB Inspector (not a failure)."
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 # Inspector itself errored; record but do not crash validation.
                 print(f"NWB Inspector run failed: {exc}")
                 report_messages.append({"inspector_error": str(exc)})
 
-            validation_passed = bool(
-                hdf5_ok and (not inspector_ran or inspector_passed)
-            )
+            if source_job and hdf5_ok:
+                from pynwb import validate
+
+                schema_errors = validate(path=output_path)
+                errors_count += len(schema_errors)
+                report_messages.extend(
+                    {
+                        "importance": "ERROR",
+                        "message": str(error),
+                        "check": "NWB schema",
+                    }
+                    for error in schema_errors
+                )
+                if schema_errors:
+                    error_info["error_message"] = (
+                        f"NWB schema validation returned {len(schema_errors)} error(s)."
+                    )
+
+            validation_passed = hdf5_ok and errors_count == 0
 
             report_json = json.dumps(
                 {
@@ -449,12 +582,9 @@ class NwbExportHandler:
             # nwb_job_id (primary key); replace it rather than crashing on a
             # duplicate-key insert.
             job_pk = {"nwb_job_id": job["nwb_job_id"]}
-            if nwb_production.NwbExportValidation & job_pk:
-                (nwb_production.NwbExportValidation & job_pk).delete_quick()
-            nwb_production.NwbExportValidation.insert1(validation_record)
-
-            (nwb_production.NwbExportJob & job_pk).update1(
-                {"actual_file_size_gb": file_size_gb}
+            nwb_production.NwbExportValidation.insert1(validation_record, replace=True)
+            nwb_production.NwbExportJob.update1(
+                {**job_pk, "actual_file_size_gb": file_size_gb}
             )
 
             if not validation_passed:
@@ -541,7 +671,7 @@ class NwbExportHandler:
             # Record upload success. The neuroconv upload returns organised file
             # paths, not a DANDI asset id; leave dandi_asset_id NULL until a real
             # asset-id lookup is wired (TODO).
-            (nwb_production.NwbExportJobDandi & job_pk).update1(
+            nwb_production.NwbExportJobDandi.update1(
                 {**job_pk, "upload_status": 1, "upload_timestamp": datetime.now()}
             )
 
@@ -572,26 +702,20 @@ class NwbExportHandler:
             f"Updating job {job_key['nwb_job_id']}: status {old_status} -> {new_status}"
         )
 
-        # Update job status
-        (nwb_production.NwbExportJob & job_key).update1({"status_id": new_status})
+        now = datetime.now()
+        update = {**job_key, "status_id": new_status}
+        if NwbExportStatusEnum(new_status).is_terminal:
+            update["completion_timestamp"] = now
 
-        # Set completion timestamp if completed
-        if new_status == 3:  # COMPLETED
-            (nwb_production.NwbExportJob & job_key).update1(
-                {"completion_timestamp": datetime.now()}
-            )
-
-        # Log status change
         log_entry = {
             **job_key,
             "status_old": old_status,
             "status_new": new_status,
-            "status_timestamp": datetime.now(),
+            "status_timestamp": now,
+            "error_message": error_info.get("error_message"),
+            "error_exception": error_info.get("error_exception"),
         }
-
-        if error_info.get("error_message"):
-            log_entry["error_message"] = error_info["error_message"]
-        if error_info.get("error_exception"):
-            log_entry["error_exception"] = error_info["error_exception"]
-
-        nwb_production.NwbExportLogStatus.insert1(log_entry)
+        table = nwb_production.NwbExportJob
+        with table.connection.transaction:
+            table.update1(update)
+            nwb_production.NwbExportLogStatus.insert1(log_entry)

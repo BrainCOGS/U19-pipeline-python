@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import random
 import time
-from typing import Callable, TypeVar
+from typing import TypeVar
+from collections.abc import Callable
 
 from u19_pipeline.nwb_export.config import (
     DANDI_RETRY_BASE_DELAY_SECONDS,
@@ -52,11 +53,13 @@ def compute_backoff_delay(attempt: int) -> float:
         Delay in seconds (float, always positive).
     """
     base = DANDI_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
-    jitter_factor = random.uniform(1 - DANDI_RETRY_JITTER_FRACTION, 1 + DANDI_RETRY_JITTER_FRACTION)
+    jitter_factor = random.uniform(
+        1 - DANDI_RETRY_JITTER_FRACTION, 1 + DANDI_RETRY_JITTER_FRACTION
+    )
     return base * jitter_factor
 
 
-def execute_with_retry(fn: Callable[[], T]) -> T:
+def execute_with_retry[T](fn: Callable[[], T]) -> T:
     """Execute *fn* with up to ``MAX_DANDI_RETRIES`` retries on failure.
 
     Sleeps between retries using :func:`compute_backoff_delay`.
@@ -78,7 +81,7 @@ def execute_with_retry(fn: Callable[[], T]) -> T:
     for attempt in range(1, total_attempts + 1):
         try:
             return fn()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
             if attempt < total_attempts:
                 delay = compute_backoff_delay(attempt)

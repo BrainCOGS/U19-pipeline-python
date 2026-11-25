@@ -27,9 +27,9 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import List, Optional
 
-from neuroconv.tools.data_transfers import automatic_dandi_upload  # type: ignore  # noqa: E402
+
+from neuroconv.tools.data_transfers import automatic_dandi_upload  # type: ignore
 
 
 class DandiUploadClient:
@@ -67,7 +67,7 @@ class DandiUploadClient:
     # Public API
     # ------------------------------------------------------------------
 
-    def upload(self, local_path: str | Path) -> List[str]:
+    def upload(self, local_path: str | Path) -> list[str]:
         """Upload a local NWB file to DANDI and return the organized file paths.
 
         Neuroconv's ``automatic_dandi_upload`` organises NWB files into the
@@ -94,12 +94,14 @@ class DandiUploadClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _do_upload(self, path: Path) -> List[str]:
+    def _do_upload(self, path: Path) -> list[str]:
         """Copy *path* into a temp staging dir and call automatic_dandi_upload."""
-        env_var = self.SANDBOX_API_KEY_ENV_VAR if self._sandbox else self.API_KEY_ENV_VAR
+        env_var = (
+            self.SANDBOX_API_KEY_ENV_VAR if self._sandbox else self.API_KEY_ENV_VAR
+        )
         prev_value = os.environ.get(env_var)
 
-        staging_dir: Optional[Path] = None
+        staging_dir: Path | None = None
         try:
             # Set API key env var for the duration of the upload.
             os.environ[env_var] = self._api_key

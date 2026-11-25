@@ -16,7 +16,7 @@ class TestNwbExportConfigImport:
 
     def test_module_importable(self):
         """config module is importable from nwb_export package."""
-        from u19_pipeline.nwb_export import config  # noqa: F401
+        from u19_pipeline.nwb_export import config
 
     def test_max_dandi_retries_defined(self):
         """MAX_DANDI_RETRIES defined and matches FR-034 (must be 3)."""
@@ -66,13 +66,16 @@ class TestNwbExportConfigTypes:
 
     def test_max_dandi_retries_is_int(self):
         from u19_pipeline.nwb_export.config import MAX_DANDI_RETRIES
+
         assert isinstance(MAX_DANDI_RETRIES, int)
 
     def test_log_retention_days_is_int(self):
         from u19_pipeline.nwb_export.config import LOG_RETENTION_DAYS
+
         assert isinstance(LOG_RETENTION_DAYS, int)
 
     def test_required_metadata_fields_is_sequence(self):
         from u19_pipeline.nwb_export.config import REQUIRED_NWB_METADATA_FIELDS
+
         assert hasattr(REQUIRED_NWB_METADATA_FIELDS, "__iter__")
         assert hasattr(REQUIRED_NWB_METADATA_FIELDS, "__len__")

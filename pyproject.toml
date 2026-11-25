@@ -81,12 +81,14 @@ dev = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 # pytest 9 reads pyproject.toml natively and needs "args"-type options as TOML lists.
-addopts = ["-ra", "--showlocals", "--strict-config", "--strict-markers", "--import-mode=importlib", "--doctest-modules"]
+addopts = ["-ra", "--showlocals", "--strict-config", "--strict-markers", "--import-mode=importlib", "--doctest-modules", "-m", "not with_db"]
 xfail_strict = true
 log_level = "INFO"
 testpaths = ["tests"]
 pythonpath = ["tests"]
 markers = [
+    "no_db: NWB tests that run without a database",
+    "with_db: legacy NWB integration tests for the original schema; excluded from the current suite",
     "db: needs a DataJoint database (dj_local_conf.json + reachable server); skipped when unavailable, see tests/dbskip.py",
 ]
 filterwarnings = [

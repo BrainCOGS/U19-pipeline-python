@@ -22,6 +22,7 @@ class TestSubmitJobContractInputValidation:
             parse_modalities,
             ModalityParseError,
         )
+
         self.VALID_MODALITIES = VALID_MODALITIES
         self.parse = parse_modalities
         self.Error = ModalityParseError
@@ -74,6 +75,7 @@ class TestSubmitJobContractOutputShape:
     @pytest.fixture(autouse=True)
     def _import(self):
         from u19_pipeline.nwb_export.modality_service import parse_modalities
+
         self.parse = parse_modalities
 
     def test_behavior_output_tuple_fields(self):

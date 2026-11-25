@@ -16,18 +16,20 @@ class TestMetadataValidatorImport:
     """Module must be importable."""
 
     def test_module_importable(self):
-        from u19_pipeline.nwb_export.output_validation import metadata_validator  # noqa
+        from u19_pipeline.nwb_export.output_validation import metadata_validator
 
     def test_validate_callable(self):
         from u19_pipeline.nwb_export.output_validation.metadata_validator import (
             validate_metadata_completeness,
         )
+
         assert callable(validate_metadata_completeness)
 
     def test_MetadataValidationResult_importable(self):
         from u19_pipeline.nwb_export.output_validation.metadata_validator import (
             MetadataValidationResult,
         )
+
         assert MetadataValidationResult is not None
 
 
@@ -41,6 +43,7 @@ class TestValidateMetadataCompletenessPass:
             validate_metadata_completeness,
         )
         from u19_pipeline.nwb_export.config import REQUIRED_NWB_METADATA_FIELDS
+
         self.validate = validate_metadata_completeness
         self.required = REQUIRED_NWB_METADATA_FIELDS
 
@@ -72,6 +75,7 @@ class TestValidateMetadataCompletenessFail:
             validate_metadata_completeness,
         )
         from u19_pipeline.nwb_export.config import REQUIRED_NWB_METADATA_FIELDS
+
         self.validate = validate_metadata_completeness
         self.required = REQUIRED_NWB_METADATA_FIELDS
 
@@ -80,26 +84,26 @@ class TestValidateMetadataCompletenessFail:
         assert result.passed is False
 
     def test_missing_one_field_fails(self):
-        meta = {f: "v" for f in self.required}
-        missing_field = list(self.required)[0]
+        meta = dict.fromkeys(self.required, "v")
+        missing_field = next(iter(self.required))
         del meta[missing_field]
         result = self.validate(meta)
         assert result.passed is False
 
     def test_missing_fields_reported(self):
-        meta = {f: "v" for f in self.required}
+        meta = dict.fromkeys(self.required, "v")
         del meta["session_start_time"]
         result = self.validate(meta)
         assert "session_start_time" in result.missing_fields
 
     def test_none_value_for_required_field_fails(self):
-        meta = {f: "v" for f in self.required}
+        meta = dict.fromkeys(self.required, "v")
         meta["institution"] = None
         result = self.validate(meta)
         assert result.passed is False
 
     def test_empty_string_for_required_field_fails(self):
-        meta = {f: "v" for f in self.required}
+        meta = dict.fromkeys(self.required, "v")
         meta["experimenter"] = ""
         result = self.validate(meta)
         assert result.passed is False
@@ -116,6 +120,7 @@ class TestMetadataValidationResultShape:
             validate_metadata_completeness,
         )
         from u19_pipeline.nwb_export.config import REQUIRED_NWB_METADATA_FIELDS
+
         self.Result = MetadataValidationResult
         self.validate = validate_metadata_completeness
         self.required = REQUIRED_NWB_METADATA_FIELDS
@@ -133,7 +138,7 @@ class TestMetadataValidationResultShape:
         assert hasattr(result, "messages")
 
     def test_passed_is_bool(self):
-        result = self.validate({f: "v" for f in self.required})
+        result = self.validate(dict.fromkeys(self.required, "v"))
         assert isinstance(result.passed, bool)
 
     def test_missing_fields_is_list(self):

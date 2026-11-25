@@ -57,7 +57,9 @@ def _connect_dj() -> None:
 
         try_find_conf_file()
     except Exception:
-        pass  # may not exist in all environments
+        log.debug(
+            "Optional configuration or sync information unavailable", exc_info=True
+        )
 
     import datajoint as dj
 
@@ -67,7 +69,7 @@ def _connect_dj() -> None:
 # Shared conversion logic lives in u19_pipeline.nwb_export.conversion so the CLI
 # and the cronjob handler share one code path. Re-exported under the historical
 # private names to keep this module's internal references working.
-from u19_pipeline.nwb_export.conversion import (  # noqa: E402
+from u19_pipeline.nwb_export.conversion import (
     run_conversion_to_file as _run_conversion_to_file,
 )
 

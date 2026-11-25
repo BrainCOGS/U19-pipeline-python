@@ -14,14 +14,16 @@ class TestCredentialsCryptoImport:
     """Module must be importable from the nwb_export package."""
 
     def test_module_importable(self):
-        from u19_pipeline.nwb_export import credentials_crypto  # noqa: F401
+        from u19_pipeline.nwb_export import credentials_crypto
 
     def test_encrypt_callable(self):
         from u19_pipeline.nwb_export.credentials_crypto import encrypt_api_key
+
         assert callable(encrypt_api_key)
 
     def test_decrypt_callable(self):
         from u19_pipeline.nwb_export.credentials_crypto import decrypt_api_key
+
         assert callable(decrypt_api_key)
 
 
@@ -36,7 +38,11 @@ class TestAesGcmRoundTrip:
             "NWB_DANDI_KEY_HEX",
             "0" * 64,  # 32 zero bytes — valid AES-256 key for tests
         )
-        from u19_pipeline.nwb_export.credentials_crypto import encrypt_api_key, decrypt_api_key
+        from u19_pipeline.nwb_export.credentials_crypto import (
+            encrypt_api_key,
+            decrypt_api_key,
+        )
+
         self.encrypt = encrypt_api_key
         self.decrypt = decrypt_api_key
 
@@ -83,7 +89,11 @@ class TestMissingEnvVar:
     @pytest.fixture(autouse=True)
     def _clear_env(self, monkeypatch):
         monkeypatch.delenv("NWB_DANDI_KEY_HEX", raising=False)
-        from u19_pipeline.nwb_export.credentials_crypto import encrypt_api_key, decrypt_api_key
+        from u19_pipeline.nwb_export.credentials_crypto import (
+            encrypt_api_key,
+            decrypt_api_key,
+        )
+
         self.encrypt = encrypt_api_key
         self.decrypt = decrypt_api_key
 

@@ -1,6 +1,6 @@
 # NWB Export Handler Implementation Guide
 
-**Status**: Feature Specification & TDD Complete  
+**Status**: Feature Specification & TDD Complete
 **Constitution Compliance**: Enum-based states, DataJoint-first, Python 3.12+, TDD tests first
 
 ## Architecture Overview
@@ -99,7 +99,7 @@ specs/001-nwb-export-handler/
 ## Implementation Checklist
 
 - [x] **Feature Specification**: Comprehensive spec with 7 user stories
-- [x] **Test Suite**: TDD tests defining all required functionality  
+- [x] **Test Suite**: TDD tests defining all required functionality
 - [x] **Enum Definitions**: Status, modality, upload status enums
 - [x] **DataJoint Schema**: Enhanced schema with DANDI support
 - [x] **Public API**: Job submission, status updates, credential management
@@ -136,27 +136,31 @@ specs/001-nwb-export-handler/
 ```python
 # User submits job
 job_id = submit_nwb_export_job(
-    session_key={'subject_id': 'mouse001', 'session_date': '2026-02-24', 'session_number': 1},
-    job_name='export_towers_with_ephys_imaging',
-    user_id='user123',
+    session_key={
+        "subject_id": "mouse001",
+        "session_date": "2026-02-24",
+        "session_number": 1,
+    },
+    job_name="export_towers_with_ephys_imaging",
+    user_id="user123",
     modalities=[
-        ('behavior', 'towers_task', None),
-        ('ephys', 'processed', [0, 1, 2]),  # 3 probes
-        ('imaging', 'processed', [0, 1])     # 2 FOVs
+        ("behavior", "towers_task", None),
+        ("ephys", "processed", [0, 1, 2]),  # 3 probes
+        ("imaging", "processed", [0, 1]),  # 2 FOVs
     ],
-    output_filepath='/data/nwb/mouse001_2026-02-24_export.nwb',
-    estimated_size_gb=2.5
+    output_filepath="/data/nwb/mouse001_2026-02-24_export.nwb",
+    estimated_size_gb=2.5,
 )
 
 # Cronjob picks it up and processes through phases
-# Status transitions: QUEUED → DATA_VALIDATION → PROCESSING → VALIDATION → 
+# Status transitions: QUEUED → DATA_VALIDATION → PROCESSING → VALIDATION →
 #                    [check DANDI creds] →
 #                    (if both provided): UPLOAD → COMPLETED
 #                    (if missing): COMPLETED
 
 # User can query status
-status, status_name = get_job_status({'nwb_job_id': job_id})
-history = get_job_history({'nwb_job_id': job_id})
+status, status_name = get_job_status({"nwb_job_id": job_id})
+history = get_job_history({"nwb_job_id": job_id})
 
 # If job fails, error logged with traceback
 # User can examine errors and retry after fixing data

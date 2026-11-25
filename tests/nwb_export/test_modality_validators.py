@@ -96,12 +96,19 @@ class TestBehaviorValidatorLogic:
 class TestEphysValidatorLogic:
     """validate_ephys_data_exists decision paths."""
 
-    def _call(self, recording_exists: bool, probes_exist: bool, probe_numbers: list | None = None):
+    def _call(
+        self,
+        recording_exists: bool,
+        probes_exist: bool,
+        probe_numbers: list | None = None,
+    ):
         from u19_pipeline.nwb_production_utils import validate_ephys_data_exists
 
         probe_numbers = probe_numbers or [0]
 
-        recording_mock = _make_dj_table([{"recording_id": 1}] if recording_exists else [])
+        recording_mock = _make_dj_table(
+            [{"recording_id": 1}] if recording_exists else []
+        )
         probe_mock = _make_dj_table([{"insertion_number": 0}] if probes_exist else [])
 
         rec_m = MagicMock()

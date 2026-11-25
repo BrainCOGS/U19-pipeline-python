@@ -3,8 +3,8 @@
 ## Summary
 This feature implements a comprehensive NWB export pipeline supporting behavior, electrophysiology (raw or processed), and imaging (raw or processed) data conversion to NWB 2.0 format with optional DANDI upload.
 
-**Constitution Compliance**: ✅ 100% (Principles I-V)  
-**Development Approach**: ✅ TDD (tests written first, locally approved)  
+**Constitution Compliance**: ✅ 100% (Principles I-V)
+**Development Approach**: ✅ TDD (tests written first, locally approved)
 **Status**: ✅ Specification & Scaffolding Complete | ⏳ Implementation In Progress
 
 ---
@@ -299,7 +299,7 @@ For questions about:
 
 ---
 
-**Branch**: `001-nwb-export-handler`  
-**Created**: 2026-02-24  
-**Status**: Ready for implementation phase  
+**Branch**: `001-nwb-export-handler`
+**Created**: 2026-02-24
+**Status**: Ready for implementation phase
 **Next Review**: After NWB conversion integration

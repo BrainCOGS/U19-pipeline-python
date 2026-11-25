@@ -27,7 +27,7 @@ class TestNwbExportStatusEnum:
             "PROCESSING",
             "VALIDATION",
             "UPLOAD",
-            "UPLOADED",       # Added by I2 fix — must exist
+            "UPLOADED",  # Added by I2 fix — must exist
             "COMPLETED",
             "FAILED",
         }
@@ -75,7 +75,9 @@ class TestNwbExportStatusEnum:
         """QUEUED.value < DATA_VALIDATION.value (pipeline progression)."""
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 
-        assert NwbExportStatusEnum.QUEUED.value < NwbExportStatusEnum.DATA_VALIDATION.value
+        assert (
+            NwbExportStatusEnum.QUEUED.value < NwbExportStatusEnum.DATA_VALIDATION.value
+        )
 
     def test_uploaded_between_upload_and_completed(self):
         """UPLOAD.value < UPLOADED.value < COMPLETED.value preserves pipeline order."""
@@ -118,7 +120,13 @@ class TestDataModalityTypeEnum:
         """Enum covers all modalities from FR-001."""
         from u19_pipeline.nwb_export_enums import DataModalityTypeEnum
 
-        required = {"BEHAVIOR", "EPHYS_RAW", "EPHYS_PROCESSED", "IMAGING_RAW", "IMAGING_PROCESSED"}
+        required = {
+            "BEHAVIOR",
+            "EPHYS_RAW",
+            "EPHYS_PROCESSED",
+            "IMAGING_RAW",
+            "IMAGING_PROCESSED",
+        }
         actual = {m.name for m in DataModalityTypeEnum}
         missing = required - actual
         assert not missing, f"Missing modality types: {missing}"

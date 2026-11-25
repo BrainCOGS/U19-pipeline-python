@@ -11,7 +11,8 @@ Tests verify:
 from __future__ import annotations
 
 import time
-from typing import Callable, List
+
+from collections.abc import Callable
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -21,10 +22,11 @@ class TestRetryPolicyImport:
     """retry_policy module must be importable."""
 
     def test_module_importable(self):
-        from u19_pipeline.nwb_export.dandi import retry_policy  # noqa
+        from u19_pipeline.nwb_export.dandi import retry_policy
 
     def test_execute_with_retry_callable(self):
         from u19_pipeline.nwb_export.dandi.retry_policy import execute_with_retry
+
         assert callable(execute_with_retry)
 
 
@@ -35,6 +37,7 @@ class TestRetryPolicySuccess:
     @pytest.fixture(autouse=True)
     def _import(self):
         from u19_pipeline.nwb_export.dandi.retry_policy import execute_with_retry
+
         self.execute = execute_with_retry
 
     def test_success_on_first_attempt_returns_result(self):
@@ -83,6 +86,7 @@ class TestRetryPolicyFailure:
     def _import(self):
         from u19_pipeline.nwb_export.dandi.retry_policy import execute_with_retry
         from u19_pipeline.nwb_export.errors import NwbDandiUploadError
+
         self.execute = execute_with_retry
         self.Error = NwbDandiUploadError
 
@@ -95,6 +99,7 @@ class TestRetryPolicyFailure:
     def test_call_count_equals_max_retries_plus_one(self, monkeypatch):
         """Should attempt exactly MAX_DANDI_RETRIES + 1 = 4 times (1 initial + 3 retries)."""
         from u19_pipeline.nwb_export.config import MAX_DANDI_RETRIES
+
         monkeypatch.setattr("time.sleep", lambda _: None)
         fn = MagicMock(side_effect=RuntimeError("always fails"))
         with pytest.raises(self.Error):
@@ -103,6 +108,7 @@ class TestRetryPolicyFailure:
 
     def test_error_carries_attempt_count(self, monkeypatch):
         from u19_pipeline.nwb_export.config import MAX_DANDI_RETRIES
+
         monkeypatch.setattr("time.sleep", lambda _: None)
         fn = MagicMock(side_effect=RuntimeError("fail"))
         with pytest.raises(self.Error) as exc_info:
@@ -122,6 +128,7 @@ class TestRetryPolicyBackoff:
             DANDI_RETRY_BASE_DELAY_SECONDS,
             DANDI_RETRY_JITTER_FRACTION,
         )
+
         self.compute = compute_backoff_delay
         self.base = DANDI_RETRY_BASE_DELAY_SECONDS
         self.jitter = DANDI_RETRY_JITTER_FRACTION
@@ -140,7 +147,7 @@ class TestRetryPolicyBackoff:
 
     def test_delay_within_expected_range_attempt_1(self):
         """attempt=1: base_delay * 2^0 = 2.0 ± jitter (30%)."""
-        expected = self.base * (2 ** 0)  # 2.0s
+        expected = self.base * (2**0)  # 2.0s
         low = expected * (1 - self.jitter)
         high = expected * (1 + self.jitter)
         delay = self.compute(attempt=1)
@@ -148,7 +155,7 @@ class TestRetryPolicyBackoff:
 
     def test_delay_within_expected_range_attempt_2(self):
         """attempt=2: base_delay * 2^1 = 4.0 ± jitter."""
-        expected = self.base * (2 ** 1)
+        expected = self.base * (2**1)
         low = expected * (1 - self.jitter)
         high = expected * (1 + self.jitter)
         # compute many to account for randomness
@@ -159,4 +166,5 @@ class TestRetryPolicyBackoff:
 
     def test_compute_backoff_delay_callable(self):
         from u19_pipeline.nwb_export.dandi.retry_policy import compute_backoff_delay
+
         assert callable(compute_backoff_delay)

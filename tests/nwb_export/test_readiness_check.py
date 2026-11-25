@@ -14,7 +14,7 @@ class TestEphysReadinessResultShape:
     """EphysReadinessResult must satisfy the output contract schema."""
 
     def test_importable(self):
-        from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult  # noqa
+        from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
 
     def test_has_all_output_contract_fields(self):
         from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
@@ -40,28 +40,43 @@ class TestEphysReadinessResultShape:
 
     def test_imaging_checked_always_false_default(self):
         from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
+
         result = EphysReadinessResult(
-            subject_exists=True, ephys_session_count=2,
-            required_date_present=True, required_session_date="2024-07-22",
-            ephys_session_dates=[], passed=True, messages=[],
+            subject_exists=True,
+            ephys_session_count=2,
+            required_date_present=True,
+            required_session_date="2024-07-22",
+            ephys_session_dates=[],
+            passed=True,
+            messages=[],
         )
         assert result.imaging_checked is False
 
     def test_messages_is_list(self):
         from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
+
         result = EphysReadinessResult(
-            subject_exists=True, ephys_session_count=2,
-            required_date_present=True, required_session_date="2024-07-22",
-            ephys_session_dates=[], passed=True, messages=["m1", "m2"],
+            subject_exists=True,
+            ephys_session_count=2,
+            required_date_present=True,
+            required_session_date="2024-07-22",
+            ephys_session_dates=[],
+            passed=True,
+            messages=["m1", "m2"],
         )
         assert isinstance(result.messages, list)
 
     def test_ephys_session_dates_is_list(self):
         from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
+
         result = EphysReadinessResult(
-            subject_exists=True, ephys_session_count=1,
-            required_date_present=True, required_session_date="2024-07-22",
-            ephys_session_dates=["2024-07-22"], passed=True, messages=[],
+            subject_exists=True,
+            ephys_session_count=1,
+            required_date_present=True,
+            required_session_date="2024-07-22",
+            ephys_session_dates=["2024-07-22"],
+            passed=True,
+            messages=[],
         )
         assert isinstance(result.ephys_session_dates, list)
 
@@ -70,8 +85,13 @@ class TestEphysReadinessResultShape:
 class TestCheckEphysReadinessLogic:
     """Pass/fail logic of check_ephys_readiness with mocked DataJoint queries."""
 
-    def _call(self, subject_exists: bool, dates: list[str], required_date: str,
-              min_sessions: int = 2):
+    def _call(
+        self,
+        subject_exists: bool,
+        dates: list[str],
+        required_date: str,
+        min_sessions: int = 2,
+    ):
         from u19_pipeline.nwb_export.readiness_check import check_ephys_readiness
 
         subject_mock = MagicMock()
@@ -96,22 +116,38 @@ class TestCheckEphysReadinessLogic:
         rec_module = MagicMock()
         rec_module.Recording.EphysSession = ephs_session_mock
 
-        with patch("u19_pipeline.nwb_export.readiness_check.subj_module", subj_module, create=True), \
-             patch("u19_pipeline.nwb_export.readiness_check.acquisition", acq_module, create=True), \
-             patch("u19_pipeline.nwb_export.readiness_check.recording", rec_module, create=True):
+        with (
+            patch(
+                "u19_pipeline.nwb_export.readiness_check.subj_module",
+                subj_module,
+                create=True,
+            ),
+            patch(
+                "u19_pipeline.nwb_export.readiness_check.acquisition",
+                acq_module,
+                create=True,
+            ),
+            patch(
+                "u19_pipeline.nwb_export.readiness_check.recording",
+                rec_module,
+                create=True,
+            ),
+        ):
             # Need to patch the actual import inside the function
             import u19_pipeline.nwb_export.readiness_check as rc_mod
+
             original_check = rc_mod.check_ephys_readiness
 
             # Directly build result to test business logic separately
             from u19_pipeline.nwb_export.readiness_check import EphysReadinessResult
+
             messages = []
             required_date_str = str(required_date)
             date_strs = sorted(str(d) for d in dates)
             count = len(date_strs)
             required_present = required_date_str in date_strs
 
-            passed = (subject_exists and count >= min_sessions and required_present)
+            passed = subject_exists and count >= min_sessions and required_present
 
             return EphysReadinessResult(
                 subject_exists=subject_exists,

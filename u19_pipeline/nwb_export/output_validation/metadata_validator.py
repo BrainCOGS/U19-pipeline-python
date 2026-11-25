@@ -18,7 +18,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from u19_pipeline.nwb_export.config import REQUIRED_NWB_METADATA_FIELDS
 
@@ -38,8 +38,8 @@ class MetadataValidationResult:
     """
 
     passed: bool
-    missing_fields: List[str]
-    messages: List[str] = field(default_factory=list)
+    missing_fields: list[str]
+    messages: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ class MetadataValidationResult:
 
 
 def validate_metadata_completeness(
-    metadata: Dict[str, Any],
+    metadata: dict[str, Any],
 ) -> MetadataValidationResult:
     """Check that all required NWB metadata fields are present and non-empty.
 
@@ -60,8 +60,8 @@ def validate_metadata_completeness(
         :class:`MetadataValidationResult` with ``passed``, ``missing_fields``,
         and ``messages``.
     """
-    missing: List[str] = []
-    messages: List[str] = []
+    missing: list[str] = []
+    messages: list[str] = []
 
     for field_name in REQUIRED_NWB_METADATA_FIELDS:
         value = metadata.get(field_name)

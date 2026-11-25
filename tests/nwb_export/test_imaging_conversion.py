@@ -38,7 +38,7 @@ def imaging_root(tmp_path, monkeypatch):
     monkeypatch.setitem(
         dj.config,
         "custom",
-        {**dj.config.get("custom", {}), "imaging_root_data_dir": [str(tmp_path)]},
+        {**(dj.config.get("custom") or {}), "imaging_root_data_dir": [str(tmp_path)]},
     )
     return tmp_path
 
@@ -245,7 +245,7 @@ def test_converter_metadata_keeps_species_and_gives_the_dob_a_time_zone():
         {
             "experimenter": ["Doe, Jane"],
             "subject_sex": "F",
-            "subject_dob": datetime(2026, 1, 2),
+            "subject_dob": datetime(2026, 1, 2),  # noqa: DTZ001 - DB dates are naive
         }
     )
     assert out["experimenter"] == ["Doe, Jane"]

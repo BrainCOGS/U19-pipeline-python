@@ -37,7 +37,7 @@ _NONCE_BYTES = 12  # 96-bit nonce — recommended for AES-GCM
 _KEY_BYTES = 32  # 256 bits
 
 # Per-encryption AAD is omitted here; the ciphertext is self-contained.
-_AAD: Optional[bytes] = None
+_AAD: bytes | None = None
 
 
 # -------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def _get_master_key() -> bytes:
     """
     hex_key = os.environ.get(_ENV_VAR)
     if not hex_key:
-        raise EnvironmentError(
+        raise OSError(
             f"AES-256-GCM master key not set. "
             f"Export environment variable '{_ENV_VAR}' "
             f"as 64 hex characters (256-bit key)."
@@ -61,10 +61,10 @@ def _get_master_key() -> bytes:
     try:
         raw = bytes.fromhex(hex_key)
     except ValueError as exc:
-        raise EnvironmentError(f"'{_ENV_VAR}' is not valid hex: {exc}") from exc
+        raise OSError(f"'{_ENV_VAR}' is not valid hex: {exc}") from exc
 
     if len(raw) != _KEY_BYTES:
-        raise EnvironmentError(
+        raise OSError(
             f"'{_ENV_VAR}' must encode exactly {_KEY_BYTES} bytes ({_KEY_BYTES * 2} hex chars). Got {len(raw)} bytes."
         )
     return raw
@@ -75,7 +75,7 @@ def _get_master_key() -> bytes:
 # -------------------------------------------------------------------------
 
 
-def encrypt_api_key(plaintext: Optional[str]) -> Optional[str]:
+def encrypt_api_key(plaintext: str | None) -> str | None:
     """Encrypt *plaintext* with AES-256-GCM.
 
     Args:
@@ -99,7 +99,7 @@ def encrypt_api_key(plaintext: Optional[str]) -> Optional[str]:
     return base64.b64encode(blob).decode()
 
 
-def decrypt_api_key(ciphertext_b64: Optional[str]) -> Optional[str]:
+def decrypt_api_key(ciphertext_b64: str | None) -> str | None:
     """Decrypt a blob previously produced by :func:`encrypt_api_key`.
 
     Args:

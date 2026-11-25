@@ -26,26 +26,25 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Set
 
 from u19_pipeline.nwb_export.errors import NwbStatusTransitionError
-from u19_pipeline.nwb_export_enums import NwbExportStatusEnum as _S
+from u19_pipeline.nwb_export_enums import NwbExportStatusEnum as Status
 
 # ---------------------------------------------------------------------------
 # Canonical transition table
 # ---------------------------------------------------------------------------
 
-ALLOWED_TRANSITIONS: dict[_S, Set[_S]] = {
-    _S.QUEUED: {_S.DATA_VALIDATION},
-    _S.DATA_VALIDATION: {_S.PROCESSING, _S.FAILED},
-    _S.PROCESSING: {_S.VALIDATION, _S.FAILED},
-    _S.VALIDATION: {_S.COMPLETED, _S.UPLOAD, _S.FAILED},
-    _S.UPLOAD: {_S.UPLOADED, _S.FAILED},
-    _S.UPLOADED: {_S.COMPLETED},
+ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
+    Status.QUEUED: {Status.DATA_VALIDATION},
+    Status.DATA_VALIDATION: {Status.PROCESSING, Status.FAILED},
+    Status.PROCESSING: {Status.VALIDATION, Status.FAILED},
+    Status.VALIDATION: {Status.COMPLETED, Status.UPLOAD, Status.FAILED},
+    Status.UPLOAD: {Status.UPLOADED, Status.FAILED},
+    Status.UPLOADED: {Status.COMPLETED},
     # Terminal states — explicitly present with empty sets so they are not
     # accidentally omitted from the map.
-    _S.COMPLETED: set(),
-    _S.FAILED: set(),
+    Status.COMPLETED: set(),
+    Status.FAILED: set(),
 }
 
 
@@ -54,12 +53,12 @@ ALLOWED_TRANSITIONS: dict[_S, Set[_S]] = {
 # ---------------------------------------------------------------------------
 
 
-def is_valid_transition(from_state: _S, to_state: _S) -> bool:
+def is_valid_transition(from_state: Status, to_state: Status) -> bool:
     """Return True if transitioning from *from_state* to *to_state* is allowed."""
     return to_state in ALLOWED_TRANSITIONS.get(from_state, set())
 
 
-def assert_valid_transition(from_state: _S, to_state: _S) -> None:
+def assert_valid_transition(from_state: Status, to_state: Status) -> None:
     """Raise :exc:`NwbStatusTransitionError` if the transition is not allowed.
 
     Args:

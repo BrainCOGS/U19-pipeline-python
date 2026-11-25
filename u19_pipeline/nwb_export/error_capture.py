@@ -23,13 +23,13 @@ Usage::
 from __future__ import annotations
 
 import traceback
-from typing import Dict, Optional
+
 
 _MAX_TRACEBACK_CHARS = 4096  # matches NwbExportLogStatus.error_exception column width
 _MAX_MESSAGE_CHARS = 512  # matches NwbExportLogStatus.error_message column width
 
 
-def capture_exception(exc: BaseException) -> Dict[str, Optional[str]]:
+def capture_exception(exc: BaseException) -> dict[str, str | None]:
     """Convert an exception into a storable error-info dict.
 
     Args:

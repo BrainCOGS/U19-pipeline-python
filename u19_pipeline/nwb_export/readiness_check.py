@@ -27,7 +27,7 @@ Usage (with_db)::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+
 
 # ---------------------------------------------------------------------------
 # Output contract type
@@ -53,10 +53,10 @@ class EphysReadinessResult:
     ephys_session_count: int
     required_date_present: bool
     required_session_date: str
-    ephys_session_dates: List[str]
+    ephys_session_dates: list[str]
     imaging_checked: bool = False
     passed: bool = False
-    messages: List[str] = field(default_factory=list)
+    messages: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ def check_ephys_readiness(
     from u19_pipeline import acquisition, recording
     from u19_pipeline import subject as subj_module  # type: ignore
 
-    messages: List[str] = []
+    messages: list[str] = []
 
     # ------------------------------------------------------------------
     # 1. Subject existence
@@ -97,13 +97,16 @@ def check_ephys_readiness(
     if subject_exists:
         messages.append(f"PASS — subject '{subject_fullname}' found in database")
     else:
-        messages.append(f"FAIL — subject '{subject_fullname}' not found in subject.Subject")
+        messages.append(
+            f"FAIL — subject '{subject_fullname}' not found in subject.Subject"
+        )
 
     # ------------------------------------------------------------------
     # 2. Ephys session count
     # ------------------------------------------------------------------
     ephys_rows = (
-        acquisition.Session * recording.Recording.EphysSession & {"subject_fullname": subject_fullname}
+        acquisition.Session * recording.Recording.EphysSession
+        & {"subject_fullname": subject_fullname}
     ).fetch("session_date", as_dict=False)
 
     # session_date may arrive as datetime.date objects; normalise to ISO string
@@ -111,9 +114,13 @@ def check_ephys_readiness(
     ephys_session_count = len(ephys_session_dates)
 
     if ephys_session_count >= min_ephys_sessions:
-        messages.append(f"PASS — {ephys_session_count} ephys session(s) found (required ≥ {min_ephys_sessions})")
+        messages.append(
+            f"PASS — {ephys_session_count} ephys session(s) found (required ≥ {min_ephys_sessions})"
+        )
     else:
-        messages.append(f"FAIL — only {ephys_session_count} ephys session(s) found (required ≥ {min_ephys_sessions})")
+        messages.append(
+            f"FAIL — only {ephys_session_count} ephys session(s) found (required ≥ {min_ephys_sessions})"
+        )
 
     # ------------------------------------------------------------------
     # 3. Required date inclusion
@@ -131,7 +138,11 @@ def check_ephys_readiness(
     # ------------------------------------------------------------------
     # Overall pass/fail
     # ------------------------------------------------------------------
-    passed = subject_exists and ephys_session_count >= min_ephys_sessions and required_date_present
+    passed = (
+        subject_exists
+        and ephys_session_count >= min_ephys_sessions
+        and required_date_present
+    )
 
     return EphysReadinessResult(
         subject_exists=subject_exists,

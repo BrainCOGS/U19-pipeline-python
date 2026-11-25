@@ -250,16 +250,19 @@ clock — that is exactly what `frame_times_on_behavior_clock` computes:
 
 ```python
 from u19_pipeline.utils.imaging_behavior_sync import (
-    sync_imaging_behavior, load_behavior_log, frame_times_on_behavior_clock)
+    sync_imaging_behavior,
+    load_behavior_log,
+    frame_times_on_behavior_clock,
+)
 from neuroconv.datainterfaces import ScanImageImagingInterface
 from pynwb import TimeSeries
 
-log  = load_behavior_log(behavior_mat)
+log = load_behavior_log(behavior_mat)
 sync = sync_imaging_behavior(tif_files, log)
 timestamps, slope, offset, res = frame_times_on_behavior_clock(sync, log)
 
 interface = ScanImageImagingInterface(file_path=tif_files[0])
-interface.set_aligned_timestamps(timestamps)     # imaging now on ViRMEn clock
+interface.set_aligned_timestamps(timestamps)  # imaging now on ViRMEn clock
 nwbfile = interface.create_nwbfile(metadata=...)  # TwoPhotonSeries w/ timestamps
 
 # trials table straight from the spans / behavior log

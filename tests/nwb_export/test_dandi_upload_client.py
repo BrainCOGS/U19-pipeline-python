@@ -21,6 +21,7 @@ pytestmark = pytest.mark.no_db
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_nwb_file(tmp_path: Path, name: str = "output.nwb") -> Path:
     """Create a minimal (empty) NWB stub file for testing."""
     p = tmp_path / name
@@ -31,6 +32,7 @@ def _make_nwb_file(tmp_path: Path, name: str = "output.nwb") -> Path:
 # ---------------------------------------------------------------------------
 # Constructor validation
 # ---------------------------------------------------------------------------
+
 
 class TestDandiUploadClientInit:
     def test_valid_construction(self):
@@ -64,6 +66,7 @@ class TestDandiUploadClientInit:
 # upload() — file-not-found guard
 # ---------------------------------------------------------------------------
 
+
 class TestUploadFileNotFound:
     def test_raises_file_not_found_for_missing_path(self):
         client = DandiUploadClient(api_key="k", dandiset_id="000123")
@@ -74,6 +77,7 @@ class TestUploadFileNotFound:
 # ---------------------------------------------------------------------------
 # upload() — happy path
 # ---------------------------------------------------------------------------
+
 
 class TestUploadHappyPath:
     def test_returns_organised_paths_list(self, tmp_path):
@@ -110,7 +114,9 @@ class TestUploadHappyPath:
             "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
             return_value=[],
         ) as mock_upload:
-            client = DandiUploadClient(api_key="key", dandiset_id="000123", sandbox=True)
+            client = DandiUploadClient(
+                api_key="key", dandiset_id="000123", sandbox=True
+            )
             client.upload(nwb_file)
 
         call_kwargs = mock_upload.call_args.kwargs
@@ -146,7 +152,9 @@ class TestUploadHappyPath:
             "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
             side_effect=_capture,
         ):
-            client = DandiUploadClient(api_key="sandbox-key", dandiset_id="000123", sandbox=True)
+            client = DandiUploadClient(
+                api_key="sandbox-key", dandiset_id="000123", sandbox=True
+            )
             client.upload(nwb_file)
 
         assert captured_env.get("DANDI_SANDBOX_API_KEY") == "sandbox-key"
@@ -185,6 +193,7 @@ class TestUploadHappyPath:
 # upload() — error handling
 # ---------------------------------------------------------------------------
 
+
 class TestUploadErrors:
     def test_neuroconv_exception_wrapped_in_runtime_error(self, tmp_path):
         nwb_file = _make_nwb_file(tmp_path)
@@ -214,13 +223,20 @@ class TestUploadErrors:
     def test_import_error_raises_runtime_error(self, tmp_path):
         nwb_file = _make_nwb_file(tmp_path)
 
-        with patch.dict("sys.modules", {"neuroconv": None, "neuroconv.tools": None,
-                                         "neuroconv.tools.data_transfers": None}):
-            # Re-import triggers ImportError inside _do_upload
-            with patch(
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "neuroconv": None,
+                    "neuroconv.tools": None,
+                    "neuroconv.tools.data_transfers": None,
+                },
+            ),
+            patch(
                 "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
                 side_effect=ImportError("no neuroconv"),
-            ):
-                client = DandiUploadClient(api_key="key", dandiset_id="000123")
-                with pytest.raises(RuntimeError, match="neuroconv"):
-                    client.upload(nwb_file)
+            ),
+        ):
+            client = DandiUploadClient(api_key="key", dandiset_id="000123")
+            with pytest.raises(RuntimeError, match="neuroconv"):
+                client.upload(nwb_file)

@@ -21,11 +21,13 @@ class TestModalityParseError:
             ModalityParseError,
             parse_modalities,
         )
+
         self.Error = ModalityParseError
         self.parse = parse_modalities
 
     def test_error_is_subclass_of_nwb_export_error(self):
         from u19_pipeline.nwb_export.errors import NwbExportError
+
         assert issubclass(self.Error, NwbExportError)
 
     def test_error_carries_invalid_value(self):
@@ -44,7 +46,10 @@ class TestModalityParseError:
     def test_empty_list_message_is_clear(self):
         with pytest.raises(self.Error) as exc_info:
             self.parse([])
-        assert "empty" in str(exc_info.value).lower() or "no modalities" in str(exc_info.value).lower()
+        assert (
+            "empty" in str(exc_info.value).lower()
+            or "no modalities" in str(exc_info.value).lower()
+        )
 
 
 @pytest.mark.no_db
@@ -54,6 +59,7 @@ class TestModalityNormalization:
     @pytest.fixture(autouse=True)
     def _import(self):
         from u19_pipeline.nwb_export.modality_service import parse_modalities
+
         self.parse = parse_modalities
 
     def test_leading_trailing_whitespace_stripped(self):
@@ -83,6 +89,7 @@ class TestModalityDeduplication:
     @pytest.fixture(autouse=True)
     def _import(self):
         from u19_pipeline.nwb_export.modality_service import parse_modalities
+
         self.parse = parse_modalities
 
     def test_exact_duplicates_deduplicated(self):
@@ -109,7 +116,11 @@ class TestParsedModalityAttributes:
 
     @pytest.fixture(autouse=True)
     def _import(self):
-        from u19_pipeline.nwb_export.modality_service import parse_modalities, ParsedModality
+        from u19_pipeline.nwb_export.modality_service import (
+            parse_modalities,
+            ParsedModality,
+        )
+
         self.parse = parse_modalities
         self.ParsedModality = ParsedModality
 

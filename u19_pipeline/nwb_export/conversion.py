@@ -121,13 +121,13 @@ def _recording_restriction(key: dict):
     """A ``recording_id`` restriction for ``key``: kept as is, or found from an ``acquisition.Session`` key."""
     if "recording_id" in key:
         return [{"recording_id": key["recording_id"]}]
-    from u19_pipeline.nwb_production_utils import recording_ids_for_session  # noqa: PLC0415
+    from u19_pipeline.nwb_production_utils import recording_ids_for_session
 
     return [{"recording_id": rid} for rid in recording_ids_for_session(dict(key))]
 
 
 def _data_roots(config_key: str) -> list:
-    import datajoint as dj  # noqa: PLC0415
+    import datajoint as dj
 
     roots = dj.config.get("custom", {}).get(config_key, None) or []
     return [roots] if isinstance(roots, (str, Path)) else list(roots)
@@ -160,7 +160,7 @@ def resolve_imaging_tiffs(key: dict, fov_numbers: list | None = None) -> list[Pa
         ValueError: If no imaging recording, or more than one, matches; or ``fov_numbers`` names a subset.
         FileNotFoundError: If a listed TIFF is missing under every imaging root.
     """
-    from u19_pipeline import imaging_pipeline  # noqa: PLC0415
+    from u19_pipeline import imaging_pipeline
 
     restriction = _recording_restriction(key)
     rows = (
@@ -248,7 +248,7 @@ def resolve_suite2p_dirs(
         ValueError: If a split has no finished run, or several and ``paramset_idx`` is not given.
         FileNotFoundError: If an output folder is missing under every imaging root.
     """
-    from u19_pipeline.imaging_pipeline import imaging_element  # noqa: PLC0415
+    from u19_pipeline.imaging_pipeline import imaging_element
 
     tasks = (
         imaging_element.ProcessingTask
@@ -300,8 +300,8 @@ def imaging_data_kind(export_params: dict) -> str | None:
 
 def _number_list(raw) -> list:
     """A fov_numbers value (JSON or Python list text, a list, or NULL) as a list."""
-    import ast  # noqa: PLC0415
-    import json  # noqa: PLC0415
+    import ast
+    import json
 
     if raw is None:
         return []
@@ -325,7 +325,7 @@ def with_imaging_modality(export_params: dict, modalities: list) -> dict:
     unless export_parameters already set them. Raw and processed together would
     be two NWB files, and a job has one output path, so that is refused.
     """
-    from u19_pipeline.nwb_export_enums import DataModalityTypeEnum  # noqa: PLC0415
+    from u19_pipeline.nwb_export_enums import DataModalityTypeEnum
 
     imaging = [m for m in modalities if m.get("modality_name") == "imaging"]
     if not imaging:
@@ -436,7 +436,7 @@ def query_metadata(session_key: dict) -> dict:
 
         subject_fullname = session_key["subject_fullname"]
         sub_info = (
-            subject.Subject() * lab.User() & f"subject_fullname = '{subject_fullname}'"
+            subject.Subject() * lab.User() & {"subject_fullname": subject_fullname}
         ).fetch1()
 
         owner_full = sub_info.get("full_name", sub_info.get("user_id", ""))
@@ -473,7 +473,9 @@ def query_metadata(session_key: dict) -> dict:
 
             result["sync_timestamps"] = np.array(sync_rows[0]["sync_timestamps"])
     except Exception:
-        pass  # BehaviorSync is optional
+        log.debug(
+            "Optional configuration or sync information unavailable", exc_info=True
+        )
 
     return result
 
@@ -490,7 +492,7 @@ def converter_metadata(metadata: dict) -> dict:
     and a whole ``subject`` dict). Only what the DB knows is set; the rest keeps
     the converter's placeholders.
     """
-    from zoneinfo import ZoneInfo  # noqa: PLC0415
+    from zoneinfo import ZoneInfo
 
     out: dict = {}
     if metadata.get("experimenter"):
@@ -529,11 +531,11 @@ def run_imaging_conversion(
     ``suite2p_dirs``). ``allow_incomplete_imaging`` lets the converter take TIFFs
     it can't show are the whole acquisition, and the file then says so.
     """
-    import json  # noqa: PLC0415
-    import shutil  # noqa: PLC0415
+    import json
+    import shutil
 
-    from tank_lab_to_nwb.imaging.convert import conversion_report, convert_session  # noqa: PLC0415
-    from tank_lab_to_nwb.imaging.suite2p import convert_suite2p  # noqa: PLC0415
+    from tank_lab_to_nwb.imaging.convert import conversion_report, convert_session
+    from tank_lab_to_nwb.imaging.suite2p import convert_suite2p
 
     kind = imaging_data_kind(export_params)
     fov_numbers = export_params.get("fov_numbers") or []
@@ -638,7 +640,7 @@ def run_conversion_to_file(
             session_key, export_params, Path(virmen_file), output, metadata
         )
     else:
-        from tank_lab_to_nwb.convert_towers_task.towersnwbconverter import (  # noqa: PLC0415
+        from tank_lab_to_nwb.convert_towers_task.towersnwbconverter import (
             TowersNWBConverter,
         )
 

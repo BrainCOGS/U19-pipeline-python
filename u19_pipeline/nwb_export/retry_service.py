@@ -19,12 +19,12 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 
 
-def retry_failed_job(job_key: Dict[str, Any]) -> None:
+def retry_failed_job(job_key: dict[str, Any]) -> None:
     """Reset a FAILED job back to QUEUED for re-processing (FR-033).
 
     Validates that the current status is FAILED before resetting.
@@ -45,7 +45,9 @@ def retry_failed_job(job_key: Dict[str, Any]) -> None:
     current_status, _ = nwb_production.get_job_status(job_key)
 
     if current_status != NwbExportStatusEnum.FAILED:
-        raise ValueError(f"Cannot retry a job in state '{current_status.name}'. Only FAILED jobs can be retried.")
+        raise ValueError(
+            f"Cannot retry a job in state '{current_status.name}'. Only FAILED jobs can be retried."
+        )
 
     # Reset to QUEUED — no direct FAILED→QUEUED transition in state_machine
     # (retry is an exceptional operation authorised explicitly here)

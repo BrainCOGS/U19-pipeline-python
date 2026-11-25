@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Optional
 
 
-def is_eligible_for_upload(api_key: Optional[str], dandiset_id: Optional[str]) -> bool:
+def is_eligible_for_upload(api_key: str | None, dandiset_id: str | None) -> bool:
     """Return ``True`` only when both *api_key* and *dandiset_id* are present.
 
     Accepts the direct output of ``get_dandi_credentials(user_id)``.
@@ -30,4 +30,6 @@ def is_eligible_for_upload(api_key: Optional[str], dandiset_id: Optional[str]) -
     Returns:
         ``True`` when both values are non-``None`` and non-empty strings.
     """
-    return bool(api_key and api_key.strip()) and bool(dandiset_id and dandiset_id.strip())
+    return bool(api_key and api_key.strip()) and bool(
+        dandiset_id and dandiset_id.strip()
+    )

@@ -19,17 +19,18 @@ from pathlib import Path
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('/tmp/nwb_export_cronjob.log')
-    ]
+        logging.FileHandler("/tmp/nwb_export_cronjob.log"),
+    ],
 )
 logger = logging.getLogger(__name__)
 
 # Find and load configuration
 try:
     from scripts.conf_file_finding import try_find_conf_file
+
     try_find_conf_file()
 except ImportError:
     logger.warning("Could not import conf_file_finding, using default config")
@@ -40,9 +41,10 @@ try:
     from u19_pipeline.automatic_job.nwb_export_handler import NwbExportHandler
     from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
     from u19_pipeline import nwb_production
+
     logger.info("Successfully imported NWB export handler modules")
 except ImportError as e:
-    logger.error(f"Failed to import required modules: {e}", exc_info=True)
+    logger.exception("Failed to import required modules")
     sys.exit(1)
 
 
@@ -71,7 +73,7 @@ class NwbExportCronjob:
         try:
             # Count jobs not in terminal state
             active_jobs = (
-                nwb_production.NwbExportJob 
+                nwb_production.NwbExportJob
                 & "status_id >= 0 AND status_id < 5"  # QUEUED to UPLOAD
             ).fetch(limit=1000)
             return len(active_jobs)
@@ -82,7 +84,7 @@ class NwbExportCronjob:
         """Log current processing status."""
         uptime_hours = (time.time() - self.start_time) / 3600
         active_count = self.get_active_job_count()
-        
+
         logger.info(
             f"Cronjob status: {uptime_hours:.1f}h uptime, "
             f"{self.jobs_processed} jobs processed, "
@@ -109,7 +111,7 @@ class NwbExportCronjob:
         except Exception as e:
             self.jobs_failed += 1
             self.last_error_time = time.time()
-            logger.error(f"Error in processing loop: {e}", exc_info=True)
+            logger.exception("Error in processing loop")
             time.sleep(5)  # Back off on error
 
     def run_forever(self) -> None:
@@ -137,7 +139,7 @@ class NwbExportCronjob:
                 logger.info("Received SIGINT, shutting down gracefully...")
                 break
             except Exception as e:
-                logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
+                logger.exception("Unexpected error in main loop")
                 time.sleep(10)
 
 
@@ -148,7 +150,7 @@ def main() -> int:
         cronjob.run_forever()
         return 0
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
+        logger.exception("Fatal error")
         return 1
 
 

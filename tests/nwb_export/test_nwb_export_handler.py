@@ -35,17 +35,29 @@ class TestNwbExportStatusEnum:
         """Status enum contains all pipeline stages."""
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 
-        required_states = {"QUEUED", "DATA_VALIDATION", "PROCESSING", "VALIDATION", "UPLOAD", "COMPLETED", "FAILED"}
+        required_states = {
+            "QUEUED",
+            "DATA_VALIDATION",
+            "PROCESSING",
+            "VALIDATION",
+            "UPLOAD",
+            "COMPLETED",
+            "FAILED",
+        }
         enum_values = {member.name for member in NwbExportStatusEnum}
 
-        assert required_states.issubset(enum_values), f"Missing states: {required_states - enum_values}"
+        assert required_states.issubset(enum_values), (
+            f"Missing states: {required_states - enum_values}"
+        )
 
     def test_enum_has_numeric_values(self):
         """Each state has a numeric ID for database storage."""
         from u19_pipeline.nwb_export_enums import NwbExportStatusEnum
 
         for member in NwbExportStatusEnum:
-            assert isinstance(member.value, (int, tuple)), f"{member.name} has non-numeric value {member.value}"
+            assert isinstance(member.value, (int, tuple)), (
+                f"{member.name} has non-numeric value {member.value}"
+            )
 
     def test_enum_ordered_by_pipeline_stage(self):
         """States ordered logically through pipeline."""
@@ -67,7 +79,11 @@ class TestNwbExportJobSchema:
     @pytest.fixture
     def mock_session_key(self):
         """Standard test session key."""
-        return {"subject_id": "test_mouse_001", "session_date": "2026-02-24", "session_number": 1}
+        return {
+            "subject_id": "test_mouse_001",
+            "session_date": "2026-02-24",
+            "session_number": 1,
+        }
 
     def test_job_creation_with_valid_session(self, mock_session_key):
         """Job record created with QUEUED status for valid session."""
@@ -139,7 +155,9 @@ class TestNwbExportJobSchema:
         nwb_production.NwbExportJob.insert1(job)
 
         # Update with actual size
-        nwb_production.NwbExportJob.update1({**mock_session_key, "actual_file_size_gb": 0.47})
+        nwb_production.NwbExportJob.update1(
+            {**mock_session_key, "actual_file_size_gb": 0.47}
+        )
 
         retrieved = (nwb_production.NwbExportJob & mock_session_key).fetch1()
         assert retrieved["actual_file_size_gb"] == 0.47
@@ -155,7 +173,11 @@ class TestNwbExportModalityTable:
     @pytest.fixture
     def mock_session_key(self):
         """Standard test session key."""
-        return {"subject_id": "test_mouse_modality", "session_date": "2026-02-24", "session_number": 1}
+        return {
+            "subject_id": "test_mouse_modality",
+            "session_date": "2026-02-24",
+            "session_number": 1,
+        }
 
     @pytest.fixture
     def mock_job_key(self, mock_session_key):
@@ -179,7 +201,11 @@ class TestNwbExportModalityTable:
         """Behavior modality can be associated with job."""
         from u19_pipeline import nwb_production
 
-        modality = {**mock_job_key, "modality_name": "behavior", "modality_type": "towers_task"}
+        modality = {
+            **mock_job_key,
+            "modality_name": "behavior",
+            "modality_type": "towers_task",
+        }
         nwb_production.NwbExportModality.insert1(modality)
 
         retrieved = (nwb_production.NwbExportModality & mock_job_key).fetch()
@@ -190,10 +216,18 @@ class TestNwbExportModalityTable:
         """Ephys raw data modality can be associated."""
         from u19_pipeline import nwb_production
 
-        modality = {**mock_job_key, "modality_name": "ephys", "modality_type": "raw", "probe_numbers": "[0, 1, 2]"}
+        modality = {
+            **mock_job_key,
+            "modality_name": "ephys",
+            "modality_type": "raw",
+            "probe_numbers": "[0, 1, 2]",
+        }
         nwb_production.NwbExportModality.insert1(modality)
 
-        retrieved = (nwb_production.NwbExportModality & {**mock_job_key, "modality_name": "ephys"}).fetch1()
+        retrieved = (
+            nwb_production.NwbExportModality
+            & {**mock_job_key, "modality_name": "ephys"}
+        ).fetch1()
         assert retrieved["modality_type"] == "raw"
 
     def test_associate_imaging_modality_processed(self, mock_job_key):
@@ -208,7 +242,10 @@ class TestNwbExportModalityTable:
         }
         nwb_production.NwbExportModality.insert1(modality)
 
-        retrieved = (nwb_production.NwbExportModality & {**mock_job_key, "modality_name": "imaging"}).fetch1()
+        retrieved = (
+            nwb_production.NwbExportModality
+            & {**mock_job_key, "modality_name": "imaging"}
+        ).fetch1()
         assert retrieved["modality_type"] == "processed"
 
     def test_support_multiple_modalities_per_job(self, mock_job_key):
@@ -216,9 +253,23 @@ class TestNwbExportModalityTable:
         from u19_pipeline import nwb_production
 
         modalities = [
-            {**mock_job_key, "modality_name": "behavior", "modality_type": "towers_task"},
-            {**mock_job_key, "modality_name": "ephys", "modality_type": "processed", "probe_numbers": "[0, 1]"},
-            {**mock_job_key, "modality_name": "imaging", "modality_type": "raw", "fov_numbers": "[0, 1, 2]"},
+            {
+                **mock_job_key,
+                "modality_name": "behavior",
+                "modality_type": "towers_task",
+            },
+            {
+                **mock_job_key,
+                "modality_name": "ephys",
+                "modality_type": "processed",
+                "probe_numbers": "[0, 1]",
+            },
+            {
+                **mock_job_key,
+                "modality_name": "imaging",
+                "modality_type": "raw",
+                "fov_numbers": "[0, 1, 2]",
+            },
         ]
 
         for mod in modalities:
@@ -302,7 +353,11 @@ class TestNwbExportLogStatus:
     @pytest.fixture
     def mock_session_key(self):
         """Standard test session key."""
-        return {"subject_id": "test_mouse_logging", "session_date": "2026-02-24", "session_number": 1}
+        return {
+            "subject_id": "test_mouse_logging",
+            "session_date": "2026-02-24",
+            "session_number": 1,
+        }
 
     @pytest.fixture
     def mock_job_key(self, mock_session_key):
@@ -400,7 +455,11 @@ class TestNwbExportValidation:
     @pytest.fixture
     def mock_session_key(self):
         """Standard test session key."""
-        return {"subject_id": "test_mouse_validation", "session_date": "2026-02-24", "session_number": 1}
+        return {
+            "subject_id": "test_mouse_validation",
+            "session_date": "2026-02-24",
+            "session_number": 1,
+        }
 
     @pytest.fixture
     def mock_job_key(self, mock_session_key):
@@ -516,7 +575,12 @@ class TestNwbExportHandler:
         """
         from u19_pipeline.automatic_job.nwb_export_handler import NwbExportHandler
 
-        job = {"nwb_job_id": 999, "subject_id": "test", "session_date": "2026-02-24", "session_number": 1}
+        job = {
+            "nwb_job_id": 999,
+            "subject_id": "test",
+            "session_date": "2026-02-24",
+            "session_number": 1,
+        }
 
         result = NwbExportHandler.process_data_validation(job)
 
