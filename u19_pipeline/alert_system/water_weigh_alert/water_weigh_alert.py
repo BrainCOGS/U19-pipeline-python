@@ -19,7 +19,7 @@ from u19_pipeline.alert_system.water_weigh_alert import (
     alert_tiers,
     explicit_duties,
 )
-from u19_pipeline.utils import responsibilities
+from u19_pipeline.utils import planned_responsibilities, responsibilities
 from u19_pipeline.utils.responsibilities import DailyAssignment, Responsibility
 from u19_pipeline.utils.subject_metadata import (
     fetch_slack_handles_for_lab_managers_by_subject,
@@ -607,6 +607,8 @@ def main_water_weigh_alert(tier: alert_tiers.AlertTier | str | None = None):
     tier = alert_tiers.resolve_alert_tier(tier)
 
     dj.conn()
+    # Make ResponsibilitiesAlt current before reading it; a failure is printed, not raised
+    planned_responsibilities.apply_planned_responsibilities_or_report()
 
     subject_data = get_subject_data(get_explicit_assignments())
     subject_data = alert_tiers.filter_subjects_for_tier(subject_data, tier)
