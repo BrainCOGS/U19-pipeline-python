@@ -1,4 +1,4 @@
-# Spock ephys jobs from uv
+# Spock ephys and imaging jobs from uv
 
 Ephys jobs on spock can run from the uv environment of the sorters checkout
 (`<electrophysiology_process_dir>/BrainCogsEphysSorters/.venv`, built from its `uv.lock`)
@@ -39,6 +39,47 @@ pipeline's `dj_local_conf.json` control it:
    it the job can hang after the sort), and Kilosort 2 needs its mex files built once
    (`matlab -batch mexGPUall` in `sorters/Kilosort2/CUDA` on a GPU node). In the database no
    ephys job since job_id 602 has used anything but kilosort4.
+
+## Imaging (suite2p) jobs
+
+Imaging jobs have their own switch, so ephys and imaging can move to uv separately:
+
+```json
+"custom": {
+    "spock_imaging_env": "uv",
+    "spock_uv_cache_dir": "/mnt/bucket/scratch/u19prod/uv_cache"
+}
+```
+
+- `spock_imaging_env`: `"conda"` (the default, also when the key is missing) or `"uv"`. With
+  `"conda"` the job runs in the conda environment `u19_suite2p_env` and the slurm script is byte
+  for byte what it was before. `spock_ephys_env` does not affect imaging jobs, nor this key ephys.
+- `spock_uv_cache_dir` is shared with ephys jobs (same cache, same rules).
+
+With `"uv"` the job runs from `<imaging_process_dir>/U19-pipeline-python/.venv`, the U19 checkout
+that holds `u19_pipeline/automatic_job/suite2p_slurm_job.py`, built from that checkout's
+`uv.lock` with the `pipeline` extra (suite2p 1.1.0, element-calcium-imaging and the CUDA build of
+torch). The steps are those of an ephys job, with `--extra pipeline` on both commands:
+
+1. Before `sbatch`, on the login node: `uv sync --locked --extra pipeline`.
+2. In the job: `cd` into the checkout, check `uv` is on PATH, then
+   `uv sync --frozen --offline --check --extra pipeline`, `source .venv/bin/activate` and
+   `python -u u19_pipeline/automatic_job/suite2p_slurm_job.py`. No module is loaded: torch's
+   wheels bring the CUDA libraries, the node only needs the NVIDIA driver.
+
+The extra has to match on both sides: `--check` without it fails on a `.venv` synced with it (it
+would remove suite2p), and a person who runs a plain `uv sync` in the checkout removes the extra
+and makes the next job's sync reinstall it.
+
+Like the sorters checkout (#201), the handler fast-forwards this checkout to `master` of
+BrainCOGS/U19-pipeline-python before queuing an imaging job (once per cron run), under conda and
+uv alike; if it can't, it warns in Slack and the job runs on the code already there. The uv sync
+comes after the pull, so a changed `uv.lock` is installed before the job starts. Neither happens
+while jobs run from the checkout (see [Updating the sorters](#updating-the-sorters-and-the-imaging-checkout)).
+
+The pull is `--ff-only` onto the checked-out branch, so the checkout has to be on `master`. It is
+since 2026-11-17 (before that it was on the branch of #135, commit 71493d7, squash-merged as
+8339430). It has no `.venv` yet: build it before setting `spock_imaging_env` to `"uv"`.
 
 ## Shared uv cache
 
@@ -86,13 +127,27 @@ Why this is safe, and what was and was not checked:
 - **Python.** uv's Python builds are not in the cache: `.venv/bin/python` points at the Python uv
   installed for the account that ran the sync (`~u19prod/.local/share/uv/python`, readable by all).
 
-## Updating the sorters
+## Updating the sorters (and the imaging checkout)
 
-A `git pull` that changes `uv.lock` is picked up by the next job's sync. That sync replaces
-packages in the `.venv` that running jobs use, as the `git pull` already replaces their code: pull
-when `squeue -u u19prod` shows no ephys jobs, or run `uv sync --locked` by hand right after.
+A pull changes the code under jobs already running from the checkout, and a pull that changes
+`uv.lock` makes the next job's sync replace packages in the `.venv` they use. So the handler does
+not pull while jobs run from it (#202):
+
+- Before pulling it lists `u19prod`'s running jobs (`squeue -u u19prod -t RUNNING -o '%j|%k'`).
+  Processing jobs are named `job_id_<id>`, and `queue_slurm_file` tags each with its checkout
+  (`sbatch --comment=<checkout>`), so ephys jobs only hold back the sorters checkout and imaging
+  jobs only the U19 checkout. Jobs queued before the tag (no comment) hold back both.
+- If any run, the job is queued on the code already there and the next cron run tries again.
+  That is not an error: nothing goes to Slack, unless the checkout has been behind `master` that
+  way for 24 h: then one note says so (the clock is kept in
+  `u19_pipeline/automatic_job/SlurmFiles/repository_update_skips.json` and restarts at the next
+  pull).
+- If `squeue` fails, nothing is pulled and Slack gets the usual warning.
+
+To update by hand anyway, pull when `squeue -u u19prod` shows no ephys or imaging jobs, then run
+`uv sync --locked` (imaging: `uv sync --locked --extra pipeline`).
 
 ## Roll back
 
-Remove `spock_ephys_env` (or set it to `"conda"`) and restart the handler. The conda
-environments are untouched by the uv path.
+Remove `spock_ephys_env` / `spock_imaging_env` (or set it to `"conda"`) and restart the handler.
+The conda environments are untouched by the uv path.
