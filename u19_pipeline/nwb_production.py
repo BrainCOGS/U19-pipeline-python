@@ -110,9 +110,7 @@ class NwbExportJob(dj.Manual):
     actual_file_size_gb=NULL: FLOAT  # Actual file size after conversion (GB)
     export_parameters=NULL: VARCHAR(5000)  # JSON blob with conversion parameters
     nwb_file_hash=NULL: VARCHAR(64)  # SHA256 hash of NWB file for integrity
-    request_id=NULL: CHAR(32)       # Idempotency key for path-based submissions
     source_request=NULL: LONGBLOB   # Versioned source snapshot for the worker
-    unique index (request_id)
     """
 
 

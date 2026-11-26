@@ -68,9 +68,9 @@ def _parse_export_params(raw) -> dict:
 
 
 def _source_request(job: dict) -> dict | None:
-    if job.get("request_id") is None and job.get("source_request") is None:
-        return None  # Existing jobs use the original session-based path.
     request = job.get("source_request")
+    if request is None:
+        return None  # Existing jobs use the original session-based path.
     if not isinstance(request, dict):
         raise TypeError("The job has no source snapshot.")
     return request
@@ -287,7 +287,7 @@ class NwbExportHandler:
                     resolve_sources,
                 )
 
-                job_output(job)
+                job_output(job, queue_schema=nwb_production.NwbExportJob.database)
                 resolve_sources(request)
                 _validate_registered_source(job, request)
                 return True, error_info
@@ -405,7 +405,7 @@ class NwbExportHandler:
                 key = _validate_registered_source(job, request)
                 size_gb = convert_sources(
                     paths,
-                    job_output(job),
+                    job_output(job, queue_schema=nwb_production.NwbExportJob.database),
                     metadata=converter_metadata(query_metadata(key)) if key else {},
                     session_date=key["session_date"] if key else None,
                 )
@@ -480,7 +480,9 @@ class NwbExportHandler:
             if source_job:
                 from u19_pipeline.nwb_export.source_request import job_output
 
-                output_path = job_output(job)
+                output_path = job_output(
+                    job, queue_schema=nwb_production.NwbExportJob.database
+                )
             if not output_path.exists():
                 raise FileNotFoundError(f"NWB file not found: {output_path}")
 

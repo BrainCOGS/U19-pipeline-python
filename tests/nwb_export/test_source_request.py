@@ -10,7 +10,7 @@ from u19_pipeline.nwb_export import source_request
 def _request(root: Path, **extra) -> dict:
     log = root / "behavior.mat"
     log.touch()
-    return {"version": 1, "source": "manual_paths", "behavior_path": str(log), **extra}
+    return {"version": 2, "source": "manual_paths", "behavior_path": str(log), **extra}
 
 
 def test_manual_behavior_needs_no_session(tmp_path):
@@ -45,19 +45,54 @@ def test_recording_rejects_symlink_escaping_root(tmp_path):
         source_request.resolve_sources(request, root=root)
 
 
-def test_output_location_is_derived_from_the_request_id(tmp_path):
-    token = "f" * 32
-    output = tmp_path / "Processed" / "NWB" / f"{token}.nwb"
+def test_output_location_is_derived_from_the_job_id(tmp_path):
+    output = tmp_path / "Processed" / "NWB" / "u19_test_nwb_production" / "42.nwb"
+    job = {
+        "nwb_job_id": 42,
+        "output_filepath": str(output),
+        "source_request": {"version": 2},
+    }
     assert (
         source_request.job_output(
-            {"request_id": token, "output_filepath": str(output)}, root=tmp_path
+            job, queue_schema="u19_test_nwb_production", root=tmp_path
         )
         == output
     )
 
+    with pytest.raises(ValueError, match="match the job"):
+        source_request.job_output(job, queue_schema="u19_nwb_production", root=tmp_path)
+
+    for wrong in (
+        tmp_path / "42.nwb",
+        output.with_name("43.nwb"),
+        output.with_name(f"{'f' * 32}.nwb"),
+    ):
+        with pytest.raises(ValueError, match="match the job"):
+            source_request.job_output(
+                {**job, "output_filepath": str(wrong)},
+                queue_schema="u19_test_nwb_production",
+                root=tmp_path,
+            )
+
+
+def test_version_one_jobs_keep_existing_output_names_without_a_request_id(tmp_path):
+    request = _request(tmp_path, version=1)
+    output = tmp_path / "Processed" / "NWB" / f"{'a' * 32}.nwb"
+    job = {"nwb_job_id": 42, "output_filepath": str(output), "source_request": request}
+    assert (
+        source_request.job_output(
+            job, queue_schema="u19_test_nwb_production", root=tmp_path
+        )
+        == output
+    )
+    assert source_request.resolve_sources(request, root=tmp_path).behavior == Path(
+        request["behavior_path"]
+    )
+
     with pytest.raises(ValueError, match="NWB output directory"):
         source_request.job_output(
-            {"request_id": token, "output_filepath": str(tmp_path / "fake.nwb")},
+            {**job, "output_filepath": str(tmp_path / output.name)},
+            queue_schema="u19_test_nwb_production",
             root=tmp_path,
         )
 

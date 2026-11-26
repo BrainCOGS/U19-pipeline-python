@@ -49,7 +49,7 @@ def _check_recording_tree(folder: Path, root: Path) -> None:
 
 
 def resolve_sources(request: dict, *, root: Path = DATA_ROOT) -> Sources:
-    if request.get("version") != 1 or request.get("source") not in {
+    if request.get("version") not in (1, 2) or request.get("source") not in {
         "registered_session",
         "manual_paths",
     }:
@@ -92,13 +92,24 @@ def resolve_sources(request: dict, *, root: Path = DATA_ROOT) -> Sources:
     return Sources(behavior, modality, recording, tiffs)
 
 
-def job_output(job: dict, *, root: Path = DATA_ROOT) -> Path:
-    token = job.get("request_id")
-    if not isinstance(token, str) or re.fullmatch("[0-9a-f]{32}", token) is None:
-        raise ValueError("The export request has an invalid identifier.")
-    path = root / "Processed" / "NWB" / f"{token}.nwb"
-    if job["output_filepath"] != str(path) or path.resolve() != path:
-        raise ValueError("The export output must stay in the NWB output directory.")
+def job_output(job: dict, *, queue_schema: str, root: Path = DATA_ROOT) -> Path:
+    job_id = job.get("nwb_job_id")
+    if type(job_id) is not int or job_id <= 0:
+        raise ValueError("The export job has an invalid ID.")
+    output = job["output_filepath"]
+    if re.fullmatch(r"[a-zA-Z0-9_]+", queue_schema) is None:
+        raise ValueError("The NWB queue schema name is invalid.")
+    directory = root / "Processed" / "NWB"
+    path = directory / queue_schema / f"{job_id}.nwb"
+    if job["source_request"].get("version") == 1:
+        # Keep the UUID filenames written by the original source picker.
+        legacy_name = Path(output).name
+        if re.fullmatch(r"[0-9a-f]{32}\.nwb", legacy_name):
+            path = directory / legacy_name
+    if output != str(path) or path.resolve() != path:
+        raise ValueError(
+            "The export output must stay in the NWB output directory and match the job."
+        )
     return path
 
 

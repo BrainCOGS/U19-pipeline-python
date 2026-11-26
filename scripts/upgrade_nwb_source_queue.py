@@ -41,7 +41,7 @@ def upgrade(conn, schema_name: str, *, apply: bool) -> None:
         conn.query(f"SHOW COLUMNS FROM {table.full_table_name}", as_dict=True)
     ) as cursor:
         columns = {row["Field"]: row for row in cursor.fetchall()}
-    expected = (*fields, "request_id", "source_request")
+    expected = (*fields, "source_request")
     if not set(fields) <= columns.keys():
         raise RuntimeError(
             "The existing job table is missing expected session columns."
@@ -52,11 +52,8 @@ def upgrade(conn, schema_name: str, *, apply: bool) -> None:
     for field, sql_type in zip(fields, ("VARCHAR(64)", "DATE", "INT"), strict=True):
         if columns[field]["Null"] == "NO":
             clauses.append(f"MODIFY COLUMN `{field}` {sql_type} NULL DEFAULT NULL")
-    if "request_id" not in columns:
-        clauses += [
-            "ADD COLUMN request_id CHAR(32) NULL",
-            "ADD UNIQUE INDEX request_id (request_id)",
-        ]
+    if "request_id" in columns:
+        clauses.append("DROP COLUMN request_id")
     if "source_request" not in columns:
         clauses.append("ADD COLUMN source_request LONGBLOB NULL")
     if not clauses:
