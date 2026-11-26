@@ -29,7 +29,10 @@ import tempfile
 from pathlib import Path
 
 
-from neuroconv.tools.data_transfers import automatic_dandi_upload  # type: ignore
+def _upload_with_neuroconv(**kwargs) -> list[str]:
+    from neuroconv.tools.data_transfers import automatic_dandi_upload
+
+    return automatic_dandi_upload(**kwargs)
 
 
 class DandiUploadClient:
@@ -110,7 +113,7 @@ class DandiUploadClient:
             staging_dir = Path(tempfile.mkdtemp())
             shutil.copy2(path, staging_dir / path.name)
 
-            result = automatic_dandi_upload(
+            result = _upload_with_neuroconv(
                 dandiset_id=self._dandiset_id,
                 nwb_folder_path=staging_dir,
                 sandbox=self._sandbox,

@@ -1,8 +1,7 @@
 """
 Tests for DandiUploadClient (T064 / US7).
 
-All tests are no_db — they mock ``neuroconv.tools.data_transfers.automatic_dandi_upload``
-and never touch the file system beyond a temporary NWB stub.
+These tests stub the NeuroConv upload and use temporary NWB files.
 """
 
 import os
@@ -85,7 +84,7 @@ class TestUploadHappyPath:
         organised = ["/tmp/staged/sub-ms1/sub-ms1_ses-001.nwb"]
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             return_value=organised,
         ) as mock_upload:
             client = DandiUploadClient(api_key="secret", dandiset_id="000123")
@@ -98,7 +97,7 @@ class TestUploadHappyPath:
         nwb_file = _make_nwb_file(tmp_path)
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             return_value=[],
         ) as mock_upload:
             client = DandiUploadClient(api_key="key", dandiset_id="000456")
@@ -111,7 +110,7 @@ class TestUploadHappyPath:
         nwb_file = _make_nwb_file(tmp_path)
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             return_value=[],
         ) as mock_upload:
             client = DandiUploadClient(
@@ -132,7 +131,7 @@ class TestUploadHappyPath:
             return []
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             side_effect=_capture,
         ):
             client = DandiUploadClient(api_key="my-secret-key", dandiset_id="000123")
@@ -149,7 +148,7 @@ class TestUploadHappyPath:
             return []
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             side_effect=_capture,
         ):
             client = DandiUploadClient(
@@ -165,7 +164,7 @@ class TestUploadHappyPath:
         os.environ.pop("DANDI_API_KEY", None)
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             return_value=[],
         ):
             client = DandiUploadClient(api_key="temp-key", dandiset_id="000123")
@@ -179,7 +178,7 @@ class TestUploadHappyPath:
         os.environ["DANDI_API_KEY"] = "original-value"
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             return_value=[],
         ):
             client = DandiUploadClient(api_key="temp-key", dandiset_id="000123")
@@ -199,7 +198,7 @@ class TestUploadErrors:
         nwb_file = _make_nwb_file(tmp_path)
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             side_effect=Exception("network timeout"),
         ):
             client = DandiUploadClient(api_key="key", dandiset_id="000123")
@@ -211,7 +210,7 @@ class TestUploadErrors:
         os.environ.pop("DANDI_API_KEY", None)
 
         with patch(
-            "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
+            "u19_pipeline.nwb_export.dandi.upload_client._upload_with_neuroconv",
             side_effect=Exception("boom"),
         ):
             client = DandiUploadClient(api_key="ephemeral", dandiset_id="000123")
@@ -223,20 +222,7 @@ class TestUploadErrors:
     def test_import_error_raises_runtime_error(self, tmp_path):
         nwb_file = _make_nwb_file(tmp_path)
 
-        with (
-            patch.dict(
-                "sys.modules",
-                {
-                    "neuroconv": None,
-                    "neuroconv.tools": None,
-                    "neuroconv.tools.data_transfers": None,
-                },
-            ),
-            patch(
-                "u19_pipeline.nwb_export.dandi.upload_client.automatic_dandi_upload",
-                side_effect=ImportError("no neuroconv"),
-            ),
-        ):
+        with patch.dict("sys.modules", {"neuroconv.tools.data_transfers": None}):
             client = DandiUploadClient(api_key="key", dandiset_id="000123")
             with pytest.raises(RuntimeError, match="neuroconv"):
                 client.upload(nwb_file)

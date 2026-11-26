@@ -30,10 +30,8 @@ jobs:
             deps: base
           - python-version: "3.14"
             deps: base
-          # The `pipeline` extra (suite2p, cellpose, element-* git deps), so
-          # the importorskip-guarded tests actually run. --require-extras
-          # turns those skips into failures, so a broken install fails here
-          # instead of passing with everything skipped.
+          # Install both `pipeline` and `nwb` so their optional tests run.
+          # --require-extras fails the job if an optional import is missing.
           - python-version: "3.13"
             deps: pipeline
             pytest-args: --require-extras
@@ -57,12 +55,12 @@ jobs:
         run: |
           if [ "$DEPS" = pipeline ]; then
             mapfile -t skip < <(
-              uv export --locked --extra pipeline --no-hashes --no-header --no-annotate \
+              uv export --locked --extra pipeline --extra nwb --no-hashes --no-header --no-annotate \
                 | grep -oE '^(torch|torchvision|triton|nvidia-[a-z0-9-]+|cuda-[a-z0-9-]+)\b' \
                 | sort -u
             )
             echo "Not installing: ${skip[*]}"
-            uv sync --locked --extra pipeline "${skip[@]/#/--no-install-package=}"
+            uv sync --locked --extra pipeline --extra nwb "${skip[@]/#/--no-install-package=}"
           else
             uv sync --locked
           fi
@@ -78,7 +76,7 @@ jobs:
         if: matrix.deps == 'pipeline'
         run: |
           mapfile -t pins < <(
-            uv export --locked --extra pipeline --no-hashes --no-header --no-annotate \
+            uv export --locked --extra pipeline --extra nwb --no-hashes --no-header --no-annotate \
               | grep -E '^(torch|torchvision)=='
           )
           echo "Installing ${pins[*]} from the PyTorch CPU index"
